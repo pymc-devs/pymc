@@ -184,48 +184,55 @@ def test_init_groups(three_var_model, raises, grouping):
     ids=lambda t: ", ".join(f"{k.__name__}: {v[0]}" for k, v in t[1].items()),
 )
 def three_var_groups(request, three_var_model):
-    kw, grouping = request.param
-    approxes, groups = zip(*grouping.items())
-    groups, gkwargs = zip(*groups)
-    groups = [
-        list(map(ft.partial(getattr, three_var_model), g)) if g is not None else None
-        for g in groups
-    ]
-    inited_groups = [
-        a(group=g, model=three_var_model, **gk) for a, g, gk in zip(approxes, groups, gkwargs)
-    ]
+    with three_var_model:
+        kw, grouping = request.param
+        approxes, groups = zip(*grouping.items())
+        groups, gkwargs = zip(*groups)
+        groups = [
+            list(map(ft.partial(getattr, three_var_model), g)) if g is not None else None
+            for g in groups
+        ]
+        inited_groups = [
+            a(group=g, model=three_var_model, **gk) for a, g, gk in zip(approxes, groups, gkwargs)
+        ]
     return inited_groups
 
 
 @pytest.fixture
 def three_var_approx(three_var_model, three_var_groups):
-    approx = opvi.Approximation(three_var_groups, model=three_var_model)
+    with three_var_model:
+        approx = opvi.Approximation(three_var_groups, model=three_var_model)
     return approx
 
 
 @pytest.fixture
 def three_var_approx_single_group_mf(three_var_model):
-    return MeanField(model=three_var_model)
+    with three_var_model:
+        approx = MeanField(model=three_var_model)
+    return approx
 
 
-def test_pickle_approx(three_var_approx):
+def test_pickle_approx(three_var_approx, three_var_model):
     import cloudpickle
 
     dump = cloudpickle.dumps(three_var_approx)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    with three_var_model:
+        assert new.sample(1)
 
 
-def test_pickle_single_group(three_var_approx_single_group_mf):
+def test_pickle_single_group(three_var_approx_single_group_mf, three_var_model):
     import cloudpickle
 
     dump = cloudpickle.dumps(three_var_approx_single_group_mf)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    with three_var_model:
+        assert new.sample(1)
 
 
-def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(100, return_inferencedata=False)
+def test_sample_simple(three_var_approx, three_var_model):
+    with three_var_model:
+        trace = three_var_approx.sample(100, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
     assert len(trace) == 100
     assert trace[0]["one"].shape == (10, 2)
@@ -246,39 +253,48 @@ def parametric_grouped_approxes(request):
 
 def test_logq_mini_1_sample_1_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
-    approx = cls([three_var_model.one], model=three_var_model, **kw)
-    logq = approx.logq
-    logq = approx.set_size_and_deterministic(logq, 1, 0)
-    logq.eval()
+    with three_var_model:
+        approx = cls([three_var_model.one], model=three_var_model, **kw)
+        logq = approx.logq
+        logq = approx.set_size_and_deterministic(logq, 1, 0)
+        logq.eval()
 
 
 def test_logq_mini_2_sample_2_var(parametric_grouped_approxes, three_var_model):
     cls, kw = parametric_grouped_approxes
-    approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
-    logq = approx.logq
-    logq = approx.set_size_and_deterministic(logq, 2, 0)
-    logq.eval()
+    with three_var_model:
+        approx = cls([three_var_model.one, three_var_model.two], model=three_var_model, **kw)
+        logq = approx.logq
+        logq = approx.set_size_and_deterministic(logq, 2, 0)
+        logq.eval()
 
 
-def test_logq_globals(three_var_approx):
-    if not three_var_approx.has_logq:
-        pytest.skip(f"{three_var_approx} does not implement logq")
-    approx = three_var_approx
-    logq, symbolic_logq = approx.set_size_and_deterministic(
-        [approx.logq, approx.symbolic_logq], 1, 0
-    )
-    e = logq.eval()
-    es = symbolic_logq.eval()
-    assert e.shape == ()
-    assert es.shape == (1,)
+def test_logq_globals(three_var_approx, three_var_model):
+    with three_var_model:
+        if not three_var_approx.has_logq:
+            pytest.skip(f"{three_var_approx} does not implement logq")
+        approx = three_var_approx
+        logq, symbolic_logq = approx.set_size_and_deterministic(
+            [approx.logq, approx.symbolic_logq], 1, 0
+        )
+        e = logq.eval()
+        es = symbolic_logq.eval()
+        assert e.shape == ()
+        assert es.shape == (1,)
 
-    logq, symbolic_logq = approx.set_size_and_deterministic(
-        [approx.logq, approx.symbolic_logq], 2, 0
-    )
-    e = logq.eval()
-    es = symbolic_logq.eval()
-    assert e.shape == ()
-    assert es.shape == (2,)
+        logq, symbolic_logq = approx.set_size_and_deterministic(
+            [approx.logq, approx.symbolic_logq], 2, 0
+        )
+        e = logq.eval()
+        es = symbolic_logq.eval()
+        assert e.shape == ()
+        assert es.shape == (2,)
+
+
+def test_model_property_emits_deprecation(three_var_approx, three_var_model):
+    with three_var_model:
+        with pytest.warns(DeprecationWarning, match="`model` field is deprecated"):
+            _ = three_var_approx.model
 
 
 def test_symbolic_normalizing_constant_no_rvs():
@@ -292,5 +308,32 @@ def test_symbolic_normalizing_constant_no_rvs():
         y_hat = pm.Flat("y_hat", observed=obs_batch, total_size=1000)
 
         step = pm.ADVI()
+        # Access property within model context
+        symbolic_normalizing = step.approx.symbolic_normalizing_constant
 
-    assert_no_rvs(step.approx.symbolic_normalizing_constant)
+    # Access the property again to test it doesn't require model context after first access
+    assert_no_rvs(symbolic_normalizing)
+
+
+def test_sample_additional_vars(three_var_approx, three_var_model):
+    with pm.Model() as extended_model:
+        one = pm.HalfNormal("one", size=(10, 2))
+        two = pm.Normal("two", size=(10,))
+        three = pm.Normal("three", size=(10, 1, 2))
+        four = pm.Normal("four", mu=two, sigma=1, size=(10,))
+        five = pm.Deterministic("five", four.sum())
+        pm.Normal("six", mu=five, sigma=1)
+
+    with extended_model:
+        idata = three_var_approx.sample(20)
+
+    posterior = idata.posterior
+
+    varnames = set(posterior.data_vars)
+    assert {"one", "two", "three"}.issubset(varnames)
+    assert {"four", "five", "six"}.issubset(varnames)
+    assert posterior.sizes["draw"] == 20
+    assert posterior.sizes["chain"] == 1
+    assert posterior["four"].shape == (1, 20, 10)
+    assert posterior["five"].shape == (1, 20)
+    assert posterior["six"].shape == (1, 20)
