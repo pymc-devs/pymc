@@ -28,8 +28,11 @@ from typing import (
 import numpy as np
 import xarray
 
-from arviz import InferenceData, concat, rcParams
-from arviz.data.base import CoordSpec, DimSpec, dict_to_dataset, requires
+from arviz import InferenceData, concat
+from arviz.data.base import CoordSpec, DimSpec
+from arviz_base import dict_to_dataset
+from arviz_base.base import requires
+from arviz_base.rcparams import RcParams
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -211,7 +214,7 @@ class InferenceDataConverter:
         save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
-        self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        self.save_warmup = RcParams["data.save_warmup"] if save_warmup is None else save_warmup
         self.include_transformed = include_transformed
         self.trace = trace
 
