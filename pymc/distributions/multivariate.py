@@ -2264,11 +2264,11 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         # This variable has an expensive validation check, that we want to constant-fold if possible
         # So it's passed as an explicit input
-        from pytensor.sparse import as_sparse_or_tensor_variable, structured_sign
+        from pytensor.sparse import as_sparse_or_tensor_variable, sign
 
         W = as_sparse_or_tensor_variable(W)
         if isinstance(W.type, pytensor.sparse.SparseTensorType):
-            abs_diff = structured_sign(W - W.T) * (W - W.T)
+            abs_diff = sign(W - W.T) * (W - W.T)
             W_is_valid = pt.isclose(abs_diff.sum(), 0)
         else:
             W_is_valid = pt.allclose(W, W.T)

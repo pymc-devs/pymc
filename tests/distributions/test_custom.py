@@ -356,24 +356,25 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, expected)
 
     def test_custom_dist_default_support_point_scan(self):
-        def scan_step(left, right):
-            x = Uniform.dist(left, right)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(left, right, rng):
+            x = Uniform.dist(left, right, rng=rng)
+            x_update = collect_default_updates([x], must_be_shared=False)
+            return x, x_update[rng]
 
         def dist(size):
-            with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
-                xs, updates = scan(
-                    fn=scan_step,
-                    sequences=[
-                        pt.as_tensor_variable(np.array([-4, -3])),
-                        pt.as_tensor_variable(np.array([-2, -1])),
-                    ],
-                    name="xs",
-                    # There's a bug in the ordering of outputs when there's a mapped `None` output
-                    # We have to stick with the deprecated API for now
-                    return_updates=True,
-                )
+            rng = pytensor.shared(np.random.default_rng())
+            xs, next_rng = scan(
+                fn=scan_step,
+                sequences=[
+                    pt.as_tensor_variable(np.array([-4, -3])),
+                    pt.as_tensor_variable(np.array([-2, -1])),
+                ],
+                outputs_info=[None, rng],
+                name="xs",
+                # There's a bug in the ordering of outputs when there's a mapped `None` output
+                # We have to stick with the deprecated API for now
+                return_updates=False,
+            )
             return xs
 
         with Model() as model:
@@ -674,22 +675,21 @@ class TestCustomSymbolicDist:
         batch = 2
 
         def scan_dist(seq, n_steps, size):
-            def step(s):
-                innov = Normal.dist()
-                traffic = s + innov
-                return traffic, {innov.owner.inputs[0]: innov.owner.outputs[0]}
+            rng = pytensor.shared(np.random.default_rng())
 
-            with pytest.warns(DeprecationWarning, match="Scan return signature will change"):
-                rv_seq, _ = pytensor.scan(
-                    fn=step,
-                    sequences=[seq],
-                    outputs_info=[None],
-                    n_steps=n_steps,
-                    strict=True,
-                    # There's a bug in the ordering of outputs when there's a mapped `None` output
-                    # We have to stick with the deprecated API for now
-                    return_updates=True,
-                )
+            def step(s, rng):
+                next_rng, innov = Normal.dist(rng=rng).owner.outputs
+                traffic = s + innov
+                return traffic, next_rng
+
+            rv_seq, _next_rng = pytensor.scan(
+                fn=step,
+                sequences=[seq],
+                outputs_info=[None, rng],
+                n_steps=n_steps,
+                strict=True,
+                return_updates=False,
+            )
             return rv_seq
 
         def normal_shifted(mu, size):
