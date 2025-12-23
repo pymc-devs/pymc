@@ -85,6 +85,7 @@ jobs:
             tests/sampling/test_deterministic.py
             tests/sampling/test_forward.py
             tests/sampling/test_population.py
+            tests/sampling/test_background_sampling.py
             tests/stats/test_convergence.py
             tests/stats/test_log_density.py
             tests/distributions/test_distribution.py
@@ -190,7 +191,7 @@ jobs:
         python-version: ["3.11"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
-          - tests/model/test_core.py tests/sampling/test_mcmc.py
+          - tests/model/test_core.py tests/sampling/test_mcmc.py tests/sampling/test_background_sampling.py
           - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
 
@@ -247,6 +248,7 @@ jobs:
 
           - |
             tests/sampling/test_mcmc.py
+            tests/sampling/test_background_sampling.py
 
           - |
             tests/backends/test_arviz.py
@@ -349,7 +351,7 @@ jobs:
         floatx: [float32]
         python-version: ["3.14"]
         test-subset:
-        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
+        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py tests/sampling/test_background_sampling.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
