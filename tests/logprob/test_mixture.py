@@ -52,6 +52,8 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
+import pymc as pm
+
 from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
@@ -969,6 +971,22 @@ def test_switch_mixture_invalid_bcast():
     invalid_mix = pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch)
     fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
     assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
+
+
+def test_switch_mixture_constant_branch_broadcast_ok():
+    t = pt.arange(10)
+    cat = pm.Categorical.dist(p=[0.5, 0.5], shape=(10,))
+    cat_fixed_const = pt.where(t > 5, cat, -1)
+    cat_fixed_dirac = pt.where(t > 5, cat, pm.DiracDelta.dist(-1, shape=cat.shape))
+    vv_const = cat_fixed_const.clone()
+    vv_dirac = cat_fixed_dirac.clone()
+    logp_const = logp(cat_fixed_const, vv_const, warn_rvs=False)
+    logp_dirac = logp(cat_fixed_dirac, vv_dirac, warn_rvs=False)
+    test_value = np.where(np.arange(10) > 5, 0, -1).astype(vv_const.dtype)
+    np.testing.assert_allclose(
+        logp_const.eval({vv_const: test_value}),
+        logp_dirac.eval({vv_dirac: test_value.astype(vv_dirac.dtype)}),
+    )
 
 
 def test_ifelse_mixture_one_component():
