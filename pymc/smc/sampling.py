@@ -23,13 +23,14 @@ from typing import Any
 import cloudpickle
 import numpy as np
 
-from arviz import InferenceData
+from arviz import from_dict
 from rich.progress import (
     SpinnerColumn,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from xarray import DataTree
 
 import pymc
 
@@ -61,7 +62,7 @@ def sample_smc(
     progressbar=True,
     compile_kwargs: dict | None = None,
     **kernel_kwargs,
-) -> InferenceData | MultiTrace:
+) -> DataTree | MultiTrace:
     r"""
     Sequential Monte Carlo based sampling.
 
@@ -91,7 +92,7 @@ def sample_smc(
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
     return_inferencedata : bool, default True
-        Whether to return the trace as an InferenceData (True) object or a MultiTrace (False).
+        Whether to return the trace as a DataTree (True) object or a MultiTrace (False).
         Defaults to ``True``.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`.
@@ -235,7 +236,7 @@ def _save_sample_stats(
     _t_sampling,
     idata_kwargs,
     model: Model,
-) -> tuple[Any | None, InferenceData | None]:
+) -> tuple[Any | None, DataTree | None]:
     sample_settings_dict = sample_settings[0]
     sample_settings_dict["_t_sampling"] = _t_sampling
     sample_stats_dict = sample_stats[0]
@@ -248,7 +249,7 @@ def _save_sample_stats(
                 value_list.append(chain_sample_stats[stat])
             sample_stats_dict[stat] = value_list
 
-    idata: InferenceData | None = None
+    idata: DataTree | None = None
     if not return_inferencedata:
         for stat, value in sample_stats_dict.items():
             setattr(trace.report, stat, value)
@@ -267,14 +268,15 @@ def _save_sample_stats(
         sample_stats = dict_to_dataset(
             sample_stats_dict,
             attrs=sample_settings_dict,
-            library=pymc,
+            inference_library=pymc,
+            sample_dims=[],
         )
 
         ikwargs: dict[str, Any] = {"model": model}
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
         idata = to_inference_data(trace, **ikwargs)
-        idata = InferenceData(**idata, sample_stats=sample_stats)  # type: ignore[arg-type]
+        idata = from_dict(idata)
 
     return sample_stats, idata
 

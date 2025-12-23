@@ -35,7 +35,7 @@ of the topics below refer to that specific library
 * Plotting e.g. Trace plots, rank plots, posterior plots
 * MCMC sampling diagnostics e.g. Rhat, Effective Sample Size.
 * Model comparison, particularly efficient leave-one-out cross-validation approximation
-* Inference Data structure
+* Data structures for Bayesian inference data storage and manipulation
 
 
 # Modules

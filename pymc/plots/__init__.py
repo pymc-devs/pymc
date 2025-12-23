@@ -21,13 +21,12 @@ See https://arviz-devs.github.io/arviz/ for details on plots.
 
 import sys
 
-import arviz as az
+import arviz_plots as azp
 
 # Makes this module as identical to arviz.plots as possible
-for attr in az.plots.__all__:
-    obj = getattr(az.plots, attr)
-    if not attr.startswith("__"):
-        setattr(sys.modules[__name__], attr, obj)
+azp_exports = [attr for attr in dir(azp) if not attr.startswith("_")]
 
+for attr in azp_exports:
+    setattr(sys.modules[__name__], attr, getattr(azp, attr))
 
-__all__ = az.plots.__all__
+__all__ = azp_exports

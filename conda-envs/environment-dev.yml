@@ -5,7 +5,7 @@ channels:
 - defaults
 dependencies:
 # Base dependencies
-- arviz>=0.13.0
+- arviz>=1.0.0rc0
 - blas
 - cachetools>=4.2.1
 - cloudpickle
@@ -19,6 +19,7 @@ dependencies:
 - typing-extensions>=3.7.4
 - threadpoolctl>=3.1.0
 - zarr>=2.5.0,<3
+- netCDF4
 # Extra dependencies for dev, testing and docs build
 - ipython>=7.16
 - jax

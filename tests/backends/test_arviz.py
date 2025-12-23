@@ -19,15 +19,14 @@ import pytensor.tensor as pt
 import pytest
 import xarray
 
-from arviz import InferenceData
-from arviz.tests.helpers import check_multiple_attrs
+from arviz_base.testing import check_multiple_attrs
 from numpy import ma
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 
 import pymc as pm
 
 from pymc.backends.arviz import (
-    InferenceDataConverter,
+    DataTreeConverter,
     dataset_to_point_list,
     predictions_to_inference_data,
     to_inference_data,
@@ -110,7 +109,7 @@ class TestDataPyMC:
 
     def get_predictions_inference_data(
         self, data, eight_schools_params, inplace
-    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
+    ) -> tuple[xarray.DataTree, dict[str, np.ndarray]]:
         with data.model:
             prior = pm.sample_prior_predictive(return_inferencedata=False)
             posterior_predictive = pm.sample_posterior_predictive(
@@ -123,17 +122,17 @@ class TestDataPyMC:
                 coords={"school": np.arange(eight_schools_params["J"])},
                 dims={"theta": ["school"], "eta": ["school"]},
             )
-            assert isinstance(idata, InferenceData)
+            assert isinstance(idata, xarray.DataTree)
             extended = predictions_to_inference_data(
                 posterior_predictive, idata_orig=idata, inplace=inplace
             )
-            assert isinstance(extended, InferenceData)
+            assert isinstance(extended, xarray.DataTree)
             assert (id(idata) == id(extended)) == inplace
         return (extended, posterior_predictive)
 
     def make_predictions_inference_data(
         self, data, eight_schools_params
-    ) -> tuple[InferenceData, dict[str, np.ndarray]]:
+    ) -> tuple[xarray.DataTree, dict[str, np.ndarray]]:
         with data.model:
             posterior_predictive = pm.sample_posterior_predictive(
                 data.obj, return_inferencedata=False
@@ -144,7 +143,7 @@ class TestDataPyMC:
                 coords={"school": np.arange(eight_schools_params["J"])},
                 dims={"theta": ["school"], "eta": ["school"]},
             )
-            assert isinstance(idata, InferenceData)
+            assert isinstance(idata, xarray.DataTree)
         return idata, posterior_predictive
 
     def test_to_idata(self, data, eight_schools_params, chains, draws):
@@ -166,7 +165,7 @@ class TestDataPyMC:
         assert inference_data.log_likelihood["obs"].shape == (chains, draws, *obs.shape)
 
     def test_predictions_to_idata(self, data, eight_schools_params):
-        "Test that we can add predictions to a previously-existing InferenceData."
+        "Test that we can add predictions to a previously-existing xarray.DataTree."
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp"],
@@ -236,7 +235,7 @@ class TestDataPyMC:
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
             thinned_idata = idata.sel(draw=slice(None, None, thin_by))
-            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+            idata.update(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp", "~log_likelihood"],
@@ -639,7 +638,12 @@ class TestDataPyMC:
             assert len(data[k].shape) == len(dims[k])
 
         ds = pm.backends.arviz.dict_to_dataset(
-            data=data, library=pm, coords=coords, dims=dims, default_dims=[], index_origin=0
+            data=data,
+            inference_library=pm,
+            coords=coords,
+            dims=dims,
+            sample_dims=[],
+            index_origin=0,
         )
         for dname, cvals in coords.items():
             np.testing.assert_array_equal(ds[dname].values, cvals)
@@ -661,14 +665,14 @@ class TestDataPyMC:
             )
             # The converter must convert coord values them to numpy arrays
             # because tuples as coordinate values causes problems with xarray.
-            converter = InferenceDataConverter(trace=mtrace)
+            converter = DataTreeConverter(trace=mtrace)
             assert isinstance(converter.coords["city"], np.ndarray)
             converter.to_inference_data()
 
             # We're not automatically converting things other than tuple,
-            # so advanced use cases remain supported at the InferenceData level.
+            # so advanced use cases remain supported at the DataTree level.
             # They just can't be used in the model construction already.
-            converter = InferenceDataConverter(
+            converter = DataTreeConverter(
                 trace=mtrace,
                 coords={
                     "city": pd.MultiIndex.from_tuples(
@@ -862,11 +866,13 @@ def test_incompatible_coordinate_lengths():
                 "Incompatible coordinate length of 3 for dimension 'a' of variable 'y'"
             ),
         ):
-            prior = pm.sample_prior_predictive(draws=1).prior.squeeze(("chain", "draw"))
+            prior = (
+                pm.sample_prior_predictive(draws=1).prior.to_dataset().squeeze(("chain", "draw"))
+            )
         assert prior.x.dims == prior.y.dims == ("a",)
         assert prior.x.shape == prior.y.shape == (3,)
         assert np.isnan(prior.y.values[-1])
-        assert list(prior.coords["a"]) == [0, 1, 2]
+        assert list(prior.coords["a"]) == [-1, -2, -3]
 
         pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
         with pytest.raises(ValueError):

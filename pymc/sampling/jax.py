@@ -27,7 +27,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytensor.tensor as pt
 
-from arviz.data.base import make_attrs
+from arviz_base import make_attrs
 from jax.lax import scan
 from numpy.typing import ArrayLike
 from pytensor.compile import SharedVariable, mode
@@ -38,6 +38,7 @@ from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.type import RandomType
+from xarray import DataTree
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import (
@@ -525,7 +526,7 @@ def sample_jax_nuts(
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
-) -> az.InferenceData:
+) -> DataTree:
     """
     Draw samples from the posterior using a jax NUTS method.
 
@@ -588,8 +589,8 @@ def sample_jax_nuts(
 
     Returns
     -------
-    InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together
+    DataTree
+        ``DataTree`` object that contains the posterior samples, together
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """

@@ -159,9 +159,11 @@ def test_do_posterior_predictive():
     # Dummy posterior
     idata_m = az.from_dict(
         {
-            "x": np.full((2, 500), 25),
-            "y": np.full((2, 500), np.nan),
-            "z": np.full((2, 500), np.nan),
+            "posterior": {
+                "x": np.full((2, 500), 25),
+                "y": np.full((2, 500), np.nan),
+                "z": np.full((2, 500), np.nan),
+            }
         }
     )
 
@@ -293,7 +295,9 @@ def test_do_sample_posterior_predictive(make_interventions_shared):
         b = pm.Deterministic("b", a * 2)
         c = pm.Normal("c", b / 2)
 
-    idata = az.from_dict({"a": [[1.0]], "b": [[2.0]], "c": [[1.0]]})
+    idata = az.from_dict(
+        {"posterior": {"a": np.array([[1.0]]), "b": np.array([[2.0]]), "c": np.array([[1.0]])}}
+    )
 
     with do(model, {a: 1000}, make_interventions_shared=make_interventions_shared):
         pp = sample_posterior_predictive(idata, var_names=["c"], predictions=True).predictions

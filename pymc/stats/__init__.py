@@ -21,13 +21,13 @@ See https://arviz-devs.github.io/arviz/ for details.
 
 import sys
 
-import arviz as az
+import arviz_stats as azs
 
-for attr in az.stats.__all__:
-    obj = getattr(az.stats, attr)
-    if not attr.startswith("__"):
-        setattr(sys.modules[__name__], attr, obj)
+azs_exports = [attr for attr in dir(azs) if not attr.startswith("_")]
+
+for attr in azs_exports:
+    setattr(sys.modules[__name__], attr, getattr(azs, attr))
 
 from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 
-__all__ = ("compute_log_likelihood", "compute_log_prior", *az.stats.__all__)
+__all__ = ("compute_log_likelihood", "compute_log_prior", *azs_exports)

@@ -20,7 +20,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
-from arviz.data.inference_data import InferenceData
+from xarray import DataTree
 
 import pymc as pm
 
@@ -236,7 +236,7 @@ class TestSMC:
                     progressbar=not (chains > 1 and _IS_WINDOWS),
                 )
 
-        assert isinstance(idata, InferenceData)
+        assert isinstance(idata, DataTree)
         assert "sample_stats" in idata
         assert idata.posterior.sizes["chain"] == chains
         assert idata.posterior.sizes["draw"] == draws
@@ -288,7 +288,7 @@ class TestMHKernel:
             idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH, progressbar=not _IS_WINDOWS)
         assert_random_state_equal(initial_rng_state, np.random.get_state())
 
-        post = idata.posterior.stack(sample=("chain", "draw"))
+        post = idata.posterior.to_dataset().stack(sample=("chain", "draw"))
         assert np.abs(post["mu"].mean() - 10) < 0.1
         assert np.abs(post["sigma"].mean() - 0.5) < 0.05
 

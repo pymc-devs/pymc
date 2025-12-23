@@ -227,8 +227,8 @@ class TestNested:
         with pm.Model("scope") as model:
             b = pm.Normal("var")
             trace = pm.sample(100, tune=0)
-        az.to_netcdf(trace, tmp_path / "trace.nc")
-        trace1 = az.from_netcdf(tmp_path / "trace.nc")
+        trace.to_netcdf(tmp_path / "trace.nc")
+        trace1 = az.convert_to_datatree(str(tmp_path / "trace.nc"))
         assert "scope::var" in trace1.posterior
 
     def test_bad_name(self):
@@ -1430,8 +1430,10 @@ class TestImputationMissingData:
             np.testing.assert_array_equal(trace["theta2"][0][~obs2.mask], obs1[~obs2.mask])
 
             pp_idata = pm.sample_posterior_predictive(trace, random_seed=rng)
-            pp_trace = pp_idata.posterior_predictive.stack(sample=["chain", "draw"]).transpose(
-                "sample", ...
+            pp_trace = (
+                pp_idata.posterior_predictive.to_dataset()
+                .stack(sample=["chain", "draw"])
+                .transpose("sample", ...)
             )
             assert set(pp_trace.keys()) == {
                 "theta1",

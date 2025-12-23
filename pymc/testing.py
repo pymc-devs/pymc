@@ -22,7 +22,6 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
-from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
 from numpy.typing import NDArray
@@ -1032,7 +1031,7 @@ def mock_sample(
     draws: int = 10,
     sample_stats: dict[str, SampleStatsCreator] | None = None,
     **kwargs,
-) -> InferenceData:
+) -> xr.DataTree:
     """Mock :func:`pymc.sample` with :func:`pymc.sample_prior_predictive`.
 
     Useful for testing models that use pm.sample without running MCMC sampling.
@@ -1098,33 +1097,34 @@ def mock_sample(
     draws = kwargs.get("draws", draws)
     n_chains = kwargs.get("chains", 1)
     var_names = kwargs.get("var_names", None)
-    idata: InferenceData = pm.sample_prior_predictive(
+    idata: xr.DataTree = pm.sample_prior_predictive(
         model=model,
         random_seed=random_seed,
         draws=draws,
         var_names=var_names,
     )
 
-    idata.add_groups(
-        posterior=(
-            idata["prior"]
-            .isel(chain=0)
-            .expand_dims({"chain": range(n_chains)})
-            .transpose("chain", "draw", ...)
-        )
+    posterior_ds = (
+        idata["prior"]
+        .to_dataset()
+        .isel(chain=0)
+        .expand_dims({"chain": range(n_chains)})
+        .transpose("chain", "draw", ...)
     )
+    idata.update({"posterior": xr.DataTree(posterior_ds)})
     del idata["prior"]
     if "prior_predictive" in idata:
         del idata["prior_predictive"]
 
     if sample_stats is not None:
-        sizes = idata["posterior"].sizes
+        posterior_ds = idata["posterior"].to_dataset()
+        sizes = posterior_ds.sizes
         size = (sizes["chain"], sizes["draw"])
         sample_stats_ds = xr.Dataset(
             {name: (("chain", "draw"), creator(size)) for name, creator in sample_stats.items()},
-            coords=idata["posterior"].coords,
+            coords=posterior_ds.coords,
         )
-        idata.add_groups(sample_stats=sample_stats_ds)
+        idata.update({"sample_stats": xr.DataTree(sample_stats_ds)})
 
     return idata
 
