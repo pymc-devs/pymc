@@ -157,15 +157,17 @@ def test_unset_repr(capsys):
 
 def test_drop_warning_stat():
     idata = arviz.from_dict(
-        sample_stats={
-            "a": np.ones((2, 5, 4)),
-            "warning": np.ones((2, 5, 3), dtype=object),
+        {
+            "sample_stats": {
+                "a": np.ones((2, 5, 4)),
+                "warning": np.ones((2, 5, 3), dtype=object),
+            },
+            "warmup_sample_stats": {
+                "a": np.ones((2, 5, 4)),
+                "warning": np.ones((2, 5, 3), dtype=object),
+            },
         },
-        warmup_sample_stats={
-            "a": np.ones((2, 5, 4)),
-            "warning": np.ones((2, 5, 3), dtype=object),
-        },
-        attrs={"version": "0.1.2"},
+        attrs={"/": {"version": "0.1.2"}},
         coords={
             "adim": [0, 1, None, 3],
             "warning_dim_0": list("ABC"),
@@ -180,7 +182,7 @@ def test_drop_warning_stat():
     assert new.attrs.get("version") == "0.1.2"
 
     for gname in ["sample_stats", "warmup_sample_stats"]:
-        ss = new.get(gname)
+        ss = new[gname].ds
         assert isinstance(ss, xarray.Dataset), gname
         assert "a" in ss
         assert "warning" not in ss
