@@ -43,6 +43,8 @@ import scipy.special
 
 from pytensor.graph.basic import equal_computations
 
+import pymc as pm
+
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
@@ -219,6 +221,7 @@ def test_exp_transform_rv():
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
     )
+
     np.testing.assert_almost_equal(
         logcdf_fn(y_val),
         sp.stats.lognorm(s=1).logcdf(y_val),
@@ -227,6 +230,57 @@ def test_exp_transform_rv():
         icdf_fn(q_val),
         sp.stats.lognorm(s=1).ppf(q_val),
     )
+
+
+def test_leaky_relu_switch_logp_scalar():
+    a = 0.5
+    x = pm.Normal.dist(mu=0, sigma=1)
+    y = pm.math.switch(x > 0, x, a * x)
+
+    v_pos = 1.2
+    np.testing.assert_allclose(
+        pm.logp(y, v_pos, warn_rvs=False).eval(),
+        pm.logp(x, v_pos, warn_rvs=False).eval(),
+    )
+
+    v_neg = -2.0
+    np.testing.assert_allclose(
+        pm.logp(y, v_neg, warn_rvs=False).eval(),
+        pm.logp(x, v_neg / a, warn_rvs=False).eval() - np.log(a),
+    )
+
+    # boundary point (measure-zero for continuous RVs): should still produce a finite logp
+    assert np.isfinite(pm.logp(y, 0.0, warn_rvs=False).eval())
+
+
+def test_leaky_relu_switch_logp_vectorized():
+    a = 0.5
+    x = pm.Normal.dist(mu=0, sigma=1, size=(3,))
+    y = pm.math.switch(x > 0, x, a * x)
+
+    v = np.array([-2.0, 0.0, 1.5])
+    expected = pm.logp(x, np.where(v > 0, v, v / a), warn_rvs=False).eval() + np.where(
+        v > 0, 0.0, -np.log(a)
+    )
+    np.testing.assert_allclose(pm.logp(y, v, warn_rvs=False).eval(), expected)
+
+
+def test_leaky_relu_switch_logp_symbolic_slope_checks_positive():
+    a = pt.scalar("a")
+    x = pm.Normal.dist(mu=0, sigma=1)
+    y = pm.math.switch(x > 0, x, a * x)
+
+    # positive slope passes
+    res = pm.logp(y, -1.0, warn_rvs=False).eval({a: 0.5})
+    expected = pm.logp(x, -1.0 / 0.5, warn_rvs=False).eval() - np.log(0.5)
+    np.testing.assert_allclose(res, expected)
+
+    # non pos slope raises
+    with pytest.raises(ParameterValueError, match="leaky_relu slope > 0"):
+        pm.logp(y, -1.0, warn_rvs=False).eval({a: -0.5})
+
+    with pytest.raises(ParameterValueError, match="leaky_relu slope > 0"):
+        pm.logp(y, -1.0, warn_rvs=False).eval({a: 0.0})
 
 
 def test_log_transform_rv():
