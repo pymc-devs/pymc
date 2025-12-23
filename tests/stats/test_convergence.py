@@ -30,8 +30,10 @@ from pymc.stats import convergence
 )
 def test_warn_divergences(diverging, expected_phrase):
     idata = arviz.from_dict(
-        sample_stats={
-            "diverging": np.array([diverging, [0, 0, 0, 0]]).astype(bool),
+        {
+            "sample_stats": {
+                "diverging": np.array([diverging, [0, 0, 0, 0]]).astype(bool),
+            }
         }
     )
     warns = convergence.warn_divergences(idata)
@@ -41,8 +43,10 @@ def test_warn_divergences(diverging, expected_phrase):
 
 def test_warn_treedepth():
     idata = arviz.from_dict(
-        sample_stats={
-            "reached_max_treedepth": np.array([[0, 0, 0], [0, 1, 0]]).astype(bool),
+        {
+            "sample_stats": {
+                "reached_max_treedepth": np.array([[0, 0, 0], [0, 1, 0]]).astype(bool),
+            }
         }
     )
     warns = convergence.warn_treedepth(idata)
@@ -56,8 +60,10 @@ def test_warn_treedepth_multiple_samplers():
     max_treedepth[0, 0, 0] = True
     max_treedepth[2, 1, 1] = True
     idata = arviz.from_dict(
-        sample_stats={
-            "reached_max_treedepth": max_treedepth,
+        {
+            "sample_stats": {
+                "reached_max_treedepth": max_treedepth,
+            }
         }
     )
     warns = convergence.warn_treedepth(idata)
