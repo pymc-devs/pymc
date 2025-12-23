@@ -293,13 +293,11 @@ class TestMcBackendSampling:
                 return_inferencedata=False,
             )
         assert isinstance(mtrace, pm.backends.base.MultiTrace)
-        tune = mtrace._straces[0].get_sampler_stats("tune")
-        assert isinstance(tune, np.ndarray)
+        # warmup is tracked by the sampling driver
         if discard_warmup:
-            assert tune.shape == (7, 3)
+            assert len(mtrace) == 7
         else:
-            assert tune.shape == (12, 3)
-        pass
+            assert len(mtrace) == 12
 
     @pytest.mark.parametrize("cores", [1, 3])
     def test_return_inferencedata(self, simple_model, cores):

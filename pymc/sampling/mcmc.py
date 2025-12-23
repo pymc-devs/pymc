@@ -1043,18 +1043,10 @@ def _sample_return(
     else:
         traces, length = _choose_chains(traces, 0)
     mtrace = MultiTrace(traces)[:length]
-    # count the number of tune/draw iterations that happened
-    # ideally via the "tune" statistic, but not all samplers record it!
-    if "tune" in mtrace.stat_names:
-        # Get the tune stat directly from chain 0, sampler 0
-        stat = mtrace._straces[0].get_sampler_stats("tune", sampler_idx=0)
-        stat = tuple(stat)
-        n_tune = stat.count(True)
-        n_draws = stat.count(False)
-    else:
-        # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
-        n_tune = min(tune, len(mtrace))
-        n_draws = max(0, len(mtrace) - n_tune)
+    # Count the number of tune/draw iterations that happened.
+    # The warmup/draw boundary is owned by the sampling driver.
+    n_tune = min(tune, len(mtrace))
+    n_draws = max(0, len(mtrace) - n_tune)
 
     if discard_tuned_samples:
         mtrace = mtrace[n_tune:]
