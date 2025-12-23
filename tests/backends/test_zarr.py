@@ -20,8 +20,6 @@ import pytest
 import xarray as xr
 import zarr
 
-from arviz import InferenceData
-
 import pymc as pm
 
 from pymc.backends.zarr import ZarrTrace
@@ -436,7 +434,7 @@ def test_sample(
         assert isinstance(out_trace, ZarrTrace)
         assert out_trace.root.store is trace.root.store
     else:
-        assert isinstance(out_trace, InferenceData)
+        assert isinstance(out_trace, xr.DataTree)
 
     expected_groups = {"posterior", "constant_data", "observed_data", "sample_stats"}
     if include_transformed:

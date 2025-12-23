@@ -22,7 +22,6 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
-from arviz import InferenceData
 from numpy import random as nr
 from numpy import testing as npt
 from numpy.typing import NDArray
@@ -1032,7 +1031,7 @@ def mock_sample(
     draws: int = 10,
     sample_stats: dict[str, SampleStatsCreator] | None = None,
     **kwargs,
-) -> InferenceData:
+) -> xr.DataTree:
     """Mock :func:`pymc.sample` with :func:`pymc.sample_prior_predictive`.
 
     Useful for testing models that use pm.sample without running MCMC sampling.
@@ -1098,7 +1097,7 @@ def mock_sample(
     draws = kwargs.get("draws", draws)
     n_chains = kwargs.get("chains", 1)
     var_names = kwargs.get("var_names", None)
-    idata: InferenceData = pm.sample_prior_predictive(
+    idata: xr.DataTree = pm.sample_prior_predictive(
         model=model,
         random_seed=random_seed,
         draws=draws,

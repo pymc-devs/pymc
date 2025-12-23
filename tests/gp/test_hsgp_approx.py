@@ -215,8 +215,8 @@ class TestHSGP(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
-        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
-        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+        samples1 = az.extract(idata.prior["f1"]).values.T
+        samples2 = az.extract(idata.prior["f2"]).values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
@@ -242,8 +242,8 @@ class TestHSGP(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(draws=1000)
 
-        samples1 = az.extract(idata.prior["f"])["f"].values.T
-        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+        samples1 = az.extract(idata.prior["f"]).values.T
+        samples2 = az.extract(idata.prior["fc"]).values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
@@ -302,8 +302,8 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
 
-        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
-        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+        samples1 = az.extract(idata.prior["f1"]).values.T
+        samples2 = az.extract(idata.prior["f2"]).values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
@@ -323,8 +323,8 @@ class TestHSGPPeriodic(_BaseFixtures):
 
             idata = pm.sample_prior_predictive(draws=1000)
 
-        samples1 = az.extract(idata.prior["f"])["f"].values.T
-        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+        samples1 = az.extract(idata.prior["f"]).values.T
+        samples2 = az.extract(idata.prior["fc"]).values.T
 
         h0, mmd, critical_value, reject = two_sample_test(
             samples1, samples2, n_sims=500, alpha=0.01
