@@ -36,7 +36,6 @@ from pytensor.tensor.random.basic import (
     cauchy,
     exponential,
     gumbel,
-    halfcauchy,
     halfnormal,
     invgamma,
     laplace,
@@ -2218,6 +2217,23 @@ class Cauchy(Continuous):
         )
 
 
+class HalfCauchyRV(SymbolicRandomVariable):
+    name = "halfcauchy"
+    extended_signature = "[rng],[size],()->[rng],()"
+    _print_name = ("HalfCauchy", "\\operatorname{HalfCauchy}")
+
+    @classmethod
+    def rv_op(cls, beta, *, size=None, rng=None):
+        bt = pt.as_tensor(beta)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        next_rng, cauchy_draws = cauchy(loc=0, scale=beta, size=size, rng=rng).owner.outputs
+        draws = pt.abs(cauchy_draws)
+
+        return cls(inputs=[rng, size, beta], outputs=[next_rng, draws])(rng, size, beta)
+
+
 class HalfCauchy(PositiveContinuous):
     r"""
     Half-Cauchy distribution.
@@ -2258,32 +2274,33 @@ class HalfCauchy(PositiveContinuous):
         Scale parameter (beta > 0).
     """
 
-    rv_op = halfcauchy
+    rv_op = HalfCauchyRV.rv_op
+    rv_type = HalfCauchyRV
 
     @classmethod
     def dist(cls, beta, *args, **kwargs):
         beta = pt.as_tensor_variable(beta)
-        return super().dist([0.0, beta], **kwargs)
+        return super().dist([beta], **kwargs)
 
-    def support_point(rv, size, loc, beta):
+    def support_point(rv, size, beta):
         if not rv_size_is_none(size):
             beta = pt.full(size, beta)
         return beta
 
-    def logp(value, loc, beta):
-        res = pt.log(2) + _logprob_helper(Cauchy.dist(loc, beta), value)
-        res = pt.switch(pt.ge(value, loc), res, -np.inf)
+    def logp(value, beta):
+        res = pt.log(2) + _logprob_helper(Cauchy.dist(alpha=0, beta=beta), value)
+        res = pt.switch(value >= 0, res, -np.inf)
         return check_parameters(
             res,
             beta > 0,
             msg="beta > 0",
         )
 
-    def logcdf(value, loc, beta):
+    def logcdf(value, beta):
         res = pt.switch(
-            pt.lt(value, loc),
+            value < 0,
             -np.inf,
-            pt.log(2 * pt.arctan((value - loc) / beta) / np.pi),
+            pt.log(2 * pt.arctan(value / beta) / np.pi),
         )
 
         return check_parameters(
@@ -2292,8 +2309,8 @@ class HalfCauchy(PositiveContinuous):
             msg="beta > 0",
         )
 
-    def icdf(value, loc, beta):
-        res = loc + beta * pt.tan(np.pi * (value) / 2.0)
+    def icdf(value, beta):
+        res = beta * pt.tan(np.pi * (value) / 2.0)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -2610,7 +2627,7 @@ class WeibullBetaRV(SymbolicRandomVariable):
     _print_name = ("Weibull", "\\operatorname{Weibull}")
 
     @classmethod
-    def rv_op(cls, alpha, beta, *, rng=None, size=None) -> np.ndarray:
+    def rv_op(cls, alpha, beta, *, rng=None, size=None):
         alpha = pt.as_tensor(alpha)
         beta = pt.as_tensor(beta)
         rng = normalize_rng_param(rng)
@@ -2737,7 +2754,7 @@ class HalfStudentTRV(SymbolicRandomVariable):
     _print_name = ("HalfStudentT", "\\operatorname{HalfStudentT}")
 
     @classmethod
-    def rv_op(cls, nu, sigma, *, size=None, rng=None) -> np.ndarray:
+    def rv_op(cls, nu, sigma, *, size=None, rng=None):
         nu = pt.as_tensor(nu)
         sigma = pt.as_tensor(sigma)
         rng = normalize_rng_param(rng)
