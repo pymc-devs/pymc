@@ -43,7 +43,6 @@ pymc/model/fgraph.py
 pymc/model/transform/conditioning.py
 pymc/pytensorf.py
 pymc/sampling/jax.py
-pymc/sampling/mcmc.py
 """
 
 

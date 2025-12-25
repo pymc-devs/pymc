@@ -866,7 +866,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
 class DEMetropolisState(StepMethodState):
     scaling: np.ndarray
     lamb: float
-    tune: str | None
+    tune: bool
+    tune_target: str | None
     tune_interval: int
     steps_until_tune: int
     accepted: int
@@ -968,7 +969,8 @@ class DEMetropolis(PopulationArrayStepShared):
         self.lamb = float(lamb)
         if tune not in {None, "scaling", "lambda"}:
             raise ValueError('The parameter "tune" must be one of {None, scaling, lambda}')
-        self.tune = tune
+        self.tune = True
+        self.tune_target = tune
         self.tune_interval = tune_interval
         self.steps_until_tune = tune_interval
         self.accepted = 0
@@ -984,9 +986,9 @@ class DEMetropolis(PopulationArrayStepShared):
         q0d = q0.data
 
         if not self.steps_until_tune and self.tune:
-            if self.tune == "scaling":
+            if self.tune_target == "scaling":
                 self.scaling = tune(self.scaling, self.accepted / float(self.tune_interval))
-            elif self.tune == "lambda":
+            elif self.tune_target == "lambda":
                 self.lamb = tune(self.lamb, self.accepted / float(self.tune_interval))
             # Reset counter
             self.steps_until_tune = self.tune_interval
