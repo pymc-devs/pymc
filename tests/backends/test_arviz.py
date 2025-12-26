@@ -639,7 +639,12 @@ class TestDataPyMC:
             assert len(data[k].shape) == len(dims[k])
 
         ds = pm.backends.arviz.dict_to_dataset(
-            data=data, library=pm, coords=coords, dims=dims, default_dims=[], index_origin=0
+            data=data,
+            inference_library=pm,
+            coords=coords,
+            dims=dims,
+            sample_dims=[],
+            index_origin=0,
         )
         for dname, cvals in coords.items():
             np.testing.assert_array_equal(ds[dname].values, cvals)
