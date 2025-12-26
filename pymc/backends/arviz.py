@@ -32,7 +32,7 @@ from arviz import InferenceData, concat
 from arviz.data.base import CoordSpec, DimSpec
 from arviz_base import dict_to_dataset
 from arviz_base.base import requires
-from arviz_base.rcparams import RcParams
+from arviz_base.rcparams import rcParams
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -214,7 +214,7 @@ class InferenceDataConverter:
         save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
-        self.save_warmup = RcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
         self.include_transformed = include_transformed
         self.trace = trace
 
@@ -444,7 +444,9 @@ class InferenceDataConverter:
         scalars = [var_name for var_name, value in constant_data.items() if np.ndim(value) == 0]
         for s in scalars:
             s_dim_0_name = f"{s}_dim_0"
-            xarray_dataset = xarray_dataset.squeeze(s_dim_0_name, drop=True)
+            # only remove the scalar if it exists in dims, otherwise you get KeyError
+            if s_dim_0_name in xarray_dataset.dims:
+                xarray_dataset = xarray_dataset.squeeze(s_dim_0_name, drop=True)
 
         return xarray_dataset
 
