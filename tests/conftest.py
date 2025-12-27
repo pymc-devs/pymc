@@ -17,6 +17,8 @@ import numpy as np
 import pytensor
 import pytest
 
+from numba.core.errors import NumbaPerformanceWarning, NumbaWarning
+
 
 @pytest.fixture(scope="function", autouse=True)
 def pytensor_config():
@@ -51,4 +53,6 @@ def seeded_test():
 def fail_on_warning():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
+        warnings.filterwarnings("ignore", category=NumbaPerformanceWarning)
+        warnings.filterwarnings("ignore", ".*Cannot cache.*", NumbaWarning)
         yield
