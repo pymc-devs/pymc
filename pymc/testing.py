@@ -27,10 +27,11 @@ from numpy import random as nr
 from numpy import testing as npt
 from numpy.typing import NDArray
 from pytensor.compile import SharedVariable
-from pytensor.compile.mode import Mode
+from pytensor.compile.mode import Mode, get_default_mode
 from pytensor.graph.basic import Constant, Variable, equal_computations
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.traversal import graph_inputs
+from pytensor.link.numba import NumbaLinker
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
@@ -947,6 +948,15 @@ class BaseTestDistributionRandom:
     def check_pymc_draws_match_reference(self):
         # need to re-instantiate it to make sure that the order of drawings match the reference distribution one
         # self._instantiate_pymc_rv()
+        npt.assert_array_almost_equal(
+            self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
+        )
+
+    def check_pymc_draws_match_reference_not_numba(self):
+        # This calls `check_pymc_draws_match_reference` but only if the default linker is NOT numba.
+        # It's used when the draws aren't expected to match in that backend.
+        if isinstance(get_default_mode().linker, NumbaLinker):
+            return
         npt.assert_array_almost_equal(
             self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )

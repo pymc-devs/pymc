@@ -21,6 +21,7 @@ import pytensor
 import pytensor.tensor as pt
 import scipy
 
+from pytensor import config
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
@@ -544,7 +545,8 @@ class Dirichlet(SimplexContinuous):
 
     @classmethod
     def dist(cls, a, **kwargs):
-        a = pt.as_tensor_variable(a)
+        # dtype="floatX" is a temporary work-around for numba impl of dirichlet with discrete alpha
+        a = pt.as_tensor_variable(a, dtype=config.floatX)
         # mean = a / pt.sum(a)
         # mode = pt.switch(pt.all(a > 1), (a - 1) / pt.sum(a - 1), np.nan)
 
