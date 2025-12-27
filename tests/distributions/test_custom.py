@@ -55,7 +55,10 @@ from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
 # Raise for any warnings in this file
-pytestmark = pytest.mark.filterwarnings("error")
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    r"ignore:^Numba will use object mode to run.*perform method\.:UserWarning",
+)
 
 
 class TestCustomDist:

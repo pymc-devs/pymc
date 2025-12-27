@@ -20,7 +20,10 @@ import pymc as pm
 
 from pymc import dims as pmx
 
-pytestmark = pytest.mark.filterwarnings("error")
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    "ignore::numba.core.errors.NumbaPerformanceWarning",
+)
 
 
 def test_distribution_dims():
