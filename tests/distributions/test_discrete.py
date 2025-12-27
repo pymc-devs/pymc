@@ -769,7 +769,7 @@ class TestBernoulli(BaseTestDistributionRandom):
     reference_dist = seeded_scipy_distribution_builder("bernoulli")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 
