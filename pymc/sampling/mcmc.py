@@ -33,8 +33,7 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import InferenceData, dict_to_dataset
-from arviz.data.base import make_attrs
+from arviz import InferenceData
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
@@ -43,11 +42,6 @@ from typing_extensions import Protocol
 import pymc as pm
 
 from pymc.backends import RunType, TraceOrBackend, init_traces
-from pymc.backends.arviz import (
-    coords_and_dims_for_inferencedata,
-    find_constants,
-    find_observations,
-)
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
@@ -55,6 +49,7 @@ from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import ProgressBarManager, ProgressBarType, default_progress_theme
+from pymc.sampling.external.base import ExternalSampler
 from pymc.sampling.parallel import Draw, _cpu_count
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -238,17 +233,18 @@ def assign_step_methods(
                     )
             assigned_vars = assigned_vars.union(set(step.vars))
 
-    # Use competence classmethods to select step methods for remaining
-    # variables
+    # Use competence classmethods to select step methods for remaining variables
     methods_list: list[type[BlockedStep]] = list(methods or pm.STEP_METHODS)
     selected_steps: dict[type[BlockedStep], list] = {}
-    model_logp = model.logp()
 
+    model_logp = None
     for var in model.value_vars:
         if var not in assigned_vars:
             # determine if a gradient can be computed
             has_gradient = getattr(var, "dtype") not in discrete_types
             if has_gradient:
+                if model_logp is None:
+                    model_logp = model.logp()
                 try:
                     tg.grad(model_logp, var)  # type: ignore[arg-type]
                 except (NotImplementedError, tg.NullTypeGradError):
@@ -258,9 +254,7 @@ def assign_step_methods(
             rv_var = model.values_to_rvs[var]
             selected = max(
                 methods_list,
-                key=lambda method, var=rv_var, has_gradient=has_gradient: method._competence(  # type: ignore[misc]
-                    var, has_gradient
-                ),
+                key=lambda method: method._competence(rv_var, has_gradient),
             )
             selected_steps.setdefault(selected, []).append(var)
 
@@ -290,127 +284,6 @@ def all_continuous(vars):
         return True
 
 
-def _sample_external_nuts(
-    sampler: Literal["nutpie", "numpyro", "blackjax"],
-    draws: int,
-    tune: int,
-    chains: int,
-    target_accept: float,
-    random_seed: RandomState | None,
-    initvals: StartDict | Sequence[StartDict | None] | None,
-    model: Model,
-    var_names: Sequence[str] | None,
-    progressbar: bool,
-    idata_kwargs: dict | None,
-    compute_convergence_checks: bool,
-    nuts_sampler_kwargs: dict | None,
-    **kwargs,
-):
-    if nuts_sampler_kwargs is None:
-        nuts_sampler_kwargs = {}
-
-    if sampler == "nutpie":
-        try:
-            import nutpie
-        except ImportError as err:
-            raise ImportError(
-                "nutpie not found. Install it with conda install -c conda-forge nutpie"
-            ) from err
-
-        if initvals is not None:
-            warnings.warn(
-                "`initvals` are currently not passed to nutpie sampler. "
-                "Use `init_mean` kwarg following nutpie specification instead.",
-                UserWarning,
-            )
-
-        if idata_kwargs is not None:
-            warnings.warn(
-                "`idata_kwargs` are currently ignored by the nutpie sampler",
-                UserWarning,
-            )
-
-        compile_kwargs = {}
-        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
-        for kwarg in ("backend", "gradient_backend"):
-            if kwarg in nuts_sampler_kwargs:
-                compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
-        compiled_model = nutpie.compile_pymc_model(
-            model,
-            var_names=var_names,
-            **compile_kwargs,
-        )
-        t_start = time.time()
-        idata = nutpie.sample(
-            compiled_model,
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            seed=_get_seeds_per_chain(random_seed, 1)[0],
-            progress_bar=progressbar,
-            **nuts_sampler_kwargs,
-        )
-        t_sample = time.time() - t_start
-        # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
-        # gather observed and constant data as nutpie.sample() has no access to the PyMC model
-        coords, dims = coords_and_dims_for_inferencedata(model)
-        constant_data = dict_to_dataset(
-            find_constants(model),
-            library=pm,
-            coords=coords,
-            dims=dims,
-            default_dims=[],
-        )
-        observed_data = dict_to_dataset(
-            find_observations(model),
-            library=pm,
-            coords=coords,
-            dims=dims,
-            default_dims=[],
-        )
-        attrs = make_attrs(
-            {
-                "sampling_time": t_sample,
-                "tuning_steps": tune,
-            },
-            library=nutpie,
-        )
-        for k, v in attrs.items():
-            idata.posterior.attrs[k] = v
-        idata.add_groups(
-            {"constant_data": constant_data, "observed_data": observed_data},
-            coords=coords,
-            dims=dims,
-        )
-        return idata
-
-    elif sampler in ("numpyro", "blackjax"):
-        import pymc.sampling.jax as pymc_jax
-
-        idata = pymc_jax.sample_jax_nuts(
-            draws=draws,
-            tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            random_seed=random_seed,
-            initvals=initvals,
-            model=model,
-            var_names=var_names,
-            progressbar=progressbar,
-            nuts_sampler=sampler,
-            idata_kwargs=idata_kwargs,
-            compute_convergence_checks=compute_convergence_checks,
-            **nuts_sampler_kwargs,
-        )
-        return idata
-
-    else:
-        raise ValueError(
-            f"Sampler {sampler} not found. Choose one of ['nutpie', 'numpyro', 'blackjax', 'pymc']."
-        )
-
-
 @overload
 def sample(
     draws: int = 1000,
@@ -419,11 +292,11 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -451,11 +324,11 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = default_progress_theme,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -477,17 +350,17 @@ def sample(
 
 
 def sample(
-    draws: int = 1000,
+    draws: int | None = None,
     *,
-    tune: int = 1000,
+    tune: int | None = None,
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
+    step=None,
+    external_sampler: ExternalSampler | None = None,
     progressbar: bool | ProgressBarType = True,
     progressbar_theme: Theme | None = None,
-    step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -534,6 +407,12 @@ def sample(
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
+    step : function or iterable of functions, optional
+        A step function or collection of functions. If there are variables without step methods,
+        step methods for those variables will be assigned automatically. By default the NUTS step
+        method will be used, if appropriate to the model. Not compatible with external_sampler
+    external_sampler: ExternalSampler, optional
+        An external sampler to sample the whole model. Not compatible with step.
     progressbar: bool or ProgressType, optional
             How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
             for one of the following:
@@ -546,16 +425,8 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
-    step : function or iterable of functions
-        A step function or collection of functions. If there are variables without step methods,
-        step methods for those variables will be assigned automatically. By default the NUTS step
-        method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
-        Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
-        This requires the chosen sampler to be installed.
-        All samplers, except "pymc", require the full model to be continuous.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -688,17 +559,6 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
-    if "start" in kwargs:
-        if initvals is not None:
-            raise ValueError("Passing both `start` and `initvals` is not supported.")
-        warnings.warn(
-            "The `start` kwarg was renamed to `initvals` and can now do more. Please check the docstring.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        initvals = kwargs.pop("start")
-    if nuts_sampler_kwargs is None:
-        nuts_sampler_kwargs = {}
     if "target_accept" in kwargs:
         if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
@@ -708,12 +568,6 @@ def sample(
             kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
         else:
             kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
-    if isinstance(trace, list):
-        raise ValueError("Please use `var_names` keyword argument for partial traces.")
-
-    # progressbar might be a string, which is used by the ProgressManager in the pymc samplers. External samplers and
-    # ADVI initialization expect just a bool.
-    progress_bool = bool(progressbar)
 
     model = modelcontext(model)
     if not model.free_RVs:
@@ -749,75 +603,74 @@ def sample(
             f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
         )
 
-    if random_seed == -1:
-        raise ValueError(
-            "Setting random_seed = -1 is not allowed. Pass `None` to not specify a seed."
-        )
-    elif isinstance(random_seed, tuple | list):
-        warnings.warn(
-            "A list or tuple of random_seed no longer specifies the specific random_seed of each chain. "
-            "Use a single seed instead.",
-            UserWarning,
-        )
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
-        warnings.warn(
-            "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
-            " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
-            "`pm.sample(..., return_inferencedata=True)`",
-            UserWarning,
-            stacklevel=2,
-        )
-
-    # small trace warning
-    if draws == 0:
-        msg = "Tuning was enabled throughout the whole trace."
-        _log.warning(msg)
-    elif draws < 100:
-        msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
-        _log.warning(msg)
-
-    provided_steps, selected_steps = assign_step_methods(model, step, methods=pm.STEP_METHODS)
-    exclusive_nuts = (
-        # User provided an instantiated NUTS step, and nothing else is needed
-        (not selected_steps and len(provided_steps) == 1 and isinstance(provided_steps[0], NUTS))
-        or
-        # Only automatically selected NUTS step is needed
-        (
-            not provided_steps
-            and len(selected_steps) == 1
-            and issubclass(next(iter(selected_steps)), NUTS)
-        )
-    )
-
-    if nuts_sampler != "pymc":
-        if not exclusive_nuts:
-            raise ValueError(
-                "Model can not be sampled with NUTS alone. It either has discrete variables or a non-differentiable log-probability."
+    if "nuts_sampler" in kwargs:
+        # Transition backwards-compatibility
+        nuts_sampler = kwargs.pop("nuts_sampler")
+        if nuts_sampler != "pymc":
+            warnings.warn(
+                f"Setting `pm.sample(nuts_sampler='{nuts_sampler}, nuts_sampler_kwargs=...)'` is deprecated.\n"
+                f"Use `pm.sample(external_sampler=pm.external.{nuts_sampler.capitalize()}(**nuts_sampler_kwargs))` instead",
+                FutureWarning,
             )
+            from pymc.sampling import external
 
-        with joined_blas_limiter():
-            return _sample_external_nuts(
-                sampler=nuts_sampler,
-                draws=draws,
-                tune=tune,
-                chains=chains,
-                target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
-                random_seed=random_seed,
-                initvals=initvals,
+            external_sampler = getattr(external, nuts_sampler.capitalize())(
                 model=model,
+                **(nuts_sampler_kwargs or {}),
+                **(kwargs.pop("nuts") or {}),
+            )
+            nuts_sampler_kwargs = None
+
+    if external_sampler is not None:
+        if step is not None:
+            raise ValueError("`step` and `external_sampler` cannot be used together")
+
+        if external_sampler.model is not model:
+            raise ValueError(
+                "External sampler model does not match model detected by sample function"
+            )
+        if nuts_sampler_kwargs:
+            raise ValueError(
+                f"{nuts_sampler_kwargs=} should be passed when constructing external sampler"
+            )
+        if "nuts" in kwargs:
+            kwargs.update(kwargs.pop("nuts"))
+        with joined_blas_limiter():
+            return external_sampler.sample(
+                tune=tune,
+                draws=draws,
+                chains=chains,
+                initvals=initvals,
+                random_seed=random_seed,
+                progressbar=bool(progressbar),
                 var_names=var_names,
-                progressbar=progress_bool,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
-                nuts_sampler_kwargs=nuts_sampler_kwargs,
                 **kwargs,
             )
 
-    if exclusive_nuts and not provided_steps:
-        # Special path for NUTS initialization
+    # PyMC defaults
+    if tune is None:
+        tune = 1000
+    if draws is None:
+        draws = 1000
+    elif 0 < draws < 100:
+        _log.warning(
+            f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
+        )
+
+    provided_steps, selected_steps = assign_step_methods(model, step, methods=pm.STEP_METHODS)
+
+    if (
+        not provided_steps
+        and len(selected_steps) == 1
+        and issubclass(next(iter(selected_steps)), NUTS)
+    ):
+        # Special path for automatically NUTS initialization
+        # When no step sampler is provided and only NUTS is needed
         if "nuts" in kwargs:
             nuts_kwargs = kwargs.pop("nuts")
             [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
@@ -828,7 +681,7 @@ def sample(
                 n_init=n_init,
                 model=model,
                 random_seed=random_seed_list,
-                progressbar=progress_bool,
+                progressbar=bool(progressbar),
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,
@@ -907,10 +760,6 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
-    # At some point it was decided that PyMC should not set a global seed by default,
-    # unless the user specified a seed. This is a symptom of the fact that PyMC samplers
-    # are built around global seeding. This branch makes sure we maintain this unspoken
-    # rule. See https://github.com/pymc-devs/pymc/pull/1395.
     if parallel:
         # For parallel sampling we can pass the list of random seeds directly, as
         # global seeding will only be called inside each process
