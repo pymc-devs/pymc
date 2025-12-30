@@ -905,3 +905,62 @@ class TestShared:
         np.testing.assert_allclose(
             x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
         )
+
+class TestQuietMode:
+    """Tests for the quiet parameter in pm.sample()."""
+
+    def test_quiet_suppresses_logging(self, caplog):
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    quiet=True,
+                    random_seed=42,
+                    progressbar=False,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) == 0
+
+        assert hasattr(idata, "posterior")
+        assert "x" in idata.posterior
+
+    def test_quiet_overrides_progressbar(self, caplog):
+        """Test that quiet=True overrides progressbar=True."""
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    progressbar=True,
+                    quiet=True,
+                    random_seed=42,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) == 0
+
+    def test_quiet_false_shows_logs(self, caplog):
+        """Test that quiet=False (default) shows logs."""
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.INFO, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    quiet=False,
+                    progressbar=False,
+                    random_seed=42,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) > 0
