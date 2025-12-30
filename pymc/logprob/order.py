@@ -35,12 +35,15 @@
 #   SOFTWARE.
 from typing import cast
 
+import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.math import Max
+from pytensor.tensor.math import Max, Sum
+from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -62,6 +65,29 @@ class MeasurableMax(MeasurableOp, Max):
 
 class MeasurableMaxDiscrete(MeasurableOp, Max):
     """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables."""
+
+
+class MeasurableSum(MeasurableOp, Op):
+    __props__ = ("axis", "dtype", "acc_dtype")
+
+    def __init__(self, axis=None, dtype=None, acc_dtype=None):
+        self.axis = axis
+        self.dtype = dtype
+        self.acc_dtype = acc_dtype
+
+    def make_node(self, x):
+        x = pt.as_tensor_variable(x)
+        out_dtype = self.dtype if self.dtype is not None else x.dtype
+        out = pt.scalar(dtype=out_dtype)
+        return Apply(self, [x], [out])
+
+    def perform(self, node, inputs, outputs):
+        (x,) = inputs
+        (out,) = outputs
+        out[0] = np.asarray(x).sum(axis=self.axis, dtype=self.acc_dtype)
+
+    def infer_shape(self, fgraph, node, input_shapes):
+        return [()]
 
 
 @node_rewriter([Max])
@@ -126,6 +152,44 @@ measurable_ir_rewrites_db.register(
 )
 
 
+@node_rewriter([Sum])
+def find_measurable_sum(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    if isinstance(node.op, MeasurableSum):
+        return None
+    [base_var] = node.inputs
+    if base_var.owner is None:
+        return None
+    if not filter_measurable_variables(node.inputs):
+        return None
+    latent_op = base_var.owner.op
+    if not isinstance(latent_op, NormalRV):
+        return None
+    if getattr(latent_op, "ndim_supp", None) != 0:
+        return None
+    if not all(all(params.type.broadcastable) for params in latent_op.dist_params(base_var.owner)):
+        return None
+    base_var = cast(TensorVariable, base_var)
+    if node.op.axis is None:
+        axis = tuple(range(base_var.ndim))
+    else:
+        axis = tuple(sorted(node.op.axis))
+        if axis != tuple(range(base_var.ndim)):
+            return None
+    sum_rv = cast(
+        TensorVariable,
+        MeasurableSum(axis=axis, dtype=node.op.dtype, acc_dtype=node.op.acc_dtype)(base_var),
+    )
+    return [sum_rv]
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_sum",
+    find_measurable_sum,
+    "basic",
+    "sum",
+)
+
+
 @_logprob.register(MeasurableMax)
 def max_logprob(op, values, base_rv, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation."""
@@ -158,3 +222,16 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
 
     n = pt.prod(base_rv_shape)
     return logdiffexp(n * logcdf, n * logcdf_prev)
+
+
+@_logprob.register(MeasurableSum)
+def sum_logprob(op: MeasurableSum, values, base_rv: TensorVariable, **kwargs):
+    (value,) = values
+    mu, sigma = base_rv.owner.op.dist_params(base_rv.owner)
+    base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
+    n = pt.prod(base_rv_shape)
+    n = pt.cast(n, mu.dtype)
+    mu_sum = mu * n
+    sigma_sum = sigma * pt.sqrt(n)
+    z = (value - mu_sum) / sigma_sum
+    return -0.5 * pt.square(z) - pt.log(sigma_sum) - 0.5 * pt.log(2.0 * np.pi)
