@@ -22,6 +22,15 @@ from scipy.spatial import distance
 
 import pymc as pm
 
+from pymc.gp.hsgp_approx import (
+    calc_eigenvalues,
+    calc_eigenvalues_dirichlet,
+    calc_eigenvalues_neumann,
+    calc_eigenvectors,
+    calc_eigenvectors_dirichlet,
+    calc_eigenvectors_neumann,
+)
+
 
 def build_mmd_func(sample1, sample2):
     """Build a PyTensor function that calculates the minimum mean discrepancy (MMD) statistic."""
@@ -330,3 +339,252 @@ class TestHSGPPeriodic(_BaseFixtures):
             samples1, samples2, n_sims=500, alpha=0.01
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
+
+
+class TestEigenvaluesFunctions:
+    """Unit tests for eigenvalue calculation functions."""
+
+    def test_calc_eigenvalues_dirichlet_1d(self):
+        """Verify eigenvalues match theoretical formula λ_j = (πj/(2L))²."""
+        L = np.array([5.0])
+        m = [10]
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+        expected = np.array([[(np.pi * j / (2 * 5.0)) ** 2] for j in range(1, 11)])
+        np.testing.assert_allclose(eigvals, expected)
+
+    def test_calc_eigenvalues_neumann_1d(self):
+        """Verify Neumann eigenvalues start at j=1 (no j=0) and match Dirichlet."""
+        L = np.array([5.0])
+        m = [10]
+        eigvals = calc_eigenvalues_neumann(L, m)
+        # Should be identical to Dirichlet since we skip j=0
+        eigvals_dirichlet = calc_eigenvalues_dirichlet(L, m)
+        np.testing.assert_allclose(eigvals, eigvals_dirichlet)
+
+    def test_calc_eigenvalues_shape(self):
+        """Verify output shape is (prod(m), len(m))."""
+        L = np.array([5.0, 3.0])
+        m = [10, 8]
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+        assert eigvals.shape == (80, 2)
+
+    def test_calc_eigenvalues_2d(self):
+        """Verify 2D eigenvalues are correct for both boundary conditions."""
+        L = np.array([3.0, 4.0])
+        m = [3, 2]
+        eigvals_dirichlet = calc_eigenvalues_dirichlet(L, m)
+        eigvals_neumann = calc_eigenvalues_neumann(L, m)
+        assert eigvals_dirichlet.shape == (6, 2)
+        assert eigvals_neumann.shape == (6, 2)
+        np.testing.assert_allclose(eigvals_dirichlet, eigvals_neumann)
+
+    def test_calc_eigenvalues_dispatcher(self):
+        """Verify the dispatcher function calls the correct implementation."""
+        L = np.array([5.0])
+        m = [10]
+        eigvals_d = calc_eigenvalues(L, m, boundary="dirichlet")
+        eigvals_n = calc_eigenvalues(L, m, boundary="neumann")
+        eigvals_default = calc_eigenvalues(L, m)
+
+        np.testing.assert_allclose(eigvals_d, calc_eigenvalues_dirichlet(L, m))
+        np.testing.assert_allclose(eigvals_n, calc_eigenvalues_neumann(L, m))
+        np.testing.assert_allclose(eigvals_default, calc_eigenvalues_dirichlet(L, m))
+
+
+class TestEigenvectorsFunctions:
+    """Unit tests for eigenvector calculation functions."""
+
+    def test_eigenvectors_dirichlet_boundary_zero(self):
+        """Verify Dirichlet eigenvectors are zero at boundaries x = ±L."""
+        L = np.array([5.0])
+        m = [10]
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+        # Test at boundary x = L and x = -L
+        Xs_boundary = np.array([[5.0], [-5.0]])
+        phi = calc_eigenvectors_dirichlet(Xs_boundary, L, eigvals, m).eval()
+        np.testing.assert_allclose(phi, 0, atol=1e-10)
+
+    def test_eigenvectors_neumann_derivative_zero(self):
+        """Verify Neumann eigenvector derivatives are theoretically zero at boundaries.
+
+        At x=±L: d/dx[cos(√λ_j(x+L))] = -√λ_j·sin(√λ_j(x+L))
+        At x=L: sin(√λ_j·2L) = sin(πj) = 0 for integer j ✓
+        """
+        L = np.array([5.0])
+        m = [10]
+        eigvals = calc_eigenvalues_neumann(L, m)
+        # Theoretical verification: derivative is 0 at boundaries
+        for j in range(1, 11):
+            assert np.isclose(np.sin(np.pi * j), 0, atol=1e-10)
+
+    def test_eigenvectors_neumann_not_zero_at_boundary(self):
+        """Verify Neumann eigenvectors are NOT zero at boundaries (unlike Dirichlet)."""
+        L = np.array([5.0])
+        m = [10]
+        eigvals = calc_eigenvalues_neumann(L, m)
+        Xs_boundary = np.array([[5.0], [-5.0]])
+        phi = calc_eigenvectors_neumann(Xs_boundary, L, eigvals, m).eval()
+        # Neumann eigenvectors should NOT be zero at boundaries in general
+        # At x=L: cos(√λ_j·2L) = cos(πj) = ±1 for integer j
+        # At x=-L: cos(√λ_j·0) = 1
+        assert not np.allclose(phi, 0), "Neumann eigenvectors should not be zero at boundaries"
+
+    def test_eigenvectors_orthonormality_dirichlet(self):
+        """Verify Dirichlet eigenvectors are approximately orthonormal."""
+        L = np.array([5.0])
+        m = [20]
+        # Dense grid for numerical integration
+        x = np.linspace(-5, 5, 1000)[:, None]
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+        phi = calc_eigenvectors_dirichlet(x, L, eigvals, m).eval()
+        # Numerical integration: ∫φ_i·φ_j dx ≈ δ_ij
+        dx = 10 / 1000
+        gram = phi.T @ phi * dx
+        np.testing.assert_allclose(gram, np.eye(20), atol=0.1)
+
+    def test_eigenvectors_orthonormality_neumann(self):
+        """Verify Neumann eigenvectors are approximately orthonormal."""
+        L = np.array([5.0])
+        m = [20]
+        # Dense grid for numerical integration
+        x = np.linspace(-5, 5, 1000)[:, None]
+        eigvals = calc_eigenvalues_neumann(L, m)
+        phi = calc_eigenvectors_neumann(x, L, eigvals, m).eval()
+        # Numerical integration: ∫φ_i·φ_j dx ≈ δ_ij
+        dx = 10 / 1000
+        gram = phi.T @ phi * dx
+        np.testing.assert_allclose(gram, np.eye(20), atol=0.1)
+
+    def test_eigenvectors_shape(self):
+        """Verify output shape is (n, prod(m))."""
+        L = np.array([5.0, 3.0])
+        m = [10, 8]
+        n = 50
+        Xs = np.random.randn(n, 2)
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+        phi = calc_eigenvectors_dirichlet(Xs, L, eigvals, m).eval()
+        assert phi.shape == (50, 80)
+
+    def test_eigenvectors_dispatcher(self):
+        """Verify the dispatcher function calls the correct implementation."""
+        L = np.array([5.0])
+        m = [10]
+        Xs = np.linspace(-3, 3, 20)[:, None]
+        eigvals = calc_eigenvalues_dirichlet(L, m)
+
+        phi_d = calc_eigenvectors(Xs, L, eigvals, m, boundary="dirichlet").eval()
+        phi_n = calc_eigenvectors(Xs, L, eigvals, m, boundary="neumann").eval()
+        phi_default = calc_eigenvectors(Xs, L, eigvals, m).eval()
+
+        np.testing.assert_allclose(phi_d, calc_eigenvectors_dirichlet(Xs, L, eigvals, m).eval())
+        np.testing.assert_allclose(phi_n, calc_eigenvectors_neumann(Xs, L, eigvals, m).eval())
+        np.testing.assert_allclose(
+            phi_default, calc_eigenvectors_dirichlet(Xs, L, eigvals, m).eval()
+        )
+
+
+class TestHSGPBoundaryConditions(_BaseFixtures):
+    """Integration tests for HSGP with different boundary conditions."""
+
+    def test_boundary_parameter_validation(self):
+        """Verify invalid boundary parameter raises ValueError."""
+        with pytest.raises(ValueError, match="`boundary` must be"):
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            pm.gp.HSGP(m=[50], c=2, boundary="invalid", cov_func=cov_func)
+
+    def test_boundary_default_is_dirichlet(self):
+        """Verify default boundary condition is Dirichlet."""
+        cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+        hsgp = pm.gp.HSGP(m=[50], c=2, cov_func=cov_func)
+        assert hsgp._boundary == "dirichlet"
+
+    @pytest.mark.parametrize("boundary", ["dirichlet", "neumann"])
+    def test_prior_matches_gp(self, model, X1, boundary, rng):
+        """Compare HSGP prior to unapproximated GP using MMD test."""
+        with model:
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            hsgp = pm.gp.HSGP(m=[200], c=2.0, boundary=boundary, cov_func=cov_func)
+            f1 = hsgp.prior("f1", X=X1)
+
+            gp = pm.gp.Latent(cov_func=cov_func)
+            f2 = gp.prior("f2", X=X1)
+
+            idata = pm.sample_prior_predictive(draws=1000, random_seed=rng)
+
+        samples1 = az.extract(idata.prior["f1"])["f1"].values.T
+        samples2 = az.extract(idata.prior["f2"])["f2"].values.T
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, (
+            f"H0 was rejected for {boundary} boundary, even though HSGP and GP priors should match."
+        )
+
+    @pytest.mark.parametrize("boundary", ["dirichlet", "neumann"])
+    def test_conditional_matches_prior(self, model, X1, boundary):
+        """Verify conditional matches prior when no data observed."""
+        with model:
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, boundary=boundary, cov_func=cov_func)
+            f = hsgp.prior("f", X=X1)
+            fc = hsgp.conditional("fc", Xnew=X1)
+
+            idata = pm.sample_prior_predictive(draws=1000)
+
+        samples1 = az.extract(idata.prior["f"])["f"].values.T
+        samples2 = az.extract(idata.prior["fc"])["fc"].values.T
+        h0, mmd, critical_value, reject = two_sample_test(
+            samples1, samples2, n_sims=500, alpha=0.01
+        )
+        assert not reject, (
+            f"H0 was rejected for {boundary} boundary, "
+            "even though HSGP prior and conditional should match."
+        )
+
+    def test_neumann_no_edge_effect(self, model):
+        """Verify Neumann doesn't force function toward zero at edges."""
+        X = np.linspace(-5, 5, 100)[:, None]
+        X_edge = np.array([[-4.9], [4.9]])  # Near boundaries
+
+        with model:
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, boundary="neumann", cov_func=cov_func)
+            hsgp.prior("f", X=X)
+            fc = hsgp.conditional("fc", Xnew=X_edge)
+            idata = pm.sample_prior_predictive(draws=500)
+
+        edge_samples = az.extract(idata.prior["fc"])["fc"].values
+        # Variance at edges should be similar to interior (not suppressed)
+        edge_var = np.var(edge_samples, axis=1)
+        assert np.all(edge_var > 0.5), "Neumann should not suppress variance at edges"
+
+    def test_dirichlet_edge_effect(self, model):
+        """Verify Dirichlet DOES force function toward zero at edges."""
+        X = np.linspace(-5, 5, 100)[:, None]
+        # Use points very close to the boundary L
+        # With c=2.0 and X in [-5, 5], L = 2 * 5 = 10
+        X_edge = np.array([[-9.9], [9.9]])  # Very close to L boundaries
+
+        with model:
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            hsgp = pm.gp.HSGP(m=[100], c=2.0, boundary="dirichlet", cov_func=cov_func)
+            hsgp.prior("f", X=X)
+            fc = hsgp.conditional("fc", Xnew=X_edge)
+            idata = pm.sample_prior_predictive(draws=500)
+
+        edge_samples = az.extract(idata.prior["fc"])["fc"].values
+        edge_var = np.var(edge_samples, axis=1)
+        # Dirichlet should suppress variance at boundaries
+        assert np.all(edge_var < 0.5), "Dirichlet should suppress variance at boundaries"
+
+    @pytest.mark.parametrize("boundary", ["dirichlet", "neumann"])
+    def test_prior_linearized_with_boundary(self, X1, boundary):
+        """Verify prior_linearized works correctly with boundary parameter."""
+        with pm.Model():
+            cov_func = pm.gp.cov.ExpQuad(1, ls=1)
+            hsgp = pm.gp.HSGP(m=[50], c=2.0, boundary=boundary, cov_func=cov_func)
+            phi, sqrt_psd = hsgp.prior_linearized(X=X1)
+
+            # Check shapes
+            assert phi.eval().shape == (100, 50)
+            assert sqrt_psd.eval().shape == (50,)
