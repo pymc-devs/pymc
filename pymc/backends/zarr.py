@@ -163,7 +163,7 @@ class ZarrChain(BaseTrace):
         draw: Mapping[str, np.ndarray],
         stats: Sequence[Mapping[str, Any]],
         *,
-        tune: bool | None = None,
+        in_warmup: bool,
     ) -> bool | None:
         """Record the step method's returned draw and stats.
 
@@ -189,7 +189,7 @@ class ZarrChain(BaseTrace):
                 self.buffer(group="posterior", var_name=var_name, value=var_value)
         for var_name, var_value in self.stats_bijection.map(stats).items():
             self.buffer(group="sample_stats", var_name=var_name, value=var_value)
-        self.buffer(group="sample_stats", var_name="tune", value=bool(tune))
+        self.buffer(group="sample_stats", var_name="in_warmup", value=bool(in_warmup))
         self._buffered_draws += 1
         if self._buffered_draws == self.draws_until_flush:
             self.flush()
@@ -530,7 +530,7 @@ class ZarrTrace:
         stats_dtypes_shapes = get_stats_dtypes_shapes_from_steps(
             [step] if isinstance(step, BlockedStep) else step.methods
         )
-        stats_dtypes_shapes = {"tune": (bool, [])} | stats_dtypes_shapes
+        stats_dtypes_shapes = {"in_warmup": (bool, [])} | stats_dtypes_shapes
         self.init_group_with_empty(
             group=self.root.create_group(name="sample_stats", overwrite=True),
             var_dtype_and_shape=stats_dtypes_shapes,

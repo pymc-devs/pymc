@@ -17,12 +17,14 @@
 See the docstring for pymc.backends for more information
 """
 
+import inspect
 import itertools as itl
 import logging
 import warnings
 
 from abc import ABC
 from collections.abc import Mapping, Sequence, Sized
+from functools import cache
 from typing import (
     Any,
     TypeVar,
@@ -38,6 +40,58 @@ from pymc.pytensorf import compile
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
+
+
+@cache
+def _record_supports_in_warmup(trace_type: type) -> str:
+    """Return how to call `trace.record` for this backend type.
+
+    Returns
+    -------
+    mode : {"kw", "no", "try"}
+        - "kw": safe to pass `in_warmup=` (parameter present or **kwargs supported)
+        - "no": do not pass `in_warmup=`
+        - "try": signature introspection failed; try `in_warmup=` and fallback on
+          unexpected-keyword errors.
+    """
+    try:
+        sig = inspect.signature(trace_type.record)
+    except (TypeError, ValueError):
+        return "try"
+
+    parameters = sig.parameters
+    if "in_warmup" in parameters:
+        return "kw"
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in parameters.values()):
+        return "kw"
+    return "no"
+
+
+def _record_with_in_warmup(
+    trace: "IBaseTrace",
+    draw: Mapping[str, np.ndarray],
+    stats: Sequence[Mapping[str, Any]],
+    *,
+    in_warmup: bool,
+):
+    """Record a draw, passing `in_warmup` when the backend supports it.
+
+    this will keep compatibility with custom traces that predate the `in_warmup` kwarg.
+    """
+    mode = _record_supports_in_warmup(type(trace))
+    if mode == "kw":
+        return trace.record(draw, stats, in_warmup=in_warmup)
+    if mode == "no":
+        return trace.record(draw, stats)
+
+    # fallback for backends we can't introspect reliably.
+    try:
+        return trace.record(draw, stats, in_warmup=in_warmup)
+    except TypeError as err:
+        message = str(err)
+        if "unexpected keyword argument" in message and "in_warmup" in message:
+            return trace.record(draw, stats)
+        raise
 
 
 class BackendError(Exception):
@@ -118,7 +172,7 @@ class IBaseTrace(ABC, Sized):
         draw: Mapping[str, np.ndarray],
         stats: Sequence[Mapping[str, Any]],
         *,
-        tune: bool | None = None,
+        in_warmup: bool,
     ):
         """Record results of a sampling iteration.
 
@@ -128,8 +182,8 @@ class IBaseTrace(ABC, Sized):
             Values mapped to variable names
         stats: list of dicts
             The diagnostic values for each sampler
-        tune: bool | None
-            Whether this draw belongs to the tuning/warmup phase. This is a driver-owned
+        in_warmup: bool
+            Whether this draw belongs to the warmup phase. This is a driver-owned
             concept and is intended for storage/backends to persist warmup information.
         """
         raise NotImplementedError()
