@@ -105,16 +105,26 @@ class ChainRecordAdapter(IBaseTrace):
             {sname: stats_dtypes[fname] for fname, sname, is_obj in sstats}
             for sstats in stats_bijection._stat_groups
         ]
+        if "tune" in stats_dtypes and self.sampler_vars:
+            # expose driver-owned warmup marker via the sampler-stats API.
+            self.sampler_vars[0].setdefault("tune", stats_dtypes["tune"])
 
         self._chain = chain
         self._point_fn = point_fn
         self._statsbj = stats_bijection
         super().__init__()
 
-    def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
+    def record(
+        self,
+        draw: Mapping[str, np.ndarray],
+        stats: Sequence[Mapping[str, Any]],
+        *,
+        tune: bool | None = None,
+    ):
         values = self._point_fn(draw)
         value_dict = dict(zip(self.varnames, values))
         stats_dict = self._statsbj.map(stats)
+        stats_dict["tune"] = bool(tune)
         # Apply pickling to objects stats
         for fname in self._statsbj.object_stats.keys():
             val_bytes = pickle.dumps(stats_dict[fname])
@@ -147,6 +157,8 @@ class ChainRecordAdapter(IBaseTrace):
         self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         slc = slice(burn, None, thin)
+        if stat_name == "tune":
+            return self._get_stats("tune", slc)
         # When there's just one sampler, default to remove the sampler dimension
         if sampler_idx is None and self._statsbj.n_samplers == 1:
             sampler_idx = 0
@@ -231,6 +243,16 @@ def make_runmeta_and_point_fn(
                 undefined_ndim=shape is None,
             )
             sample_stats.append(svar)
+
+    # driver owned warmup marker. stored once per draw.
+    sample_stats.append(
+        mcb.Variable(
+            name="tune",
+            dtype=np.dtype(bool).name,
+            shape=[],
+            undefined_ndim=False,
+        )
+    )
 
     coordinates = [
         mcb.Coordinate(dname, mcb.npproto.utils.ndarray_from_numpy(np.array(cvals)))
