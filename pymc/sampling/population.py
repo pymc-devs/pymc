@@ -458,7 +458,7 @@ def _iter_population(
                 # apply the update to the points and record to the traces
                 for c, strace in enumerate(traces):
                     points[c], stats = updates[c]
-                    flushed = strace.record(points[c], stats)
+                    flushed = strace.record(points[c], stats, tune=i < tune)
                     log_warning_stats(stats)
                     if flushed and isinstance(strace, ZarrChain):
                         sampling_state = popstep.request_sampling_state(c)

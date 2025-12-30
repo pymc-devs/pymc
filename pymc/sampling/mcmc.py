@@ -1213,7 +1213,7 @@ def _sample(
     try:
         for it, stats in enumerate(sampling_gen):
             progress_manager.update(
-                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
+                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune
             )
 
         if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
@@ -1284,7 +1284,7 @@ def _iter_sample(
                 step.stop_tuning()
 
             point, stats = step.step(point)
-            trace.record(point, stats)
+            trace.record(point, stats, tune=i < tune)
             log_warning_stats(stats)
 
             if callback is not None:
@@ -1397,7 +1397,7 @@ def _mp_sample(
                     strace = traces[draw.chain]
                     if not zarr_recording:
                         # Zarr recording happens in each process
-                        strace.record(draw.point, draw.stats)
+                        strace.record(draw.point, draw.stats, tune=draw.tuning)
                     log_warning_stats(draw.stats)
 
                     if callback is not None:

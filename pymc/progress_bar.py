@@ -285,6 +285,7 @@ class ProgressBarManager:
 
         self._show_progress = show_progress
         self.completed_draws = 0
+        self.tune = tune
         self.total_draws = draws + tune
         self.desc = "Sampling chain"
         self.chains = chains
@@ -308,6 +309,7 @@ class ProgressBarManager:
                     draws=0,
                     total=self.total_draws * self.chains - 1,
                     chain_idx=0,
+                    tune=self.tune > 0,
                     sampling_speed=0,
                     speed_unit="draws/s",
                     failing=False,
@@ -323,6 +325,7 @@ class ProgressBarManager:
                     draws=0,
                     total=self.total_draws - 1,
                     chain_idx=chain_idx,
+                    tune=self.tune > 0,
                     sampling_speed=0,
                     speed_unit="draws/s",
                     failing=False,
@@ -381,6 +384,7 @@ class ProgressBarManager:
             self.tasks[chain_idx],
             completed=draw,
             draws=draw,
+            tune=tuning,
             sampling_speed=speed,
             speed_unit=unit,
             failing=failing,
@@ -391,13 +395,17 @@ class ProgressBarManager:
             self._progress.update(
                 self.tasks[chain_idx],
                 draws=draw + 1 if not self.combined_progress else draw,
+                tune=False,
                 failing=failing,
                 **all_step_stats,
                 refresh=True,
             )
 
     def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
-        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
+        columns = [
+            TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1)),
+            TextColumn("{task.fields[tune]}", table_column=Column("Tuning", ratio=1)),
+        ]
 
         if self.full_stats:
             columns += step_columns

@@ -97,7 +97,7 @@ class NDArray(base.BaseTrace):
                     new = np.zeros(draws, dtype=dtype)
                     data[varname] = np.concatenate([old, new])
 
-    def record(self, point, sampler_stats=None) -> None:
+    def record(self, point, sampler_stats=None, *, tune: bool | None = None) -> None:
         """Record results of a sampling iteration.
 
         Parameters
