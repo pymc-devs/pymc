@@ -450,6 +450,18 @@ class HSGP(Base):
 
         Both options use the same number of basis vectors (m) and exclude any
         constant eigenfunctions to ensure model identifiability.
+
+        **Note**: Neumann boundary conditions typically require significantly larger
+        values of `m` and/or `c` compared to Dirichlet to achieve equivalent
+        approximation quality, since cosine basis functions don't vanish at boundaries.
+        As a practical guideline:
+
+        - For standard applications: use 1.5-2x more basis vectors (e.g., `m=[300]`
+          instead of `m=[200]`) and increase `c` by 50% (e.g., `c=3.0` instead of
+          `c=2.0`)
+        - The approximation quality improves with larger `m` and `c`, but at higher
+          computational cost
+        - Validate approximation quality against a full GP on a hold-out set if needed
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
     mean_func: None, instance of Mean
