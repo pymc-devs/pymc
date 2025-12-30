@@ -1559,6 +1559,7 @@ def init_nuts(
         Instantiated and initialized NUTS sampler object
     """
     model = modelcontext(model)
+    foo = 1
 
     vars = kwargs.get("vars", model.value_vars)
     if set(vars) != set(model.value_vars):
