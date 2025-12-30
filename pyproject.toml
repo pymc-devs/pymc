@@ -16,7 +16,7 @@ versionfile_build = "pymc/_version.py"
 tag_prefix = "v"
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.12"
 no_implicit_optional = false
 strict_optional = true
 warn_redundant_casts = false
