@@ -267,7 +267,9 @@ def _save_sample_stats(
         sample_stats = dict_to_dataset(
             sample_stats_dict,
             attrs=sample_settings_dict,
-            library=pymc,
+            inference_library=pymc,
+            sample_dims=["chain"],
+            check_conventions=False,
         )
 
         ikwargs: dict[str, Any] = {"model": model}
