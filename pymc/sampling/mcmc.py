@@ -48,7 +48,7 @@ from pymc.backends.arviz import (
     find_constants,
     find_observations,
 )
-from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
+from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains, _record_with_in_warmup
 from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
@@ -1284,7 +1284,7 @@ def _iter_sample(
                 step.stop_tuning()
 
             point, stats = step.step(point)
-            trace.record(point, stats, tune=i < tune)
+            _record_with_in_warmup(trace, point, stats, in_warmup=i < tune)
             log_warning_stats(stats)
 
             if callback is not None:
@@ -1397,7 +1397,9 @@ def _mp_sample(
                     strace = traces[draw.chain]
                     if not zarr_recording:
                         # Zarr recording happens in each process
-                        strace.record(draw.point, draw.stats, tune=draw.tuning)
+                        _record_with_in_warmup(
+                            strace, draw.point, draw.stats, in_warmup=draw.tuning
+                        )
                     log_warning_stats(draw.stats)
 
                     if callback is not None:

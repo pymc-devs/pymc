@@ -105,9 +105,9 @@ class ChainRecordAdapter(IBaseTrace):
             {sname: stats_dtypes[fname] for fname, sname, is_obj in sstats}
             for sstats in stats_bijection._stat_groups
         ]
-        if "tune" in stats_dtypes and self.sampler_vars:
-            # expose driver-owned warmup marker via the sampler-stats API.
-            self.sampler_vars[0].setdefault("tune", stats_dtypes["tune"])
+        if "in_warmup" in stats_dtypes and self.sampler_vars:
+            # Expose driver-owned warmup marker via the sampler-stats API.
+            self.sampler_vars[0].setdefault("in_warmup", stats_dtypes["in_warmup"])
 
         self._chain = chain
         self._point_fn = point_fn
@@ -119,12 +119,12 @@ class ChainRecordAdapter(IBaseTrace):
         draw: Mapping[str, np.ndarray],
         stats: Sequence[Mapping[str, Any]],
         *,
-        tune: bool | None = None,
+        in_warmup: bool,
     ):
         values = self._point_fn(draw)
         value_dict = dict(zip(self.varnames, values))
         stats_dict = self._statsbj.map(stats)
-        stats_dict["tune"] = bool(tune)
+        stats_dict["in_warmup"] = bool(in_warmup)
         # Apply pickling to objects stats
         for fname in self._statsbj.object_stats.keys():
             val_bytes = pickle.dumps(stats_dict[fname])
@@ -157,8 +157,9 @@ class ChainRecordAdapter(IBaseTrace):
         self, stat_name: str, sampler_idx: int | None = None, burn=0, thin=1
     ) -> np.ndarray:
         slc = slice(burn, None, thin)
-        if stat_name == "tune":
-            return self._get_stats("tune", slc)
+        if stat_name in {"in_warmup", "tune"}:
+            # Backwards-friendly alias for users that might try "tune".
+            return self._get_stats("in_warmup", slc)
         # When there's just one sampler, default to remove the sampler dimension
         if sampler_idx is None and self._statsbj.n_samplers == 1:
             sampler_idx = 0
@@ -247,7 +248,7 @@ def make_runmeta_and_point_fn(
     # driver owned warmup marker. stored once per draw.
     sample_stats.append(
         mcb.Variable(
-            name="tune",
+            name="in_warmup",
             dtype=np.dtype(bool).name,
             shape=[],
             undefined_ndim=False,

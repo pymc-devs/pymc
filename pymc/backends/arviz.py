@@ -333,7 +333,7 @@ class InferenceDataConverter:
         data_warmup = {}
         for stat in self.trace.stat_names:
             name = rename_key.get(stat, stat)
-            if name == "tune":
+            if name in {"tune", "in_warmup"}:
                 continue
             if self.warmup_trace:
                 data_warmup[name] = np.array(
