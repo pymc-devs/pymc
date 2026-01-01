@@ -2,7 +2,7 @@
 name: pymc-dev
 channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 # Base dependencies (see install guide for Windows)
 - arviz>=0.13.0
