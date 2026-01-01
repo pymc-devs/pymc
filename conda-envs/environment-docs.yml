@@ -2,7 +2,7 @@
 name: pymc-docs
 channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 # Base dependencies
 - arviz>=0.13.0
