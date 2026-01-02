@@ -517,6 +517,7 @@ def sample_jax_nuts(
     var_names: Sequence[str] | None = None,
     nuts_kwargs: dict | None = None,
     progressbar: bool = True,
+    quiet: bool = False,
     keep_untransformed: bool = False,
     chain_method: Literal["parallel", "vectorized"] = "parallel",
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
@@ -613,6 +614,9 @@ def sample_jax_nuts(
         postprocessing_vectorize = "vmap"
 
     model = modelcontext(model)
+
+    if quiet:
+        progressbar = False
 
     if var_names is not None:
         filtered_var_names = [v for v in model.unobserved_value_vars if v.name in var_names]
@@ -719,7 +723,8 @@ def sample_jax_nuts(
 
     if compute_convergence_checks:
         warns = run_convergence_checks(az_trace, model)
-        log_warnings(warns)
+        if not quiet:
+            log_warnings(warns)
 
     return az_trace
 
