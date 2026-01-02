@@ -20,7 +20,9 @@ import pytensor
 import pytest
 import scipy.stats as st
 
+from pytensor.compile.mode import get_default_mode
 from pytensor.graph import ancestors
+from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sort import SortOp
@@ -96,7 +98,9 @@ class TestSimulator:
             pytest.param(
                 "float32",
                 marks=pytest.mark.xfail(
-                    condition=sys.version_info.minor == 14, reason="Needs investigation"
+                    condition=sys.version_info.minor == 14
+                    and not isinstance(get_default_mode().linker, NumbaLinker),
+                    reason="Needs investigation",
                 ),
             ),
             "float64",
