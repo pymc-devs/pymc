@@ -26,7 +26,7 @@ import numpy as np
 
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
-from pymc.backends.base import BaseTrace, _record_with_in_warmup
+from pymc.backends.base import BaseTrace
 from pymc.backends.zarr import ZarrChain
 from pymc.initial_point import PointType
 from pymc.model import Model, modelcontext
@@ -458,7 +458,7 @@ def _iter_population(
                 # apply the update to the points and record to the traces
                 for c, strace in enumerate(traces):
                     points[c], stats = updates[c]
-                    flushed = _record_with_in_warmup(strace, points[c], stats, in_warmup=i < tune)
+                    flushed = strace.record(points[c], stats, in_warmup=i < tune)
                     log_warning_stats(stats)
                     if flushed and isinstance(strace, ZarrChain):
                         sampling_state = popstep.request_sampling_state(c)
