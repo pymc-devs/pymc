@@ -240,6 +240,9 @@ def test_get_value_vars_from_user_vars():
         x2 = pm.Normal("x2", mu=0, sigma=1)
         y2 = pm.Normal("y2", mu=0, sigma=1)
         det2 = pm.Deterministic("det2", x2 + y2)
+        
+    with pm.Model() as model:
+        assert get_value_vars_from_user_vars([], model) == []
 
     prefix = "The following variables are not random variables in the model:"
     with pytest.raises(ValueError, match=rf"{prefix} \['x2', 'y2'\]"):
