@@ -19,12 +19,12 @@ import pytensor.tensor as pt
 
 from pytensor import config
 from pytensor.graph.basic import Variable
-from pytensor.graph.features import ShapeFeature
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import graph_replace, vectorize_graph
-from pytensor.graph.traversal import ancestors, explicit_graph_inputs
+from pytensor.graph.traversal import ancestors
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import infer_shape_db
+from pytensor.tensor.rewriting.shape import ShapeFeature
 
 from pymc.distributions import MvNormal, Normal
 from pymc.math import expand_packed_triangular
@@ -35,13 +35,11 @@ from pymc.model.core import Deterministic, Model
 class AutoGuideModel:
     model: Model
     draws: TensorVariable
+    params_init_values: dict[Variable, np.ndarray]
 
     @property
     def params(self) -> tuple[Variable]:
-        draws = self.draws
-        return tuple(
-            var for var in explicit_graph_inputs(self.model.named_vars) if var is not draws
-        )
+        return tuple(self.params_init_values.keys())
 
 
 def get_symbolic_rv_shapes(
@@ -67,11 +65,16 @@ def AutoDiagonalNormal(model) -> AutoGuideModel:
     draws = pt.tensor("draws", shape=(), dtype="int64")
 
     free_rv_shapes = dict(zip(free_rvs, get_symbolic_rv_shapes(free_rvs)))
+    params_init_values = {}
 
     with Model(coords=coords) as guide_model:
         for rv in free_rvs:
             loc = pt.tensor(f"{rv.name}_loc", shape=rv.type.shape)
             scale = pt.tensor(f"{rv.name}_scale", shape=rv.type.shape)
+            # TODO: Make these customizable
+            params_init_values[loc] = pt.random.uniform(-1, 1, size=free_rv_shapes[rv]).eval()
+            params_init_values[scale] = pt.full(free_rv_shapes[rv], 0.1).eval()
+
             z = Normal(
                 f"{rv.name}_z",
                 mu=0,
@@ -79,13 +82,15 @@ def AutoDiagonalNormal(model) -> AutoGuideModel:
                 # TODO: Don't require draws in guide_model, automate this as a "vectorize_model"
                 shape=(draws, *free_rv_shapes[rv]),
                 # TODO: What are we trying to do here with transform
-                transform=model.rvs_to_transforms[rv],
+                # transform=model.rvs_to_transforms[rv],
             )
             Deterministic(
-                rv.name, loc + scale * z, dims=model.named_vars_to_dims.get(rv.name, None)
+                rv.name,
+                loc + pt.softplus(scale) * z,
+                dims=model.named_vars_to_dims.get(rv.name, None),
             )
 
-    return AutoGuideModel(guide_model, draws)
+    return AutoGuideModel(guide_model, draws, params_init_values)
 
 
 def AutoFullRankNormal(model):
