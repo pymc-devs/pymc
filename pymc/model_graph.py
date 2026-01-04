@@ -326,13 +326,13 @@ class ModelGraph:
     def get_plates(
         self,
         var_names: Iterable[str] | None = None,
-        ) -> list[Plate]:
+    ) -> list[Plate]:
         """Rough but surprisingly accurate plate detection.
 
         Just groups by the shape of the underlying distribution.  Will be wrong
         if there are two plates with the same shape.
 
-         Returns
+        Returns
         -------
         dict
         Maps plate labels to the set of strings inside the plate.
@@ -343,6 +343,7 @@ class ModelGraph:
         all_nodes = [self.model[v] for v in all_vars]
 
         import pytensor
+
         shapes_fn = pytensor.function([], [v.shape for v in all_nodes], mode=_cheap_eval_mode)
         all_shapes = shapes_fn()
 
@@ -384,7 +385,7 @@ class ModelGraph:
                 variables=list(variables),
             )
             for dim_info, variables in plates.items()
-    ]
+        ]
 
     def edges(
         self,
