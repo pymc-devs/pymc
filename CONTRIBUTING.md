@@ -5,11 +5,11 @@ Thank you for being interested in contributing to PyMC. PyMC is an open source, 
 Quick links
 -----------
 
-* [Pull request (PR) step-by-step ](https://docs.pymc.io/en/latest/contributing/pr_tutorial.html)
-* [Pull request (PR) checklist](https://docs.pymc.io/en/latest/contributing/pr_checklist.html)
-* [Python style guide with pre-commit](https://docs.pymc.io/en/latest/contributing/python_style.html)
-* [Running the test suite](https://docs.pymc.io/en/latest/contributing/running_the_test_suite.html)
-* [Running PyMC in Docker](https://docs.pymc.io/en/latest/contributing/docker_container.html)
+* [Pull request (PR) step-by-step ](https://www.pymc.io/projects/docs/en/latest/contributing/pr_tutorial.html)
+* [Pull request (PR) checklist](https://www.pymc.io/projects/docs/en/latest/contributing/pr_checklist.html)
+* [Python style guide with pre-commit](https://www.pymc.io/projects/docs/en/latest/contributing/python_style.html)
+* [Running the test suite](https://www.pymc.io/projects/docs/en/latest/contributing/running_the_test_suite.html)
+* [Running PyMC in Docker](https://www.pymc.io/projects/docs/en/latest/contributing/docker_container.html)
 * [Submitting a bug report or feature request](https://github.com/pymc-devs/pymc/issues)
 
-For a complete list visit [the contributing section of the documentation](https://docs.pymc.io/en/latest/contributing/index.html).
+For a complete list visit [the contributing section of the documentation](https://www.pymc.io/projects/docs/en/latest/contributing/index.html).
