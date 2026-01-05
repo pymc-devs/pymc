@@ -144,9 +144,13 @@ def test_log1mexp_deprecation_warnings():
 def test_logdiffexp():
     a = np.log([1, 2, 3, 4])
     with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
         b = np.log([0, 1, 2, 3])
-    assert np.allclose(logdiffexp(a, b).eval(), 0)
+    np.testing.assert_allclose(logdiffexp(a, b).eval(), 0, atol=1e-15)
+
+    np.testing.assert_allclose(
+        logdiffexp(-np.inf, -np.inf).eval(),
+        -np.inf,
+    )
 
 
 class TestLogDet:
