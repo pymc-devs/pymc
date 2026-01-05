@@ -42,9 +42,14 @@ def strict_float32():
         yield
 
 
-@pytest.fixture(scope="function", autouse=False)
-def seeded_test():
-    np.random.seed(20160911)
+@pytest.fixture(scope="function")
+def rng():
+    """Provides a seeded random number generator for reproducible tests.
+
+    Uses the modern numpy Generator API instead of the legacy global
+    np.random.seed() approach. Each test gets an independent RNG instance.
+    """
+    return np.random.default_rng(20160911)
 
 
 @pytest.fixture

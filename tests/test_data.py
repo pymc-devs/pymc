@@ -38,9 +38,9 @@ class TestData:
             pm.Normal("y", 0, 1, observed=X)
             model.compile_logp()(model.initial_point())
 
-    def test_sample(self, seeded_test):
-        x = np.random.normal(size=100)
-        y = x + np.random.normal(scale=1e-2, size=100)
+    def test_sample(self, rng):
+        x = rng.normal(size=100)
+        y = x + rng.normal(scale=1e-2, size=100)
 
         x_pred = np.linspace(-3, 3, 200, dtype="float32")
 
@@ -311,10 +311,10 @@ class TestData:
         pm.model_to_graphviz(model, save=tmp_path / "a_model", dpi=100)
         assert path.exists(tmp_path / "a_model.png")
 
-    def test_explicit_coords(self, seeded_test):
+    def test_explicit_coords(self, rng):
         N_rows = 5
         N_cols = 7
-        data = np.random.uniform(size=(N_rows, N_cols))
+        data = rng.uniform(size=(N_rows, N_cols))
         coords = {
             "rows": [f"R{r + 1}" for r in range(N_rows)],
             "columns": [f"C{c + 1}" for c in range(N_cols)],
@@ -369,10 +369,10 @@ class TestData:
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
 
-    def test_implicit_coords_series(self, seeded_test):
+    def test_implicit_coords_series(self, rng):
         pd = pytest.importorskip("pandas")
         ser_sales = pd.Series(
-            data=np.random.randint(low=0, high=30, size=22),
+            data=rng.integers(low=0, high=30, size=22),
             index=pd.date_range(start="2020-05-01", periods=22, freq="24h", name="date"),
             name="sales",
         )
@@ -383,13 +383,13 @@ class TestData:
         assert len(pmodel.coords["date"]) == 22
         assert pmodel.named_vars_to_dims == {"sales": ("date",)}
 
-    def test_implicit_coords_dataframe(self, seeded_test):
+    def test_implicit_coords_dataframe(self, rng):
         pd = pytest.importorskip("pandas")
         N_rows = 5
         N_cols = 7
         df_data = pd.DataFrame()
         for c in range(N_cols):
-            df_data[f"Column {c + 1}"] = np.random.normal(size=(N_rows,))
+            df_data[f"Column {c + 1}"] = rng.normal(size=(N_rows,))
         df_data.index.name = "rows"
         df_data.columns.name = "columns"
 
