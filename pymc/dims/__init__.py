@@ -71,4 +71,7 @@ from pytensor.xtensor.basic import tensor_from_xtensor
 
 from pymc.dims import math
 from pymc.dims.distributions import *
+from pymc.dims.distributions.scalar import create_scalar_dims_docstrings
 from pymc.dims.model import Data, Deterministic, Potential
+
+create_scalar_dims_docstrings()

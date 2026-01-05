@@ -194,3 +194,35 @@ class InverseGamma(PositiveDimDistribution):
                 "Incompatible parameterization. Either use alpha and (optionally) beta, or mu and sigma"
             )
         return super().dist([alpha, beta], **kwargs)
+
+
+def create_scalar_dims_docstrings():
+    import inspect
+    import sys
+
+    import pymc.distributions.continuous as _regular_dists
+
+    from pymc.distributions import Continuous
+
+    # Get all subclasses of Continuous class
+    imported_dists = {
+        name: cls
+        for name, cls in inspect.getmembers(_regular_dists, inspect.isclass)
+        if issubclass(cls, Continuous) and cls is not Continuous
+    }
+
+    # Get all classes declared in this file
+    dims_dists = {
+        name: cls
+        for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
+        if issubclass(cls, DimDistribution) and cls.__module__ == __name__
+    }
+
+    # Copy docstring from regular distribution to dims distribution
+    for dist_class_name in dims_dists:
+        imported_cls = imported_dists.get(dist_class_name)
+        dims_cls = dims_dists.get(dist_class_name)
+        if imported_cls and imported_cls.__doc__ and dims_cls.__doc__ is None:
+            dims_cls.__doc__ = imported_cls.__doc__.replace("tensor_like", "xtensor_like")
+
+    del _regular_dists, Continuous, inspect, sys
