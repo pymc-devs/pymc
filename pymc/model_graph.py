@@ -342,9 +342,7 @@ class ModelGraph:
         all_vars = self.vars_to_plot(var_names)
         all_nodes = [self.model[v] for v in all_vars]
 
-        import pytensor
-
-        shapes_fn = pytensor.function([], [v.shape for v in all_nodes], mode=_cheap_eval_mode)
+        shapes_fn = function([], [v.shape for v in all_nodes], mode=_cheap_eval_mode)
         all_shapes = shapes_fn()
 
         var_shapes: dict[str, tuple[int, ...]] = {
