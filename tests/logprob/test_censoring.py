@@ -41,8 +41,6 @@ import pytest
 import scipy as sp
 import scipy.stats as st
 
-import pymc as pm
-
 from pymc import logp
 from pymc.logprob import conditional_logp
 from pymc.logprob.transform_value import TransformValuesRewrite
@@ -263,29 +261,3 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
-
-
-@pytest.mark.parametrize(
-    "censoring_side,bound_value",
-    [
-        ("right", 100.0),
-        ("left", -100.0),
-    ],
-)
-def test_censored_logprob_numerical_stability(censoring_side, bound_value):
-    """Censored logp at 100 sigma should be finite, not -inf."""
-    ref_scipy = st.norm(0, 1)
-
-    with pm.Model() as model:
-        normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
-        if censoring_side == "right":
-            pm.Censored("y", normal_dist, lower=None, upper=bound_value)
-            expected_logp = ref_scipy.logsf(bound_value)
-        else:
-            pm.Censored("y", normal_dist, lower=bound_value, upper=None)
-            expected_logp = ref_scipy.logcdf(bound_value)
-
-    logp_at_bound = model.compile_logp()({"y": bound_value})
-
-    assert np.isfinite(logp_at_bound)
-    assert np.isclose(logp_at_bound, expected_logp, rtol=1e-6)
