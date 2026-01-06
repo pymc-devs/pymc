@@ -119,7 +119,6 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     if not (isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))):
         is_upper_bounded = True
 
-        # Use numerically stable logccdf (falls back to log1mexp if not available)
         logccdf = _logccdf_helper(base_rv, value, **kwargs)
 
         # For right clipped discrete RVs, we need to add an extra term

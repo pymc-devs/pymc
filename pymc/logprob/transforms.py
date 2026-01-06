@@ -252,7 +252,6 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
         # For discrete distributions, P(X >= t) = P(X > t-1)
         logccdf = _logccdf_helper(measurable_input, backward_value - 1)
     else:
-        # Use numerically stable logccdf (falls back to log1mexp if not available)
         logccdf = _logccdf_helper(measurable_input, backward_value)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):

@@ -418,7 +418,6 @@ def truncated_logprob(op, values, *inputs, **kwargs):
     if is_lower_bounded and is_upper_bounded:
         lognorm = logdiffexp(upper_logcdf, lower_logcdf)
     elif is_lower_bounded:
-        # Use numerically stable logccdf instead of log(1 - exp(logcdf))
         lognorm = TruncatedRV._create_lower_logccdf_expr(base_rv, value, lower)
     elif is_upper_bounded:
         lognorm = upper_logcdf
@@ -456,7 +455,6 @@ def truncated_logcdf(op: TruncatedRV, value, *inputs, **kwargs):
     if is_lower_bounded and is_upper_bounded:
         lognorm = logdiffexp(upper_logcdf, lower_logcdf)
     elif is_lower_bounded:
-        # Use numerically stable logccdf instead of log(1 - exp(logcdf))
         lognorm = TruncatedRV._create_lower_logccdf_expr(base_rv, value, lower)
     elif is_upper_bounded:
         lognorm = upper_logcdf
