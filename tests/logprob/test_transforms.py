@@ -45,7 +45,7 @@ from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
-from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
+from pymc.logprob.basic import conditional_logp, icdf, logccdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
     ArcsinhTransform,
@@ -546,6 +546,31 @@ def test_extra_bijective_rv_transforms(pt_transform, transform):
     np.testing.assert_allclose(
         rv_logp.eval({vv: vv_test}),
         np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
+    )
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform",
+    [
+        (pt.erfc, ErfcTransform()),
+        (pt.erfcx, ErfcxTransform()),
+    ],
+)
+def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
+    """Test logcdf for monotonically decreasing transforms (Erfc, Erfcx)."""
+    base_rv = pt.random.normal(0.5, 1, name="base_rv")
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_logcdf = logcdf(rv, vv)
+
+    # For decreasing transform: P(Y <= y) = P(X >= backward(y)) = 1 - P(X < backward(y))
+    expected_logcdf = logccdf(base_rv, transform.backward(vv))
+
+    vv_test = np.array(0.25)
+    np.testing.assert_allclose(
+        rv_logcdf.eval({vv: vv_test}),
+        expected_logcdf.eval({vv: vv_test}),
     )
 
 
