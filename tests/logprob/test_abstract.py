@@ -269,3 +269,127 @@ def test_logccdf_transformed_argument():
     expected = expected_logp + expected_logsf
 
     assert np.isclose(observed, expected)
+
+
+def test_logccdf_helper_discrete():
+    """Test _logccdf_helper semantics for discrete distributions.
+
+    What: Verifies that _logccdf_helper computes log(P(X > x)) for discrete RVs,
+    which is the survival function P(X > x), NOT P(X >= x).
+
+    Why: For discrete distributions, P(X > x) != P(X >= x). The difference is:
+    - P(X > x) = 1 - P(X <= x) = 1 - CDF(x)
+    - P(X >= x) = 1 - P(X < x) = 1 - P(X <= x-1) = 1 - CDF(x-1)
+
+    The _logccdf_helper consistently computes log(P(X > x)) for both continuous
+    and discrete distributions. This test verifies that behavior.
+
+    How: Uses Bernoulli(p=0.7) where X in {0, 1}:
+    - P(X > -1) = 1 (all values exceed -1)
+    - P(X > 0) = P(X = 1) = 0.7 (probability of exceeding 0)
+    - P(X > 1) = 0 (no value exceeds 1)
+    """
+    p = 0.7
+    x = pm.Bernoulli.dist(p=p)
+
+    # Test at various points
+    # P(X > -1) = P(X=0) + P(X=1) = 1
+    logccdf_minus1 = _logccdf_helper(x, -1).eval()
+    np.testing.assert_almost_equal(logccdf_minus1, 0.0)  # log(1)
+
+    # P(X > 0) = P(X=1) = p = 0.7
+    logccdf_0 = _logccdf_helper(x, 0).eval()
+    np.testing.assert_almost_equal(logccdf_0, np.log(p))
+
+    # P(X > 1) = 0
+    logccdf_1 = _logccdf_helper(x, 1).eval()
+    assert logccdf_1 == -np.inf
+
+
+def test_logccdf_discrete():
+    """Test the public logccdf function for discrete distributions.
+
+    What: Tests that the public pm.logccdf API works correctly for discrete
+    distributions (Poisson) and computes log(P(X > x)).
+
+    Why: Discrete distributions need log(1 - CDF(x)) computed via fallback
+    since most don't have specialized logccdf implementations. This tests
+    the fallback path with a distribution that has more than 2 values.
+
+    How: Uses Poisson(mu=3) and verifies logccdf at several points against
+    scipy's survival function.
+    """
+    mu = 3.0
+    x = pm.Poisson.dist(mu=mu)
+
+    test_values = np.array([0, 1, 2, 3, 5, 10])
+    result = logccdf(x, test_values).eval()
+    expected = sp.poisson(mu).logsf(test_values)
+
+    np.testing.assert_allclose(result, expected, rtol=1e-6)
+
+
+def test_logccdf_negated_discrete():
+    """Test logccdf on negated discrete random variable.
+
+    What: Tests logccdf for a transformed discrete RV: Y = -X where X ~ Bernoulli.
+    This exercises the special handling in measurable_transform_logcdf.
+
+    Why: For a decreasing transform like negation, the CDF relationship is:
+    P(Y <= y) = P(-X <= y) = P(X >= -y)
+
+    For discrete X, P(X >= t) = 1 - CDF(t-1), NOT 1 - CDF(t).
+    This is why measurable_transform_logcdf uses backward_value - 1 for
+    discrete distributions when computing logccdf.
+
+    How: For Y = -Bernoulli(p=0.7), Y in {-1, 0}:
+    - P(Y = -1) = p = 0.7
+    - P(Y = 0) = 1 - p = 0.3
+
+    CCDF (survival function) P(Y > y):
+    - P(Y > -2) = 1 (all values exceed -2)
+    - P(Y > -1) = P(Y = 0) = 0.3
+    - P(Y > 0) = 0 (no value exceeds 0)
+    """
+    p = 0.7
+    rv = -pm.Bernoulli.dist(p=p)
+
+    # P(Y > -2) = 1
+    np.testing.assert_almost_equal(logccdf(rv, -2).eval(), 0.0)
+
+    # P(Y > -1) = P(Y = 0) = 1 - p = 0.3
+    np.testing.assert_almost_equal(logccdf(rv, -1).eval(), np.log(1 - p))
+
+    # P(Y > 0) = 0
+    assert logccdf(rv, 0).eval() == -np.inf
+
+
+def test_logccdf_shifted_discrete():
+    """Test logccdf on shifted discrete random variable.
+
+    What: Tests logccdf for Y = X + 5 where X ~ Bernoulli (an increasing transform).
+
+    Why: For an increasing transform (addition), no special discrete handling
+    is needed since P(Y <= y) = P(X <= y - 5) = CDF_X(y - 5) directly.
+    The CCDF is just 1 - CDF.
+
+    How: For Y = Bernoulli(p=0.7) + 5, Y in {5, 6}:
+    - P(Y = 5) = 1 - p = 0.3
+    - P(Y = 6) = p = 0.7
+
+    CCDF P(Y > y):
+    - P(Y > 4) = 1
+    - P(Y > 5) = P(Y = 6) = 0.7
+    - P(Y > 6) = 0
+    """
+    p = 0.7
+    rv = pm.Bernoulli.dist(p=p) + 5
+
+    # P(Y > 4) = 1
+    np.testing.assert_almost_equal(logccdf(rv, 4).eval(), 0.0)
+
+    # P(Y > 5) = P(Y = 6) = p = 0.7
+    np.testing.assert_almost_equal(logccdf(rv, 5).eval(), np.log(p))
+
+    # P(Y > 6) = 0
+    assert logccdf(rv, 6).eval() == -np.inf
