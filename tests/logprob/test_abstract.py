@@ -132,32 +132,26 @@ def test_logccdf_numerical_stability():
     np.testing.assert_allclose(result, expected, rtol=1e-6)
 
 
-def test_logccdf_helper_fallback():
+def test_logccdf_fallback():
     """Distributions without logccdf should fall back to log1mexp(logcdf)."""
+    from pytensor.graph.traversal import ancestors
     from pytensor.scalar.math import Log1mexp
     from pytensor.tensor.elemwise import Elemwise
 
-    def graph_contains_log1mexp(var, depth=0, visited=None):
-        if visited is None:
-            visited = set()
-        if id(var) in visited or depth > 20:
-            return False
-        visited.add(id(var))
-        if var.owner:
-            op = var.owner.op
-            if isinstance(op, Elemwise) and isinstance(op.scalar_op, Log1mexp):
-                return True
-            for inp in var.owner.inputs:
-                if graph_contains_log1mexp(inp, depth + 1, visited):
-                    return True
-        return False
+    def graph_contains_log1mexp(var):
+        return any(
+            v.owner
+            and isinstance(v.owner.op, Elemwise)
+            and isinstance(v.owner.op.scalar_op, Log1mexp)
+            for v in ancestors([var])
+        )
 
     # Uniform has no logccdf - should use fallback
-    uniform_logccdf = _logccdf_helper(pm.Uniform.dist(0, 1), 0.5)
+    uniform_logccdf = logccdf(pm.Uniform.dist(0, 1), 0.5)
     assert graph_contains_log1mexp(uniform_logccdf)
 
     # Normal has logccdf - should NOT use fallback
-    normal_logccdf = _logccdf_helper(pm.Normal.dist(0, 1), 0.5)
+    normal_logccdf = logccdf(pm.Normal.dist(0, 1), 0.5)
     assert not graph_contains_log1mexp(normal_logccdf)
 
 
