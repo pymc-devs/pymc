@@ -45,12 +45,7 @@ from pytensor.scalar import Exp, exp
 
 import pymc as pm
 
-from pymc.logprob.abstract import (
-    MeasurableElemwise,
-    MeasurableOp,
-    _logccdf_helper,
-    _logcdf_helper,
-)
+from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logcdf_helper
 from pymc.logprob.basic import logccdf, logcdf
 
 
@@ -83,17 +78,6 @@ def test_logcdf_helper():
 
     x_logcdf = _logcdf_helper(x, [0, 1])
     np.testing.assert_almost_equal(x_logcdf.eval(), sp.norm(0, 1).logcdf([0, 1]))
-
-
-def test_logccdf_helper():
-    value = pt.vector("value")
-    x = pm.Normal.dist(0, 1)
-
-    x_logccdf = _logccdf_helper(x, value)
-    np.testing.assert_almost_equal(x_logccdf.eval({value: [0, 1]}), sp.norm(0, 1).logsf([0, 1]))
-
-    x_logccdf = _logccdf_helper(x, [0, 1])
-    np.testing.assert_almost_equal(x_logccdf.eval(), sp.norm(0, 1).logsf([0, 1]))
 
 
 def test_logcdf_transformed_argument():
@@ -153,16 +137,6 @@ def test_logccdf_fallback():
     # Normal has logccdf - should NOT use fallback
     normal_logccdf = logccdf(pm.Normal.dist(0, 1), 0.5)
     assert not graph_contains_log1mexp(normal_logccdf)
-
-
-def test_logccdf_helper_discrete():
-    """Test that logccdf computes P(X > x), not P(X >= x), for discrete RVs."""
-    p = 0.7
-    x = pm.Bernoulli.dist(p=p)
-
-    np.testing.assert_almost_equal(_logccdf_helper(x, -1).eval(), 0.0)  # P(X > -1) = 1
-    np.testing.assert_almost_equal(_logccdf_helper(x, 0).eval(), np.log(p))  # P(X > 0) = p
-    assert _logccdf_helper(x, 1).eval() == -np.inf  # P(X > 1) = 0
 
 
 def test_logccdf_discrete():
