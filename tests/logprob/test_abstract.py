@@ -159,23 +159,3 @@ def test_logccdf_discrete():
     expected = sp.poisson(mu).logsf(test_values)
 
     np.testing.assert_allclose(result, expected, rtol=1e-6)
-
-
-def test_logccdf_negated_discrete():
-    """Test logccdf on Y = -Bernoulli (decreasing transform)."""
-    p = 0.7
-    rv = -pm.Bernoulli.dist(p=p)
-
-    np.testing.assert_almost_equal(logccdf(rv, -2).eval(), 0.0)  # P(Y > -2) = 1
-    np.testing.assert_almost_equal(logccdf(rv, -1).eval(), np.log(1 - p))  # P(Y > -1) = 1-p
-    assert logccdf(rv, 0).eval() == -np.inf  # P(Y > 0) = 0
-
-
-def test_logccdf_shifted_discrete():
-    """Test logccdf on Y = Bernoulli + 5 (increasing transform)."""
-    p = 0.7
-    rv = pm.Bernoulli.dist(p=p) + 5
-
-    np.testing.assert_almost_equal(logccdf(rv, 4).eval(), 0.0)  # P(Y > 4) = 1
-    np.testing.assert_almost_equal(logccdf(rv, 5).eval(), np.log(p))  # P(Y > 5) = p
-    assert logccdf(rv, 6).eval() == -np.inf  # P(Y > 6) = 0

@@ -734,6 +734,10 @@ def test_negated_discrete_rv_transform():
     logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
     np.testing.assert_allclose(logcdf_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), 0, 0])
 
+    # logccdf: P(Y > y)
+    logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(logccdf_fn([-2, -1, 0, 1]), [0, np.log(1 - p), -np.inf, -np.inf])
+
     with pytest.raises(NotImplementedError):
         icdf(rv, [-2, -1, 0, 1])
 
@@ -754,6 +758,13 @@ def test_shifted_discrete_rv_transform():
     np.testing.assert_allclose(rv_logcdf_fn(5), np.log(1 - p))
     np.testing.assert_allclose(rv_logcdf_fn(6), 0)
     assert rv_logcdf_fn(7) == 0
+
+    # logccdf: P(Y > y)
+    rv_logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(rv_logccdf_fn(4), 0)
+    np.testing.assert_allclose(rv_logccdf_fn(5), np.log(p))
+    assert rv_logccdf_fn(6) == -np.inf
+    assert rv_logccdf_fn(7) == -np.inf
 
     # icdf not supported yet
     with pytest.raises(NotImplementedError):
