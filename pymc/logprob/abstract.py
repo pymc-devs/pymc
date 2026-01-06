@@ -40,11 +40,9 @@ import warnings
 from collections.abc import Sequence
 from functools import singledispatch
 
-import pytensor.tensor as pt
-
 from pytensor.graph import Apply, Op, Variable
 from pytensor.graph.utils import MetaType
-from pytensor.tensor import TensorVariable
+from pytensor.tensor import TensorVariable, log1mexp
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
@@ -141,7 +139,7 @@ def _logccdf_helper(rv, value, **kwargs):
         logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
     except NotImplementedError:
         logcdf = _logcdf_helper(rv, value, **kwargs)
-        logccdf = pt.log1mexp(logcdf)
+        logccdf = log1mexp(logcdf)
 
     if rv.name:
         logccdf.name = f"{rv.name}_logccdf"
