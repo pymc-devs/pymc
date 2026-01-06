@@ -783,7 +783,8 @@ class TestMixture:
 
 
 class TestNormalMixture:
-    def test_normal_mixture_sampling(self, rng):
+    def test_normal_mixture_sampling(self):
+        rng = np.random.default_rng(20160911)
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
         norm_sigma = np.ones_like(norm_mu)
@@ -813,7 +814,8 @@ class TestNormalMixture:
     @pytest.mark.parametrize(
         "nd, ncomp", [((), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
     )
-    def test_normal_mixture_nd(self, rng, nd, ncomp):
+    def test_normal_mixture_nd(self, nd, ncomp):
+        rng = np.random.default_rng(20160911)
         nd = to_tuple(nd)
         ncomp = int(ncomp)
         comp_shape = (*nd, ncomp)
@@ -860,7 +862,8 @@ class TestNormalMixture:
             assert_allclose(logp0, logp1)
             assert_allclose(logp0, logp2)
 
-    def test_random(self, rng):
+    def test_random(self):
+        rng = np.random.default_rng(20160911)
         def ref_rand(size, w, mu, sigma):
             component = rng.choice(w.size, size=size, p=w)
             return rng.normal(mu[component], sigma[component], size=size)
@@ -1028,7 +1031,8 @@ class TestMixtureSameFamily:
         cls.mixture_comps = 10
 
     @pytest.mark.parametrize("batch_shape", [(3, 4), (20,)], ids=str)
-    def test_with_multinomial(self, rng, batch_shape):
+    def test_with_multinomial(self, batch_shape):
+        rng = np.random.default_rng(20160911)
         p = rng.uniform(size=(*batch_shape, self.mixture_comps, 3))
         p /= p.sum(axis=-1, keepdims=True)
         n = 100 * np.ones((*batch_shape, 1))
@@ -1063,7 +1067,8 @@ class TestMixtureSameFamily:
             rtol,
         )
 
-    def test_with_mvnormal(self, rng):
+    def test_with_mvnormal(self):
+        rng = np.random.default_rng(20160911)
         # 10 batch, 3-variate Gaussian
         mu = rng.standard_normal((self.mixture_comps, 3))
         mat = rng.standard_normal((3, 3))

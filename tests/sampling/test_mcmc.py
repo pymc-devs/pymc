@@ -874,7 +874,8 @@ class TestType:
 
 
 class TestShared:
-    def test_sample(self, rng):
+    def test_sample(self):
+        rng = np.random.default_rng(20160911)
         x = rng.normal(size=100)
         y = x + rng.normal(scale=1e-2, size=100)
 

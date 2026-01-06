@@ -38,7 +38,8 @@ class TestData:
             pm.Normal("y", 0, 1, observed=X)
             model.compile_logp()(model.initial_point())
 
-    def test_sample(self, rng):
+    def test_sample(self):
+        rng = np.random.default_rng(20160911)
         x = rng.normal(size=100)
         y = x + rng.normal(scale=1e-2, size=100)
 
@@ -311,7 +312,8 @@ class TestData:
         pm.model_to_graphviz(model, save=tmp_path / "a_model", dpi=100)
         assert path.exists(tmp_path / "a_model.png")
 
-    def test_explicit_coords(self, rng):
+    def test_explicit_coords(self):
+        rng = np.random.default_rng(20160911)
         N_rows = 5
         N_cols = 7
         data = rng.uniform(size=(N_rows, N_cols))
@@ -369,7 +371,8 @@ class TestData:
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
 
-    def test_implicit_coords_series(self, rng):
+    def test_implicit_coords_series(self):
+        rng = np.random.default_rng(20160911)
         pd = pytest.importorskip("pandas")
         ser_sales = pd.Series(
             data=rng.integers(low=0, high=30, size=22),
@@ -383,7 +386,8 @@ class TestData:
         assert len(pmodel.coords["date"]) == 22
         assert pmodel.named_vars_to_dims == {"sales": ("date",)}
 
-    def test_implicit_coords_dataframe(self, rng):
+    def test_implicit_coords_dataframe(self):
+        rng = np.random.default_rng(20160911)
         pd = pytest.importorskip("pandas")
         N_rows = 5
         N_cols = 7

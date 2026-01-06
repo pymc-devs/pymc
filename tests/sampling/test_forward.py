@@ -631,7 +631,8 @@ class TestSamplePPC:
             _, pval = stats.kstest(ppc["b"].flatten(), stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-    def test_model_not_drawable_prior(self, rng):
+    def test_model_not_drawable_prior(self):
+        rng = np.random.default_rng(20160911)
         data = rng.poisson(lam=10, size=200)
         model = pm.Model()
         with model:
@@ -1155,7 +1156,8 @@ def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]
 
 
 class TestSamplePriorPredictive:
-    def test_ignores_observed(self, rng):
+    def test_ignores_observed(self):
+        rng = np.random.default_rng(20160911)
         observed = rng.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
@@ -1196,7 +1198,8 @@ class TestSamplePriorPredictive:
 
         assert trace.prior["m"].shape == (1, 10, 4)
 
-    def test_multivariate2(self, rng):
+    def test_multivariate2(self):
+        rng = np.random.default_rng(20160911)
         # Added test for issue #3271
         mn_data = rng.multinomial(n=100, pvals=[1 / 6.0] * 6, size=10)
         with pm.Model() as dm_model:
@@ -1229,7 +1232,8 @@ class TestSamplePriorPredictive:
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
-    def test_transformed(self, rng):
+    def test_transformed(self):
+        rng = np.random.default_rng(20160911)
         n = 18
         at_bats = 45 * np.ones(n, dtype=int)
         hits = rng.integers(1, 40, size=n, dtype=int)
@@ -1250,7 +1254,8 @@ class TestSamplePriorPredictive:
         assert gen.prior_predictive["y"].shape == (1, draws, n)
         assert "thetas" in gen.prior.data_vars
 
-    def test_shared(self, rng):
+    def test_shared(self):
+        rng = np.random.default_rng(20160911)
         n1 = 10
         obs = shared(rng.random(n1) < 0.5)
         draws = 50
@@ -1272,7 +1277,8 @@ class TestSamplePriorPredictive:
         assert gen2.prior_predictive["y"].shape == (1, draws, n2)
         assert gen2.prior["o"].shape == (1, draws, n2)
 
-    def test_density_dist(self, rng):
+    def test_density_dist(self):
+        rng = np.random.default_rng(20160911)
         obs = rng.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
