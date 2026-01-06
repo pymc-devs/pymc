@@ -238,34 +238,7 @@ class TestSymbolicRandomVariable:
         assert resized_rv.type.shape == (5,)
 
     def test_logccdf_with_extended_signature(self):
-        """Test logccdf registration for SymbolicRandomVariable with extended_signature.
-
-        What: Tests that a custom Distribution subclass using SymbolicRandomVariable
-        with an extended_signature can define a logccdf method that gets properly
-        registered and dispatched.
-
-        Why: The DistributionMeta metaclass has two code paths for registering
-        distribution methods like logp, logcdf, logccdf:
-        1. For standard RandomVariable ops: unpack (rng, size, *params)
-        2. For SymbolicRandomVariable with extended_signature: use params_idxs
-
-        This test specifically exercises path #2 (the params_idxs branch) to ensure
-        logccdf works for custom distributions that wrap other distributions with
-        additional graph structure.
-
-        How:
-        1. Creates a custom Distribution (TestDistWithLogccdf) that:
-           - Uses a SymbolicRandomVariable with extended_signature
-           - Wraps a Normal distribution internally
-           - Defines a logccdf method using normal_lccdf
-        2. Creates an instance with mu=0, sigma=1
-        3. Evaluates pm.logccdf at value=0.5
-        4. Compares against scipy.stats.norm.logsf reference
-
-        The extended_signature "[rng],[size],(),()->[rng],()" means:
-        - Inputs: rng, size, and two scalar params (mu, sigma)
-        - Outputs: next_rng and scalar draws
-        """
+        """Test logccdf registration for SymbolicRandomVariable with extended_signature."""
         from pymc.distributions.dist_math import normal_lccdf
         from pymc.distributions.distribution import Distribution
 
