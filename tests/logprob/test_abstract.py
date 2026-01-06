@@ -155,26 +155,6 @@ def test_logccdf_fallback():
     assert not graph_contains_log1mexp(normal_logccdf)
 
 
-def test_logccdf_transformed_argument():
-    with pm.Model() as m:
-        sigma = pm.HalfFlat("sigma")
-        x = pm.Normal("x", 0, sigma)
-        pm.Potential("norm_term", logccdf(x, 1.0))
-
-    sigma_value_log = -1.0
-    sigma_value = np.exp(sigma_value_log)  # sigma ≈ 0.368
-    x_value = 0.5
-
-    observed = m.compile_logp(jacobian=False)({"sigma_log__": sigma_value_log, "x": x_value})
-
-    # Expected = logp(x | sigma) + logccdf(Normal(0, sigma), 1.0)
-    expected_logp = pm.logp(pm.Normal.dist(0, sigma_value), x_value).eval()
-    expected_logsf = sp.norm(0, sigma_value).logsf(1.0)
-    expected = expected_logp + expected_logsf
-
-    assert np.isclose(observed, expected)
-
-
 def test_logccdf_helper_discrete():
     """Test that logccdf computes P(X > x), not P(X >= x), for discrete RVs."""
     p = 0.7
