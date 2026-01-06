@@ -117,7 +117,18 @@ def test_logccdf_numerical_stability():
 
 
 def test_logccdf_fallback():
-    """Distributions without logccdf should fall back to log1mexp(logcdf)."""
+    """Distributions without logccdf should fall back to log1mexp(logcdf).
+
+    This test assumes Uniform does not implement logccdf. Implementing one would
+    not be very useful since the logcdf is very simple and there are no numerical
+    stability concerns. If Uniform ever gets a logccdf implementation, this test
+    should be updated to use a different distribution without one.
+
+    Before rewrites, the logccdf graph for Uniform should contain log1mexp.
+
+    Normal implements a specialized logccdf using erfc/erfcx, so its graph, even
+    before rewrites, should not contain log1mexp.
+    """
     from pytensor.graph.traversal import ancestors
     from pytensor.scalar.math import Log1mexp
     from pytensor.tensor.elemwise import Elemwise
