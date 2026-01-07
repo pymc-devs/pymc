@@ -45,7 +45,7 @@ from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
-from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
+from pymc.logprob.basic import conditional_logp, icdf, logccdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
     ArcsinhTransform,
@@ -549,6 +549,31 @@ def test_extra_bijective_rv_transforms(pt_transform, transform):
     )
 
 
+@pytest.mark.parametrize(
+    "pt_transform, transform",
+    [
+        (pt.erfc, ErfcTransform()),
+        (pt.erfcx, ErfcxTransform()),
+    ],
+)
+def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
+    """Test logcdf for monotonically decreasing transforms (Erfc, Erfcx)."""
+    base_rv = pt.random.normal(0.5, 1, name="base_rv")
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_logcdf = logcdf(rv, vv)
+
+    # For decreasing transform: P(Y <= y) = P(X >= backward(y)) = 1 - P(X < backward(y))
+    expected_logcdf = logccdf(base_rv, transform.backward(vv))
+
+    vv_test = np.array(0.25)
+    np.testing.assert_allclose(
+        rv_logcdf.eval({vv: vv_test}),
+        expected_logcdf.eval({vv: vv_test}),
+    )
+
+
 def test_cosh_rv_transform():
     # Something not centered around 0 is usually better
     base_rv = pt.random.normal(0.5, 1, size=(2,), name="base_rv")
@@ -709,6 +734,10 @@ def test_negated_discrete_rv_transform():
     logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
     np.testing.assert_allclose(logcdf_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), 0, 0])
 
+    # logccdf: P(Y > y)
+    logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(logccdf_fn([-2, -1, 0, 1]), [0, np.log(1 - p), -np.inf, -np.inf])
+
     with pytest.raises(NotImplementedError):
         icdf(rv, [-2, -1, 0, 1])
 
@@ -729,6 +758,13 @@ def test_shifted_discrete_rv_transform():
     np.testing.assert_allclose(rv_logcdf_fn(5), np.log(1 - p))
     np.testing.assert_allclose(rv_logcdf_fn(6), 0)
     assert rv_logcdf_fn(7) == 0
+
+    # logccdf: P(Y > y)
+    rv_logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(rv_logccdf_fn(4), 0)
+    np.testing.assert_allclose(rv_logccdf_fn(5), np.log(p))
+    assert rv_logccdf_fn(6) == -np.inf
+    assert rv_logccdf_fn(7) == -np.inf
 
     # icdf not supported yet
     with pytest.raises(NotImplementedError):

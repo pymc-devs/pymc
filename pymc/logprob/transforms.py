@@ -111,6 +111,7 @@ from pymc.logprob.abstract import (
     MeasurableOp,
     _icdf,
     _icdf_helper,
+    _logccdf_helper,
     _logcdf,
     _logcdf_helper,
     _logprob,
@@ -248,9 +249,10 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     logcdf = _logcdf_helper(measurable_input, backward_value)
     if is_discrete:
-        logccdf = pt.log1mexp(_logcdf_helper(measurable_input, backward_value - 1))
+        # For discrete distributions, P(X >= t) = P(X > t-1)
+        logccdf = _logccdf_helper(measurable_input, backward_value - 1)
     else:
-        logccdf = pt.log1mexp(logcdf)
+        logccdf = _logccdf_helper(measurable_input, backward_value)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass

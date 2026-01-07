@@ -53,6 +53,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableOp,
     _icdf_helper,
+    _logccdf_helper,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
@@ -296,6 +297,70 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logcdf_helper(ir_rv, ir_value, **kwargs)
+        [expr] = cleanup_ir([expr])
+        if warn_rvs:
+            _warn_rvs_in_inferred_graph([expr])
+        return expr
+
+
+def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
+    """Create a graph for the log complementary CDF (log survival function) of a random variable.
+
+    The log complementary CDF is defined as log(1 - CDF(x)), also known as the
+    log survival function. For distributions with a numerically stable implementation,
+    this is more accurate than computing log(1 - exp(logcdf)).
+
+    Parameters
+    ----------
+    rv : TensorVariable
+    value : tensor_like
+        Should be the same type (shape and dtype) as the rv.
+    warn_rvs : bool, default True
+        Warn if RVs were found in the logccdf graph.
+        This can happen when a variable has other random variables as inputs.
+        In that case, those random variables should be replaced by their respective values.
+
+    Returns
+    -------
+    logccdf : TensorVariable
+
+    Raises
+    ------
+    RuntimeError
+        If the logccdf cannot be derived.
+
+    Examples
+    --------
+    Create a compiled function that evaluates the logccdf of a variable
+
+    .. code-block:: python
+
+        import pymc as pm
+        import pytensor.tensor as pt
+
+        mu = pt.scalar("mu")
+        rv = pm.Normal.dist(mu, 1.0)
+
+        value = pt.scalar("value")
+        rv_logccdf = pm.logccdf(rv, value)
+
+        # Use .eval() for debugging
+        print(rv_logccdf.eval({value: 0.9, mu: 0.0}))  # -1.5272506
+
+        # Compile a function for repeated evaluations
+        rv_logccdf_fn = pm.compile_pymc([value, mu], rv_logccdf)
+        print(rv_logccdf_fn(value=0.9, mu=0.0))  # -1.5272506
+
+    """
+    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    try:
+        return _logccdf_helper(rv, value, **kwargs)
+    except NotImplementedError:
+        # Try to rewrite rv
+        fgraph = construct_ir_fgraph({rv: value})
+        [ir_valued_rv] = fgraph.outputs
+        [ir_rv, ir_value] = ir_valued_rv.owner.inputs
+        expr = _logccdf_helper(ir_rv, ir_value, **kwargs)
         [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])
