@@ -238,5 +238,5 @@ def point_list_to_multitrace(
 
         chain.fn = point_fun
         for point in point_list:
-            chain.record(point)
+            chain.record(point, in_warmup=False)
     return MultiTrace([chain])

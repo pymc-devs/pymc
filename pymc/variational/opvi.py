@@ -1592,7 +1592,7 @@ class Approximation(WithMemoization):
         try:
             trace.setup(draws=draws, chain=0)
             for point in points:
-                trace.record(point)
+                trace.record(point, in_warmup=False)
         finally:
             trace.close()
 

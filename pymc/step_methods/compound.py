@@ -355,10 +355,6 @@ def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:
     return steps
 
 
-def check_step_emits_tune(step: CompoundStep | BlockedStep):
-    return
-
-
 class StatsBijection:
     """Map between a `list` of stats to `dict` of stats."""
 

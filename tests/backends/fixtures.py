@@ -195,11 +195,11 @@ class ModelBackendSampledTestCase:
                 stats2 = [
                     {key: val[idx] for key, val in stats.items()} for stats in cls.expected_stats[1]
                 ]
-                strace0.record(point=point0, sampler_stats=stats1)
-                strace1.record(point=point1, sampler_stats=stats2)
+                strace0.record(point=point0, sampler_stats=stats1, in_warmup=False)
+                strace1.record(point=point1, sampler_stats=stats2, in_warmup=False)
             else:
-                strace0.record(point=point0)
-                strace1.record(point=point1)
+                strace0.record(point=point0, in_warmup=False)
+                strace1.record(point=point1, in_warmup=False)
         strace0.close()
         strace1.close()
         cls.mtrace = base.MultiTrace([strace0, strace1])
@@ -244,9 +244,9 @@ class SamplingTestCase(ModelBackendSetupTestCase):
         }
         if self.sampler_vars is not None:
             stats = [{key: dtype(val) for key, dtype in vars.items()} for vars in self.sampler_vars]
-            self.strace.record(point=point, sampler_stats=stats)
+            self.strace.record(point=point, sampler_stats=stats, in_warmup=False)
         else:
-            self.strace.record(point=point)
+            self.strace.record(point=point, in_warmup=False)
 
     def test_standard_close(self):
         for idx in range(self.draws):
@@ -270,7 +270,7 @@ class SamplingTestCase(ModelBackendSetupTestCase):
     def test_missing_stats(self):
         if self.sampler_vars is not None:
             with pytest.raises(ValueError):
-                self.strace.record(point=self.test_point)
+                self.strace.record(point=self.test_point, in_warmup=False)
 
     def test_clean_interrupt(self):
         self.record_point(0)

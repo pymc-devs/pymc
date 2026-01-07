@@ -157,7 +157,6 @@ class TestNutsCheckTrace:
             "step_size",
             "step_size_bar",
             "tree_size",
-            "tune",
             "perf_counter_diff",
             "perf_counter_start",
             "process_time_diff",
