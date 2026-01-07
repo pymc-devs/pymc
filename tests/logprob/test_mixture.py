@@ -41,8 +41,10 @@ import pytest
 import scipy.stats.distributions as sp
 
 from pytensor import function
+from pytensor.compile import get_default_mode
 from pytensor.graph.basic import Variable
 from pytensor.ifelse import ifelse
+from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
@@ -997,6 +999,11 @@ def test_ifelse_mixture_one_component():
     )
 
 
+@pytest.mark.xfail(
+    condition=isinstance(get_default_mode().linker, NumbaLinker),
+    raises=AssertionError,
+    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
+)
 def test_ifelse_mixture_multiple_components():
     rng = np.random.default_rng(968)
 
@@ -1010,6 +1017,8 @@ def test_ifelse_mixture_multiple_components():
     mix_rv1, mix_rv2 = ifelse(
         if_var, [comp_then1, comp_then2], [comp_else1, comp_else2], name="mix"
     )
+    mix_rv1.name = "mix1"
+    mix_rv2.name = "mix2"
     mix_vv1 = mix_rv1.clone()
     mix_vv2 = mix_rv2.clone()
     mix_logp1, mix_logp2 = conditional_logp({mix_rv1: mix_vv1, mix_rv2: mix_vv2}).values()

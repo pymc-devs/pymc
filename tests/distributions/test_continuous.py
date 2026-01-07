@@ -1924,7 +1924,7 @@ class TestGumbel(BaseTestDistributionRandom):
     reference_dist = seeded_scipy_distribution_builder("gumbel_r")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 
@@ -2321,19 +2321,22 @@ class TestCauchy(BaseTestDistributionRandom):
     reference_dist = seeded_scipy_distribution_builder("cauchy")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 
 class TestHalfCauchy(BaseTestDistributionRandom):
+    def halfcauchy_rng_fn(self, scale, size, rng):
+        return np.abs(st.cauchy.rvs(scale=scale, size=size, random_state=rng))
+
     pymc_dist = pm.HalfCauchy
     pymc_dist_params = {"beta": 5.0}
-    expected_rv_op_params = {"alpha": 0.0, "beta": 5.0}
-    reference_dist_params = {"loc": 0.0, "scale": 5.0}
-    reference_dist = seeded_scipy_distribution_builder("halfcauchy")
+    expected_rv_op_params = {"beta": 5.0}
+    reference_dist_params = {"scale": 5.0}
+    reference_dist = lambda self: ft.partial(self.halfcauchy_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 

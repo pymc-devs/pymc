@@ -1413,7 +1413,7 @@ class TestMvNormalChol(BaseTestDistributionRandom):
     }
     expected_rv_op_params = {
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1426,7 +1426,7 @@ class TestMvNormalTau(BaseTestDistributionRandom):
     }
     expected_rv_op_params = {
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1839,7 +1839,7 @@ class TestMvStudentTChol(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1854,7 +1854,7 @@ class TestMvStudentTTau(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 

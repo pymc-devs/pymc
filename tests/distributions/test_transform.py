@@ -241,7 +241,8 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
-    log_prob = model.point_logps()
+    with pytensor.config.change_flags(numba__fastmath=False):
+        log_prob = model.point_logps()
     assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
 
 

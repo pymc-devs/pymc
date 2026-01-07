@@ -2,7 +2,7 @@
 name: pymc-test
 channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 # Base dependencies (see install guide for Windows)
 - arviz>=1.0.0rc0
@@ -15,7 +15,7 @@ dependencies:
 - pandas>=0.24.0
 - pip
 - polyagamma
-- pytensor>=2.36.1,<2.37
+- pytensor>=2.36.2,<2.37
 - python-graphviz
 - networkx
 - rich>=13.7.1
