@@ -16,9 +16,10 @@ import functools
 import re
 
 from collections import namedtuple
-from collections.abc import Sequence
+from collections.abc import Hashable, Mapping, Sequence
 from copy import deepcopy
-from typing import cast
+from types import EllipsisType
+from typing import TypeAlias, cast
 
 import arviz
 import cloudpickle
@@ -26,10 +27,47 @@ import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
-from pytensor import Variable
 from pytensor.compile import SharedVariable
+from pytensor.graph.basic import Variable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import BlockModelAccessError
+
+CoordValue: TypeAlias = Sequence[Hashable] | np.ndarray | None
+"""User-provided values for a single coordinate dimension."""
+
+Coords: TypeAlias = Mapping[str, CoordValue]
+"""Mapping from dimension name to its coordinate values."""
+
+StrongCoordValue: TypeAlias = tuple[Hashable, ...] | None
+"""Normalized coordinate values stored internally."""
+
+StrongCoords: TypeAlias = Mapping[str, StrongCoordValue]
+"""Mapping from dimension name to normalized coordinate values."""
+
+StrongDims: TypeAlias = tuple[str, ...]
+"""Tuple of dimension names after validation."""
+
+StrongShape: TypeAlias = tuple[int, ...]
+"""Fully-resolved numeric shape used internally."""
+
+Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+"""User-provided shape specification before normalization."""
+
+Dims: TypeAlias = str | Sequence[str | None]
+"""User-provided dimension names before normalization."""
+
+DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
+"""User-provided dimension names that may include ellipsis."""
+
+Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
+"""User-provided size specification before normalization."""
+
+StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
+"""Normalized dimension names that may include ellipsis."""
+
+StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
+"""Normalized symbolic size used internally."""
 
 
 class _UnsetType:

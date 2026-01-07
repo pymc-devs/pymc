@@ -14,12 +14,14 @@
 
 """Common shape operations to broadcast samples from probability distributions for stochastic nodes in PyMC."""
 
+from __future__ import annotations
+
 import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
-from typing import Any, TypeAlias, cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -33,17 +35,24 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.model import modelcontext
-from pymc.pytensorf import convert_observed_data
+from pymc.exceptions import ShapeError
+from pymc.pytensorf import PotentialShapeType, convert_observed_data
+from pymc.util import (
+    Dims,
+    DimsWithEllipsis,
+    Shape,
+    Size,
+    StrongDims,
+    StrongDimsWithEllipsis,
+    StrongShape,
+    StrongSize,
+)
 
 __all__ = [
     "change_dist_size",
     "rv_size_is_none",
     "to_tuple",
 ]
-
-from pymc.exceptions import ShapeError
-from pymc.pytensorf import PotentialShapeType
 
 
 def to_tuple(shape):
@@ -83,19 +92,6 @@ def _check_shape_type(shape):
     except Exception:
         raise TypeError(f"Supplied value {shape} does not represent a valid shape")
     return tuple(out)
-
-
-# User-provided can be lazily specified as scalars
-Shape: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-Dims: TypeAlias = str | Sequence[str | None]
-DimsWithEllipsis: TypeAlias = str | EllipsisType | Sequence[str | None | EllipsisType]
-Size: TypeAlias = int | TensorVariable | Sequence[int | Variable]
-
-# After conversion to vectors
-StrongShape: TypeAlias = TensorVariable | tuple[int | Variable, ...]
-StrongDims: TypeAlias = Sequence[str]
-StrongDimsWithEllipsis: TypeAlias = Sequence[str | EllipsisType]
-StrongSize: TypeAlias = TensorVariable | tuple[int | Variable, ...]
 
 
 def convert_dims(dims: Dims | None) -> StrongDims | None:
@@ -162,31 +158,6 @@ def convert_size(size: Size) -> StrongSize | None:
         raise ValueError(
             f"The `size` parameter must be a tuple, TensorVariable, int or list. Actual: {type(size)}"
         )
-
-
-def shape_from_dims(dims: StrongDims, model) -> StrongShape:
-    """Determine shape from a `dims` tuple.
-
-    Parameters
-    ----------
-    dims : array-like
-        A vector of dimension names or None.
-    model : pm.Model
-        The current model on stack.
-
-    Returns
-    -------
-    dims : tuple of (str or None)
-        Names or None for all RV dimensions.
-    """
-    # Dims must be known already
-    unknowndim_dims = set(dims) - set(model.dim_lengths)
-    if unknowndim_dims:
-        raise KeyError(
-            f"Dimensions {unknowndim_dims} are unknown to the model and cannot be used to specify a `shape`."
-        )
-
-    return tuple(model.dim_lengths[dname] for dname in dims)
 
 
 def find_size(
@@ -403,6 +374,8 @@ def get_support_shape(
         assert isinstance(dims, tuple)
         if len(dims) < ndim_supp:
             raise ValueError(f"Number of dims is too small for ndim_supp of {ndim_supp}")
+        from pymc.model.core import modelcontext
+
         model = modelcontext(None)
         inferred_support_shape = [
             model.dim_lengths[dims[i]] - support_shape_offset[i] for i in range(-ndim_supp, 0)

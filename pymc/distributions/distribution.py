@@ -48,7 +48,6 @@ from pymc.distributions.shape_utils import (
     convert_size,
     find_size,
     rv_size_is_none,
-    shape_from_dims,
 )
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
@@ -533,7 +532,7 @@ class Distribution(metaclass=DistributionMeta):
         # finally, observed, to determine the shape of the variable.
         if kwargs.get("size") is None and kwargs.get("shape") is None:
             if dims is not None:
-                kwargs["shape"] = shape_from_dims(dims, model)
+                kwargs["shape"] = model.symbolic_shape_from_dims(dims)
             elif observed is not None:
                 kwargs["shape"] = tuple(observed.shape)
 
