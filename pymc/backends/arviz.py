@@ -291,7 +291,6 @@ class DataTreeConverter:
         return trace_posterior, trace_warmup
 
     @requires("trace")
-    @requires("trace")
     def posterior_to_xarray(self):
         """Convert the posterior to xarray datasets with separate warmup group."""
         var_names = get_default_varnames(
