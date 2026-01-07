@@ -840,7 +840,7 @@ def sample_posterior_predictive(
         if "posterior" in trace.children:
             trace = trace["posterior"].to_dataset()
         else:
-            trace = trace.to_dataset()
+            trace = trace.dataset
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
         _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
