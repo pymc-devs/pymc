@@ -14,8 +14,7 @@
 from collections.abc import Sequence
 from typing import Any, Literal
 
-from arviz import InferenceData
-from xarray import Dataset
+from xarray import Dataset, DataTree
 
 from pymc.backends.arviz import (
     apply_function_over_dataset,
@@ -29,7 +28,7 @@ from pymc.model.transform.conditioning import remove_value_transforms
 
 
 def compute_log_likelihood(
-    idata: InferenceData,
+    idata: DataTree,
     *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
@@ -73,7 +72,7 @@ def compute_log_likelihood(
 
 
 def compute_log_prior(
-    idata: InferenceData,
+    idata: DataTree,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
     model: Model | None = None,
@@ -116,7 +115,7 @@ def compute_log_prior(
 
 
 def compute_log_density(
-    idata: InferenceData,
+    idata: DataTree,
     *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
@@ -125,7 +124,7 @@ def compute_log_density(
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
     compile_kwargs=None,
-) -> InferenceData | Dataset:
+) -> DataTree | Dataset:
     """
     Compute elemwise log_likelihood or log_prior of model given InferenceData with posterior group.
 
@@ -190,9 +189,13 @@ def compute_log_density(
 
     coords, dims = coords_and_dims_for_inferencedata(umodel)
 
+    is_datatree = hasattr(posterior, "to_dataset")
+    input_dataset = posterior.to_dataset() if is_datatree else posterior
+    input_dataset = input_dataset[[rv.name for rv in model.free_RVs]]
+
     logdens_dataset = apply_function_over_dataset(
         elemwise_logdens_fn,
-        posterior[[rv.name for rv in umodel.free_RVs]],
+        input_dataset,
         output_var_names=var_names,
         sample_dims=sample_dims,
         dims=dims,
@@ -201,7 +204,7 @@ def compute_log_density(
     )
 
     if extend_inferencedata:
-        idata.add_groups({f"log_{kind}": logdens_dataset})
+        idata.update({f"log_{kind}": DataTree(logdens_dataset)})
         return idata
     else:
         return logdens_dataset

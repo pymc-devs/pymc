@@ -36,7 +36,7 @@ def compute_deterministics(
     Parameters
     ----------
     dataset : Dataset
-        Dataset with values for model variables. Commonly InferenceData["posterior"].
+        Dataset with values for model variables. Commonly DataTree["posterior"].
     var_names : sequence of str, optional
         List of names of deterministic variable to compute.
         If None, compute all deterministics in the model.
@@ -99,9 +99,13 @@ def compute_deterministics(
 
     coords, dims = coords_and_dims_for_inferencedata(model)
 
+    is_datatree = isinstance(dataset, xarray.DataTree)
+    input_dataset = dataset.dataset if is_datatree else dataset
+    input_dataset = input_dataset[[rv.name for rv in model.free_RVs]]
+
     new_dataset = apply_function_over_dataset(
         fn,
-        dataset[[rv.name for rv in model.free_RVs]],
+        input_dataset,
         output_var_names=var_names,
         dims=dims,
         coords=coords,
@@ -110,6 +114,7 @@ def compute_deterministics(
     )
 
     if merge_dataset:
-        new_dataset = xarray.merge([dataset, new_dataset], compat="override")
+        original_dataset = dataset.to_dataset() if is_datatree else dataset
+        new_dataset = xarray.merge([original_dataset, new_dataset], compat="override")
 
     return new_dataset

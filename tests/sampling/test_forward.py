@@ -22,9 +22,8 @@ import pytensor.tensor as pt
 import pytest
 import xarray as xr
 
-from arviz import InferenceData
-from arviz import from_dict as az_from_dict
-from arviz.tests.helpers import check_multiple_attrs
+from arviz_base import from_dict as az_from_dict
+from arviz_base.testing import check_multiple_attrs
 from pytensor import Mode, shared
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
@@ -441,7 +440,7 @@ class TestCompileForwardSampler:
 
         # Same coord length -- `x` is not volatile
         trace_same_len = az_from_dict(
-            posterior={"x": [[[np.pi] * 3]]},
+            {"posterior": {"x": np.array([[[np.pi] * 3]])}},
             coords={"trial": range(3)},
             dims={"x": ["trial"]},
         )
@@ -449,19 +448,18 @@ class TestCompileForwardSampler:
             pp_same_len = pm.sample_posterior_predictive(
                 trace_same_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_same_len["y"] == np.pi
+        assert pp_same_len["y"].values.item() == np.pi
 
         # Coord length changed -- `x` is volatile
         trace_diff_len = az_from_dict(
-            posterior={"x": [[[np.pi] * 2]]},
+            {"posterior": {"x": np.array([[[np.pi] * 2]])}},
             coords={"trial": range(2)},
-            dims={"x": ["trial"]},
         )
         with model:
             pp_diff_len = pm.sample_posterior_predictive(
                 trace_diff_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_diff_len["y"] != np.pi
+        assert pp_diff_len["y"].values.item() != np.pi
 
         # Changing the dim length on the model itself
         # -- `x` is volatile because trace has same len as original model
@@ -470,7 +468,7 @@ class TestCompileForwardSampler:
             pp_diff_len_model_set = pm.sample_posterior_predictive(
                 trace_same_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_diff_len_model_set["y"] != np.pi
+        assert pp_diff_len_model_set["y"].values.item() != np.pi
 
 
 class TestSamplePPC:
@@ -497,7 +495,7 @@ class TestSamplePPC:
             assert len(ppc) == 0
 
             # test empty ppc with extend_inferencedata
-            assert isinstance(trace, InferenceData)
+            assert isinstance(trace, xr.DataTree)
             ppc = pm.sample_posterior_predictive(trace, var_names=[], extend_inferencedata=True)
             assert ppc is trace
 
@@ -534,12 +532,12 @@ class TestSamplePPC:
                     discard_tuned_samples=False,
                 )
 
-        assert not isinstance(trace, InferenceData)
+        assert not isinstance(trace, xr.DataTree)
 
         with model:
             # test keep_size parameter and idata input
             idata = pm.to_inference_data(trace)
-            assert isinstance(idata, InferenceData)
+            assert isinstance(idata, xr.DataTree)
 
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False)
             assert ppc["a"].shape == (nchains, ndraws)
@@ -587,12 +585,12 @@ class TestSamplePPC:
             a = pm.Normal("a", mu=mu, sigma=1, observed=np.array([0.5, 0.2]))
             trace = pm.sample(return_inferencedata=False)
 
-        assert not isinstance(trace, InferenceData)
+        assert not isinstance(trace, xr.DataTree)
 
         with model:
             # test keep_size parameter with inference data as input...
             idata = pm.to_inference_data(trace)
-            assert isinstance(idata, InferenceData)
+            assert isinstance(idata, xr.DataTree)
 
             ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False)
             assert ppc["a"].shape == (trace.nchains, len(trace), 2)
@@ -783,7 +781,7 @@ class TestSamplePPC:
             p = pm.Potential("p", a + 1)
             obs = pm.Normal("obs", a, 1, observed=5)
 
-        trace = az_from_dict({"a": np.random.rand(5)})
+        trace = az_from_dict({"posterior": {"a": np.random.rand(1, 5)}})
         with m:
             with pytest.warns(UserWarning, match=warning_msg):
                 pm.sample_posterior_predictive(trace)
@@ -886,7 +884,9 @@ class TestSamplePPC:
             y = pm.Normal("y", x_det)
             z = pm.Normal("z", y, observed=0)
 
-        idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
+        idata = az_from_dict(
+            {"posterior": {"x": np.zeros((1, 5)), "x_det": np.ones((1, 5)), "y": np.ones((1, 5))}}
+        )
         with m:
             pm.sample_posterior_predictive(idata)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
@@ -907,21 +907,21 @@ class TestSamplePPC:
 
         # Missing deterministic `x_det` does not show in the log, even if it is being
         # recomputed, only `y` RV shows
-        idata = az_from_dict(posterior={"x": np.zeros(5)})
+        idata = az_from_dict({"posterior": {"x": np.zeros((1, 5))}})
         with m:
             pm.sample_posterior_predictive(idata)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
 
         # Missing deterministic `x_det` does not cause recomputation of downstream `y` RV
-        idata = az_from_dict(posterior={"x": np.zeros(5), "y": np.ones(5)})
+        idata = az_from_dict({"posterior": {"x": np.zeros((1, 5)), "y": np.ones((1, 5))}})
         with m:
             pm.sample_posterior_predictive(idata)
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
         # Missing `x` causes sampling of downstream `y` RV, even if it is present in trace
-        idata = az_from_dict(posterior={"y": np.ones(5)})
+        idata = az_from_dict({"posterior": {"y": np.ones((1, 5))}})
         with m:
             pm.sample_posterior_predictive(idata)
         assert caplog.record_tuples == [
@@ -938,7 +938,9 @@ class TestSamplePPC:
 
         # Explicit resampling a deterministic will lead to resampling of downstream RV `y`
         # This behavior could change in the future as the posterior of `y` is still valid
-        idata = az_from_dict(posterior={"x": np.zeros(5), "x_det": np.ones(5), "y": np.ones(5)})
+        idata = az_from_dict(
+            {"posterior": {"x": np.zeros((1, 5)), "x_det": np.ones((1, 5)), "y": np.ones((1, 5))}}
+        )
         with m:
             pm.sample_posterior_predictive(idata, var_names=["x_det", "z"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
@@ -979,7 +981,7 @@ class TestSamplePPC:
             )
         return trace
 
-    @pytest.fixture(scope="class", params=["MultiTrace", "InferenceData", "Dataset"])
+    @pytest.fixture(scope="class", params=["MultiTrace", "DataTree", "Dataset"])
     def mock_sample_results(self, request, mock_multitrace):
         kind = request.param
         trace = mock_multitrace
@@ -1012,8 +1014,8 @@ class TestSamplePPC:
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
             ]
             caplog.clear()
-        elif kind == "InferenceData":
-            # InferenceData has all MCMC posterior samples and the values for both coordinates and
+        elif kind == "DataTree":
+            # DataTree has all MCMC posterior samples and the values for both coordinates and
             # data containers. This enables it to see that no data has changed and it should only
             # resample the observed variable
             assert caplog.record_tuples == [
@@ -1031,7 +1033,7 @@ class TestSamplePPC:
 
         original_offsets = model["offsets"].get_value()
         with model:
-            # Changing the Data values. This will only be picked up by InferenceData
+            # Changing the Data values. This will only be picked up by DataTree
             pm.set_data({"offsets": original_offsets + 1})
             pm.sample_posterior_predictive(samples)
         if kind == "MultiTrace":
@@ -1039,7 +1041,7 @@ class TestSamplePPC:
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
             ]
             caplog.clear()
-        elif kind == "InferenceData":
+        elif kind == "DataTree":
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
             ]
@@ -1051,7 +1053,7 @@ class TestSamplePPC:
             caplog.clear()
 
         with model:
-            # Changing the mutable coordinates. This will be picked up by InferenceData and Dataset
+            # Changing the mutable coordinates. This will be picked up by DataTree and Dataset
             model.set_dim("name", new_length=4, coord_values=["D", "E", "F", "G"])
             pm.set_data({"offsets": original_offsets, "y_obs": np.zeros((10, 4))})
             pm.sample_posterior_predictive(samples)
@@ -1060,7 +1062,7 @@ class TestSamplePPC:
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
             ]
             caplog.clear()
-        elif kind == "InferenceData":
+        elif kind == "DataTree":
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, sigma, y]")
             ]
@@ -1082,7 +1084,7 @@ class TestSamplePPC:
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
             ]
             caplog.clear()
-        elif kind == "InferenceData":
+        elif kind == "DataTree":
             assert caplog.record_tuples == [
                 ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
             ]
@@ -1106,7 +1108,7 @@ class TestSamplePPC:
 
             prior = pm.sample_prior_predictive(draws=25).prior
 
-        fake_idata = InferenceData(posterior=prior)
+        fake_idata = az_from_dict({"posterior": prior})
 
         new_coords = {"trial": range(2), "feature": range(3)}
         new_x_data = np.random.normal(size=(2, 3))
@@ -1130,7 +1132,7 @@ class TestSamplePPC:
 
             prior = pm.sample_prior_predictive(draws=25).prior
 
-        fake_idata = InferenceData(posterior=prior)
+        fake_idata = az_from_dict({"posterior": prior})
 
         with m:
             pm.set_data({"x_data": new_x_data}, coords=new_coords)
@@ -1407,7 +1409,7 @@ class TestSamplePosteriorPredictive:
             y = pm.Deterministic("y", x + sharedvar)
 
             pp = pm.sample_posterior_predictive(
-                trace=az_from_dict({"x": np.arange(5)}),
+                trace=az_from_dict({"posterior": {"x": np.arange(5).reshape(1, 5)}}),
                 var_names=["y"],
                 return_inferencedata=False,
                 compile_kwargs={
@@ -1421,7 +1423,9 @@ class TestSamplePosteriorPredictive:
     def test_sample_dims(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
         with pmodel:
-            post = pm.to_inference_data(trace).posterior.stack(sample=["chain", "draw"])
+            post = (
+                pm.to_inference_data(trace).posterior.to_dataset().stack(sample=["chain", "draw"])
+            )
             pp = pm.sample_posterior_predictive(post, var_names=["d"], sample_dims=["sample"])
             assert "sample" in pp.posterior_predictive
             assert len(pp.posterior_predictive["sample"]) == len(post["sample"])
@@ -1846,7 +1850,7 @@ def model_to_vectorize(has_nested_random_variables):
 
     with model:
         idata = pm.sample_prior_predictive(100)
-        idata.add_groups({"posterior": idata.prior})
+        idata.update({"posterior": idata.prior})
     return freeze_dims_and_data(model), idata
 
 
@@ -1939,7 +1943,7 @@ def test_vectorize_over_posterior_matches_sample():
                 )
             }
         )
-    idata = InferenceData(posterior=posterior)
+    idata = az_from_dict({"posterior": posterior})
     with model:
         pp = pm.sample_posterior_predictive(idata, var_names=["obs", "det"], random_seed=1234)
         vectorized = vectorize_over_posterior(
@@ -1967,7 +1971,7 @@ def test_vectorize_over_posterior_with_intermediate_rvs():
         c = b + 1
         d = pm.Normal.dist(c)
         idata = pm.sample_prior_predictive(100, var_names=["a"])
-        idata.add_groups({"posterior": idata.prior})
+        idata.update({"posterior": idata.prior})
     _, _, vectorized_no_intermediate = vectorize_over_posterior(
         outputs=[b, c, d],
         posterior=idata.posterior,

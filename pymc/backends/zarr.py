@@ -18,9 +18,9 @@ import arviz as az
 import numpy as np
 import xarray as xr
 
-from arviz.data.base import make_attrs
-from arviz.data.inference_data import WARMUP_TAG
+from arviz_base.base import make_attrs
 from pytensor.tensor.variable import TensorVariable
+from xarray import DataTree
 
 import pymc
 
@@ -59,6 +59,9 @@ except ImportError:
         BaseStore = TypeVar("BaseStore")
         Synchronizer = TypeVar("Synchronizer")
     _zarr_available = False
+
+
+WARMUP_TAG = "warmup_"
 
 
 class ZarrChain(BaseTrace):
@@ -271,8 +274,8 @@ def get_initial_fill_value_and_codec(
 class ZarrTrace:
     """Object that stores and enables access to MCMC draws stored in a :class:`zarr.hierarchy.Group` objects.
 
-    This class creats a zarr hierarchy to represent the sampling information which is
-    intended to mimic :class:`arviz.InferenceData`. The hierarchy looks like this:
+    This class creates a zarr hierarchy to represent the sampling information which is
+    intended to mimic :class:`xarray.DataTree`. The hierarchy looks like this:
 
     | root
     | |--> constant_data
@@ -292,7 +295,7 @@ class ZarrTrace:
     :meth:`~ZarrTrace.split_warmup_groups`.
 
     Since ``ZarrTrace`` objects are intended to be as close to
-    :class:`arviz.InferenceData` objects as possible, the groups store the dimension
+    :class:`xarray.DataTree` objects as possible, the groups store the dimension
     and coordinate information following the `xarray zarr standard <https://xarray.pydata.org/en/v2023.11.0/internals/zarr-encoding-spec.html>`_.
 
     Parameters
@@ -815,11 +818,11 @@ class ZarrTrace:
                     posterior_array.attrs.update(array_attrs)
             warmup_array.attrs.update(array_attrs)
 
-    def to_inferencedata(self, save_warmup: bool = False) -> az.InferenceData:
-        """Convert ``ZarrTrace`` to :class:`~.arviz.InferenceData`.
+    def to_inferencedata(self, save_warmup: bool = False, eager: bool = False) -> DataTree:
+        """Convert ``ZarrTrace`` to :class:`~.xarray.DataTree`.
 
         This converts all the groups in the ``ZarrTrace.root`` hierarchy into an
-        ``InferenceData`` object. The only exception is that ``_sampling_state`` is
+        ``DataTree`` object. The only exception is that ``_sampling_state`` is
         excluded.
 
         Parameters
@@ -827,15 +830,18 @@ class ZarrTrace:
         save_warmup : bool
             If ``True``, all of the warmup groups are stored in the inference data
             object.
+        eager : bool
+            If ``True``, all of the data is loaded into memory. If ``False``, the data
+            is lazily loaded when accessed.
 
         Notes
         -----
         ``xarray`` and in turn ``arviz`` require the zarr groups to have consolidated
         metadata. To achieve this, a new consolidated store is constructed by calling
         :func:`zarr.consolidate_metadata` on the root's store. This means that the
-        returned ``InferenceData`` object will operate on a different storage unit
+        returned ``DataTree`` object will operate on a different storage unit
         than the calling ``ZarrTrace``, so future changes to the ``ZarrTrace`` won't be
-        automatically reflected in the returned ``InferenceData`` object.
+        automatically reflected in the returned ``DataTree`` object.
         """
         self.split_warmup_groups()
         # Xarray complains if we try to open a zarr hierarchy that doesn't have consolidated metadata
@@ -857,6 +863,8 @@ class ZarrTrace:
                 continue
             data = xr.open_zarr(store, group=name, mask_and_scale=False)
             attrs = {**data.attrs, **global_attrs}
-            data.attrs = make_attrs(attrs=attrs, library=pymc)
-            groups[name] = data.load() if az.rcParams["data.load"] == "eager" else data
-        return az.InferenceData(**groups)
+            data.attrs = make_attrs(attrs=attrs, inference_library=pymc)
+            groups[name] = data.load() if eager else data
+        return az.from_dict(
+            groups, save_warmup=save_warmup, coords=self.coords, dims=self.vars_to_dims
+        )
