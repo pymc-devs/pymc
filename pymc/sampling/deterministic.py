@@ -99,8 +99,8 @@ def compute_deterministics(
 
     coords, dims = coords_and_dims_for_inferencedata(model)
 
-    is_datatree = hasattr(dataset, "to_dataset")
-    input_dataset = dataset.to_dataset() if is_datatree else dataset
+    is_datatree = isinstance(dataset, xarray.DataTree)
+    input_dataset = dataset.dataset if is_datatree else dataset
     input_dataset = input_dataset[[rv.name for rv in model.free_RVs]]
 
     new_dataset = apply_function_over_dataset(

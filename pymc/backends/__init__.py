@@ -57,7 +57,7 @@ type of original trace.
 Loading a saved backend
 -----------------------
 
-Saved backends can be loaded using `arviz.convert_to_datatree`
+Saved backends can be loaded using `arviz.from_netcdf`
 
 """
 
