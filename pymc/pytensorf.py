@@ -13,7 +13,9 @@
 #   limitations under the License.
 import warnings
 
+from collections import deque
 from collections.abc import Iterable, Sequence
+from itertools import chain
 from typing import cast
 
 import numpy as np
@@ -1037,12 +1039,105 @@ def as_symbolic_string(x, **kwargs):
     return StringConstant(stringtype, x)
 
 
+def _replace_rebuild(
+    fgraph: FunctionGraph, replacements: Sequence[tuple[Variable, Variable]], **kwargs
+) -> FunctionGraph:
+    """Replace variables and rebuild dependent graph if needed.
+
+    Rebuilding allows for replacements that change the semantics of the graph
+    (different types), which may not be possible for all Ops.
+    """
+    fg_clients = fgraph.clients
+    fg_variables = fgraph.variables
+
+    def get_client_nodes(vars) -> set[Apply]:
+        # Start with the immediate clients of vars
+        nodes = set()
+        d = list(chain.from_iterable(fg_clients[var] for var in vars if var in fg_variables))
+        while d:
+            node, _ = d.pop()
+            if node in nodes or isinstance(node.op, Output):
+                continue
+            nodes.add(node)
+            # Keep walking to the successor clients
+            d.extend(chain.from_iterable(fg_clients[out] for out in node.outputs))
+        return nodes
+
+    repl_dict = dict(replacements)
+    root_nodes = {var.owner for var in repl_dict.keys()}
+
+    # Build sorted queue with all nodes that depend on replaced variables
+    topo_order = {node: order for order, node in enumerate(fgraph.toposort())}
+    d = deque(
+        sorted(
+            get_client_nodes(repl_dict.keys()),
+            key=lambda node: topo_order[node],
+        )
+    )
+    while d:
+        node = d.popleft()
+        if node in root_nodes:
+            continue
+
+        new_inputs = [repl_dict.get(i, i) for i in node.inputs]
+        if new_inputs == node.inputs:
+            continue
+
+        # We need to remake the node if:
+        #  1. The output type depends on an input value
+        #  2. Any of the input type changed
+        if getattr(node.op, "_output_type_depends_on_input_value", False):
+            remake_node = True
+        else:
+            remake_node = any(
+                inp.type != new_inp.type for inp, new_inp in zip(node.inputs, new_inputs)
+            )
+
+        if remake_node:
+            new_node = node.clone_with_new_inputs(new_inputs, strict=False)
+            fgraph.import_node(new_node, import_missing=True)
+
+            # We are not always allowed to call `fgraph.replace_all` because the output types may be incompatible
+            # We will keep the changes in repl_dict until we can replace a node without remaking it,
+            # or we arrive to the end of the graph, in which case we need to replace the FunctionGraph output
+            for out, new_out in zip(node.outputs, new_node.outputs):
+                new_out.name = out.name
+                repl_dict[out] = new_out
+        else:
+            fgraph.replace_all(tuple(zip(node.inputs, new_inputs)), import_missing=True)
+
+    # If the FunctionGraph outputs themselves were rebuilt we need to handle them
+    for i, (new_output, old_output) in enumerate(
+        zip(
+            (repl_dict.get(out, out) for out in fgraph.outputs),
+            fgraph.outputs,
+        )
+    ):
+        if new_output is old_output:
+            continue
+        fgraph.outputs[i] = new_output
+        fgraph.import_var(new_output, import_missing=True)
+        fgraph.clients[new_output] = [
+            # Output variables have a special Output Op client
+            # We need to transfer it to the new output.
+            # Any other uses of this output variable will already have been substituted in the loop above,
+            # or are part of other outputs we will subsitute next
+            (cl.op.make_node(new_output), idx) if isinstance(cl.op, Output) else (cl, idx)
+            for cl, idx in fgraph.clients[old_output]
+        ]
+    return fgraph
+
+
 def toposort_replace(
     fgraph: FunctionGraph,
     replacements: Sequence[tuple[Variable, Variable]],
     reverse: bool = False,
+    rebuild: bool = False,
 ) -> None:
     """Replace multiple variables in place in topological order."""
+    if rebuild and reverse:
+        raise NotImplementedError("reverse rebuild not yet supported")
+
     fgraph_toposort = {node: i for i, node in enumerate(fgraph.toposort())}
     fgraph_toposort[None] = -1  # Variables without owner are not in the toposort
     sorted_replacements = sorted(
@@ -1050,7 +1145,21 @@ def toposort_replace(
         key=lambda pair: fgraph_toposort[pair[0].owner],
         reverse=reverse,
     )
-    fgraph.replace_all(sorted_replacements, import_missing=True)
+
+    if rebuild:
+        if len(replacements) > 1:
+            # In this case we need to modify the replacements recursively with each other
+            sorted_replacements = [list(pairs) for pairs in sorted_replacements]
+            for i in range(1, len(replacements)):
+                temp_fgraph = FunctionGraph(
+                    outputs=[repl for _, repl in sorted_replacements[i:]],
+                    clone=False,
+                )
+                _replace_rebuild(temp_fgraph, replacements=sorted_replacements[:i])
+                sorted_replacements[i][1] = temp_fgraph.outputs[0]
+        _replace_rebuild(fgraph, sorted_replacements)
+    else:
+        fgraph.replace_all(sorted_replacements, import_missing=True)
 
 
 def normalize_rng_param(rng: None | Variable) -> Variable:
