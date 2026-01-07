@@ -419,7 +419,7 @@ def sample_prior_predictive(
 
     Returns
     -------
-    arviz.xarray.DataTree or Dict
+    xarray.DataTree or dict
         A ``DataTree`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
