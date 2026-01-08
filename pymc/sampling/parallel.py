@@ -145,8 +145,7 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        # Only apply threadpool_limits for non-fork methods.
-        # With fork, the child inherits the parent's thread pool settings.
+        # Remove condition when fork is no longer supported
         with threadpool_limits(
             limits=self._blas_cores if self._mp_start_method != "fork" else None
         ):
