@@ -864,6 +864,7 @@ class TestNormalMixture:
 
     def test_random(self):
         rng = np.random.default_rng(20160911)
+
         def ref_rand(size, w, mu, sigma):
             component = rng.choice(w.size, size=size, p=w)
             return rng.normal(mu[component], sigma[component], size=size)
