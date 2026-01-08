@@ -104,6 +104,7 @@ class _Process:
         rng_state: RandomGeneratorState,
         blas_cores,
         chain: int,
+        mp_start_method: str,
         zarr_chains: list[ZarrChain] | bytes | None = None,
         zarr_chains_is_pickled: bool = False,
     ):
@@ -129,6 +130,7 @@ class _Process:
         self._draws = draws
         self._tune = tune
         self._blas_cores = blas_cores
+        self._mp_start_method = mp_start_method
 
     def _unpickle_step_method(self):
         unpickle_error = (
@@ -143,7 +145,11 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        with threadpool_limits(limits=self._blas_cores):
+        # Only apply threadpool_limits for non-fork methods.
+        # With fork, the child inherits the parent's thread pool settings.
+        with threadpool_limits(
+            limits=self._blas_cores if self._mp_start_method != "fork" else None
+        ):
             try:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
@@ -304,6 +310,7 @@ class ProcessAdapter:
                 get_state_from_generator(rng),
                 blas_cores,
                 self.chain,
+                mp_ctx.get_start_method(),
                 zarr_chains_send,
                 zarr_chains_pickled is not None,
             ),
