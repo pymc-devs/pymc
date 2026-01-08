@@ -145,8 +145,8 @@ class CholeskyCovPacked(Transform):
 
         Parameters
         ----------
-        n: int
-            Number of diagonal entries in the LKJCholeskyCov distribution
+        n : int
+            Number of diagonal entries in the LKJCholeskyCov distribution.
         """
         self.diag_idxs = pt.arange(1, n + 1).cumsum() - 1
 
