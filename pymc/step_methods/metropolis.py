@@ -531,7 +531,6 @@ class BinaryMetropolis(ArrayStep):
 
 @dataclass_state
 class BinaryGibbsMetropolisState(StepMethodState):
-    tune: bool
     transit_p: int
     shuffle_dims: bool
     order: list
@@ -586,7 +585,6 @@ class BinaryGibbsMetropolis(ArrayStep):
     ):
         model = pm.modelcontext(model)
 
-        self.tune = True
         # transition probabilities
         self.transit_p = transit_p
 
