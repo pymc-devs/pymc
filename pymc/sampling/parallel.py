@@ -22,6 +22,7 @@ import traceback
 
 from collections import namedtuple
 from collections.abc import Sequence
+from contextlib import nullcontext
 from typing import cast
 
 import cloudpickle
@@ -112,6 +113,7 @@ class _Process:
         # the rng instance to the child process because pickling (copying) looses
         # the seed sequence state information. For this reason, we send a
         # RandomGeneratorState instead.
+        # The blas_cores argument is ignored when using fork multiprocessing start method
         rng = random_generator_from_state(rng_state)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
@@ -145,10 +147,13 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        # Remove condition when fork is no longer supported
-        with threadpool_limits(
-            limits=self._blas_cores if self._mp_start_method != "fork" else None
-        ):
+        # Only apply threadpool_limits for non-fork methods.
+        context = (
+            nullcontext()
+            if self._mp_start_method == "fork"
+            else threadpool_limits(limits=self._blas_cores)
+        )
+        with context:
             try:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
