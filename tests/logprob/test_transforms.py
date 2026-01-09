@@ -276,10 +276,10 @@ def test_leaky_relu_switch_logp_symbolic_slope_checks_positive():
     np.testing.assert_allclose(res, expected)
 
     # non pos slope raises
-    with pytest.raises(ParameterValueError, match="leaky_relu slope > 0"):
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scale > 0"):
         pm.logp(y, -1.0, warn_rvs=False).eval({a: -0.5})
 
-    with pytest.raises(ParameterValueError, match="leaky_relu slope > 0"):
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scale > 0"):
         pm.logp(y, -1.0, warn_rvs=False).eval({a: 0.0})
 
 

@@ -47,10 +47,7 @@ from pytensor.graph.traversal import ancestors
 from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar import Switch
 from pytensor.scalar import switch as scalar_switch
-from pytensor.scalar.basic import GE, GT, LE, LT, Mul
 from pytensor.tensor.basic import Join, MakeVector, switch
-from pytensor.tensor.elemwise import Elemwise
-from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
     local_rv_size_lift,
@@ -83,9 +80,7 @@ from pymc.logprob.rewriting import (
     measurable_ir_rewrites_db,
     subtensor_ops,
 )
-from pymc.logprob.transforms import MeasurableTransform
 from pymc.logprob.utils import (
-    CheckParameterValue,
     check_potential_measurability,
     filter_measurable_variables,
     get_related_valued_nodes,
@@ -412,80 +407,6 @@ class MeasurableSwitchMixture(MeasurableElemwise):
 measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
 
 
-class MeasurableLeakyReLUSwitch(MeasurableElemwise):
-    """A placeholder for leaky-ReLU graphs built via `switch(x > 0, x, a * x)`.
-
-    this is an invertible, piecewise-linear transform of a single continuous measurable variable.
-    """
-
-    valid_scalar_types = (Switch,)
-
-
-measurable_leaky_relu_switch = MeasurableLeakyReLUSwitch(scalar_switch)
-
-
-def _is_x_positive_condition(cond: TensorVariable, x: TensorVariable) -> bool:
-    if cond.owner is None:
-        return False
-    if not isinstance(cond.owner.op, Elemwise):
-        return False
-    scalar_op = cond.owner.op.scalar_op
-    if not isinstance(scalar_op, GT | GE | LT | LE):
-        return False
-
-    left, right = cond.owner.inputs
-
-    def _is_zero(v: TensorVariable) -> bool:
-        try:
-            return pt.get_underlying_scalar_constant_value(v) == 0
-        except NotScalarConstantError:
-            return False
-
-    # x > 0 or x >= 0
-    if left is x and _is_zero(right) and isinstance(scalar_op, GT | GE):
-        return True
-    # 0 < x or 0 <= x
-    if right is x and _is_zero(left) and isinstance(scalar_op, LT | LE):
-        return True
-    return False
-
-
-def _extract_leaky_relu_slope(
-    neg_branch: TensorVariable, x: TensorVariable
-) -> TensorVariable | None:
-    """Extract slope `a` from `neg_branch` assuming it represents `a * x`.
-
-    supports both plain `Elemwise(Mul)` and `MeasurableTransform` scale rewrites.
-    """
-    if neg_branch is x:
-        return pt.constant(1.0)
-
-    if neg_branch.owner is None:
-        return None
-
-    # handle case where `a * x` was already rewritten into a measurable scale transform
-    if isinstance(neg_branch.owner.op, MeasurableTransform):
-        op = neg_branch.owner.op
-        if not isinstance(op.scalar_op, Mul):
-            return None
-        # MeasurableTransform takes (measurable_input, scale)
-        if len(neg_branch.owner.inputs) != 2:
-            return None
-        if neg_branch.owner.inputs[op.measurable_input_idx] is not x:
-            return None
-        scale = neg_branch.owner.inputs[1 - op.measurable_input_idx]
-        return cast(TensorVariable, scale)
-
-    # plain multiplication
-    if isinstance(neg_branch.owner.op, Elemwise) and isinstance(neg_branch.owner.op.scalar_op, Mul):
-        left, right = neg_branch.owner.inputs
-        if left is x:
-            return cast(TensorVariable, right)
-        if right is x:
-            return cast(TensorVariable, left)
-    return None
-
-
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
     if isinstance(node.op, MeasurableOp):
@@ -510,51 +431,6 @@ def find_measurable_switch_mixture(fgraph, node):
     return [measurable_switch_mixture(switch_cond, *components)]
 
 
-@node_rewriter([switch])
-def find_measurable_leaky_relu_switch(fgraph, node):
-    """Detect `switch(x > 0, x, a * x)` and replace it by a measurable op.
-
-    This enables a change-of-variables logprob derivation instead of treating it as a mixture.
-    """
-    if isinstance(node.op, MeasurableOp):
-        return None
-
-    cond, pos_branch, neg_branch = node.inputs
-
-    # we only mark the switch measurable once both branches are already measurable.
-    # so, the switch logprob can simply gate between branch logps (delegating inversion/Jacobian details to each branch).
-    if set(filter_measurable_variables([pos_branch, neg_branch])) != {pos_branch, neg_branch}:
-        return None
-
-    if not filter_measurable_variables([pos_branch]):
-        return None
-    x = cast(TensorVariable, pos_branch)
-
-    if x.type.dtype.startswith("int"):
-        return None
-
-    if x.type.broadcastable != node.outputs[0].type.broadcastable:
-        return None
-
-    if not _is_x_positive_condition(cast(TensorVariable, cond), x):
-        return None
-
-    a = _extract_leaky_relu_slope(cast(TensorVariable, neg_branch), x)
-    if a is None:
-        return None
-
-    if check_potential_measurability([a]):
-        return None
-
-    return [
-        measurable_leaky_relu_switch(
-            cast(TensorVariable, cond),
-            x,
-            cast(TensorVariable, neg_branch),
-        )
-    ]
-
-
 @_logprob.register(MeasurableSwitchMixture)
 def logprob_switch_mixture(op, values, switch_cond, component_true, component_false, **kwargs):
     [value] = values
@@ -564,30 +440,6 @@ def logprob_switch_mixture(op, values, switch_cond, component_true, component_fa
         _logprob_helper(component_true, value),
         _logprob_helper(component_false, value),
     )
-
-
-@_logprob.register(MeasurableLeakyReLUSwitch)
-def logprob_leaky_relu_switch(op, values, cond, x, neg_branch, **kwargs):
-    (value,) = values
-
-    a = _extract_leaky_relu_slope(cast(TensorVariable, neg_branch), cast(TensorVariable, x))
-    if a is None:
-        raise NotImplementedError("Could not extract leaky-ReLU slope")
-
-    # enforce `a > 0` at runtime to ensure invertibility and to make the branch selection predicate depend only on the observed value.
-    a_is_positive = pt.all(pt.gt(a, 0))
-
-    # for `a > 0`, `switch(x > 0, x, a * x)` maps to disjoint regions in `value`: true branch -> value > 0, false branch -> value <= 0.
-    value_implies_true_branch = pt.gt(value, 0)
-
-    logp_expr = pt.switch(
-        value_implies_true_branch,
-        _logprob_helper(x, value, **kwargs),
-        _logprob_helper(neg_branch, value, **kwargs),
-    )
-
-    # attach the parameter check to the returned expression so it can't be optimized away.
-    return CheckParameterValue("leaky_relu slope > 0")(logp_expr, a_is_positive)
 
 
 measurable_ir_rewrites_db.register(
@@ -602,13 +454,6 @@ measurable_ir_rewrites_db.register(
     find_measurable_switch_mixture,
     "basic",
     "mixture",
-)
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_leaky_relu_switch",
-    find_measurable_leaky_relu_switch,
-    "basic",
-    "transform",
 )
 
 
