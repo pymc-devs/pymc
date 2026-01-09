@@ -601,6 +601,7 @@ def sample(
         number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
+        Note that this argument is ignored when using fork multiprocessing start method.
     initvals : optional, dict, array of dict
         Dict or list of dicts with initial value strategies to use instead of the defaults from
         `Model.initial_values`. The keys should be names of transformed random variables.

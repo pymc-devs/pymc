@@ -113,7 +113,6 @@ class _Process:
         # the rng instance to the child process because pickling (copying) looses
         # the seed sequence state information. For this reason, we send a
         # RandomGeneratorState instead.
-        # The blas_cores argument is ignored when using fork multiprocessing start method
         rng = random_generator_from_state(rng_state)
         self._msg_pipe = msg_pipe
         self._step_method = step_method
