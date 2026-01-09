@@ -66,7 +66,6 @@ from pytensor.tensor.type import TensorType
 from pytensor.tensor.type_other import NoneConst, NoneTypeT, SliceType
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
@@ -416,50 +415,32 @@ def find_measurable_switch_mixture(fgraph, node):
 
     switch_cond, *components = node.inputs
 
-    # require at least one measurable component, otherwise there's no logprob to compute
+    # Require at least one measurable component, otherwise there's no logprob to compute
     measurable_components = filter_measurable_variables(components)
     if not measurable_components:
         return None
 
-    # only allow non measurable components if they are compile time constants
-    measurable_ids = {id(c) for c in measurable_components}
-    non_measurable_components = [c for c in components if id(c) not in measurable_ids]
-    folded_constants: dict[int, TensorVariable] = {}
-    for comp in non_measurable_components:
-        if isinstance(comp, Constant):
-            folded_constants[id(comp)] = comp
-            continue
-        try:
-            (folded_comp,) = constant_fold([comp], raise_not_constant=True)
-        except NotConstantValueError:
-            return None
-        if not isinstance(folded_comp, TensorVariable):
-            folded_comp = pt.constant(folded_comp)
-        if not isinstance(folded_comp, Constant):
-            return None
-        folded_constants[id(comp)] = folded_comp
-    bcast_ref = measurable_components[
-        0
-    ]  # use a measurable component as broadcasting reference for constant branches
+    measurable_set = set(measurable_components)
+
     new_components: list[TensorVariable] = []
     for comp in components:
-        if id(comp) in measurable_ids:
+        if comp in measurable_set:
             new_components.append(comp)
-        else:
-            # treat constant branches as point masses so we can compute a logp.
-            # broadcasting is allowed for constants because it doesn't introduce dependence.
-            const_comp = folded_constants[id(comp)]
-            bcast_comp, _ = pt.broadcast_arrays(const_comp, bcast_ref)
-            new_components.append(dirac_delta(bcast_comp))
+            continue
+
+        # Deterministic branches must not depend on measurable variables
+        if check_potential_measurability([comp]):
+            return None
+
+        # Treat deterministic branches as point-masses; broadcasting happens during logp evaluation
+        new_components.append(dirac_delta(comp))
 
     # We don't support broadcasting of components, as that yields dependent (identical) values.
     # The current logp implementation assumes all component values are independent.
     # Broadcasting of the switch condition is fine
     out_bcast = node.outputs[0].type.broadcastable
     if any(
-        comp.type.broadcastable != out_bcast
-        for comp in new_components
-        if id(comp) in measurable_ids
+        comp.type.broadcastable != out_bcast for comp in new_components if comp in measurable_set
     ):
         return None
 

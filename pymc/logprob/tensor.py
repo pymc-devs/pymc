@@ -39,7 +39,6 @@ from pathlib import Path
 
 from numpy.lib.array_utils import normalize_axis_index
 from pytensor import tensor as pt
-from pytensor.graph.basic import Constant
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
@@ -164,7 +163,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     else:
         base_vars = node.inputs
 
-    # allow mixing potentially measurable inputs with compile time constants.
+    # Allow mixing potentially measurable inputs with deterministic ones.
     new_base_vars: list[TensorVariable] = []
     has_measurable = False
     for base_var in base_vars:
@@ -172,18 +171,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
             has_measurable = True
             new_base_vars.append(base_var)
         else:
-            if isinstance(base_var, Constant):
-                folded_var = base_var
-            else:
-                try:
-                    (folded_var,) = constant_fold([base_var], raise_not_constant=True)
-                except NotConstantValueError:
-                    return None
-                if not isinstance(folded_var, TensorVariable):
-                    folded_var = pt.constant(folded_var)
-            if not isinstance(folded_var, Constant):
-                return None
-            new_base_vars.append(dirac_delta(folded_var))
+            new_base_vars.append(dirac_delta(base_var))
     if not has_measurable:
         return None
     base_vars = new_base_vars

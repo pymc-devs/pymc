@@ -980,13 +980,20 @@ def test_switch_mixture_constant_branch_broadcast_ok():
     cat_fixed_dirac = pt.where(t > 5, cat, pm.DiracDelta.dist(-1, shape=cat.shape))
     vv_const = cat_fixed_const.clone()
     vv_dirac = cat_fixed_dirac.clone()
-    logp_const = logp(cat_fixed_const, vv_const, warn_rvs=False)
-    logp_dirac = logp(cat_fixed_dirac, vv_dirac, warn_rvs=False)
+    logp_const = logp(cat_fixed_const, vv_const)
+    logp_dirac = logp(cat_fixed_dirac, vv_dirac)
     test_value = np.where(np.arange(10) > 5, 0, -1).astype(vv_const.dtype)
     np.testing.assert_allclose(
         logp_const.eval({vv_const: test_value}),
         logp_dirac.eval({vv_dirac: test_value.astype(vv_dirac.dtype)}),
     )
+
+    bad_value = test_value.copy()
+    bad_value[0] = 0  # violates the deterministic branch requirement (-1)
+    bad_const = logp_const.eval({vv_const: bad_value})
+    bad_dirac = logp_dirac.eval({vv_dirac: bad_value.astype(vv_dirac.dtype)})
+    assert np.isneginf(bad_const[0])
+    assert np.isneginf(bad_dirac[0])
 
 
 def test_ifelse_mixture_one_component():
