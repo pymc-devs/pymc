@@ -65,6 +65,7 @@ from pymc.logprob.rewriting import (
 )
 from pymc.logprob.utils import (
     check_potential_measurability,
+    dirac_delta,
     filter_measurable_variables,
     get_related_valued_nodes,
     replace_rvs_by_values,
@@ -162,9 +163,18 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     else:
         base_vars = node.inputs
 
-    if not all(check_potential_measurability([base_var]) for base_var in base_vars):
+    # Allow mixing potentially measurable inputs with deterministic ones.
+    new_base_vars: list[TensorVariable] = []
+    has_measurable = False
+    for base_var in base_vars:
+        if check_potential_measurability([base_var]):
+            has_measurable = True
+            new_base_vars.append(base_var)
+        else:
+            new_base_vars.append(dirac_delta(base_var))
+    if not has_measurable:
         return None
-
+    base_vars = new_base_vars
     base_vars = assume_valued_outputs(base_vars)
     if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_vars):
         return None
