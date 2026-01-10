@@ -16,6 +16,7 @@
 
 import contextlib
 import logging
+import multiprocessing
 import pickle
 import sys
 import time
@@ -59,7 +60,7 @@ from pymc.progress_bar import (
     ProgressBarType,
     default_progress_theme,
 )
-from pymc.sampling.parallel import Draw, _cpu_count
+from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
     log_warning_stats,
@@ -774,27 +775,10 @@ def sample(
     if chains is None:
         chains = max(2, cores)
 
-    if blas_cores == "auto":
-        blas_cores = cores
-
-    cores = min(cores, chains)
-
-    num_blas_cores_per_chain: int | None
-    joined_blas_limiter: Callable[[], Any]
-
-    if blas_cores is None:
-        joined_blas_limiter = contextlib.nullcontext
-        num_blas_cores_per_chain = None
-    elif isinstance(blas_cores, int):
-
-        def joined_blas_limiter():
-            return threadpool_limits(limits=blas_cores)
-
-        num_blas_cores_per_chain = blas_cores // cores
-    else:
-        raise ValueError(
-            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
-        )
+    mp_ctx = _initialize_multiprocessing_context(mp_ctx, quiet=quiet)
+    joined_blas_limiter, cores, num_blas_cores_per_chain = setup_cores_blas_cores(
+        blas_cores, chains, cores, mp_ctx
+    )
 
     if random_seed == -1:
         raise ValueError(
@@ -1023,6 +1007,45 @@ def sample(
         model=model,
         quiet=quiet,
     )
+
+
+def setup_cores_blas_cores(
+    blas_cores: int | None | str,
+    chains: int,
+    cores: int,
+    mp_ctx: multiprocessing.context.BaseContext,
+) -> tuple[Callable[[], Any], int, int | None]:
+    if isinstance(blas_cores, str) and blas_cores != "auto":
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    if blas_cores == "auto":
+        blas_cores = cores
+
+    cores = min(cores, chains)
+
+    num_blas_cores_per_chain: int | None
+    joined_blas_limiter: Callable[[], Any]
+
+    if blas_cores is None:
+        joined_blas_limiter = contextlib.nullcontext
+        num_blas_cores_per_chain = None
+
+    elif isinstance(blas_cores, int):
+        if mp_ctx.get_start_method() == "fork":
+            # https://github.com/pymc-devs/pymc/issues/7354
+            joined_blas_limiter = contextlib.nullcontext
+        else:
+
+            def joined_blas_limiter():
+                return threadpool_limits(limits=blas_cores)
+
+        num_blas_cores_per_chain = blas_cores // cores
+    else:
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    return joined_blas_limiter, cores, num_blas_cores_per_chain
 
 
 def _sample_return(

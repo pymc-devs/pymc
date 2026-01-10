@@ -12,21 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import contextlib
 import logging
-import multiprocessing
-import multiprocessing.sharedctypes
-import platform
 import time
 
-from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 
 from arviz import InferenceData
 from rich.theme import Theme
-from threadpoolctl import threadpool_limits
 
 import pymc
 
@@ -34,7 +28,8 @@ from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
-from pymc.sampling.parallel import _cpu_count
+from pymc.sampling.mcmc import setup_cores_blas_cores
+from pymc.sampling.parallel import _cpu_count, _initialize_multiprocessing_context
 from pymc.smc.kernels import IMH
 from pymc.smc.parallel import ParallelSMCSampler
 from pymc.stats.convergence import log_warnings, run_convergence_checks
@@ -55,7 +50,7 @@ def sample_smc(
     random_seed: RandomState = None,
     chains=None,
     cores=None,
-    blas_cores=None,
+    blas_cores: int | str | None = None,
     compute_convergence_checks=True,
     return_inferencedata=True,
     idata_kwargs=None,
@@ -90,9 +85,13 @@ def sample_smc(
     cores : int, default None
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system.
-    blas_cores : int, default None
-        The number of BLAS cores to use for each chain. If ``None``, no limit is set.
-        Setting this can help avoid thread oversubscription when running multiple chains in parallel.
+    blas_cores: int or "auto" or None, default = "auto"
+        The total number of threads blas and openmp functions should use during sampling.
+        Setting it to "auto" will ensure that the total number of active blas threads is the
+        same as the `cores` argument. If set to an integer, the sampler will try to use that total
+        number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
+        down. If set to None, this will keep the default behavior of whatever blas implementation
+        is used at runtime.
     compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
@@ -189,32 +188,10 @@ def sample_smc(
 
     logger.info("Initializing SMC sampler...")
 
-    num_blas_cores_per_chain: int | None
-    joined_blas_limiter: Callable[[], Any]
-
-    if blas_cores is None:
-        joined_blas_limiter = contextlib.nullcontext
-        num_blas_cores_per_chain = None
-    elif isinstance(blas_cores, int):
-
-        def joined_blas_limiter():
-            return threadpool_limits(limits=blas_cores)
-
-        num_blas_cores_per_chain = blas_cores // cores
-    else:
-        raise ValueError(f"Invalid argument `blas_cores`, must be int or None: {blas_cores}")
-
-    if mp_ctx is None or isinstance(mp_ctx, str):
-        if mp_ctx is None and platform.system() == "Darwin":
-            if platform.processor() == "arm":
-                mp_ctx = "fork"
-                logger.debug(
-                    "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                    + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
-                )
-            else:
-                mp_ctx = "forkserver"
-        mp_ctx = multiprocessing.get_context(mp_ctx)
+    mp_ctx = _initialize_multiprocessing_context(mp_ctx)
+    joined_blas_limiter, cores, num_blas_cores_per_chain = setup_cores_blas_cores(
+        blas_cores, chains, cores, mp_ctx
+    )
 
     t1 = time.time()
 
@@ -251,6 +228,7 @@ def sample_smc(
             f"Sampling {chains} chain{'s' if chains > 1 else ''} "
             f"in {cores} job{'s' if cores > 1 else ''}"
         )
+
         results = []
         with joined_blas_limiter():
             with ParallelSMCSampler(

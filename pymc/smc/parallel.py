@@ -17,6 +17,7 @@ import time
 
 from collections import namedtuple
 from collections.abc import Sequence
+from contextlib import nullcontext
 
 import cloudpickle
 import numpy as np
@@ -61,6 +62,7 @@ class _SMCProcess:
         start,
         rng_state: RandomGeneratorState,
         chain: int,
+        mp_start_method: str,
         blas_cores: int | None,
     ):
         self._msg_pipe = msg_pipe
@@ -68,6 +70,7 @@ class _SMCProcess:
         self._start = start
         self._rng = random_generator_from_state(rng_state)
         self.chain = chain
+        self._mp_start_method = mp_start_method
         self._blas_cores = blas_cores
 
     def _unpickle_objects(self):
@@ -77,7 +80,11 @@ class _SMCProcess:
             self._start = cloudpickle.loads(self._start)
 
     def run(self):
-        with threadpool_limits(limits=self._blas_cores):
+        with (
+            nullcontext()
+            if self._mp_start_method == "fork"
+            else threadpool_limits(limits=self._blas_cores)
+        ):
             try:
                 self._unpickle_objects()
                 self._run_smc()
@@ -187,6 +194,7 @@ class SMCProcessAdapter:
                 start,
                 get_state_from_generator(rng),
                 chain,
+                mp_ctx.get_start_method(),
                 blas_cores,
             ),
         )
