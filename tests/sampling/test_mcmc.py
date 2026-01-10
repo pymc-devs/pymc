@@ -874,9 +874,9 @@ class TestType:
 
 
 class TestShared:
-    def test_sample(self, seeded_test):
-        x = np.random.normal(size=100)
-        y = x + np.random.normal(scale=1e-2, size=100)
+    def test_sample(self, rng):
+        x = rng.normal(size=100)
+        y = x + rng.normal(scale=1e-2, size=100)
 
         x_pred = np.linspace(-3, 3, 200)
 
