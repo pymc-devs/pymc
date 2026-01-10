@@ -14,14 +14,16 @@
 """Shared utilities for progress bar rendering."""
 
 
-def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
+def compute_draw_speed(
+    elapsed: float, draws: int, action_name="draw", time_unit="s"
+) -> tuple[float, str]:
     """Compute sampling speed and appropriate unit (draws/s or s/draw)."""
     speed = draws / max(elapsed, 1e-6)
 
     if speed > 1 or speed == 0:
-        unit = "draws/s"
+        unit = f"{action_name}s/{time_unit}"
     else:
-        unit = "s/draw"
+        unit = f"{time_unit}/{action_name}"
         speed = 1 / speed
 
     return speed, unit

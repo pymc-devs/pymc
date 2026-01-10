@@ -33,7 +33,7 @@ import pymc
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import default_progress_theme
+from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
 from pymc.smc.parallel import ParallelSMCSampler
@@ -489,25 +489,12 @@ def _sample_smc_many(
     sample_settings: list
         List to append sample_settings to
     """
-    from rich.console import Console
-    from rich.progress import SpinnerColumn, TextColumn, TimeElapsedColumn
-
-    from pymc.progress_bar import CustomProgress
-
-    with CustomProgress(
-        TextColumn("{task.description}"),
-        SpinnerColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        TextColumn("{task.fields[status]}"),
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
-    ) as progress:
-        task_ids = {}
-        for i in range(chains):
-            task_id = progress.add_task(f"Chain {i}", status="Stage: 0 Beta: 0.0000")
-            task_ids[i] = task_id
-
+    with SMCProgressBarManager(
+        kernel=kernel,
+        chains=chains,
+        progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
+    ) as progress_manager:
         for i in range(chains):
             _sample_smc(
                 chain=i,
@@ -518,8 +505,7 @@ def _sample_smc_many(
                 traces=traces,
                 sample_stats=sample_stats,
                 sample_settings=sample_settings,
-                progress=progress,
-                task_id=task_ids[i],
+                progress_manager=progress_manager,
             )
 
 
@@ -533,8 +519,7 @@ def _sample_smc(
     traces: list,
     sample_stats: list,
     sample_settings: list,
-    progress,
-    task_id: int,
+    progress_manager,
 ):
     """Sample one SMC chain (sequential).
 
@@ -556,16 +541,13 @@ def _sample_smc(
         List to append sample_stats to
     sample_settings : list
         List to append sample_settings to
-    progress : CustomProgress
+    progress_manager : SMCProgressBarManager
         Progress bar manager
-    task_id : int
-        Task ID for this chain in the progress bar
     """
     import copy
 
     from collections import defaultdict
 
-    # Initialize SMC kernel
     smc = copy.deepcopy(kernel)
     smc.start = start
     smc.rng = rng
@@ -577,13 +559,11 @@ def _sample_smc(
     chain_sample_stats = defaultdict(list)
 
     while smc.beta < 1:
+        old_beta = smc.beta
+
         smc.update_beta_and_weights()
 
-        progress.update(
-            task_id,
-            status=f"Stage: {stage} Beta: {smc.beta:.4f}",
-            refresh=True,
-        )
+        progress_manager.update(chain, stage, smc.beta, old_beta)
 
         smc.resample()
         smc.tune()
@@ -593,6 +573,8 @@ def _sample_smc(
             chain_sample_stats[stat].append(value)
 
         stage += 1
+
+    progress_manager.update(chain, stage, smc.beta, is_last=True)
 
     trace = _build_trace_from_kernel_state(
         smc.tempered_posterior,
