@@ -181,10 +181,6 @@ def sample_smc(
     model = modelcontext(model)
 
     logger.info("Initializing SMC sampler...")
-    logger.info(
-        f"Sampling {chains} chain{'s' if chains > 1 else ''} "
-        f"in {cores} job{'s' if cores > 1 else ''}"
-    )
 
     if mp_ctx is None or isinstance(mp_ctx, str):
         if mp_ctx is None and platform.system() == "Darwin":
@@ -211,37 +207,63 @@ def sample_smc(
             raise ValueError(f"Number of start dicts must match number of chains ({chains})")
         start_points = start
 
-    results = []
-    with ParallelSMCSampler(
-        draws=draws,
-        kernel=kernel,
-        chains=chains,
-        cores=cores,
-        rngs=rngs,
-        start_points=start_points,
-        model=model,
-        progressbar=progressbar,
-        progressbar_theme=progressbar_theme,
-        mp_ctx=mp_ctx,
-        kernel_kwargs=kernel_kwargs,
-    ) as sampler:
-        for result in sampler:
-            results.append(result)
-
-    chain_results = [[] for _ in range(chains)]
-    for result in results:
-        chain_results[result.chain].append(result)
+    parallel = cores > 1 and chains > 1
 
     traces = []
     sample_stats = []
     sample_settings = []
 
-    for chain_samples in chain_results:
-        if chain_samples:
-            final_result = chain_samples[-1]
-            traces.append(final_result.trace)
-            sample_stats.append(final_result.sample_stats)
-            sample_settings.append(final_result.sample_settings)
+    if parallel:
+        logger.info(
+            f"Sampling {chains} chain{'s' if chains > 1 else ''} "
+            f"in {cores} job{'s' if cores > 1 else ''}"
+        )
+        results = []
+        with ParallelSMCSampler(
+            draws=draws,
+            kernel=kernel,
+            chains=chains,
+            cores=cores,
+            rngs=rngs,
+            start_points=start_points,
+            model=model,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
+            mp_ctx=mp_ctx,
+            kernel_kwargs=kernel_kwargs,
+        ) as sampler:
+            for result in sampler:
+                results.append(result)
+
+        chain_results = [[] for _ in range(chains)]
+        for result in results:
+            chain_results[result.chain].append(result)
+
+        for chain_samples in chain_results:
+            if chain_samples:
+                final_result = chain_samples[-1]
+                traces.append(final_result.trace)
+                sample_stats.append(final_result.sample_stats)
+                sample_settings.append(final_result.sample_settings)
+
+    else:
+        logger.info(
+            f"Sampling {chains} chain{'s' if chains > 1 else ''}{' sequentially' if chains > 1 else ''}"
+        )
+        _sample_smc_many(
+            draws=draws,
+            kernel=kernel,
+            chains=chains,
+            rngs=rngs,
+            start_points=start_points,
+            model=model,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
+            kernel_kwargs=kernel_kwargs,
+            traces=traces,
+            sample_stats=sample_stats,
+            sample_settings=sample_settings,
+        )
 
     trace = MultiTrace(traces)
 
@@ -320,3 +342,175 @@ def _save_sample_stats(
         idata = InferenceData(**idata, sample_stats=sample_stats)  # type: ignore[arg-type]
 
     return sample_stats, idata
+
+
+def _sample_smc_many(
+    *,
+    draws: int,
+    kernel,
+    chains: int,
+    rngs: list[np.random.Generator],
+    start_points: list[dict | None],
+    model: Model,
+    progressbar: bool,
+    progressbar_theme: Theme | None,
+    kernel_kwargs: dict,
+    traces: list,
+    sample_stats: list,
+    sample_settings: list,
+):
+    """Sample all SMC chains sequentially.
+
+    Parameters
+    ----------
+    draws: int
+        The number of samples to draw
+    kernel: SMC_KERNEL
+        The SMC kernel class to use
+    chains: int
+        Total number of chains to sample
+    rngs: list of random Generators
+        A list of random number generators, one for each chain
+    start_points: list
+        Starting points for each chain
+    model: Model
+        The PyMC model
+    progressbar: bool
+        Whether to show progress bar
+    progressbar_theme: Theme
+        Progress bar theme
+    kernel_kwargs: dict
+        Keyword arguments for the kernel
+    traces: list
+        List to append trace results to
+    sample_stats: list
+        List to append sample_stats to
+    sample_settings: list
+        List to append sample_settings to
+    """
+    from rich.console import Console
+    from rich.progress import SpinnerColumn, TextColumn, TimeElapsedColumn
+
+    from pymc.progress_bar import CustomProgress
+
+    with CustomProgress(
+        TextColumn("{task.description}"),
+        SpinnerColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        TextColumn("{task.fields[status]}"),
+        console=Console(theme=progressbar_theme),
+        disable=not progressbar,
+    ) as progress:
+        task_ids = {}
+        for i in range(chains):
+            task_id = progress.add_task(f"Chain {i}", status="Stage: 0 Beta: 0.0000")
+            task_ids[i] = task_id
+
+        for i in range(chains):
+            _sample_smc(
+                chain=i,
+                draws=draws,
+                kernel=kernel,
+                rng=rngs[i],
+                start=start_points[i],
+                model=model,
+                kernel_kwargs=kernel_kwargs,
+                traces=traces,
+                sample_stats=sample_stats,
+                sample_settings=sample_settings,
+                progress=progress,
+                task_id=task_ids[i],
+            )
+
+
+def _sample_smc(
+    *,
+    chain: int,
+    draws: int,
+    kernel,
+    rng: np.random.Generator,
+    start: dict | None,
+    model: Model,
+    kernel_kwargs: dict,
+    traces: list,
+    sample_stats: list,
+    sample_settings: list,
+    progress,
+    task_id: int,
+):
+    """Sample one SMC chain (sequential).
+
+    Parameters
+    ----------
+    chain : int
+        Number of the chain that the samples will belong to
+    draws : int
+        The number of samples to draw
+    kernel : SMC_KERNEL
+        The SMC kernel class to use
+    rng : Generator
+        Random number generator
+    start : dict or None
+        Starting point in parameter space
+    model : Model
+        The PyMC model
+    kernel_kwargs : dict
+        Keyword arguments for the kernel
+    traces : list
+        List to append trace results to
+    sample_stats : list
+        List to append sample_stats to
+    sample_settings : list
+        List to append sample_settings to
+    progress : CustomProgress
+        Progress bar manager
+    task_id : int
+        Task ID for this chain in the progress bar
+    """
+    from collections import defaultdict
+
+    smc = kernel(
+        draws=draws,
+        start=start,
+        model=model,
+        random_seed=rng,
+        **kernel_kwargs,
+    )
+
+    smc._initialize_kernel()
+    smc.setup_kernel()
+
+    stage = 0
+    chain_sample_stats = defaultdict(list)
+
+    while smc.beta < 1:
+        smc.update_beta_and_weights()
+
+        progress.update(
+            task_id,
+            status=f"Stage: {stage} Beta: {smc.beta:.4f}",
+            refresh=True,
+        )
+
+        smc.resample()
+        smc.tune()
+        smc.mutate()
+
+        for stat, value in smc.sample_stats().items():
+            chain_sample_stats[stat].append(value)
+
+        stage += 1
+
+    progress.update(
+        task_id,
+        status=f"Stage: {stage} Beta: {smc.beta:.4f}",
+        refresh=True,
+    )
+
+    trace = smc._posterior_to_trace(chain)
+    chain_sample_settings = smc.sample_settings()
+
+    traces.append(trace)
+    sample_stats.append(dict(chain_sample_stats))
+    sample_settings.append(chain_sample_settings)
