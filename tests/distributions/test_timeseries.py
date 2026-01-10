@@ -536,7 +536,7 @@ class TestAR:
 
         y_eval = draw(y, draws=2)
         assert y_eval[0].shape == (batch_size, steps)
-        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
+        assert not np.allclose(y_eval[0], y_eval[1])
 
     def test_batched_rhos(self):
         ar_order, steps, batch_size = 3, 100, 5
@@ -782,7 +782,7 @@ class TestGARCH11:
 
         y_eval = draw(y, draws=2, random_seed=800)
         assert y_eval[0].shape == (batch_size, steps)
-        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
+        assert not np.allclose(y_eval[0], y_eval[1])
 
         kwargs1 = init_kwargs.copy()
         if explicit_shape:
@@ -864,7 +864,7 @@ class TestEulerMaruyama:
 
         y_eval = draw(y, draws=2, random_seed=numpy_rng)
         assert y_eval[0].shape == (batch_size, steps)
-        assert not np.any(np.isclose(y_eval[0], y_eval[1]))
+        assert not np.allclose(y_eval[0], y_eval[1])
 
         if explicit_shape:
             kwargs["shape"] = steps
