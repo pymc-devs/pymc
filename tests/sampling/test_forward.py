@@ -631,8 +631,8 @@ class TestSamplePPC:
             _, pval = stats.kstest(ppc["b"].flatten(), stats.norm(scale=scale).cdf)
             assert pval > 0.001
 
-    def test_model_not_drawable_prior(self, seeded_test):
-        data = np.random.poisson(lam=10, size=200)
+    def test_model_not_drawable_prior(self, rng):
+        data = rng.poisson(lam=10, size=200)
         model = pm.Model()
         with model:
             mu = pm.HalfFlat("sigma")
@@ -1155,8 +1155,8 @@ def point_list_arg_bug_fixture() -> tuple[pm.Model, pm.backends.base.MultiTrace]
 
 
 class TestSamplePriorPredictive:
-    def test_ignores_observed(self, seeded_test):
-        observed = np.random.normal(10, 1, size=200)
+    def test_ignores_observed(self, rng):
+        observed = rng.normal(10, 1, size=200)
         with pm.Model():
             # Use a prior that's way off to show we're ignoring the observed variables
             observed_data = pm.Data("observed_data", observed)
@@ -1196,9 +1196,9 @@ class TestSamplePriorPredictive:
 
         assert trace.prior["m"].shape == (1, 10, 4)
 
-    def test_multivariate2(self, seeded_test):
+    def test_multivariate2(self, rng):
         # Added test for issue #3271
-        mn_data = np.random.multinomial(n=100, pvals=[1 / 6.0] * 6, size=10)
+        mn_data = rng.multinomial(n=100, pvals=[1 / 6.0] * 6, size=10)
         with pm.Model() as dm_model:
             probs = pm.Dirichlet("probs", a=np.ones(6))
             obs = pm.Multinomial("obs", n=100, p=probs, observed=mn_data)
@@ -1229,10 +1229,10 @@ class TestSamplePriorPredictive:
         avg = np.stack([b_sampler() for i in range(10000)]).mean(0)
         npt.assert_array_almost_equal(avg, 0.5 * np.ones((10,)), decimal=2)
 
-    def test_transformed(self, seeded_test):
+    def test_transformed(self, rng):
         n = 18
         at_bats = 45 * np.ones(n, dtype=int)
-        hits = np.random.randint(1, 40, size=n, dtype=int)
+        hits = rng.integers(1, 40, size=n, dtype=int)
         draws = 50
 
         with pm.Model() as model:
@@ -1250,9 +1250,9 @@ class TestSamplePriorPredictive:
         assert gen.prior_predictive["y"].shape == (1, draws, n)
         assert "thetas" in gen.prior.data_vars
 
-    def test_shared(self, seeded_test):
+    def test_shared(self, rng):
         n1 = 10
-        obs = shared(np.random.rand(n1) < 0.5)
+        obs = shared(rng.random(n1) < 0.5)
         draws = 50
 
         with pm.Model() as m:
@@ -1265,15 +1265,15 @@ class TestSamplePriorPredictive:
         assert gen1.prior["o"].shape == (1, draws, n1)
 
         n2 = 20
-        obs.set_value(np.random.rand(n2) < 0.5)
+        obs.set_value(rng.random(n2) < 0.5)
         with m:
             gen2 = pm.sample_prior_predictive(draws)
 
         assert gen2.prior_predictive["y"].shape == (1, draws, n2)
         assert gen2.prior["o"].shape == (1, draws, n2)
 
-    def test_density_dist(self, seeded_test):
-        obs = np.random.normal(-1, 0.1, size=10)
+    def test_density_dist(self, rng):
+        obs = rng.normal(-1, 0.1, size=10)
         with pm.Model():
             mu = pm.Normal("mu", 0, 1)
             sigma = pm.HalfNormal("sigma", 1e-6)

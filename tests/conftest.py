@@ -45,9 +45,9 @@ def strict_float32():
 
 
 @pytest.fixture(scope="function", autouse=False)
-def seeded_test():
-    np.random.seed(20160911)
-
+def rng():
+    """reproducable numpy Generator"""
+    return np.random.default_rng(20160911)
 
 @pytest.fixture
 def fail_on_warning():
