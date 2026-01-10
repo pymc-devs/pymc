@@ -198,6 +198,17 @@ def sample_smc(
 
     rngs = [np.random.default_rng(seed) for seed in random_seed]
 
+    with model:
+        smc_kernel = kernel(
+            draws=draws,
+            start=None,
+            model=model,
+            random_seed=rngs[0].integers(2**30),
+            **kernel_kwargs,
+        )
+
+    # Prepare start points for each chain
+    start_points: list[dict | None]
     if start is None:
         start_points = [None] * chains
     elif isinstance(start, dict):
@@ -220,17 +231,14 @@ def sample_smc(
         )
         results = []
         with ParallelSMCSampler(
-            draws=draws,
-            kernel=kernel,
+            kernel=smc_kernel,
             chains=chains,
             cores=cores,
             rngs=rngs,
             start_points=start_points,
-            model=model,
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
             mp_ctx=mp_ctx,
-            kernel_kwargs=kernel_kwargs,
         ) as sampler:
             for result in sampler:
                 results.append(result)
@@ -239,27 +247,47 @@ def sample_smc(
         for result in results:
             chain_results[result.chain].append(result)
 
-        for chain_samples in chain_results:
-            if chain_samples:
-                final_result = chain_samples[-1]
-                traces.append(final_result.trace)
-                sample_stats.append(final_result.sample_stats)
-                sample_settings.append(final_result.sample_settings)
+        for chain_idx, chain_samples in enumerate(chain_results):
+            if not chain_samples:
+                raise RuntimeError(
+                    f"Chain {chain_idx} did not produce any results. "
+                    "This indicates a failure in parallel sampling."
+                )
+            final_result = chain_samples[-1]
+            trace = _build_trace_from_kernel_state(
+                final_result.tempered_posterior,
+                final_result.var_info,
+                final_result.variables,
+                chain_idx,
+                model,
+            )
+            traces.append(trace)
+
+            # Convert sample_stats from list of dicts to dict of lists
+            # final_result.sample_stats is a list of dicts (one per stage)
+            # We need to convert it to dict of lists (one list per stat)
+            stats_dict: dict[str, list] = {}
+            for stage_stats in final_result.sample_stats:
+                for stat, value in stage_stats.items():
+                    if stat not in stats_dict:
+                        stats_dict[stat] = []
+                    stats_dict[stat].append(value)
+
+            sample_stats.append(stats_dict)
+            sample_settings.append(final_result.sample_settings)
 
     else:
         logger.info(
             f"Sampling {chains} chain{'s' if chains > 1 else ''}{' sequentially' if chains > 1 else ''}"
         )
         _sample_smc_many(
-            draws=draws,
-            kernel=kernel,
+            kernel=smc_kernel,
             chains=chains,
             rngs=rngs,
             start_points=start_points,
             model=model,
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
-            kernel_kwargs=kernel_kwargs,
             traces=traces,
             sample_stats=sample_stats,
             sample_settings=sample_settings,
@@ -344,9 +372,62 @@ def _save_sample_stats(
     return sample_stats, idata
 
 
+def _build_trace_from_kernel_state(
+    tempered_posterior: np.ndarray,
+    var_info: dict,
+    variables: list,
+    chain: int,
+    model: Model,
+):
+    """Build a trace from kernel state.
+
+    This allows trace building to happen in the main process rather than workers.
+
+    Parameters
+    ----------
+    tempered_posterior : ndarray
+        The final particle positions
+    var_info : dict
+        Dictionary of variable info {var.name: (shape, size)}
+    variables : list
+        List of model variables
+    chain : int
+        Chain index
+    model : Model
+        PyMC model for trace setup
+
+    Returns
+    -------
+    NDArray trace backend
+    """
+    from pymc.backends.ndarray import NDArray
+    from pymc.vartypes import discrete_types
+
+    length_pos = len(tempered_posterior)
+    varnames = [v.name for v in variables]
+
+    with model:
+        strace = NDArray(name=model.name)
+        strace.setup(length_pos, chain)
+
+    for i in range(length_pos):
+        value = []
+        size = 0
+        for var in variables:
+            shape, new_size = var_info[var.name]
+            var_samples = tempered_posterior[i][size : size + new_size]
+            # Round discrete variable samples
+            if var.dtype in discrete_types:
+                var_samples = np.round(var_samples).astype(var.dtype)
+            value.append(var_samples.reshape(shape))
+            size += new_size
+        strace.record(point=dict(zip(varnames, value)))
+
+    return strace
+
+
 def _sample_smc_many(
     *,
-    draws: int,
     kernel,
     chains: int,
     rngs: list[np.random.Generator],
@@ -354,7 +435,6 @@ def _sample_smc_many(
     model: Model,
     progressbar: bool,
     progressbar_theme: Theme | None,
-    kernel_kwargs: dict,
     traces: list,
     sample_stats: list,
     sample_settings: list,
@@ -363,10 +443,8 @@ def _sample_smc_many(
 
     Parameters
     ----------
-    draws: int
-        The number of samples to draw
-    kernel: SMC_KERNEL
-        The SMC kernel class to use
+    kernel: SMC_KERNEL instance
+        An initialized SMC kernel (with compiled functions)
     chains: int
         Total number of chains to sample
     rngs: list of random Generators
@@ -379,8 +457,6 @@ def _sample_smc_many(
         Whether to show progress bar
     progressbar_theme: Theme
         Progress bar theme
-    kernel_kwargs: dict
-        Keyword arguments for the kernel
     traces: list
         List to append trace results to
     sample_stats: list
@@ -410,12 +486,10 @@ def _sample_smc_many(
         for i in range(chains):
             _sample_smc(
                 chain=i,
-                draws=draws,
                 kernel=kernel,
                 rng=rngs[i],
                 start=start_points[i],
                 model=model,
-                kernel_kwargs=kernel_kwargs,
                 traces=traces,
                 sample_stats=sample_stats,
                 sample_settings=sample_settings,
@@ -427,12 +501,10 @@ def _sample_smc_many(
 def _sample_smc(
     *,
     chain: int,
-    draws: int,
     kernel,
     rng: np.random.Generator,
     start: dict | None,
     model: Model,
-    kernel_kwargs: dict,
     traces: list,
     sample_stats: list,
     sample_settings: list,
@@ -445,18 +517,14 @@ def _sample_smc(
     ----------
     chain : int
         Number of the chain that the samples will belong to
-    draws : int
-        The number of samples to draw
-    kernel : SMC_KERNEL
-        The SMC kernel class to use
+    kernel : SMC_KERNEL instance
+        An initialized SMC kernel (with compiled functions)
     rng : Generator
         Random number generator
     start : dict or None
         Starting point in parameter space
     model : Model
         The PyMC model
-    kernel_kwargs : dict
-        Keyword arguments for the kernel
     traces : list
         List to append trace results to
     sample_stats : list
@@ -468,15 +536,14 @@ def _sample_smc(
     task_id : int
         Task ID for this chain in the progress bar
     """
+    import copy
+
     from collections import defaultdict
 
-    smc = kernel(
-        draws=draws,
-        start=start,
-        model=model,
-        random_seed=rng,
-        **kernel_kwargs,
-    )
+    # Initialize SMC kernel
+    smc = copy.deepcopy(kernel)
+    smc.start = start
+    smc.rng = rng
 
     smc._initialize_kernel()
     smc.setup_kernel()
@@ -502,13 +569,13 @@ def _sample_smc(
 
         stage += 1
 
-    progress.update(
-        task_id,
-        status=f"Stage: {stage} Beta: {smc.beta:.4f}",
-        refresh=True,
+    trace = _build_trace_from_kernel_state(
+        smc.tempered_posterior,
+        smc.var_info,
+        smc.variables,
+        chain,
+        model,
     )
-
-    trace = smc._posterior_to_trace(chain)
     chain_sample_settings = smc.sample_settings()
 
     traces.append(trace)

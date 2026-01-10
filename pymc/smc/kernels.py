@@ -12,11 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import abc
-import sys
 import warnings
 
 from abc import ABC
-from typing import TypeAlias, cast
+from typing import TypeAlias
 
 import numpy as np
 import pytensor.tensor as pt
@@ -28,7 +27,7 @@ from scipy.stats import multivariate_normal
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_expression
-from pymc.model import Point, modelcontext
+from pymc.model import modelcontext
 from pymc.pytensorf import (
     compile,
     floatX,
@@ -169,64 +168,72 @@ class SMC_KERNEL(ABC):
         if threshold < 0 or threshold > 1:
             raise ValueError(f"Threshold value {threshold} must be between 0 and 1")
         self.threshold = threshold
-        self.model = model
+
+        model = modelcontext(model)
         self.rng = np.random.default_rng(seed=random_seed)
 
-        self.model = modelcontext(model)
-        self.variables = self.model.value_vars
+        self.variables = model.value_vars
 
         self.var_info: dict[str, tuple] = {}
         self.tempered_posterior: np.ndarray
         self.prior_logp = None
         self.likelihood_logp = None
         self.tempered_posterior_logp = None
-        self.prior_logp_func = None
-        self.likelihood_logp_func = None
         self.log_marginal_likelihood = 0
         self.beta = 0
         self.iteration = 0
         self.resampling_indexes = None
         self.weights = np.ones(self.draws) / self.draws
-        self.compile_kwargs = compile_kwargs if compile_kwargs is not None else {}
+
+        initial_point = model.initial_point(random_seed=self.rng.integers(2**30))
+
+        for v in self.variables:
+            self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
+
+        shared = make_shared_replacements(initial_point, self.variables, model)
+        compile_kwargs = compile_kwargs if compile_kwargs is not None else {}
+
+        # If a model has no observed variables, the likelihood_logp will have unused inputs, which can be safely
+        # ignored.
+        compile_kwargs.update({"on_unused_input": "ignore"})
+
+        self.prior_logp_func = _logp_forw(
+            initial_point, [model.varlogp], self.variables, shared, compile_kwargs
+        )
+        self.likelihood_logp_func = _logp_forw(
+            initial_point, [model.datalogp], self.variables, shared, compile_kwargs
+        )
+
+        prior_expression = make_initial_point_expression(
+            free_rvs=model.free_RVs,
+            rvs_to_transforms=model.rvs_to_transforms,
+            initval_strategies={
+                **model.rvs_to_initial_values,
+            },
+            default_strategy="prior",
+            return_transformed=True,
+        )
+
+        self._prior_expression = prior_expression
+        self._prior_var_names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
 
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution."""
-        sys.stdout.write(" ")  # see issue #5828
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", category=UserWarning, message="The effect of Potentials"
             )
 
-            model = self.model
+            prior_values = draw(self._prior_expression, draws=self.draws, random_seed=self.rng)
+            dict_prior = {k: np.stack(v) for k, v in zip(self._prior_var_names, prior_values)}
 
-            prior_expression = make_initial_point_expression(
-                free_rvs=model.free_RVs,
-                rvs_to_transforms=model.rvs_to_transforms,
-                initval_strategies={
-                    **model.rvs_to_initial_values,
-                },
-                default_strategy="prior",
-                return_transformed=True,
-            )
-            prior_values = draw(prior_expression, draws=self.draws, random_seed=self.rng)
-
-            names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
-            dict_prior = {k: np.stack(v) for k, v in zip(names, prior_values)}
-
-        return cast(dict[str, np.ndarray], dict_prior)
+        return dict_prior
 
     def _initialize_kernel(self):
-        """Create variables and logp function necessary to run SMC kernel.
+        """Initialize particles and compute their prior and likelihood logp.
 
-        This method should not be overwritten. If needed, use `setup_kernel`
-        instead.
-
+        This method should not be overwritten. If needed, use `setup_kernel` instead.
         """
-        # Create dictionary that stores original variables shape and size
-        initial_point = self.model.initial_point(random_seed=self.rng.integers(2**30))
-        for v in self.variables:
-            self.var_info[v.name] = (initial_point[v.name].shape, initial_point[v.name].size)
-        # Create particles bijection map
         if self.start:
             init_rnd = self.start
         else:
@@ -234,21 +241,12 @@ class SMC_KERNEL(ABC):
 
         population = []
         for i in range(self.draws):
-            point = Point({v.name: init_rnd[v.name][i] for v in self.variables}, model=self.model)
+            point = {v.name: init_rnd[v.name][i] for v in self.variables}
             population.append(DictToArrayBijection.map(point).data)
 
         self.tempered_posterior = np.array(floatX(population))
 
-        # Initialize prior and likelihood log probabilities
-        shared = make_shared_replacements(initial_point, self.variables, self.model)
-
-        self.prior_logp_func = _logp_forw(
-            initial_point, [self.model.varlogp], self.variables, shared, self.compile_kwargs
-        )
-        self.likelihood_logp_func = _logp_forw(
-            initial_point, [self.model.datalogp], self.variables, shared, self.compile_kwargs
-        )
-
+        # Evaluate prior and likelihood for initial particles
         priors = [self.prior_logp_func(sample) for sample in self.tempered_posterior]
         likelihoods = [self.likelihood_logp_func(sample) for sample in self.tempered_posterior]
 
@@ -336,17 +334,30 @@ class SMC_KERNEL(ABC):
             "threshold": self.threshold,
         }
 
-    def _posterior_to_trace(self, chain=0) -> NDArray:
+    def _posterior_to_trace(self, chain=0, model=None) -> NDArray:
         """Save results into a PyMC trace.
 
         This method should not be overwritten.
+
+        Parameters
+        ----------
+        chain : int
+            Chain index for this trace
+        model : Model, optional
+            Model context needed for trace setup
+
+        Returns
+        -------
+        trace : NDArray
+            The posterior trace object.
         """
         length_pos = len(self.tempered_posterior)
         varnames = [v.name for v in self.variables]
+        model = modelcontext(model)
 
-        with self.model:
-            strace = NDArray(name=self.model.name)
-            strace.setup(length_pos, chain)
+        strace = NDArray(name=model.name if model is not None else None, model=model)
+        strace.setup(length_pos, chain)
+
         for i in range(length_pos):
             value = []
             size = 0
