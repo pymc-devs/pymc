@@ -14,36 +14,33 @@
 
 import logging
 import multiprocessing
+import multiprocessing.sharedctypes
+import platform
 import time
 
-from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, wait
 from typing import Any
 
-import cloudpickle
 import numpy as np
 
 from arviz import InferenceData
-from rich.progress import (
-    SpinnerColumn,
-    TextColumn,
-    TimeElapsedColumn,
-    TimeRemainingColumn,
-)
+from rich.theme import Theme
 
 import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
-from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
-from pymc.distributions.distribution import _support_point
-from pymc.logprob.abstract import _icdf, _logcdf, _logprob
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import CustomProgress
+from pymc.progress_bar import default_progress_theme
 from pymc.sampling.parallel import _cpu_count
 from pymc.smc.kernels import IMH
+from pymc.smc.parallel import ParallelSMCSampler
 from pymc.stats.convergence import log_warnings, run_convergence_checks
-from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.util import (
+    RandomState,
+    _get_seeds_per_chain,
+)
+
+logger = logging.getLogger(__name__)
 
 
 def sample_smc(
@@ -59,7 +56,9 @@ def sample_smc(
     return_inferencedata=True,
     idata_kwargs=None,
     progressbar=True,
+    progressbar_theme: Theme | None = default_progress_theme,
     compile_kwargs: dict | None = None,
+    mp_ctx=None,
     **kernel_kwargs,
 ) -> InferenceData | MultiTrace:
     r"""
@@ -97,8 +96,14 @@ def sample_smc(
         Keyword arguments for :func:`pymc.to_inference_data`.
     progressbar : bool, optional, default True
         Whether or not to display a progress bar in the command line.
+    progressbar_theme : Theme, optional
+        Custom theme for progress bar. Defaults to the standard PyMC progress bar theme.
     compile_kwargs: dict, optional
         Keyword arguments to pass to pytensor.function
+    mp_ctx : multiprocessing.context or str, optional
+        Multiprocessing context for parallel chains. Can be a context object or a string
+        ("fork", "spawn", or "forkserver"). If None, defaults to "fork" on macOS ARM and
+        "forkserver" on other macOS systems, and the system default elsewhere.
 
     **kernel_kwargs : dict, optional
         Keyword arguments passed to the SMC_kernel. The default IMH kernel takes the following keywords:
@@ -175,29 +180,68 @@ def sample_smc(
 
     model = modelcontext(model)
 
-    _log = logging.getLogger(__name__)
-    _log.info("Initializing SMC sampler...")
-    _log.info(
+    logger.info("Initializing SMC sampler...")
+    logger.info(
         f"Sampling {chains} chain{'s' if chains > 1 else ''} "
         f"in {cores} job{'s' if cores > 1 else ''}"
     )
 
-    params = (
-        draws,
-        kernel,
-        start,
-        model,
-    )
+    if mp_ctx is None or isinstance(mp_ctx, str):
+        if mp_ctx is None and platform.system() == "Darwin":
+            if platform.processor() == "arm":
+                mp_ctx = "fork"
+                logger.debug(
+                    "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
+                    + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
+                )
+            else:
+                mp_ctx = "forkserver"
+        mp_ctx = multiprocessing.get_context(mp_ctx)
 
     t1 = time.time()
 
-    results = run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores)
+    rngs = [np.random.default_rng(seed) for seed in random_seed]
 
-    (
-        traces,
-        sample_stats,
-        sample_settings,
-    ) = zip(*results)
+    if start is None:
+        start_points = [None] * chains
+    elif isinstance(start, dict):
+        start_points = [start] * chains
+    else:
+        if len(start) != chains:
+            raise ValueError(f"Number of start dicts must match number of chains ({chains})")
+        start_points = start
+
+    results = []
+    with ParallelSMCSampler(
+        draws=draws,
+        kernel=kernel,
+        chains=chains,
+        cores=cores,
+        rngs=rngs,
+        start_points=start_points,
+        model=model,
+        progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
+        mp_ctx=mp_ctx,
+        kernel_kwargs=kernel_kwargs,
+    ) as sampler:
+        for result in sampler:
+            results.append(result)
+
+    chain_results = [[] for _ in range(chains)]
+    for result in results:
+        chain_results[result.chain].append(result)
+
+    traces = []
+    sample_stats = []
+    sample_settings = []
+
+    for chain_samples in chain_results:
+        if chain_samples:
+            final_result = chain_samples[-1]
+            traces.append(final_result.trace)
+            sample_stats.append(final_result.sample_stats)
+            sample_settings.append(final_result.sample_settings)
 
     trace = MultiTrace(traces)
 
@@ -241,7 +285,6 @@ def _save_sample_stats(
     sample_stats_dict = sample_stats[0]
 
     if chains > 1:
-        # Collect the stat values from each chain in a single list
         for stat in sample_stats[0].keys():
             value_list = []
             for chain_sample_stats in sample_stats:
@@ -277,159 +320,3 @@ def _save_sample_stats(
         idata = InferenceData(**idata, sample_stats=sample_stats)  # type: ignore[arg-type]
 
     return sample_stats, idata
-
-
-def _sample_smc_int(
-    draws,
-    kernel,
-    start,
-    model,
-    random_seed,
-    chain,
-    progress_dict,
-    task_id,
-    **kernel_kwargs,
-):
-    """Run one SMC instance."""
-    in_out_pickled = isinstance(model, bytes)
-    if in_out_pickled:
-        # function was called in multiprocessing context, deserialize first
-        (draws, kernel, start, model) = map(
-            cloudpickle.loads,
-            (
-                draws,
-                kernel,
-                start,
-                model,
-            ),
-        )
-
-        kernel_kwargs = {key: cloudpickle.loads(value) for key, value in kernel_kwargs.items()}
-
-    smc = kernel(
-        draws=draws,
-        start=start,
-        model=model,
-        random_seed=random_seed,
-        **kernel_kwargs,
-    )
-
-    smc._initialize_kernel()
-    smc.setup_kernel()
-
-    stage = 0
-    sample_stats = defaultdict(list)
-    while smc.beta < 1:
-        smc.update_beta_and_weights()
-
-        progress_dict[task_id] = {"stage": stage, "beta": smc.beta}
-
-        smc.resample()
-        smc.tune()
-        smc.mutate()
-        for stat, value in smc.sample_stats().items():
-            sample_stats[stat].append(value)
-
-        stage += 1
-
-    results = (
-        smc._posterior_to_trace(chain),
-        sample_stats,
-        smc.sample_settings(),
-    )
-
-    if in_out_pickled:
-        results = cloudpickle.dumps(results)
-
-    return results
-
-
-def run_chains(chains, progressbar, params, random_seed, kernel_kwargs, cores):
-    with CustomProgress(
-        TextColumn("{task.description}"),
-        SpinnerColumn(),
-        TimeRemainingColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        TextColumn("{task.fields[status]}"),
-        disable=not progressbar,
-    ) as progress:
-        futures = []  # keep track of the jobs
-        with multiprocessing.Manager() as manager:
-            # this is the key - we share some state between our
-            # main process and our worker functions
-            _progress = manager.dict()
-
-            # check if model contains CustomDistributions defined without dist argument
-            custom_methods = _find_custom_dist_dispatch_methods(params[3])
-
-            # "manually" (de)serialize params before/after multiprocessing
-            params = tuple(cloudpickle.dumps(p) for p in params)
-            kernel_kwargs = {key: cloudpickle.dumps(value) for key, value in kernel_kwargs.items()}
-
-            with ProcessPoolExecutor(
-                max_workers=cores,
-                initializer=_register_custom_methods,
-                initargs=(custom_methods,),
-            ) as executor:
-                for c in range(chains):  # iterate over the jobs we need to run
-                    # set visible false so we don't have a lot of bars all at once:
-                    task_id = progress.add_task(f"Chain {c}", status="Stage: 0 Beta: 0")
-                    futures.append(
-                        executor.submit(
-                            _sample_smc_int,
-                            *params,
-                            random_seed[c],
-                            c,
-                            _progress,
-                            task_id,
-                            **kernel_kwargs,
-                        )
-                    )
-
-                # monitor the progress:
-                done = []
-                remaining = futures
-                while len(remaining) > 0:
-                    finished, remaining = wait(remaining, timeout=0.1)
-                    done.extend(finished)
-                    for task_id, update_data in _progress.items():
-                        stage = update_data["stage"]
-                        beta = update_data["beta"]
-                        # update the progress bar for this task:
-                        progress.update(
-                            status=f"Stage: {stage} Beta: {beta:.3f}",
-                            task_id=task_id,
-                            refresh=True,
-                        )
-
-        return tuple(cloudpickle.loads(r.result()) for r in done)
-
-
-def _find_custom_dist_dispatch_methods(model):
-    custom_methods = {}
-    for rv in model.basic_RVs:
-        rv_type = rv.owner.op
-        cls = type(rv_type)
-        if isinstance(rv_type, CustomDistRV | CustomSymbolicDistRV):
-            custom_methods[cloudpickle.dumps(cls)] = (
-                cloudpickle.dumps(_logprob.registry.get(cls, None)),
-                cloudpickle.dumps(_logcdf.registry.get(cls, None)),
-                cloudpickle.dumps(_icdf.registry.get(cls, None)),
-                cloudpickle.dumps(_support_point.registry.get(cls, None)),
-            )
-
-    return custom_methods
-
-
-def _register_custom_methods(custom_methods):
-    for cls, (logprob, logcdf, icdf, support_point) in custom_methods.items():
-        cls = cloudpickle.loads(cls)
-        if logprob is not None:
-            _logprob.register(cls, cloudpickle.loads(logprob))
-        if logcdf is not None:
-            _logcdf.register(cls, cloudpickle.loads(logcdf))
-        if icdf is not None:
-            _icdf.register(cls, cloudpickle.loads(icdf))
-        if support_point is not None:
-            _support_point.register(cls, cloudpickle.loads(support_point))
