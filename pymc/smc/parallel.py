@@ -22,6 +22,7 @@ import cloudpickle
 import numpy as np
 
 from rich.theme import Theme
+from threadpoolctl import threadpool_limits
 
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.sampling.parallel import ExceptionWithTraceback, ParallelSamplingError
@@ -60,12 +61,14 @@ class _SMCProcess:
         start,
         rng_state: RandomGeneratorState,
         chain: int,
+        blas_cores: int | None,
     ):
         self._msg_pipe = msg_pipe
         self._kernel = kernel
         self._start = start
         self._rng = random_generator_from_state(rng_state)
         self.chain = chain
+        self._blas_cores = blas_cores
 
     def _unpickle_objects(self):
         """Unpickle kernel and start point."""
@@ -74,17 +77,18 @@ class _SMCProcess:
             self._start = cloudpickle.loads(self._start)
 
     def run(self):
-        try:
-            self._unpickle_objects()
-            self._run_smc()
-        except KeyboardInterrupt:
-            pass
-        except BaseException as e:
-            e = ExceptionWithTraceback(e, e.__traceback__)
-            self._msg_pipe.send(("error", e))
-            self._wait_for_abortion()
-        finally:
-            self._msg_pipe.close()
+        with threadpool_limits(limits=self._blas_cores):
+            try:
+                self._unpickle_objects()
+                self._run_smc()
+            except KeyboardInterrupt:
+                pass
+            except BaseException as e:
+                e = ExceptionWithTraceback(e, e.__traceback__)
+                self._msg_pipe.send(("error", e))
+                self._wait_for_abortion()
+            finally:
+                self._msg_pipe.close()
 
     def _wait_for_abortion(self):
         """Wait for abort message from main process."""
@@ -166,6 +170,7 @@ class SMCProcessAdapter:
         rng: np.random.Generator,
         start,
         mp_ctx,
+        blas_cores: int | None,
     ):
         self.chain = chain
         process_name = f"smc_worker_chain_{chain}"
@@ -182,6 +187,7 @@ class SMCProcessAdapter:
                 start,
                 get_state_from_generator(rng),
                 chain,
+                blas_cores,
             ),
         )
         self._process.start()
@@ -315,6 +321,7 @@ class ParallelSMCSampler:
         mp_ctx: multiprocessing.context.BaseContext,
         progressbar: bool = True,
         progressbar_theme: Theme | None = default_progress_theme,
+        blas_cores: int | None = None,
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
@@ -333,6 +340,7 @@ class ParallelSMCSampler:
                 rng,
                 start_pickled,
                 mp_ctx,
+                blas_cores,
             )
             for chain, rng, start_pickled in zip(range(chains), rngs, start_points_pickled)
         ]

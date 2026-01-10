@@ -12,18 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import contextlib
 import logging
 import multiprocessing
 import multiprocessing.sharedctypes
 import platform
 import time
 
+from collections.abc import Callable
 from typing import Any
 
 import numpy as np
 
 from arviz import InferenceData
 from rich.theme import Theme
+from threadpoolctl import threadpool_limits
 
 import pymc
 
@@ -52,6 +55,7 @@ def sample_smc(
     random_seed: RandomState = None,
     chains=None,
     cores=None,
+    blas_cores=None,
     compute_convergence_checks=True,
     return_inferencedata=True,
     idata_kwargs=None,
@@ -86,6 +90,9 @@ def sample_smc(
     cores : int, default None
         The number of chains to run in parallel. If ``None``, set to the number of CPUs in the
         system.
+    blas_cores : int, default None
+        The number of BLAS cores to use for each chain. If ``None``, no limit is set.
+        Setting this can help avoid thread oversubscription when running multiple chains in parallel.
     compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
@@ -182,6 +189,21 @@ def sample_smc(
 
     logger.info("Initializing SMC sampler...")
 
+    num_blas_cores_per_chain: int | None
+    joined_blas_limiter: Callable[[], Any]
+
+    if blas_cores is None:
+        joined_blas_limiter = contextlib.nullcontext
+        num_blas_cores_per_chain = None
+    elif isinstance(blas_cores, int):
+
+        def joined_blas_limiter():
+            return threadpool_limits(limits=blas_cores)
+
+        num_blas_cores_per_chain = blas_cores // cores
+    else:
+        raise ValueError(f"Invalid argument `blas_cores`, must be int or None: {blas_cores}")
+
     if mp_ctx is None or isinstance(mp_ctx, str):
         if mp_ctx is None and platform.system() == "Darwin":
             if platform.processor() == "arm":
@@ -230,20 +252,22 @@ def sample_smc(
             f"in {cores} job{'s' if cores > 1 else ''}"
         )
         results = []
-        with ParallelSMCSampler(
-            kernel=smc_kernel,
-            chains=chains,
-            cores=cores,
-            rngs=rngs,
-            start_points=start_points,
-            progressbar=progressbar,
-            progressbar_theme=progressbar_theme,
-            mp_ctx=mp_ctx,
-        ) as sampler:
-            for result in sampler:
-                results.append(result)
+        with joined_blas_limiter():
+            with ParallelSMCSampler(
+                kernel=smc_kernel,
+                chains=chains,
+                cores=cores,
+                rngs=rngs,
+                start_points=start_points,
+                progressbar=progressbar,
+                progressbar_theme=progressbar_theme,
+                mp_ctx=mp_ctx,
+                blas_cores=num_blas_cores_per_chain,
+            ) as sampler:
+                for result in sampler:
+                    results.append(result)
 
-        chain_results = [[] for _ in range(chains)]
+        chain_results: list[list] = [[] for _ in range(chains)]
         for result in results:
             chain_results[result.chain].append(result)
 
@@ -280,18 +304,19 @@ def sample_smc(
         logger.info(
             f"Sampling {chains} chain{'s' if chains > 1 else ''}{' sequentially' if chains > 1 else ''}"
         )
-        _sample_smc_many(
-            kernel=smc_kernel,
-            chains=chains,
-            rngs=rngs,
-            start_points=start_points,
-            model=model,
-            progressbar=progressbar,
-            progressbar_theme=progressbar_theme,
-            traces=traces,
-            sample_stats=sample_stats,
-            sample_settings=sample_settings,
-        )
+        with joined_blas_limiter():
+            _sample_smc_many(
+                kernel=smc_kernel,
+                chains=chains,
+                rngs=rngs,
+                start_points=start_points,
+                model=model,
+                progressbar=progressbar,
+                progressbar_theme=progressbar_theme,
+                traces=traces,
+                sample_stats=sample_stats,
+                sample_settings=sample_settings,
+            )
 
     trace = MultiTrace(traces)
 
