@@ -21,6 +21,8 @@ import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.graph.replace import clone_replace
+from rich.progress import TextColumn
+from rich.table import Column
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
@@ -333,6 +335,36 @@ class SMC_KERNEL(ABC):
             "_n_draws": self.draws,  # Default property name used in `SamplerReport`
             "threshold": self.threshold,
         }
+
+    @staticmethod
+    def _progressbar_config(n_chains=1):
+        """Configure progress bar columns for SMC sampling.
+
+        Returns columns to display and initial stats values.
+        """
+        columns = [
+            TextColumn("{task.fields[stage]}", table_column=Column("Stage", ratio=1)),
+            TextColumn("{task.fields[beta]:.4f}", table_column=Column("Beta", ratio=1)),
+        ]
+
+        stats = {
+            "stage": [0] * n_chains,
+            "beta": [0.0] * n_chains,
+        }
+
+        return columns, stats
+
+    @staticmethod
+    def _make_progressbar_update_functions():
+        """Create functions to update progress bar statistics."""
+
+        def update_stats(stats):
+            return {
+                "stage": stats.get("stage", 0),
+                "beta": stats.get("beta", 0.0),
+            }
+
+        return (update_stats,)
 
     def _posterior_to_trace(self, chain=0, model=None) -> NDArray:
         """Save results into a PyMC trace.

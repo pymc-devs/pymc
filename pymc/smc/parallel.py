@@ -24,7 +24,7 @@ import numpy as np
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
-from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
 from pymc.sampling.parallel import ExceptionWithTraceback, ParallelSamplingError
 from pymc.smc.kernels import SMC_KERNEL
 from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
@@ -370,23 +370,13 @@ class ParallelSMCSampler:
 
         self._make_active()
 
-        from rich.console import Console
-        from rich.progress import SpinnerColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
-
-        with CustomProgress(
-            TextColumn("{task.description}"),
-            SpinnerColumn(),
-            TimeRemainingColumn(),
-            TextColumn("/"),
-            TimeElapsedColumn(),
-            TextColumn("{task.fields[status]}"),
-            console=Console(theme=self._progressbar_theme),
-            disable=not self._progressbar,
-        ) as progress:
-            task_ids = {}
-            for proc in self._samplers:
-                task_id = progress.add_task(f"Chain {proc.chain}", status="Stage: 0 Beta: 0.0000")
-                task_ids[proc.chain] = task_id
+        with SMCProgressBarManager(
+            kernel=self._kernel,
+            chains=self._chains,
+            progressbar=self._progressbar,
+            progressbar_theme=self._progressbar_theme,
+        ) as progress_manager:
+            chain_betas = {proc.chain: 0.0 for proc in self._samplers}
 
             while self._active:
                 result = SMCProcessAdapter.recv_message(self._active, timeout=3600)
@@ -395,13 +385,10 @@ class ParallelSMCSampler:
 
                 if msg_type == "progress":
                     stage, beta = result[2], result[3]
+                    old_beta = chain_betas[proc.chain]
+                    chain_betas[proc.chain] = beta
 
-                    progress.update(
-                        task_ids[proc.chain],
-                        status=f"Stage: {stage} Beta: {beta:.4f}",
-                        refresh=True,
-                    )
-
+                    progress_manager.update(proc.chain, stage, beta, old_beta)
                     proc.continue_sampling()
 
                 elif msg_type == "done":
@@ -415,11 +402,7 @@ class ParallelSMCSampler:
                         sample_settings,
                     ) = result[2:]
 
-                    progress.update(
-                        task_ids[proc.chain],
-                        status=f"Stage: {stage} Beta: {beta:.4f}",
-                        refresh=True,
-                    )
+                    progress_manager.update(proc.chain, stage, beta, is_last=True)
 
                     proc.join()
                     self._active.remove(proc)
