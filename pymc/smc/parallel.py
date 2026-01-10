@@ -15,7 +15,7 @@ import logging
 import multiprocessing
 import time
 
-from collections import defaultdict, namedtuple
+from collections import namedtuple
 from collections.abc import Sequence
 
 import cloudpickle
@@ -23,18 +23,26 @@ import numpy as np
 
 from rich.theme import Theme
 
-from pymc import Model
-from pymc.distributions.custom import CustomDistRV, CustomSymbolicDistRV
-from pymc.distributions.distribution import _support_point
-from pymc.logprob.abstract import _icdf, _logcdf, _logprob
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.sampling.parallel import ExceptionWithTraceback, ParallelSamplingError
+from pymc.smc.kernels import SMC_KERNEL
 from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
 
 logger = logging.getLogger(__name__)
 
 SMCResult = namedtuple(
-    "SMCResult", ["chain", "is_last", "stage", "beta", "trace", "sample_stats", "sample_settings"]
+    "SMCResult",
+    [
+        "chain",
+        "is_last",
+        "stage",
+        "beta",
+        "tempered_posterior",
+        "var_info",
+        "variables",
+        "sample_stats",
+        "sample_settings",
+    ],
 )
 
 
@@ -48,47 +56,26 @@ class _SMCProcess:
         self,
         name: str,
         msg_pipe,
-        draws: int,
         kernel,
-        kernel_pickled: bool,
         start,
-        model,
-        model_pickled: bool,
         rng_state: RandomGeneratorState,
         chain: int,
-        kernel_kwargs: dict,
-        custom_methods: dict,
     ):
         self._msg_pipe = msg_pipe
-        self._draws = draws
         self._kernel = kernel
-        self._kernel_pickled = kernel_pickled
         self._start = start
-        self._model = model
-        self._model_pickled = model_pickled
         self._rng = random_generator_from_state(rng_state)
         self.chain = chain
-        self._kernel_kwargs = kernel_kwargs
-        self._custom_methods = custom_methods
 
     def _unpickle_objects(self):
-        """Unpickle model and kernel if needed."""
-        if self._model_pickled:
-            self._model = cloudpickle.loads(self._model)
-        if self._kernel_pickled:
-            self._kernel = cloudpickle.loads(self._kernel)
+        """Unpickle kernel and start point."""
+        self._kernel = cloudpickle.loads(self._kernel)
         if self._start is not None:
             self._start = cloudpickle.loads(self._start)
-
-        # Unpickle kernel_kwargs
-        self._kernel_kwargs = {
-            key: cloudpickle.loads(value) for key, value in self._kernel_kwargs.items()
-        }
 
     def run(self):
         try:
             self._unpickle_objects()
-            self._register_custom_methods()
             self._run_smc()
         except KeyboardInterrupt:
             pass
@@ -98,19 +85,6 @@ class _SMCProcess:
             self._wait_for_abortion()
         finally:
             self._msg_pipe.close()
-
-    def _register_custom_methods(self):
-        """Register custom distribution methods for this process."""
-        for cls, (logprob, logcdf, icdf, support_point) in self._custom_methods.items():
-            cls = cloudpickle.loads(cls)
-            if logprob is not None:
-                _logprob.register(cls, cloudpickle.loads(logprob))
-            if logcdf is not None:
-                _logcdf.register(cls, cloudpickle.loads(logcdf))
-            if icdf is not None:
-                _icdf.register(cls, cloudpickle.loads(icdf))
-            if support_point is not None:
-                _support_point.register(cls, cloudpickle.loads(support_point))
 
     def _wait_for_abortion(self):
         """Wait for abort message from main process."""
@@ -131,19 +105,15 @@ class _SMCProcess:
         if msg[0] != "start":
             raise ValueError("Unexpected msg " + msg[0])
 
-        smc = self._kernel(
-            draws=self._draws,
-            start=self._start,
-            model=self._model,
-            random_seed=self._rng,
-            **self._kernel_kwargs,
-        )
+        smc = self._kernel
+        smc.start = self._start
+        smc.rng = self._rng
 
         smc._initialize_kernel()
         smc.setup_kernel()
 
         stage = 0
-        sample_stats = defaultdict(list)
+        sample_stats = []
 
         while smc.beta < 1:
             smc.update_beta_and_weights()
@@ -160,17 +130,23 @@ class _SMCProcess:
             smc.tune()
             smc.mutate()
 
-            # Collect sample stats
-            for stat, value in smc.sample_stats().items():
-                sample_stats[stat].append(value)
+            sample_stats.append(smc.sample_stats())
 
             stage += 1
 
-        trace = smc._posterior_to_trace(self.chain)
         sample_settings = smc.sample_settings()
 
         result = cloudpickle.dumps(
-            (stage, smc.beta, trace, dict(sample_stats), sample_settings), protocol=-1
+            (
+                stage,
+                smc.beta,
+                smc.tempered_posterior,
+                smc.var_info,
+                smc.variables,
+                sample_stats,
+                sample_settings,
+            ),
+            protocol=-1,
         )
         self._msg_pipe.send(("done", result))
 
@@ -185,17 +161,11 @@ class SMCProcessAdapter:
 
     def __init__(
         self,
-        draws: int,
         kernel,
-        kernel_pickled,
         chain: int,
         rng: np.random.Generator,
         start,
-        model,
-        model_pickled: bool,
         mp_ctx,
-        kernel_kwargs: dict,
-        custom_methods: dict,
     ):
         self.chain = chain
         process_name = f"smc_worker_chain_{chain}"
@@ -208,16 +178,10 @@ class SMCProcessAdapter:
             args=(
                 process_name,
                 remote_conn,
-                draws,
                 kernel,
-                kernel_pickled,
                 start,
-                model,
-                model_pickled,
                 get_state_from_generator(rng),
                 chain,
-                kernel_kwargs,
-                custom_methods,
             ),
         )
         self._process.start()
@@ -294,9 +258,20 @@ class SMCProcessAdapter:
             proc._current_beta = msg[2]
             return (proc, "progress", msg[1], msg[2])
         elif msg[0] == "done":
-            # Unpickle the results
-            stage, beta, trace, sample_stats, sample_settings = cloudpickle.loads(msg[1])
-            return (proc, "done", stage, beta, trace, sample_stats, sample_settings)
+            stage, beta, tempered_posterior, var_info, variables, sample_stats, sample_settings = (
+                cloudpickle.loads(msg[1])
+            )
+            return (
+                proc,
+                "done",
+                stage,
+                beta,
+                tempered_posterior,
+                var_info,
+                variables,
+                sample_stats,
+                sample_settings,
+            )
         else:
             raise ValueError("Sampler sent bad message: " + msg[0])
 
@@ -332,54 +307,32 @@ class ParallelSMCSampler:
     def __init__(
         self,
         *,
-        draws: int,
-        kernel,
+        kernel: SMC_KERNEL,
         chains: int,
         cores: int,
         rngs: Sequence[np.random.Generator],
-        start_points: Sequence[dict[str, np.ndarray] | None],
-        model: Model,
+        start_points: list[dict[str, np.ndarray] | None],
+        mp_ctx: multiprocessing.context.BaseContext,
         progressbar: bool = True,
         progressbar_theme: Theme | None = default_progress_theme,
-        mp_ctx,
-        kernel_kwargs: dict,
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
 
-        custom_methods = _find_custom_dist_dispatch_methods(model)
-
-        kernel_pickled = None
-        model_pickled = False
-        start_points_pickled = [None] * chains
-
-        if mp_ctx.get_start_method() != "fork":
-            kernel_pickled = True
-            kernel = cloudpickle.dumps(kernel, protocol=-1)
-            model = cloudpickle.dumps(model, protocol=-1)
-            model_pickled = True
-            start_points_pickled = [
-                cloudpickle.dumps(start, protocol=-1) if start is not None else None
-                for start in start_points
-            ]
-
-        kernel_kwargs_pickled = {
-            key: cloudpickle.dumps(value, protocol=-1) for key, value in kernel_kwargs.items()
-        }
+        self._kernel = kernel
+        kernel_pickled = cloudpickle.dumps(kernel, protocol=-1)
+        start_points_pickled = [
+            cloudpickle.dumps(start, protocol=-1) if start is not None else None
+            for start in start_points
+        ]
 
         self._samplers = [
             SMCProcessAdapter(
-                draws,
-                kernel,
                 kernel_pickled,
                 chain,
                 rng,
                 start_pickled,
-                model,
-                model_pickled,
                 mp_ctx,
-                kernel_kwargs_pickled,
-                custom_methods,
             )
             for chain, rng, start_pickled in zip(range(chains), rngs, start_points_pickled)
         ]
@@ -444,7 +397,15 @@ class ParallelSMCSampler:
                     proc.continue_sampling()
 
                 elif msg_type == "done":
-                    stage, beta, trace, sample_stats, sample_settings = result[2:]
+                    (
+                        stage,
+                        beta,
+                        tempered_posterior,
+                        var_info,
+                        variables,
+                        sample_stats,
+                        sample_settings,
+                    ) = result[2:]
 
                     progress.update(
                         task_ids[proc.chain],
@@ -458,7 +419,15 @@ class ParallelSMCSampler:
                     self._make_active()
 
                     yield SMCResult(
-                        proc.chain, True, stage, beta, trace, sample_stats, sample_settings
+                        proc.chain,
+                        True,
+                        stage,
+                        beta,
+                        tempered_posterior,
+                        var_info,
+                        variables,
+                        sample_stats,
+                        sample_settings,
                     )
 
     def __enter__(self):
@@ -469,19 +438,3 @@ class ParallelSMCSampler:
     def __exit__(self, *args):
         """Exit the context manager."""
         SMCProcessAdapter.terminate_all(self._samplers)
-
-
-def _find_custom_dist_dispatch_methods(model):
-    custom_methods = {}
-    for rv in model.basic_RVs:
-        rv_type = rv.owner.op
-        cls = type(rv_type)
-        if isinstance(rv_type, CustomDistRV | CustomSymbolicDistRV):
-            custom_methods[cloudpickle.dumps(cls)] = (
-                cloudpickle.dumps(_logprob.registry.get(cls, None)),
-                cloudpickle.dumps(_logcdf.registry.get(cls, None)),
-                cloudpickle.dumps(_icdf.registry.get(cls, None)),
-                cloudpickle.dumps(_support_point.registry.get(cls, None)),
-            )
-
-    return custom_methods
