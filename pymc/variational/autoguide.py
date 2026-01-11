@@ -13,6 +13,7 @@
 #   limitations under the License.
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import Protocol
 
 import numpy as np
 import pytensor.tensor as pt
@@ -22,24 +23,60 @@ from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.replace import graph_replace, vectorize_graph
 from pytensor.graph.traversal import ancestors
-from pytensor.tensor import TensorVariable
+from pytensor.tensor import TensorLike, TensorVariable
 from pytensor.tensor.basic import infer_shape_db
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.rewriting.shape import ShapeFeature
 
-from pymc.distributions import MvNormal, Normal
-from pymc.math import expand_packed_triangular
+from pymc.distributions import Normal
+from pymc.distributions.distribution import SymbolicRandomVariable
+from pymc.distributions.shape_utils import change_dist_size
+from pymc.logprob.basic import conditional_logp
 from pymc.model.core import Deterministic, Model
+from pymc.pytensorf import compile, rewrite_pregrad
+
+
+def vectorize_random_graph(
+    graph: Sequence[TensorVariable], batch_draws: TensorLike
+) -> tuple[TensorVariable]:
+    # Find the root random nodes
+    rvs = tuple(
+        var
+        for var in ancestors(graph)
+        if (
+            var.owner is not None
+            and isinstance(var.owner.op, RandomVariable | SymbolicRandomVariable)
+        )
+    )
+    rvs_set = set(rvs)
+    root_rvs = tuple(rv for rv in rvs if not (set(rv.owner.inputs) & rvs_set))
+
+    # Vectorize graph by vectorizing root RVs
+    batch_draws = pt.as_tensor(batch_draws, dtype=int)
+    vectorized_replacements = {
+        root_rv: change_dist_size(root_rv, new_size=batch_draws, expand=True)
+        for root_rv in root_rvs
+    }
+    return vectorize_graph(graph, replace=vectorized_replacements)
 
 
 @dataclass(frozen=True)
 class AutoGuideModel:
     model: Model
-    draws: TensorVariable
     params_init_values: dict[Variable, np.ndarray]
 
     @property
     def params(self) -> tuple[Variable]:
         return tuple(self.params_init_values.keys())
+
+    def stochastic_logq(self):
+        """Returns a graph representing the logp of the guide model, evaluated under draws from its random variables."""
+        # This allows arbitrary
+        logp_terms = conditional_logp(
+            {rv: rv for rv in self.model.deterministics},
+            warn_rvs=False,
+        )
+        return pt.sum([logp_term.sum() for logp_term in logp_terms.values()])
 
 
 def get_symbolic_rv_shapes(
@@ -62,7 +99,6 @@ def get_symbolic_rv_shapes(
 def AutoDiagonalNormal(model) -> AutoGuideModel:
     coords = model.coords
     free_rvs = model.free_RVs
-    draws = pt.tensor("draws", shape=(), dtype="int64")
 
     free_rv_shapes = dict(zip(free_rvs, get_symbolic_rv_shapes(free_rvs)))
     params_init_values = {}
@@ -79,10 +115,7 @@ def AutoDiagonalNormal(model) -> AutoGuideModel:
                 f"{rv.name}_z",
                 mu=0,
                 sigma=1,
-                # TODO: Don't require draws in guide_model, automate this as a "vectorize_model"
-                shape=(draws, *free_rv_shapes[rv]),
-                # TODO: What are we trying to do here with transform
-                # transform=model.rvs_to_transforms[rv],
+                shape=free_rv_shapes[rv],
             )
             Deterministic(
                 rv.name,
@@ -90,49 +123,48 @@ def AutoDiagonalNormal(model) -> AutoGuideModel:
                 dims=model.named_vars_to_dims.get(rv.name, None),
             )
 
-    return AutoGuideModel(guide_model, draws, params_init_values)
+    return AutoGuideModel(guide_model, params_init_values)
 
 
-def AutoFullRankNormal(model):
-    # TODO: Broken
-
-    coords = model.coords
-    free_rvs = model.free_RVs
-    draws = pt.tensor("draws", shape=(), dtype="int64")
-
-    rv_sizes = [np.prod(rv.type.shape) for rv in free_rvs]
-    total_size = np.sum(rv_sizes)
-    tril_size = total_size * (total_size + 1) // 2
-
-    locs = [pt.tensor(f"{rv.name}_loc", shape=rv.type.shape) for rv in free_rvs]
-    packed_L = pt.tensor("L", shape=(tril_size,), dtype="float64")
-    L = expand_packed_triangular(packed_L)
-
-    with Model(coords=coords) as guide_model:
-        z = MvNormal("z", mu=np.zeros(total_size), cov=np.eye(total_size), size=(draws, total_size))
-        params = pt.concatenate([loc.ravel() for loc in locs]) + L @ z
-
-        cursor = 0
-
-        for rv, size in zip(free_rvs, rv_sizes):
-            Deterministic(
-                rv.name,
-                params[cursor : cursor + size].reshape(rv.type.shape),
-                dims=model.named_vars_to_dims.get(rv.name, None),
-            )
-            cursor += size
-
-    return guide_model
-
-
-def get_logp_logq(model, guide_model):
+def get_logp_logq(model: Model, guide: AutoGuideModel):
     inputs_to_guide_rvs = {
-        model_value_var: guide_model[rv.name]
+        model_value_var: guide.model[rv.name]
         for rv, model_value_var in model.rvs_to_values.items()
         if rv not in model.observed_RVs
     }
 
-    logp = vectorize_graph(model.logp(), inputs_to_guide_rvs)
-    logq = graph_replace(guide_model.logp(), guide_model.values_to_rvs)
+    logp = graph_replace(model.logp(), inputs_to_guide_rvs)
+    logq = guide.stochastic_logq()
 
     return logp, logq
+
+
+def advi_objective(logp: TensorVariable, logq: TensorVariable):
+    negative_elbo = logq - logp
+    return negative_elbo
+
+
+class TrainingFn(Protocol):
+    def __call__(self, draws: int, *params: np.ndarray) -> tuple[np.ndarray, ...]: ...
+
+
+def compile_svi_training_fn(model: Model, guide: AutoGuideModel, **compile_kwargs) -> TrainingFn:
+    draws = pt.scalar("draws", dtype=int)
+    params = guide.params
+
+    logp, logq = get_logp_logq(model, guide)
+
+    scalar_negative_elbo = advi_objective(logp, logq)
+    [negative_elbo_draws] = vectorize_random_graph([scalar_negative_elbo], batch_draws=draws)
+    negative_elbo = negative_elbo_draws.mean(axis=0)
+
+    negative_elbo_grads = pt.grad(rewrite_pregrad(negative_elbo), wrt=params)
+
+    if "trust_input" not in compile_kwargs:
+        compile_kwargs["trust_input"] = True
+
+    f_loss_dloss = compile(
+        inputs=[draws, *params], outputs=[negative_elbo, *negative_elbo_grads], **compile_kwargs
+    )
+
+    return f_loss_dloss
