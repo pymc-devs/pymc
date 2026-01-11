@@ -183,13 +183,36 @@ class CheckParameterValue(CheckAndRaise):
     """Implements a parameter value check in a logprob graph.
 
     Raises `ParameterValueError` if the check is not True.
+    
+    Parameters
+    ----------
+    msg : str
+        Error message to display
+    can_be_replaced_by_ninf : bool
+        Whether this check can be replaced by a switch to -inf
+    rv : Variable, optional
+        The random variable whose parameter is being checked
+    param_idx : int, optional
+        Index of the parameter being checked in rv.owner.inputs
+    constraint_type : str, optional
+        Type of constraint: "positive", "unit_interval", "interval", etc.
     """
 
-    __props__ = ("msg", "exc_type", "can_be_replaced_by_ninf")
+    __props__ = ("msg", "exc_type", "can_be_replaced_by_ninf", "rv", "param_idx", "constraint_type")
 
-    def __init__(self, msg: str = "", can_be_replaced_by_ninf: bool = False):
+    def __init__(
+        self, 
+        msg: str = "", 
+        can_be_replaced_by_ninf: bool = False,
+        rv: typing.Any = None,
+        param_idx: int | None = None,
+        constraint_type: str | None = None,
+    ):
         super().__init__(ParameterValueError, msg)
         self.can_be_replaced_by_ninf = can_be_replaced_by_ninf
+        self.rv = rv
+        self.param_idx = param_idx
+        self.constraint_type = constraint_type
 
     def __str__(self):
         """Return a string representation of the object."""
@@ -236,6 +259,89 @@ pytensor.compile.optdb["canonicalize"].register(
     local_check_parameter_to_ninf_switch,
     use_db_name_as_tag=False,
 )
+
+
+def _transform_enforces_constraint(transform, constraint_type: str) -> bool:
+    """Check if a transform guarantees a specific constraint.
+    
+    Parameters
+    ----------
+    transform : Transform
+        The transform applied to the RV
+    constraint_type : str
+        Type of constraint: "positive", "unit_interval", etc.
+        
+    Returns
+    -------
+    bool
+        True if the transform guarantees this constraint
+    """
+    if transform is None:
+        return False
+    
+    # Avoid circular import
+    from pymc.distributions.transforms import Interval, LogOddsTransform, LogTransform
+    
+    # LogTransform (exp) guarantees positivity
+    if constraint_type == "positive":
+        return isinstance(transform, LogTransform)
+    
+    # LogOddsTransform (sigmoid) guarantees (0, 1)
+    if constraint_type == "unit_interval":
+        return isinstance(transform, LogOddsTransform)
+    
+    # IntervalTransform guarantees bounds (could be more specific)
+    if constraint_type == "interval":
+        return isinstance(transform, Interval)
+    
+    return False
+
+
+def create_transform_aware_check_rewrite(rvs_to_transforms: dict):
+    """Create a rewrite that skips checks for parameters with transforms.
+    
+    Parameters
+    ----------
+    rvs_to_transforms : dict
+        Mapping from RVs to their transforms
+        
+    Returns
+    -------
+    callable
+        A node_rewriter that applies Switch or removes check based on transforms
+    """
+    @node_rewriter(tracks=[CheckParameterValue])
+    def transform_aware_rewrite(fgraph, node):
+        """Convert to Switch, but skip if transform enforces the constraint."""
+        if not node.op.can_be_replaced_by_ninf:
+            return None
+        
+        # Check if this specific parameter has a transform that enforces the constraint
+        if (node.op.rv is not None and 
+            node.op.constraint_type is not None and
+            node.op.rv in rvs_to_transforms):
+            
+            transform = rvs_to_transforms[node.op.rv]
+            
+            if _transform_enforces_constraint(transform, node.op.constraint_type):
+                # Transform guarantees this constraint, remove check
+                return [node.inputs[0]]
+        
+        # Not redundant, apply normal Switch rewrite
+        logp_expr, *logp_conds = node.inputs
+        if len(logp_conds) > 1:
+            logp_cond = pt.all(logp_conds)
+        else:
+            (logp_cond,) = logp_conds
+        out = pt.switch(logp_cond, logp_expr, -np.inf)
+        out.name = node.op.msg
+        
+        if out.dtype != node.outputs[0].dtype:
+            out = pt.cast(out, node.outputs[0].dtype)
+        
+        return [out]
+    
+    return transform_aware_rewrite
 
 
 class DiracDelta(MeasurableOp, Op):

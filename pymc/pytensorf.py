@@ -946,16 +946,26 @@ def compile(
         reseed_rngs(rngs, random_seed)
 
     # If called inside a model context, see if check_bounds flag is set to False
+    # and get access to rvs_to_transforms for transform-aware checking
     try:
         from pymc.model import modelcontext
 
         model = modelcontext(None)
         check_bounds = model.check_bounds
+        rvs_to_transforms = model.rvs_to_transforms
     except TypeError:
         check_bounds = True
-    check_parameter_opt = (
-        "local_check_parameter_to_ninf_switch" if check_bounds else "local_remove_check_parameter"
-    )
+        rvs_to_transforms = {}
+    
+    # Use transform-aware rewrite if we have transforms and check_bounds is enabled
+    if check_bounds and rvs_to_transforms:
+        from pymc.logprob.utils import create_transform_aware_check_rewrite
+        
+        check_parameter_opt = create_transform_aware_check_rewrite(rvs_to_transforms)
+    else:
+        check_parameter_opt = (
+            "local_check_parameter_to_ninf_switch" if check_bounds else "local_remove_check_parameter"
+        )
 
     mode = get_mode(mode)
     opt_qry = mode.provided_optimizer.including("random_make_inplace", check_parameter_opt)
