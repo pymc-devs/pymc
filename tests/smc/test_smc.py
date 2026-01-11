@@ -149,6 +149,27 @@ class TestSMC:
             pm.CustomDist("y", mu, logp=_logp, class_name="", random=_random, observed=[1, 2])
             pm.sample_smc(draws=6, cores=2)
 
+    @pytest.mark.parametrize("chains", [1, 2], ids=["1_chain", "2_chains"])
+    def test_sequential(self, chains, caplog):
+        """Test sequential SMC sampling by setting cores=1"""
+        with self.fast_model:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(
+                    draws=50,
+                    chains=chains,
+                    cores=1,
+                    return_inferencedata=False,
+                    progressbar=not _IS_WINDOWS,
+                )
+
+                # Easiest way to check that we hit the sequential code path is to check which log message was emitted
+                msg = "Sampling 1 chain" if chains == 1 else "Sampling 2 chains sequentially"
+                assert msg in caplog.text
+
+                assert trace.nchains == chains
+                assert len(trace) == 50
+
     def test_marginal_likelihood(self):
         """
         Verifies that the log marginal likelihood function
