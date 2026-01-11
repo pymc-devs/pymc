@@ -21,6 +21,7 @@ import pytest
 import scipy.stats as st
 
 from arviz.data.inference_data import InferenceData
+from pytensor.compile.ops import wrap_py
 
 import pymc as pm
 
@@ -333,3 +334,22 @@ def test_systematic():
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 1, 2])
     weights = [0.99, 0.01]
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 0])
+
+
+@wrap_py(itypes=[pt.dvector], otypes=[pt.dvector])
+def _twice(x):
+    # Pickle fails if this is defined inside the test function namespace.
+    return 2 * x
+
+
+def test_smc_with_custom_op():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7078
+
+    with pm.Model() as model:
+        x = pm.Normal("x", mu=[0, 0], sigma=1)
+        y = _twice(x)
+        pm.Normal(name="z", mu=y, observed=[1, 1])
+
+        trace = pm.sample_smc(10, cores=2, chains=2)
+
+    assert trace is not None
