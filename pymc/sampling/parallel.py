@@ -147,7 +147,7 @@ class _Process:
 
     def run(self):
         # Only apply threadpool_limits for non-fork methods.
-        with = (
+        with (
             nullcontext()
             if self._mp_start_method == "fork"
             else threadpool_limits(limits=self._blas_cores)
