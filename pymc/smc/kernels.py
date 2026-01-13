@@ -20,7 +20,9 @@ from typing import TypeAlias
 import numpy as np
 import pytensor.tensor as pt
 
+from pytensor import shared
 from pytensor.graph.replace import clone_replace
+from pytensor.tensor.random.type import RandomGeneratorType
 from rich.progress import TextColumn
 from rich.table import Column
 from scipy.special import logsumexp
@@ -128,6 +130,12 @@ class SMC_KERNEL(ABC):
 
     """
 
+    stats_dtypes_shapes: dict[str, tuple[type, list]] = {
+        "log_marginal_likelihood": (float, []),
+        "beta": (float, []),
+    }
+    """Maps stat names to (dtype, shape) tuples."""
+
     def __init__(
         self,
         draws=2000,
@@ -178,13 +186,13 @@ class SMC_KERNEL(ABC):
 
         self.var_info: dict[str, tuple] = {}
         self.tempered_posterior: np.ndarray
-        self.prior_logp = None
-        self.likelihood_logp = None
-        self.tempered_posterior_logp = None
-        self.log_marginal_likelihood = 0
-        self.beta = 0
+        self.prior_logp: np.ndarray | None = None
+        self.likelihood_logp: np.ndarray | None = None
+        self.tempered_posterior_logp: np.ndarray | None = None
+        self.log_marginal_likelihood: float = 0.0
+        self.beta = 0.0
         self.iteration = 0
-        self.resampling_indexes = None
+        self.resampling_indexes: np.ndarray | None = None
         self.weights = np.ones(self.draws) / self.draws
 
         initial_point = model.initial_point(random_seed=self.rng.integers(2**30))
@@ -218,6 +226,34 @@ class SMC_KERNEL(ABC):
 
         self._prior_expression = prior_expression
         self._prior_var_names = [model.rvs_to_values[rv].name for rv in model.free_RVs]
+
+    def set_rng(self, rng: np.random.Generator):
+        """
+        Copy compiled functions, updating their random number generators.
+
+        This is necessary because these functions were compiled once at initialization, then pickled
+        and sent to worker processes. Each worker needs its own RNG state to ensure independent sampling,
+        so we replace the shared RNGs in the compiled functions with new ones created from the provided `rng`.
+
+        This method copies the functions, so it is expensive and should only be called once per worker!
+        """
+
+        def make_rng_swaps(fn, rng):
+            shared_rngs = [
+                var for var in fn.get_shared() if isinstance(var.type, RandomGeneratorType)
+            ]
+            n_shared_rngs = len(shared_rngs)
+            return {
+                old_shared_rng: shared(rng, borrow=True)
+                for old_shared_rng, rng in zip(shared_rngs, rng.spawn(n_shared_rngs), strict=True)
+            }
+
+        self.prior_logp_func = self.prior_logp_func.copy(
+            swap=make_rng_swaps(self.prior_logp_func, rng)
+        )
+        self.likelihood_logp_func = self.likelihood_logp_func.copy(
+            swap=make_rng_swaps(self.likelihood_logp_func, rng)
+        )
 
     def initialize_population(self) -> dict[str, np.ndarray]:
         """Create an initial population from the prior distribution."""
@@ -315,26 +351,58 @@ class SMC_KERNEL(ABC):
         """Apply kernel-specific perturbation to the particles once per stage."""
         pass
 
+    @abc.abstractmethod
     def sample_stats(self) -> SMCStats:
         """Stats to be saved at the end of each stage.
 
         These stats will be saved under `sample_stats` in the final InferenceData object.
         """
-        return {
-            "log_marginal_likelihood": self.log_marginal_likelihood if self.beta == 1 else np.nan,
-            "beta": self.beta,
-        }
+        pass
 
+    def step(self) -> SMCStats:
+        """Perform a single SMC stage: resample, tune, and mutate."""
+        self.resample()
+        self.tune()
+        self.mutate()
+
+        return self.sample_stats()
+
+    @abc.abstractmethod
     def sample_settings(self) -> SMCSettings:
         """SMC_kernel settings to be saved once at the end of sampling.
 
         These stats will be saved under `sample_stats` in the final InferenceData object.
-
         """
-        return {
-            "_n_draws": self.draws,  # Default property name used in `SamplerReport`
-            "threshold": self.threshold,
-        }
+        pass
+
+    def _reset_state(self):
+        """Reset the sampling state for a new run."""
+        self.tempered_posterior = np.empty(0)
+        self.prior_logp = None
+        self.likelihood_logp = None
+        self.tempered_posterior_logp = None
+        self.log_marginal_likelihood = 0.0
+        self.beta = 0.0
+        self.iteration = 0
+        self.resampling_indexes = None
+        self.weights = np.ones(self.draws) / self.draws
+
+    def initialize(self, start: dict | None, rng: np.random.Generator) -> None:
+        """Initialize the kernel for sampling.
+
+        Parameters
+        ----------
+        start : dict or None
+            Starting point in parameter space, or None to sample from prior.
+        rng : np.random.Generator
+            Random number generator for this chain.
+        """
+        self.start = start
+        self.rng = rng
+        self._reset_state()
+        self.set_rng(rng)
+        self._initialize_kernel()
+        self.setup_kernel()
 
     @staticmethod
     def _progressbar_config(n_chains=1):
@@ -409,6 +477,12 @@ class SMC_KERNEL(ABC):
 class IMH(SMC_KERNEL):
     """Independent Metropolis-Hastings SMC_kernel."""
 
+    stats_dtypes_shapes: dict[str, tuple[type, list]] = {
+        "log_marginal_likelihood": (float, []),
+        "beta": (float, []),
+        "accept_rate": (float, []),
+    }
+
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
         Create the Independent Metropolis-Hastings SMC kernel object.
@@ -482,23 +556,19 @@ class IMH(SMC_KERNEL):
         self.acc_rate = np.mean(ac_)
 
     def sample_stats(self) -> SMCStats:
-        stats = super().sample_stats()
-        stats.update(
-            {
-                "accept_rate": self.acc_rate,
-            }
-        )
-        return stats
+        return {
+            "log_marginal_likelihood": self.log_marginal_likelihood if self.beta == 1 else np.nan,
+            "beta": self.beta,
+            "accept_rate": self.acc_rate,
+        }
 
     def sample_settings(self) -> SMCSettings:
-        stats = super().sample_settings()
-        stats.update(
-            {
-                "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
-                "correlation_threshold": self.correlation_threshold,
-            }
-        )
-        return stats
+        return {
+            "_n_draws": self.draws,
+            "threshold": self.threshold,
+            "_n_tune": self.n_steps,
+            "correlation_threshold": self.correlation_threshold,
+        }
 
 
 class Pearson:
@@ -516,6 +586,13 @@ class Pearson:
 
 class MH(SMC_KERNEL):
     """Metropolis-Hastings SMC_kernel."""
+
+    stats_dtypes_shapes: dict[str, tuple[type, list]] = {
+        "log_marginal_likelihood": (float, []),
+        "beta": (float, []),
+        "mean_accept_rate": (float, []),
+        "mean_proposal_scale": (float, []),
+    }
 
     def __init__(self, *args, correlation_threshold=0.01, **kwargs):
         """
@@ -603,24 +680,20 @@ class MH(SMC_KERNEL):
         self.chain_acc_rate = np.mean(ac_, axis=0)
 
     def sample_stats(self) -> SMCStats:
-        stats = super().sample_stats()
-        stats.update(
-            {
-                "mean_accept_rate": self.chain_acc_rate.mean(),
-                "mean_proposal_scale": self.proposal_scales.mean(),
-            }
-        )
-        return stats
+        return {
+            "log_marginal_likelihood": self.log_marginal_likelihood if self.beta == 1 else np.nan,
+            "beta": self.beta,
+            "mean_accept_rate": self.chain_acc_rate.mean(),
+            "mean_proposal_scale": self.proposal_scales.mean(),
+        }
 
     def sample_settings(self) -> SMCSettings:
-        stats = super().sample_settings()
-        stats.update(
-            {
-                "_n_tune": self.n_steps,  # Default property name used in `SamplerReport`
-                "correlation_threshold": self.correlation_threshold,
-            }
-        )
-        return stats
+        return {
+            "_n_draws": self.draws,
+            "threshold": self.threshold,
+            "_n_tune": self.n_steps,
+            "correlation_threshold": self.correlation_threshold,
+        }
 
 
 def systematic_resampling(weights, rng):

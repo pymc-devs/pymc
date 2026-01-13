@@ -117,14 +117,10 @@ class _SMCProcess:
             raise ValueError("Unexpected msg " + msg[0])
 
         smc = self._kernel
-        smc.start = self._start
-        smc.rng = self._rng
-
-        smc._initialize_kernel()
-        smc.setup_kernel()
+        smc.initialize(self._start, self._rng)
 
         stage = 0
-        sample_stats = []
+        sample_stats: dict[str, list] = {stat: [] for stat in smc.stats_dtypes_shapes}  # type: ignore[annotation-unchecked]
 
         while smc.beta < 1:
             smc.update_beta_and_weights()
@@ -137,15 +133,10 @@ class _SMCProcess:
             elif msg[0] != "continue":
                 raise ValueError("Unknown message " + msg[0])
 
-            smc.resample()
-            smc.tune()
-            smc.mutate()
-
-            sample_stats.append(smc.sample_stats())
+            for stat, value in smc.step().items():
+                sample_stats[stat].append(value)
 
             stage += 1
-
-        sample_settings = smc.sample_settings()
 
         result = cloudpickle.dumps(
             (
@@ -155,7 +146,7 @@ class _SMCProcess:
                 smc.var_info,
                 smc.variables,
                 sample_stats,
-                sample_settings,
+                smc.sample_settings(),
             ),
             protocol=-1,
         )

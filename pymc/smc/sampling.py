@@ -265,17 +265,7 @@ def sample_smc(
             )
             traces.append(trace)
 
-            # Convert sample_stats from list of dicts to dict of lists
-            # final_result.sample_stats is a list of dicts (one per stage)
-            # We need to convert it to dict of lists (one list per stat)
-            stats_dict: dict[str, list] = {}
-            for stage_stats in final_result.sample_stats:
-                for stat, value in stage_stats.items():
-                    if stat not in stats_dict:
-                        stats_dict[stat] = []
-                    stats_dict[stat].append(value)
-
-            sample_stats.append(stats_dict)
+            sample_stats.append(final_result.sample_stats)
             sample_settings.append(final_result.sample_settings)
 
     else:
@@ -338,6 +328,7 @@ def _save_sample_stats(
     sample_stats_dict = sample_stats[0]
 
     if chains > 1:
+        # Collect the stat values from each chain in a single list
         for stat in sample_stats[0].keys():
             value_list = []
             for chain_sample_stats in sample_stats:
@@ -409,9 +400,8 @@ def _build_trace_from_kernel_state(
     length_pos = len(tempered_posterior)
     varnames = [v.name for v in variables]
 
-    with model:
-        strace = NDArray(name=model.name)
-        strace.setup(length_pos, chain)
+    strace = NDArray(name=model.name, model=model)
+    strace.setup(length_pos, chain)
 
     for i in range(length_pos):
         value = []
@@ -499,7 +489,7 @@ def _sample_smc(
     sample_settings: list,
     progress_manager,
 ):
-    """Sample one SMC chain (sequential).
+    """Sample SMC chains sequentiallly.
 
     Parameters
     ----------
@@ -522,47 +512,32 @@ def _sample_smc(
     progress_manager : SMCProgressBarManager
         Progress bar manager
     """
-    import copy
-
-    from collections import defaultdict
-
-    smc = copy.deepcopy(kernel)
-    smc.start = start
-    smc.rng = rng
-
-    smc._initialize_kernel()
-    smc.setup_kernel()
+    kernel.initialize(start, rng)
 
     stage = 0
-    chain_sample_stats = defaultdict(list)
+    chain_sample_stats: dict[str, list] = {stat: [] for stat in kernel.stats_dtypes_shapes}
 
-    while smc.beta < 1:
-        old_beta = smc.beta
+    while kernel.beta < 1:
+        old_beta = kernel.beta
+        kernel.update_beta_and_weights()
 
-        smc.update_beta_and_weights()
+        progress_manager.update(chain, stage, kernel.beta, old_beta)
 
-        progress_manager.update(chain, stage, smc.beta, old_beta)
-
-        smc.resample()
-        smc.tune()
-        smc.mutate()
-
-        for stat, value in smc.sample_stats().items():
+        for stat, value in kernel.step().items():
             chain_sample_stats[stat].append(value)
 
         stage += 1
 
-    progress_manager.update(chain, stage, smc.beta, is_last=True)
+    progress_manager.update(chain, stage, kernel.beta, is_last=True)
 
     trace = _build_trace_from_kernel_state(
-        smc.tempered_posterior,
-        smc.var_info,
-        smc.variables,
+        kernel.tempered_posterior,
+        kernel.var_info,
+        kernel.variables,
         chain,
         model,
     )
-    chain_sample_settings = smc.sample_settings()
 
     traces.append(trace)
-    sample_stats.append(dict(chain_sample_stats))
-    sample_settings.append(chain_sample_settings)
+    sample_stats.append(chain_sample_stats)
+    sample_settings.append(kernel.sample_settings())
