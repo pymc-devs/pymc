@@ -47,6 +47,7 @@ from pytensor.scalar.basic import GE, GT, LE, LT, Mul
 from pytensor.tensor.basic import switch as tensor_switch
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logprob, _logprob_helper
@@ -71,15 +72,22 @@ class MeasurableSwitchNonOverlapping(MeasurableElemwise):
 measurable_switch_non_overlapping = MeasurableSwitchNonOverlapping(scalar_switch)
 
 
-def _is_x_threshold_condition(cond: TensorVariable, x: TensorVariable) -> bool:
-    """Check whether `cond` is equivalent to `x > 0` / `x >= 0` (and swapped forms)."""
+def _zero_x_threshold_true_includes_zero(cond: TensorVariable, x: TensorVariable) -> bool | None:
+    """Return whether `cond` is a zero threshold on `x` and includes `0` in the true branch.
+
+    Matches `x > 0`, `x >= 0` and swapped forms `0 < x`, `0 <= x`.
+    Returns:
+        - `False` for strict comparisons (`>`/`<`)
+        - `True` for non-strict comparisons (`>=`/`<=`)
+        - `None` if `cond` doesn't match a zero-threshold comparison on `x`
+    """
     if cond.owner is None:
-        return False
+        return None
     if not isinstance(cond.owner.op, Elemwise):
-        return False
+        return None
     scalar_op = cond.owner.op.scalar_op
     if not isinstance(scalar_op, GT | GE | LT | LE):
-        return False
+        return None
 
     left, right = cond.owner.inputs
 
@@ -91,12 +99,12 @@ def _is_x_threshold_condition(cond: TensorVariable, x: TensorVariable) -> bool:
 
     # x > 0 or x >= 0
     if left is x and _is_zero(cast(TensorVariable, right)) and isinstance(scalar_op, GT | GE):
-        return True
+        return isinstance(scalar_op, GE)
     # 0 < x or 0 <= x
     if right is x and _is_zero(cast(TensorVariable, left)) and isinstance(scalar_op, LT | LE):
-        return True
+        return isinstance(scalar_op, LE)
 
-    return False
+    return None
 
 
 def _extract_scale_from_measurable_mul(
@@ -142,13 +150,19 @@ def find_measurable_switch_non_overlapping(fgraph, node):
 
     x = cast(TensorVariable, pos_branch)
 
-    if x.type.dtype.startswith("int"):
+    if x.type.numpy_dtype.kind != "f":
+        return None
+
+    # Avoid rewriting cases where `x` is broadcasted/replicated by `cond` or `a`.
+    # We require the positive branch to be a base `RandomVariable` output.
+    if x.owner is None or not isinstance(x.owner.op, RandomVariable):
         return None
 
     if x.type.broadcastable != node.outputs[0].type.broadcastable:
         return None
 
-    if not _is_x_threshold_condition(cast(TensorVariable, cond), x):
+    includes_zero_in_true = _zero_x_threshold_true_includes_zero(cast(TensorVariable, cond), x)
+    if includes_zero_in_true is None:
         return None
 
     a = _extract_scale_from_measurable_mul(cast(TensorVariable, neg_branch), x)
@@ -181,9 +195,16 @@ def logprob_switch_non_overlapping(op, values, cond, x, neg_branch, **kwargs):
 
     a_is_positive = pt.all(pt.gt(a, 0))
 
-    # For `a > 0`, `switch(x > 0, x, a * x)` maps to disjoint regions in `value`:
-    # true branch -> value > 0, false branch -> value <= 0.
-    value_implies_true_branch = pt.gt(value, 0)
+    includes_zero_in_true = _zero_x_threshold_true_includes_zero(
+        cast(TensorVariable, cond), cast(TensorVariable, x)
+    )
+    if includes_zero_in_true is None:
+        raise NotImplementedError("Could not identify zero-threshold condition")
+
+    # For `a > 0`, `switch(x > 0, x, a * x)` maps to disjoint regions in `value`.
+    # Select the branch using the observed `value` and the strictness of the original
+    # comparison (`>` vs `>=`).
+    value_implies_true_branch = pt.ge(value, 0) if includes_zero_in_true else pt.gt(value, 0)
 
     logp_expr = pt.switch(
         value_implies_true_branch,
