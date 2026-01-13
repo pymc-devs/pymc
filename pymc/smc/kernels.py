@@ -28,7 +28,6 @@ from rich.table import Column
 from scipy.special import logsumexp
 from scipy.stats import multivariate_normal
 
-from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_expression
 from pymc.model import modelcontext
@@ -244,8 +243,10 @@ class SMC_KERNEL(ABC):
             ]
             n_shared_rngs = len(shared_rngs)
             return {
-                old_shared_rng: shared(rng, borrow=True)
-                for old_shared_rng, rng in zip(shared_rngs, rng.spawn(n_shared_rngs), strict=True)
+                old_shared_rng: shared(new_rng, borrow=True)
+                for old_shared_rng, new_rng in zip(
+                    shared_rngs, rng.spawn(n_shared_rngs), strict=True
+                )
             }
 
         self.prior_logp_func = self.prior_logp_func.copy(
@@ -433,45 +434,6 @@ class SMC_KERNEL(ABC):
             }
 
         return (update_stats,)
-
-    def _posterior_to_trace(self, chain=0, model=None) -> NDArray:
-        """Save results into a PyMC trace.
-
-        This method should not be overwritten.
-
-        Parameters
-        ----------
-        chain : int
-            Chain index for this trace
-        model : Model, optional
-            Model context needed for trace setup
-
-        Returns
-        -------
-        trace : NDArray
-            The posterior trace object.
-        """
-        length_pos = len(self.tempered_posterior)
-        varnames = [v.name for v in self.variables]
-        model = modelcontext(model)
-
-        strace = NDArray(name=model.name if model is not None else None, model=model)
-        strace.setup(length_pos, chain)
-
-        for i in range(length_pos):
-            value = []
-            size = 0
-            for var in self.variables:
-                shape, new_size = self.var_info[var.name]
-                var_samples = self.tempered_posterior[i][size : size + new_size]
-                # Round discrete variable samples. The rounded values were the ones
-                # actually used in the logp evaluations (see logp_forw)
-                if var.dtype in discrete_types:
-                    var_samples = np.round(var_samples).astype(var.dtype)
-                value.append(var_samples.reshape(shape))
-                size += new_size
-            strace.record(point=dict(zip(varnames, value)))
-        return strace
 
 
 class IMH(SMC_KERNEL):
