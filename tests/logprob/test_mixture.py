@@ -52,8 +52,6 @@ from pytensor.tensor.subtensor import (
     as_index_constant,
 )
 
-import pymc as pm
-
 from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
@@ -975,9 +973,15 @@ def test_switch_mixture_invalid_bcast():
 
 def test_switch_mixture_constant_branch_broadcast_ok():
     t = pt.arange(10)
-    cat = pm.Categorical.dist(p=[0.5, 0.5], shape=(10,))
+
+    p = pt.as_tensor(np.array([0.5, 0.5], dtype=pytensor.config.floatX))
+    cat = pt.random.categorical(p=p, size=(10,))
+
     cat_fixed_const = pt.where(t > 5, cat, -1)
-    cat_fixed_dirac = pt.where(t > 5, cat, pm.DiracDelta.dist(-1, shape=cat.shape))
+
+    dirac_branch = dirac_delta(pt.full_like(t, -1, dtype=cat.dtype))
+    cat_fixed_dirac = pt.where(t > 5, cat, dirac_branch)
+
     vv_const = cat_fixed_const.clone()
     vv_dirac = cat_fixed_dirac.clone()
     logp_const = logp(cat_fixed_const, vv_const)
