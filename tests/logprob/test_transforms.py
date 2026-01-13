@@ -219,6 +219,7 @@ def test_exp_transform_rv():
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
     )
+
     np.testing.assert_almost_equal(
         logcdf_fn(y_val),
         sp.stats.lognorm(s=1).logcdf(y_val),
