@@ -402,10 +402,7 @@ class ProgressBarManager:
             )
 
     def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
-        columns = [
-            TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1)),
-            TextColumn("{task.fields[in_warmup]}", table_column=Column("Warmup", ratio=1)),
-        ]
+        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
 
         if self.full_stats:
             columns += step_columns
