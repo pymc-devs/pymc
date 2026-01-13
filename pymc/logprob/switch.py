@@ -76,7 +76,9 @@ def _zero_x_threshold_true_includes_zero(cond: TensorVariable, x: TensorVariable
     """Return whether `cond` is a zero threshold on `x` and includes `0` in the true branch.
 
     Matches `x > 0`, `x >= 0` and swapped forms `0 < x`, `0 <= x`.
-    Returns:
+
+    Returns
+    -------
         - `False` for strict comparisons (`>`/`<`)
         - `True` for non-strict comparisons (`>=`/`<=`)
         - `None` if `cond` doesn't match a zero-threshold comparison on `x`
