@@ -195,6 +195,8 @@ def logprob_switch_non_overlapping(op, values, cond, x, neg_branch, **kwargs):
     if a is None:
         raise NotImplementedError("Could not extract non-overlapping scale")
 
+    # Must be strictly positive: a == 0 is not invertible (collapses a region) and
+    # invalidates the non-overlapping branch inference.
     a_is_positive = pt.all(pt.gt(a, 0))
 
     includes_zero_in_true = _zero_x_threshold_true_includes_zero(
