@@ -40,7 +40,7 @@ from pymc.step_methods.state import (
 )
 from pymc.util import RandomGenerator, get_random_generator
 
-__all__ = ("Competence", "CompoundStep")
+__all__ = ("Competence", "CompoundStep", "StepMethodState")
 
 
 @unique
@@ -101,7 +101,8 @@ class StepMethodState(DataClassState):
     rng: RandomGeneratorState
 
 
-class BlockedStep(ABC, WithSamplingState):
+class BlockedStep(ABC, WithSamplingState[StepMethodState]):
+    _state_class = StepMethodState
     stats_dtypes: list[dict[str, type]] = []
     """A list containing <=1 dictionary that maps stat names to dtypes.
 
@@ -254,7 +255,7 @@ class CompoundStepState(DataClassState):
         self.methods = methods
 
 
-class CompoundStep(WithSamplingState):
+class CompoundStep(WithSamplingState[CompoundStepState]):
     """Step method composed of a list of several other step methods applied in sequence."""
 
     _state_class = CompoundStepState
@@ -291,7 +292,7 @@ class CompoundStep(WithSamplingState):
                 method.reset_tuning()
 
     @property
-    def sampling_state(self) -> DataClassState:
+    def sampling_state(self) -> CompoundStepState:
         return CompoundStepState(methods=[method.sampling_state for method in self.methods])
 
     @sampling_state.setter

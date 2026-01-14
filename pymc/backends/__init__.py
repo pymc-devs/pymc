@@ -72,7 +72,7 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
-from pymc.backends.zarr import ZarrTrace
+from pymc.backends.zarr import TraceAlreadyInitialized, ZarrTrace
 from pymc.blocking import PointType
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
@@ -132,15 +132,41 @@ def init_traces(
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initialize a trace recorder for each chain."""
     if isinstance(backend, ZarrTrace):
-        backend.init_trace(
-            chains=chains,
-            draws=expected_length - tune,
-            tune=tune,
-            step=step,
-            model=model,
-            vars=trace_vars,
-            test_point=initial_point,
-        )
+        try:
+            backend.init_trace(
+                chains=chains,
+                draws=expected_length - tune,
+                tune=tune,
+                step=step,
+                model=model,
+                vars=trace_vars,
+                test_point=initial_point,
+            )
+        except TraceAlreadyInitialized:
+            # Trace has already been initialized. We need to make sure that the
+            # tracked variable names and the number of chains match, and then resize
+            # the zarr groups to the desired number of draws and tune.
+            backend.assert_model_and_step_are_compatible(
+                step=step,
+                model=model,
+                vars=trace_vars,
+            )
+            assert backend.posterior.chain.size == chains, (
+                f"The requested number of chains {chains} does not match the number "
+                f"of chains stored in the trace ({backend.posterior.chain.size})."
+            )
+            vars, var_names = backend.parse_varnames(model=model, vars=trace_vars)
+            backend.link_model_and_step(
+                chains=chains,
+                draws=expected_length - tune,
+                tune=tune,
+                step=step,
+                model=model,
+                vars=vars,
+                var_names=var_names,
+                test_point=initial_point,
+            )
+            backend.resize(tune=tune, draws=expected_length - tune)
         return None, backend.straces
     if HAS_MCB and isinstance(backend, Backend):
         return init_chain_adapters(

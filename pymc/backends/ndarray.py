@@ -201,6 +201,41 @@ class NDArray(base.BaseTrace):
         idx = int(idx)
         return {varname: values[idx] for varname, values in self.samples.items()}
 
+    def completed_draws_and_divergences(self, chain_specific: bool = True) -> tuple[int, int]:
+        """Get number of completed draws and divergences in the trace.
+
+        This is a helper function to start the ProgressBarManager when resuming sampling
+        from an existing trace.
+
+        Parameters
+        ----------
+        chain_specific : bool
+            If ``True``, only the completed draws and divergences on the current chain
+            are returned. If ``False``, the draws and divergences across all chains are
+            returned. WARNING: many BaseTrace backends are not aware of the information
+            stored in other chains and will raise a ``ValueError`` if passed ``False``.
+
+        Returns
+        -------
+        draws : int
+            Number of draws in the current chain or across all chains.
+        divergences : int
+            Number of divergences in the current chain or across all chains.
+        """
+        if not chain_specific:
+            raise ValueError(
+                "NDArray traces are not aware of the number of draws and divergences "
+                "recorded in other chains. Please call this method using "
+                "chain_specific=True"
+            )
+        divergent_draws = np.zeros(len(self), dtype="int")
+        for sampler_stats in self._stats:
+            for key, data in sampler_stats.items():
+                if "divergence" in key:
+                    divergent_draws += np.asarray(data[: len(self)])
+        divergences = int(sum(divergent_draws > 0, start=0))
+        return len(self), divergences
+
 
 def _slice_as_ndarray(strace, idx):
     sliced = NDArray(model=strace.model, vars=strace.vars)

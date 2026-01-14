@@ -201,6 +201,42 @@ class ChainRecordAdapter(IBaseTrace):
     def point(self, idx: int) -> dict[str, np.ndarray]:
         return self._chain.get_draws_at(idx, [v.name for v in self._chain.variables.values()])
 
+    def completed_draws_and_divergences(self, chain_specific: bool = True) -> tuple[int, int]:
+        """Get number of completed draws and divergences in the trace.
+
+        This is a helper function to start the ProgressBarManager when resuming sampling
+        from an existing trace.
+
+        Parameters
+        ----------
+        chain_specific : bool
+            If ``True``, only the completed draws and divergences on the current chain
+            are returned. If ``False``, the draws and divergences across all chains are
+            returned. WARNING: many BaseTrace backends are not aware of the information
+            stored in other chains and will raise a ``ValueError`` if passed ``False``.
+
+        Returns
+        -------
+        draws : int
+            Number of draws in the current chain or across all chains.
+        divergences : int
+            Number of divergences in the current chain or across all chains.
+        """
+        if not chain_specific:
+            raise ValueError(
+                "NDArray traces are not aware of the number of draws and divergences "
+                "recorded in other chains. Please call this method using "
+                "chain_specific=True"
+            )
+        try:
+            divergent_draws = self.get_sampler_stats("divergence")
+            if divergent_draws.ndim > 1:
+                divergent_draws = divergent_draws.sum(axis=-1)
+            divergences = sum(divergent_draws > 0)
+        except KeyError:
+            divergences = 0
+        return len(self), divergences
+
 
 def make_runmeta_and_point_fn(
     *,

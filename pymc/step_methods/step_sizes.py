@@ -23,13 +23,13 @@ from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass
 
 @dataclass_state
 class StepSizeState(DataClassState):
-    _log_step: np.ndarray
-    _log_bar: np.ndarray
+    _log_step: np.ndarray | float
+    _log_bar: np.ndarray | float
     _hbar: float
     _count: int
-    _mu: np.ndarray
+    _mu: np.ndarray | float
     _tuned_stats: list
-    _initial_step: np.ndarray
+    _initial_step: np.ndarray | float
     _target: float
     _k: float
     _t0: float
