@@ -11,10 +11,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from collections.abc import Iterable
-from typing import TYPE_CHECKING, Literal
+"""Progress bar utilities for PyMC sampling.
 
-from rich.box import SIMPLE_HEAD
+This module provides progress bar functionality that works across different environments:
+- Terminal: Rich-based progress bars
+- Jupyter notebooks: HTML-based progress with IPython display
+- Marimo notebooks: HTML-based progress with marimo output
+
+The implementation is modeled after nutpie's progress bar approach
+"""
+
+from __future__ import annotations
+
+import time
+
+from typing import TYPE_CHECKING, Any, Literal
+
+from jinja2 import Template
 from rich.console import Console
 from rich.progress import (
     BarColumn,
@@ -25,8 +38,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 from rich.style import Style
-from rich.table import Column, Table
-from rich.theme import Theme
+from rich.table import Column
 
 if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep
@@ -39,133 +51,242 @@ ProgressBarType = Literal[
     "split+stats",
     "stats+split",
 ]
-default_progress_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "green",
-        "progress.remaining": "none",
-        "progress.elapsed": "none",
-    }
-)
 
 
-class CustomProgress(Progress):
-    """A child of Progress that allows to disable progress bars and its container.
+# =============================================================================
+# Environment Detection
+# =============================================================================
 
-    The implementation simply checks an `is_enabled` flag and generates the progress bar only if
-    it's `True`.
+
+def in_notebook() -> bool:
+    """Check if code is running in a Jupyter notebook.
+
+    Adapted from fastprogress.
     """
 
-    def __init__(self, *args, disable=False, include_headers=False, **kwargs):
-        self.is_enabled = not disable
-        self.include_headers = include_headers
+    def in_colab():
+        """Check if the code is running in Google Colaboratory."""
+        try:
+            from google import colab  # noqa: F401
 
-        if self.is_enabled:
-            super().__init__(*args, **kwargs)
+            return True
+        except ImportError:
+            return False
 
-    def __enter__(self):
-        """Enter the context manager."""
-        if self.is_enabled:
-            self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager."""
-        if self.is_enabled:
-            super().__exit__(exc_type, exc_val, exc_tb)
-
-    def add_task(self, *args, **kwargs):
-        if self.is_enabled:
-            return super().add_task(*args, **kwargs)
-        return None
-
-    def advance(self, task_id, advance=1) -> None:
-        if self.is_enabled:
-            super().advance(task_id, advance)
-        return None
-
-    def update(
-        self,
-        task_id,
-        *,
-        total=None,
-        completed=None,
-        advance=None,
-        description=None,
-        visible=None,
-        refresh=False,
-        **fields,
-    ):
-        if self.is_enabled:
-            super().update(
-                task_id,
-                total=total,
-                completed=completed,
-                advance=advance,
-                description=description,
-                visible=visible,
-                refresh=refresh,
-                **fields,
-            )
-        return None
-
-    def make_tasks_table(self, tasks: Iterable[Task]) -> Table:
-        """Get a table to render the Progress display.
-
-        Unlike the parent method, this one returns a full table (not a grid), allowing for column headings.
-
-        Parameters
-        ----------
-        tasks: Iterable[Task]
-            An iterable of Task instances, one per row of the table.
-
-        Returns
-        -------
-        table: Table
-            A table instance.
-        """
-
-        def call_column(column, task):
-            # Subclass rich.BarColumn and add a callback method to dynamically update the display
-            if hasattr(column, "callbacks"):
-                column.callbacks(task)
-
-            return column(task)
-
-        table_columns = (
-            (
-                Column(no_wrap=True)
-                if isinstance(_column, str)
-                else _column.get_table_column().copy()
-            )
-            for _column in self.columns
-        )
-        if self.include_headers:
-            table = Table(
-                *table_columns,
-                padding=(0, 1),
-                expand=self.expand,
-                show_header=True,
-                show_edge=True,
-                box=SIMPLE_HEAD,
-            )
-        else:
-            table = Table.grid(*table_columns, padding=(0, 1), expand=self.expand)
-
-        for task in tasks:
-            if task.visible:
-                table.add_row(
-                    *(
-                        (
-                            column.format(task=task)
-                            if isinstance(column, str)
-                            else call_column(column, task)
-                        )
-                        for column in self.columns
-                    )
+    if in_colab():
+        return True
+    try:
+        shell = get_ipython().__class__.__name__  # type: ignore[name-defined]
+        if shell == "ZMQInteractiveShell":  # Jupyter notebook, Spyder or qtconsole
+            try:
+                from IPython.display import (
+                    HTML,  # noqa: F401
+                    clear_output,  # noqa: F401
+                    display,  # noqa: F401
                 )
 
-        return table
+                return True
+            except ImportError:
+                import warnings
+
+                warnings.warn(
+                    "Couldn't import ipywidgets properly, progress bar will be disabled",
+                    stacklevel=2,
+                )
+                return False
+        elif shell == "TerminalInteractiveShell":
+            return False  # Terminal running IPython
+        else:
+            return False  # Other type (?)
+    except NameError:
+        return False  # Probably standard Python interpreter
+
+
+def in_marimo_notebook() -> bool:
+    """Check if code is running in a marimo notebook."""
+    try:
+        import marimo as mo
+
+        return mo.running_in_notebook()
+    except ImportError:
+        return False
+
+
+# =============================================================================
+# Marimo-specific output functions
+# =============================================================================
+
+
+def _mo_write_internal(cell_id, stream, value: object) -> None:
+    """Write to marimo cell given cell_id and stream."""
+    from marimo._messaging.cell_output import CellChannel
+    from marimo._messaging.ops import CellOp
+    from marimo._messaging.tracebacks import write_traceback
+    from marimo._output import formatting
+
+    output = formatting.try_format(value)
+    if output.traceback is not None:
+        write_traceback(output.traceback)
+    CellOp.broadcast_output(
+        channel=CellChannel.OUTPUT,
+        mimetype=output.mimetype,
+        data=output.data,
+        cell_id=cell_id,
+        status=None,
+        stream=stream,
+    )
+
+
+def _mo_create_replace():
+    """Create mo.output.replace with current context pinned.
+
+    This captures the cell context at creation time, allowing updates
+    from background threads to correctly target the originating cell.
+    """
+    from marimo._output import formatting
+    from marimo._runtime.context import get_context
+    from marimo._runtime.context.types import ContextNotInitializedError
+
+    try:
+        ctx = get_context()
+    except ContextNotInitializedError:
+        return None
+
+    cell_id = ctx.execution_context.cell_id
+    execution_context = ctx.execution_context
+    stream = ctx.stream
+
+    def replace(value):
+        execution_context.output = [formatting.as_html(value)]
+        _mo_write_internal(cell_id=cell_id, value=value, stream=stream)
+
+    return replace
+
+
+# =============================================================================
+# HTML Templates and Styles (modeled after nutpie)
+# =============================================================================
+
+_PROGRESS_STYLE = """
+<style>
+    .pymc-progress {
+        max-width: 900px;
+        margin: 10px auto;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        padding: 10px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .pymc-progress table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .pymc-progress th, .pymc-progress td {
+        padding: 8px 10px;
+        text-align: left;
+        border-bottom: 1px solid #888;
+    }
+    .pymc-progress progress {
+        width: 100%;
+        height: 15px;
+        border-radius: 5px;
+    }
+    progress::-webkit-progress-bar {
+        background-color: #eee;
+        border-radius: 5px;
+    }
+    progress::-webkit-progress-value {
+        background-color: #1764f4;
+        border-radius: 5px;
+    }
+    progress::-moz-progress-bar {
+        background-color: #1764f4;
+        border-radius: 5px;
+    }
+    .pymc-progress .progress-cell {
+        width: 100%;
+    }
+    .pymc-progress p strong { font-size: 16px; font-weight: bold; }
+    .pymc-progress .failing progress::-webkit-progress-value {
+        background-color: #d9534f;
+    }
+    .pymc-progress .failing progress::-moz-progress-bar {
+        background-color: #d9534f;
+    }
+    .pymc-progress .finished progress::-webkit-progress-value {
+        background-color: #5cb85c;
+    }
+    .pymc-progress .finished progress::-moz-progress-bar {
+        background-color: #5cb85c;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .pymc-progress {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .pymc-progress table, .pymc-progress th, .pymc-progress td {
+            border-color: #555;
+            color: #ccc;
+        }
+        .pymc-progress th {
+            background-color: #2a2a2a;
+        }
+        .pymc-progress progress::-webkit-progress-bar {
+            background-color: #444;
+        }
+        .pymc-progress progress::-webkit-progress-value {
+            background-color: #3178c6;
+        }
+        .pymc-progress progress::-moz-progress-bar {
+            background-color: #3178c6;
+        }
+    }
+</style>
+"""
+
+# Jinja2 template for progress bar HTML
+_PROGRESS_TEMPLATE = Template("""
+<div class="pymc-progress">
+    <p><strong>Sampler Progress</strong></p>
+    <p>Total Chains: {{ num_chains }} | Active: {{ running_chains }} | Finished: {{ finished_chains }}</p>
+    <p>Sampling for {{ time_sampling }}{% if time_remaining %} | ETA: {{ time_remaining }}{% endif %}</p>
+
+    <progress max="{{ total_draws }}" value="{{ total_finished_draws }}"></progress>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 30%;">Progress</th>
+                <th>Draws</th>
+                {% for col in stat_columns %}
+                <th>{{ col.header }}</th>
+                {% endfor %}
+                <th>Speed</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for chain in chains %}
+            <tr>
+                <td class="progress-cell {{ chain.state_class }}">
+                    <progress max="{{ chain.total_draws }}" value="{{ chain.finished_draws }}"></progress>
+                </td>
+                <td>{{ chain.finished_draws }}/{{ chain.total_draws }}</td>
+                {% for stat in chain.stats %}
+                <td>{{ stat }}</td>
+                {% endfor %}
+                <td>{{ chain.speed }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+""")
+
+
+# =============================================================================
+# Rich Terminal Progress Bar Components
+# =============================================================================
 
 
 class RecolorOnFailureBarColumn(BarColumn):
@@ -182,244 +303,520 @@ class RecolorOnFailureBarColumn(BarColumn):
         self.default_complete_style = self.complete_style
         self.default_finished_style = self.finished_style
 
-    def callbacks(self, task: "Task"):
-        if task.fields["failing"]:
+    def callbacks(self, task: Task):
+        if task.fields.get("failing", False):
             self.complete_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
             self.finished_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
         else:
-            # Recovered from failing yay
             self.complete_style = self.default_complete_style
             self.finished_style = self.default_finished_style
 
 
+class TerminalProgress(Progress):
+    """Rich Progress subclass that supports column headers and dynamic styling."""
+
+    def __init__(self, *args, disable: bool = False, **kwargs):
+        self.is_enabled = not disable
+        if self.is_enabled:
+            super().__init__(*args, **kwargs)
+
+    def __enter__(self):
+        if self.is_enabled:
+            self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.is_enabled:
+            super().__exit__(exc_type, exc_val, exc_tb)
+
+    def add_task(self, *args, **kwargs):  # type: ignore[override]
+        if self.is_enabled:
+            return super().add_task(*args, **kwargs)
+        return None
+
+    def advance(self, task_id, advance: int = 1) -> None:
+        if self.is_enabled and task_id is not None:
+            super().advance(task_id, advance)
+
+    def update(self, task_id, **kwargs) -> None:
+        if self.is_enabled and task_id is not None:
+            super().update(task_id, **kwargs)
+
+    def get_renderables(self):
+        """Override to call callbacks before rendering."""
+        if not self.is_enabled:
+            return
+        for task in self.tasks:
+            if task.visible:
+                for column in self.columns:
+                    if hasattr(column, "callbacks"):
+                        column.callbacks(task)
+        yield from super().get_renderables()
+
+
 class ProgressBarManager:
-    """Manage progress bars displayed during sampling."""
+    """Manage progress bars displayed during sampling.
+
+    This class handles progress bar display across different environments:
+    - Terminal: Rich-based progress bars
+    - Jupyter: HTML-based with IPython display
+    - Marimo: HTML-based with marimo output
+
+    The implementation matches nutpie's approach for marimo compatibility.
+    """
 
     def __init__(
         self,
-        step_method: "BlockedStep | CompoundStep",
+        step_method: BlockedStep | CompoundStep,
         chains: int,
         draws: int,
         tune: int,
         progressbar: bool | ProgressBarType = True,
-        progressbar_theme: Theme | None = None,
+        progressbar_theme=None,  # Kept for backward compatibility, but unused in HTML mode
     ):
-        """
-        Manage progress bars displayed during sampling.
-
-        When sampling, Step classes are responsible for computing and exposing statistics that can be reported on
-        progress bars. Each Step implements two class methods: :meth:`pymc.step_methods.BlockedStep._progressbar_config`
-        and :meth:`pymc.step_methods.BlockedStep._make_progressbar_update_functions`. `_progressbar_config` reports which
-        columns should be displayed on the progress bar, and `_make_progressbar_update_functions` computes the statistics
-        that will be displayed on the progress bar.
+        """Initialize the progress bar manager.
 
         Parameters
         ----------
-        step_method: BlockedStep or CompoundStep
+        step_method : BlockedStep or CompoundStep
             The step method being used to sample
-        chains: int
+        chains : int
             Number of chains being sampled
-        draws: int
-            Number of draws per chain
-        tune: int
+        draws : int
+            Number of draws per chain (excluding tune)
+        tune : int
             Number of tuning steps per chain
-        progressbar: bool or ProgressType, optional
-            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
-            for one of the following:
-            - "combined": A single progress bar that displays the total progress across all chains. Only timing
-                information is shown.
-            - "split": A separate progress bar for each chain. Only timing information is shown.
-            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
-                chains. Aggregate sample statistics are also displayed.
-            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
-                are also displayed.
-
-            If True, the default is "split+stats" is used.
-
-        progressbar_theme: Theme, optional
-            The theme to use for the progress bar. Defaults to the default theme.
+        progressbar : bool or ProgressBarType
+            Whether and how to display the progress bar.
+        progressbar_theme : optional
+            Theme for Rich progress bars (terminal only).
         """
-        if progressbar_theme is None:
-            progressbar_theme = default_progress_theme
-
-        match progressbar:
-            case True:
-                self.combined_progress = False
-                self.full_stats = True
-                show_progress = True
-            case False:
-                self.combined_progress = False
-                self.full_stats = True
-                show_progress = False
-            case "combined":
-                self.combined_progress = True
-                self.full_stats = False
-                show_progress = True
-            case "split":
-                self.combined_progress = False
-                self.full_stats = False
-                show_progress = True
-            case "combined+stats" | "stats+combined":
-                self.combined_progress = True
-                self.full_stats = True
-                show_progress = True
-            case "split+stats" | "stats+split":
-                self.combined_progress = False
-                self.full_stats = True
-                show_progress = True
-            case _:
-                raise ValueError(
-                    "Invalid value for `progressbar`. Valid values are True (default), False (no progress bar), "
-                    "one of 'combined', 'split', 'split+stats', or 'combined+stats."
-                )
-
-        progress_columns, progress_stats = step_method._progressbar_config(chains)
-
-        self._progress = self.create_progress_bar(
-            progress_columns,
-            progressbar=progressbar,
-            progressbar_theme=progressbar_theme,
+        self.show_progress, self.combined_progress, self.full_stats = self._parse_progressbar_arg(
+            progressbar
         )
-        self.progress_stats = progress_stats
+
+        self.chains = chains
+        self.total_draws_per_chain = draws + tune
+        self.total_draws = self.total_draws_per_chain * chains
+        self.tune = tune
+        self.draws = draws
+
+        self.stat_columns, self.progress_stats = step_method._progressbar_config(chains)
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
-        self._show_progress = show_progress
-        self.completed_draws = 0
-        self.total_draws = draws + tune
-        self.desc = "Sampling chain"
-        self.chains = chains
+        self._chain_states: list[dict[str, Any]] = [
+            {
+                "finished_draws": 0,
+                "total_draws": self.total_draws_per_chain,
+                "failing": False,
+                "finished": False,
+                "stats": {k: v[i] for k, v in self.progress_stats.items()},
+                "speed": 0.0,
+                "speed_unit": "draws/s",
+            }
+            for i in range(chains)
+        ]
 
-        self._tasks: list[Task] | None = None  # type: ignore[annotation-unchecked]
+        self._start_time: float | None = None
+        self._total_finished_draws = 0
+
+        self._display_id = None
+        self._mo_replace = None
+        self._terminal_progress: TerminalProgress | None = None
+
+        if not self.show_progress:
+            self._mode = "none"
+        elif in_marimo_notebook():
+            self._mode = "marimo"
+            self._mo_replace = _mo_create_replace()
+        elif in_notebook():
+            self._mode = "jupyter"
+        else:
+            self._mode = "terminal"
+            self._terminal_progress = self._create_terminal_progress()
+
+    def _parse_progressbar_arg(
+        self, progressbar: bool | ProgressBarType
+    ) -> tuple[bool, bool, bool]:
+        """Parse the progressbar argument.
+
+        Returns
+        -------
+        show_progress : bool
+            Whether to show progress at all
+        combined_progress : bool
+            Whether to show combined progress (single bar) or split (per-chain)
+        full_stats : bool
+            Whether to show full stats or just timing
+        """
+        match progressbar:
+            case True:
+                return True, False, True
+            case False:
+                return False, False, True
+            case "combined":
+                return True, True, False
+            case "split":
+                return True, False, False
+            case "combined+stats" | "stats+combined":
+                return True, True, True
+            case "split+stats" | "stats+split":
+                return True, False, True
+            case _:
+                raise ValueError(
+                    f"Invalid value for `progressbar`: {progressbar}. "
+                    "Valid values are True, False, 'combined', 'split', "
+                    "'combined+stats', 'stats+combined', 'split+stats', 'stats+split'."
+                )
+
+    def _create_terminal_progress(self) -> TerminalProgress:
+        """Create a Rich-based terminal progress bar."""
+        # Build columns: Progress bar, Draws, [Stats...], Speed, Elapsed, Remaining
+        columns = [
+            RecolorOnFailureBarColumn(
+                table_column=Column(header="Progress", ratio=2),
+                complete_style=Style.parse("rgb(31,119,180)"),  # Blue
+                finished_style=Style.parse("rgb(44,160,44)"),  # Green
+            ),
+            TextColumn(
+                "{task.fields[draws]}/{task.fields[draws_total]}",
+                table_column=Column(header="Draws", ratio=1),
+            ),
+        ]
+
+        if self.full_stats and self.stat_columns:
+            columns.extend(self.stat_columns)
+
+        columns.extend(
+            [
+                TextColumn(
+                    "{task.fields[speed]:.2f} {task.fields[speed_unit]}",
+                    table_column=Column(header="Speed", ratio=1),
+                ),
+                TimeElapsedColumn(table_column=Column(header="Elapsed", ratio=1)),
+                TimeRemainingColumn(table_column=Column(header="Remaining", ratio=1)),
+            ]
+        )
+
+        return TerminalProgress(
+            *columns,
+            console=Console(),
+            disable=not self.show_progress,
+        )
 
     def __enter__(self):
-        self._initialize_tasks()
+        """Enter the progress bar context."""
+        self._start_time = time.time()
 
-        return self._progress.__enter__()
+        if self._mode == "jupyter":
+            import IPython.display
+
+            IPython.display.display(IPython.display.HTML(_PROGRESS_STYLE))
+            self._display_id = IPython.display.display(
+                IPython.display.HTML(self._render_html()), display_id=True
+            )
+        elif self._mode == "marimo":
+            import marimo as mo
+
+            if self._mo_replace:
+                self._mo_replace(mo.Html(f"{_PROGRESS_STYLE}\n{self._render_html()}"))
+        elif self._mode == "terminal" and self._terminal_progress:
+            self._terminal_progress.__enter__()
+            self._init_terminal_tasks()
+
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._progress.__exit__(exc_type, exc_val, exc_tb)
+        """Exit the progress bar context."""
+        # Final update to show completion state
+        if self._mode in ("jupyter", "marimo"):
+            self._update_html()
 
-    def _initialize_tasks(self):
-        if self.combined_progress:
-            self.tasks = [
-                self._progress.add_task(
-                    self.desc.format(self),
-                    completed=0,
-                    draws=0,
-                    total=self.total_draws * self.chains - 1,
-                    chain_idx=0,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[0] for stat, value in self.progress_stats.items()},
-                )
-            ]
+        if self._mode == "terminal" and self._terminal_progress:
+            self._terminal_progress.__exit__(exc_type, exc_val, exc_tb)
 
-        else:
-            self.tasks = [
-                self._progress.add_task(
-                    self.desc.format(self),
-                    completed=0,
-                    draws=0,
-                    total=self.total_draws - 1,
-                    chain_idx=chain_idx,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
-                )
-                for chain_idx in range(self.chains)
-            ]
-
-    @staticmethod
-    def compute_draw_speed(elapsed, draws):
-        speed = draws / max(elapsed, 1e-6)
-
-        if speed > 1 or speed == 0:
-            unit = "draws/s"
-        else:
-            unit = "s/draw"
-            speed = 1 / speed
-
-        return speed, unit
-
-    def update(self, chain_idx, is_last, draw, tuning, stats):
-        if not self._show_progress:
+    def _init_terminal_tasks(self):
+        """Initialize Rich progress tasks for terminal display."""
+        if not self._terminal_progress:
             return
 
-        self.completed_draws += 1
+        self._tasks = []
         if self.combined_progress:
-            draw = self.completed_draws
-            chain_idx = 0
+            # Single combined task
+            task_id = self._terminal_progress.add_task(
+                "Sampling",
+                total=self.total_draws - 1,
+                draws=0,
+                draws_total=self.total_draws,
+                speed=0.0,
+                speed_unit="draws/s",
+                failing=False,
+                **{k: v[0] for k, v in self.progress_stats.items()},
+            )
+            self._tasks = [task_id]
+        else:
+            # Per-chain tasks
+            for i in range(self.chains):
+                task_id = self._terminal_progress.add_task(
+                    f"Chain {i}",
+                    total=self.total_draws_per_chain - 1,
+                    draws=0,
+                    draws_total=self.total_draws_per_chain,
+                    speed=0.0,
+                    speed_unit="draws/s",
+                    failing=False,
+                    **{k: v[i] for k, v in self.progress_stats.items()},
+                )
+                self._tasks.append(task_id)
 
-        elapsed = self._progress.tasks[chain_idx].elapsed
-        speed, unit = self.compute_draw_speed(elapsed, draw)
+    def update(
+        self,
+        chain_idx: int,
+        is_last: bool,
+        draw: int,
+        tuning: bool,
+        stats: list[dict[str, Any]],
+    ):
+        """Update the progress bar with new draw information.
+
+        Parameters
+        ----------
+        chain_idx : int
+            Index of the chain being updated
+        is_last : bool
+            Whether this is the last draw for the chain
+        draw : int
+            Current draw number (0-indexed)
+        tuning : bool
+            Whether the chain is still tuning
+        stats : list of dict
+            Statistics from the step method
+        """
+        if not self.show_progress:
+            return
+
+        self._total_finished_draws += 1
+        chain_state = self._chain_states[chain_idx]
+        chain_state["finished_draws"] = draw + 1
+        chain_state["finished"] = is_last
+
+        elapsed = time.time() - self._start_time if self._start_time else 1e-6
+        speed, speed_unit = self._compute_speed(elapsed, draw + 1)
+        chain_state["speed"] = speed
+        chain_state["speed_unit"] = speed_unit
 
         failing = False
         all_step_stats = {}
-
-        chain_progress_stats = [
-            update_stats_fn(step_stats)
-            for update_stats_fn, step_stats in zip(self.update_stats_functions, stats, strict=True)
-        ]
-        for step_stats in chain_progress_stats:
-            for key, val in step_stats.items():
+        for update_fn, step_stats in zip(self.update_stats_functions, stats, strict=True):
+            step_stat_update = update_fn(step_stats)
+            for key, val in step_stat_update.items():
                 if key == "failing":
                     failing |= val
-                    continue
-                if not self.full_stats:
-                    # Only care about the "failing" flag
-                    continue
+                elif self.full_stats:
+                    if key not in all_step_stats:
+                        all_step_stats[key] = val
 
-                if key in all_step_stats:
-                    # TODO: Figure out how to integrate duplicate / non-scalar keys, ignoring them for now
-                    continue
-                else:
-                    all_step_stats[key] = val
+        chain_state["failing"] = failing
+        chain_state["stats"].update(all_step_stats)
 
-        self._progress.update(
-            self.tasks[chain_idx],
-            completed=draw,
-            draws=draw,
-            sampling_speed=speed,
-            speed_unit=unit,
+        if self._mode == "terminal":
+            self._update_terminal(chain_idx, draw, is_last, failing, all_step_stats)
+        elif self._mode in ("jupyter", "marimo"):
+            self._update_html()
+
+    def _compute_speed(self, elapsed: float, draws: int) -> tuple[float, str]:
+        """Compute sampling speed."""
+        speed = draws / max(elapsed, 1e-6)
+        if speed > 1 or speed == 0:
+            return speed, "draws/s"
+        else:
+            return 1 / speed, "s/draw"
+
+    def _update_terminal(
+        self,
+        chain_idx: int,
+        draw: int,
+        is_last: bool,
+        failing: bool,
+        stats: dict[str, Any],
+    ):
+        """Update Rich terminal progress."""
+        if not self._terminal_progress or not self._tasks:
+            return
+
+        chain_state = self._chain_states[chain_idx]
+
+        if self.combined_progress:
+            task_idx = 0
+            completed = self._total_finished_draws
+        else:
+            task_idx = chain_idx
+            completed = draw + 1
+
+        self._terminal_progress.update(
+            self._tasks[task_idx],
+            completed=completed,
+            draws=chain_state["finished_draws"],
+            draws_total=chain_state["total_draws"],
+            speed=chain_state["speed"],
+            speed_unit=chain_state["speed_unit"],
             failing=failing,
-            **all_step_stats,
+            refresh=is_last,
+            **stats,
         )
 
-        if is_last:
-            self._progress.update(
-                self.tasks[chain_idx],
-                draws=draw + 1 if not self.combined_progress else draw,
-                failing=failing,
-                **all_step_stats,
-                refresh=True,
+    def _update_html(self):
+        """Update HTML progress display (Jupyter or Marimo)."""
+        html = self._render_html()
+
+        if self._mode == "jupyter" and self._display_id:
+            import IPython.display
+
+            self._display_id.update(IPython.display.HTML(html))
+        elif self._mode == "marimo" and self._mo_replace:
+            import marimo as mo
+
+            self._mo_replace(mo.Html(f"{_PROGRESS_STYLE}\n{html}"))
+
+    def _render_html(self) -> str:
+        """Render the HTML progress display."""
+        elapsed = time.time() - self._start_time if self._start_time else 0
+
+        if self._total_finished_draws > 0:
+            rate = self._total_finished_draws / max(elapsed, 1e-6)
+            remaining_draws = self.total_draws - self._total_finished_draws
+            eta_seconds = remaining_draws / rate if rate > 0 else 0
+            time_remaining = self._format_time(eta_seconds)
+        else:
+            time_remaining = None
+
+        finished_chains = sum(1 for c in self._chain_states if c["finished"])
+        running_chains = self.chains - finished_chains
+
+        stat_column_headers = []
+        if self.full_stats and self.stat_columns:
+            for col in self.stat_columns:
+                # Extract header from TextColumn's get_table_column() method
+                table_col = col.get_table_column()
+                if table_col and table_col.header:
+                    stat_column_headers.append({"header": table_col.header})
+
+        chains_data = []
+        for i, chain_state in enumerate(self._chain_states):
+            if chain_state["finished"]:
+                state_class = "finished"
+            elif chain_state["failing"]:
+                state_class = "failing"
+            else:
+                state_class = ""
+
+            stat_values = []
+            if self.full_stats:
+                for col in self.stat_columns:
+                    # Try to extract the field name and format from the TextColumn
+                    stat_values.append(self._format_stat_for_column(col, chain_state["stats"]))
+
+            speed = chain_state["speed"]
+            speed_unit = chain_state["speed_unit"]
+            speed_str = f"{speed:.2f} {speed_unit}"
+
+            chains_data.append(
+                {
+                    "finished_draws": chain_state["finished_draws"],
+                    "total_draws": chain_state["total_draws"],
+                    "state_class": state_class,
+                    "stats": stat_values,
+                    "speed": speed_str,
+                }
             )
 
-    def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
-        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
-
-        if self.full_stats:
-            columns += step_columns
-
-        columns += [
-            TextColumn(
-                "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Sampling Speed", ratio=1),
-            ),
-            TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
-            TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
-        ]
-
-        return CustomProgress(
-            RecolorOnFailureBarColumn(
-                table_column=Column("Progress", ratio=2),
-                failing_color="tab:red",
-                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-                finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-            ),
-            *columns,
-            console=Console(theme=progressbar_theme),
-            disable=not progressbar,
-            include_headers=True,
+        return _PROGRESS_TEMPLATE.render(
+            num_chains=self.chains,
+            running_chains=running_chains,
+            finished_chains=finished_chains,
+            time_sampling=self._format_time(elapsed),
+            time_remaining=time_remaining,
+            total_draws=self.total_draws,
+            total_finished_draws=self._total_finished_draws,
+            stat_columns=stat_column_headers,
+            chains=chains_data,
         )
+
+    def _format_stat_for_column(self, column: TextColumn, stats: dict[str, Any]) -> str:
+        """Format a stat value based on the column definition."""
+        # The TextColumn has a format string like "{task.fields[divergences]}"
+        text_format = column.text_format
+
+        # Extract field names from format string
+        # Pattern: {task.fields[name]} or {task.fields[name]:format}
+        import re
+
+        matches = re.findall(r"\{task\.fields\[(\w+)\](?::([^}]*))?\}", text_format)
+
+        if not matches:
+            return ""
+
+        field_name, fmt = matches[0]
+        value = stats.get(field_name, "")
+
+        if fmt and value != "":
+            try:
+                return f"{value:{fmt}}"
+            except (ValueError, TypeError):
+                return str(value)
+        return str(value)
+
+    @staticmethod
+    def _format_time(seconds: float) -> str:
+        """Format seconds as human-readable time string."""
+        if seconds < 60:
+            return f"{seconds:.0f}s"
+        elif seconds < 3600:
+            mins = int(seconds // 60)
+            secs = int(seconds % 60)
+            return f"{mins}m {secs}s"
+        else:
+            hours = int(seconds // 3600)
+            mins = int((seconds % 3600) // 60)
+            return f"{hours}h {mins}m"
+
+
+# Keep the old CustomProgress class for backward compatibility with SMC
+class CustomProgress(Progress):
+    """A child of Progress that allows to disable progress bars and its container.
+
+    Kept for backward compatibility with SMC sampling.
+    """
+
+    def __init__(self, *args, disable=False, include_headers=False, **kwargs):
+        self.is_enabled = not disable
+        self.include_headers = include_headers
+
+        if self.is_enabled:
+            super().__init__(*args, **kwargs)
+
+    def __enter__(self):
+        if self.is_enabled:
+            self.start()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        if self.is_enabled:
+            super().__exit__(exc_type, exc_val, exc_tb)
+
+    def add_task(self, *args, **kwargs):
+        if self.is_enabled:
+            return super().add_task(*args, **kwargs)
+        return None  # type: ignore[return-value]
+
+    def advance(self, task_id, advance=1) -> None:
+        if self.is_enabled and task_id is not None:
+            super().advance(task_id, advance)
+
+    def update(self, task_id, **kwargs):
+        if self.is_enabled and task_id is not None:
+            super().update(task_id, **kwargs)
+
+
+# Export default theme for backward compatibility
+default_progress_theme = None  # No longer used, kept for import compatibility
