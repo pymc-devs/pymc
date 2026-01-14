@@ -307,7 +307,7 @@ class TerminalProgress(Progress):
             return super().add_task(*args, **kwargs)
         return None
 
-    def advance(self, task_id, advance: int = 1) -> None:
+    def advance(self, task_id, advance: float = 1) -> None:
         if self.is_enabled and task_id is not None:
             super().advance(task_id, advance)
 
