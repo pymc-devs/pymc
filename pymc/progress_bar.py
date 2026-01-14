@@ -113,57 +113,6 @@ def in_marimo_notebook() -> bool:
 
 
 # =============================================================================
-# Marimo-specific output functions
-# =============================================================================
-
-
-def _mo_write_internal(cell_id, stream, value: object) -> None:
-    """Write to marimo cell given cell_id and stream."""
-    from marimo._messaging.cell_output import CellChannel
-    from marimo._messaging.ops import CellOp
-    from marimo._messaging.tracebacks import write_traceback
-    from marimo._output import formatting
-
-    output = formatting.try_format(value)
-    if output.traceback is not None:
-        write_traceback(output.traceback)
-    CellOp.broadcast_output(
-        channel=CellChannel.OUTPUT,
-        mimetype=output.mimetype,
-        data=output.data,
-        cell_id=cell_id,
-        status=None,
-        stream=stream,
-    )
-
-
-def _mo_create_replace():
-    """Create mo.output.replace with current context pinned.
-
-    This captures the cell context at creation time, allowing updates
-    from background threads to correctly target the originating cell.
-    """
-    from marimo._output import formatting
-    from marimo._runtime.context import get_context
-    from marimo._runtime.context.types import ContextNotInitializedError
-
-    try:
-        ctx = get_context()
-    except ContextNotInitializedError:
-        return None
-
-    cell_id = ctx.execution_context.cell_id
-    execution_context = ctx.execution_context
-    stream = ctx.stream
-
-    def replace(value):
-        execution_context.output = [formatting.as_html(value)]
-        _mo_write_internal(cell_id=cell_id, value=value, stream=stream)
-
-    return replace
-
-
-# =============================================================================
 # HTML Templates and Styles (modeled after nutpie)
 # =============================================================================
 
@@ -462,14 +411,12 @@ class ProgressBarManager:
         self._total_finished_draws = 0
 
         self._display_id = None
-        self._mo_replace = None
         self._terminal_progress: TerminalProgress | None = None
 
         if not self.show_progress:
             self._mode = "none"
         elif in_marimo_notebook():
             self._mode = "marimo"
-            self._mo_replace = _mo_create_replace()
         elif in_notebook():
             self._mode = "jupyter"
         else:
@@ -559,8 +506,7 @@ class ProgressBarManager:
         elif self._mode == "marimo":
             import marimo as mo
 
-            if self._mo_replace:
-                self._mo_replace(mo.Html(f"{_PROGRESS_STYLE}\n{self._render_html()}"))
+            mo.output.replace(mo.Html(f"{_PROGRESS_STYLE}\n{self._render_html()}"))
         elif self._mode == "terminal" and self._terminal_progress:
             self._terminal_progress.__enter__()
             self._init_terminal_tasks()
@@ -714,10 +660,10 @@ class ProgressBarManager:
             import IPython.display
 
             self._display_id.update(IPython.display.HTML(html))
-        elif self._mode == "marimo" and self._mo_replace:
+        elif self._mode == "marimo":
             import marimo as mo
 
-            self._mo_replace(mo.Html(f"{_PROGRESS_STYLE}\n{html}"))
+            mo.output.replace(mo.Html(f"{_PROGRESS_STYLE}\n{html}"))
 
     def _render_html(self) -> str:
         """Render the HTML progress display."""
