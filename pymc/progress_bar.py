@@ -398,7 +398,13 @@ class ProgressBarManager:
         progressbar: bool | ProgressBarType = True,
         progressbar_theme=None,  # Kept for backward compatibility, but unused in HTML mode
     ):
-        """Initialize the progress bar manager.
+        """Manage progress bars displayed during sampling.
+
+        When sampling, Step classes are responsible for computing and exposing statistics that can be reported on
+        progress bars. Each Step implements two class methods: :meth:`pymc.step_methods.BlockedStep._progressbar_config`
+        and :meth:`pymc.step_methods.BlockedStep._make_progressbar_update_functions`. `_progressbar_config` reports which
+        columns should be displayed on the progress bar, and `_make_progressbar_update_functions` computes the statistics
+        that will be displayed on the progress bar.
 
         Parameters
         ----------
@@ -407,14 +413,25 @@ class ProgressBarManager:
         chains : int
             Number of chains being sampled
         draws : int
-            Number of draws per chain (excluding tune)
+            Number of draws per chain
         tune : int
             Number of tuning steps per chain
-        progressbar : bool or ProgressBarType
-            Whether and how to display the progress bar.
-        progressbar_theme : optional
-            Theme for Rich progress bars (terminal only).
+        progressbar : bool or ProgressBarType, optional
+            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
+            for one of the following:
+            - "combined": A single progress bar that displays the total progress across all chains. Only timing
+                information is shown.
+            - "split": A separate progress bar for each chain. Only timing information is shown.
+            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
+                chains. Aggregate sample statistics are also displayed.
+            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
+                are also displayed.
+
+            If True, the default is "split+stats" is used.
+        progressbar_theme : Theme, optional
+            The theme to use for the progress bar. Only used in terminal mode.
         """
+        # Parse progressbar argument and set display mode attributes
         self.show_progress, self.combined_progress, self.full_stats = self._parse_progressbar_arg(
             progressbar
         )
