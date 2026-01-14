@@ -245,8 +245,8 @@ _PROGRESS_STYLE = """
 </style>
 """
 
-# Jinja2 template for progress bar HTML
-_PROGRESS_TEMPLATE = Template("""
+# Jinja2 template for progress bar HTML - Split mode (per-chain rows)
+_PROGRESS_TEMPLATE_SPLIT = Template("""
 <div class="pymc-progress">
     <p><strong>Sampler Progress</strong></p>
     <p>Total Chains: {{ num_chains }} | Active: {{ running_chains }} | Finished: {{ finished_chains }}</p>
@@ -278,6 +278,30 @@ _PROGRESS_TEMPLATE = Template("""
                 <td>{{ chain.speed }}</td>
             </tr>
             {% endfor %}
+        </tbody>
+    </table>
+</div>
+""")
+
+# Jinja2 template for progress bar HTML - Combined mode (single row for all chains)
+_PROGRESS_TEMPLATE_COMBINED = Template("""
+<div class="pymc-progress">
+    <p><strong>Sampler Progress</strong></p>
+    <p>Total Chains: {{ num_chains }} | Active: {{ running_chains }} | Finished: {{ finished_chains }}</p>
+    <p>Sampling for {{ time_sampling }}{% if time_remaining %} | ETA: {{ time_remaining }}{% endif %}</p>
+
+    <table>
+        <tbody>
+            <tr>
+                <td style="width: 50%;">
+                    <progress style="width: 100%;" max="{{ total_draws }}" value="{{ total_finished_draws }}" class="{{ combined_state_class }}"></progress>
+                </td>
+                <td>{{ total_finished_draws }}/{{ total_draws }}</td>
+                {% for stat in combined_stats %}
+                <td>{{ stat.label }}: {{ stat.value }}</td>
+                {% endfor %}
+                <td>{{ combined_speed }}</td>
+            </tr>
         </tbody>
     </table>
 </div>
@@ -682,6 +706,7 @@ class ProgressBarManager:
         """Render the HTML progress display."""
         elapsed = time.time() - self._start_time if self._start_time else 0
 
+        # Calculate ETA
         if self._total_finished_draws > 0:
             rate = self._total_finished_draws / max(elapsed, 1e-6)
             remaining_draws = self.total_draws - self._total_finished_draws
@@ -690,57 +715,115 @@ class ProgressBarManager:
         else:
             time_remaining = None
 
+        # Count chain states
         finished_chains = sum(1 for c in self._chain_states if c["finished"])
         running_chains = self.chains - finished_chains
 
-        stat_column_headers = []
-        if self.full_stats and self.stat_columns:
-            for col in self.stat_columns:
-                # Extract header from TextColumn's get_table_column() method
-                table_col = col.get_table_column()
-                if table_col and table_col.header:
-                    stat_column_headers.append({"header": table_col.header})
+        # Compute combined speed
+        combined_speed_val = self._total_finished_draws / max(elapsed, 1e-6)
+        if combined_speed_val > 1 or combined_speed_val == 0:
+            combined_speed = f"{combined_speed_val:.2f} draws/s"
+        else:
+            combined_speed = f"{1 / combined_speed_val:.2f} s/draw"
 
-        chains_data = []
-        for i, chain_state in enumerate(self._chain_states):
-            if chain_state["finished"]:
-                state_class = "finished"
-            elif chain_state["failing"]:
-                state_class = "failing"
-            else:
-                state_class = ""
+        # Check if any chain is failing
+        any_failing = any(c["failing"] for c in self._chain_states)
+        all_finished = all(c["finished"] for c in self._chain_states)
 
-            stat_values = []
-            if self.full_stats:
+        if self.combined_progress:
+            # Combined mode: single row showing aggregate stats
+            combined_state_class = ""
+            if all_finished:
+                combined_state_class = "finished"
+            elif any_failing:
+                combined_state_class = "failing"
+
+            # Aggregate stats across chains (show totals or averages as appropriate)
+            combined_stats = []
+            if self.full_stats and self.stat_columns:
                 for col in self.stat_columns:
-                    # Try to extract the field name and format from the TextColumn
-                    stat_values.append(self._format_stat_for_column(col, chain_state["stats"]))
+                    table_col = col.get_table_column()
+                    header = table_col.header if table_col else ""
+                    # Aggregate values across chains
+                    values = [
+                        self._format_stat_for_column(col, c["stats"]) for c in self._chain_states
+                    ]
+                    # For divergences, sum them; for others, show range or first value
+                    if "divergen" in header.lower():
+                        # Sum divergences
+                        try:
+                            total = sum(int(v) for v in values if v)
+                            combined_stats.append({"label": header, "value": str(total)})
+                        except ValueError:
+                            combined_stats.append(
+                                {"label": header, "value": values[0] if values else ""}
+                            )
+                    else:
+                        # Show first chain's value (they should be similar for step_size, etc.)
+                        combined_stats.append(
+                            {"label": header, "value": values[0] if values else ""}
+                        )
 
-            speed = chain_state["speed"]
-            speed_unit = chain_state["speed_unit"]
-            speed_str = f"{speed:.2f} {speed_unit}"
-
-            chains_data.append(
-                {
-                    "finished_draws": chain_state["finished_draws"],
-                    "total_draws": chain_state["total_draws"],
-                    "state_class": state_class,
-                    "stats": stat_values,
-                    "speed": speed_str,
-                }
+            return _PROGRESS_TEMPLATE_COMBINED.render(
+                num_chains=self.chains,
+                running_chains=running_chains,
+                finished_chains=finished_chains,
+                time_sampling=self._format_time(elapsed),
+                time_remaining=time_remaining,
+                total_draws=self.total_draws,
+                total_finished_draws=self._total_finished_draws,
+                combined_stats=combined_stats,
+                combined_speed=combined_speed,
+                combined_state_class=combined_state_class,
             )
+        else:
+            # Split mode: one row per chain
+            stat_column_headers = []
+            if self.full_stats and self.stat_columns:
+                for col in self.stat_columns:
+                    table_col = col.get_table_column()
+                    if table_col and table_col.header:
+                        stat_column_headers.append({"header": table_col.header})
 
-        return _PROGRESS_TEMPLATE.render(
-            num_chains=self.chains,
-            running_chains=running_chains,
-            finished_chains=finished_chains,
-            time_sampling=self._format_time(elapsed),
-            time_remaining=time_remaining,
-            total_draws=self.total_draws,
-            total_finished_draws=self._total_finished_draws,
-            stat_columns=stat_column_headers,
-            chains=chains_data,
-        )
+            chains_data = []
+            for i, chain_state in enumerate(self._chain_states):
+                if chain_state["finished"]:
+                    state_class = "finished"
+                elif chain_state["failing"]:
+                    state_class = "failing"
+                else:
+                    state_class = ""
+
+                stat_values = []
+                if self.full_stats:
+                    for col in self.stat_columns:
+                        stat_values.append(self._format_stat_for_column(col, chain_state["stats"]))
+
+                speed = chain_state["speed"]
+                speed_unit = chain_state["speed_unit"]
+                speed_str = f"{speed:.2f} {speed_unit}"
+
+                chains_data.append(
+                    {
+                        "finished_draws": chain_state["finished_draws"],
+                        "total_draws": chain_state["total_draws"],
+                        "state_class": state_class,
+                        "stats": stat_values,
+                        "speed": speed_str,
+                    }
+                )
+
+            return _PROGRESS_TEMPLATE_SPLIT.render(
+                num_chains=self.chains,
+                running_chains=running_chains,
+                finished_chains=finished_chains,
+                time_sampling=self._format_time(elapsed),
+                time_remaining=time_remaining,
+                total_draws=self.total_draws,
+                total_finished_draws=self._total_finished_draws,
+                stat_columns=stat_column_headers,
+                chains=chains_data,
+            )
 
     def _format_stat_for_column(self, column: TextColumn, stats: dict[str, Any]) -> str:
         """Format a stat value based on the column definition."""
