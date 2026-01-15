@@ -825,6 +825,218 @@ class MarimoProgressBarManager:
         return abbreviations.get(name, name[:6].capitalize())
 
 
+class MarimoSimpleProgress:
+    """Simple marimo-aware progress bar for forward sampling functions.
+
+    This provides a similar interface to CustomProgress but renders using
+    HTML in marimo notebooks for better display.
+    """
+
+    def __init__(self, description: str, total: int, disable: bool = False):
+        """Initialize the simple progress bar.
+
+        Parameters
+        ----------
+        description : str
+            Description text to show with the progress bar
+        total : int
+            Total number of steps
+        disable : bool
+            If True, disable the progress bar
+        """
+        self.description = description
+        self.total = total
+        self.completed = 0
+        self.is_enabled = not disable
+
+        self._mo_replace: Callable[[object], None] | None = None
+        self._start_time: float = 0.0
+        self._task_id = 0  # Dummy task ID for interface compatibility
+
+    def __enter__(self):
+        """Enter the context manager."""
+        if not self.is_enabled:
+            return self
+
+        self._mo_replace = _mo_create_replace()
+        self._start_time = perf_counter()
+
+        import marimo as mo
+
+        mo.output.clear()
+        self._render()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Exit the context manager with final render."""
+        if self.is_enabled:
+            self._render()
+        return False
+
+    def add_task(
+        self, description: str, completed: int = 0, total: int | None = None, **kwargs
+    ) -> int:
+        """Add a task (interface compatibility with CustomProgress).
+
+        Parameters are accepted but mostly ignored since MarimoSimpleProgress
+        only supports a single task initialized at construction.
+        """
+        if not self.is_enabled:
+            return self._task_id
+        self.description = description
+        self.completed = completed
+        if total is not None:
+            self.total = total
+        self._render()
+        return self._task_id
+
+    def advance(self, task_id: int | None = None, advance: int = 1) -> None:
+        """Advance the progress bar.
+
+        Parameters
+        ----------
+        task_id : int, optional
+            Ignored (for interface compatibility)
+        advance : int
+            Amount to advance by
+        """
+        if not self.is_enabled:
+            return
+        self.completed += advance
+        self._render()
+
+    def update(
+        self,
+        task_id: int | None = None,
+        completed: int | None = None,
+        refresh: bool = False,
+        **kwargs,
+    ) -> None:
+        """Update the progress bar state.
+
+        Parameters
+        ----------
+        task_id : int, optional
+            Ignored (for interface compatibility)
+        completed : int, optional
+            Set completed count
+        refresh : bool
+            If True, force a render
+        **kwargs
+            Additional arguments ignored for compatibility
+        """
+        if not self.is_enabled:
+            return
+        if completed is not None:
+            self.completed = completed
+        if refresh:
+            self._render()
+
+    def _render(self) -> None:
+        """Render HTML progress to marimo output."""
+        if self._mo_replace is None:
+            return
+
+        import marimo as mo
+
+        html = self._render_html()
+        self._mo_replace(mo.Html(html))
+
+    def _render_html(self) -> str:
+        """Generate HTML for the progress bar."""
+        pct = (self.completed / self.total * 100) if self.total > 0 else 0
+        elapsed = perf_counter() - self._start_time
+
+        # Calculate speed
+        if elapsed > 0 and self.completed > 0:
+            speed = self.completed / elapsed
+            if speed > 1:
+                speed_str = f"{speed:.1f} samples/s"
+            else:
+                speed_str = f"{1 / speed:.1f} s/sample"
+        else:
+            speed_str = "-- samples/s"
+
+        # Estimate remaining time
+        if self.completed > 0 and self.completed < self.total:
+            remaining = (self.total - self.completed) / (self.completed / elapsed)
+            remaining_str = MarimoProgressBarManager._format_time(remaining)
+        else:
+            remaining_str = "--:--"
+
+        elapsed_str = MarimoProgressBarManager._format_time(elapsed)
+
+        bar_class = "pymc-progress-bar"
+        if pct >= 100:
+            bar_class += " finished"
+
+        return f"""
+        {_MARIMO_PROGRESS_STYLE}
+        <div class="pymc-progress-container">
+            <div class="pymc-progress-row">
+                <span class="pymc-chain-label">{self.description}</span>
+                <div class="pymc-progress-bar-container">
+                    <div class="{bar_class}" style="width: {pct:.1f}%"></div>
+                </div>
+                <span class="pymc-progress-text">{self.completed}/{self.total} ({pct:.0f}%)</span>
+                <span class="pymc-timing">{speed_str} | {elapsed_str} / {remaining_str}</span>
+            </div>
+        </div>
+        """
+
+
+def create_simple_progress(
+    description: str,
+    total: int,
+    progressbar: bool = True,
+    progressbar_theme: Theme | None = None,
+) -> CustomProgress | MarimoSimpleProgress:
+    """Create a simple progress bar appropriate for the current environment.
+
+    Automatically detects marimo notebooks and returns a MarimoSimpleProgress,
+    otherwise returns a standard Rich-based CustomProgress.
+
+    This is intended for use by forward sampling functions like
+    sample_posterior_predictive and sample_prior_predictive.
+
+    Parameters
+    ----------
+    description : str
+        Description text for the progress bar
+    total : int
+        Total number of samples/steps
+    progressbar : bool
+        Whether to show the progress bar
+    progressbar_theme : Theme, optional
+        Theme for the Rich progress bar (non-marimo only)
+
+    Returns
+    -------
+    CustomProgress or MarimoSimpleProgress
+        The appropriate progress bar for the environment
+    """
+    if progressbar and in_marimo_notebook():
+        return MarimoSimpleProgress(
+            description=description,
+            total=total,
+            disable=not progressbar,
+        )
+
+    if progressbar_theme is None:
+        progressbar_theme = default_progress_theme
+
+    return CustomProgress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        console=Console(theme=progressbar_theme),
+        disable=not progressbar,
+    )
+
+
 def create_progress_bar_manager(
     step_method: "BlockedStep | CompoundStep",
     chains: int,

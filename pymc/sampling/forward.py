@@ -43,8 +43,6 @@ from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 import pymc as pm
@@ -54,7 +52,7 @@ from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.progress_bar import create_simple_progress, default_progress_theme
 from pymc.pytensorf import compile, rvs_in_graph
 from pymc.util import (
     RandomState,
@@ -921,15 +919,11 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
     ppc_trace_t = _DefaultTrace(samples)
 
-    progress = CustomProgress(
-        "[progress.description]{task.description}",
-        BarColumn(),
-        "[progress.percentage]{task.percentage:>3.0f}%",
-        TimeRemainingColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
+    progress = create_simple_progress(
+        description="Sampling ...",
+        total=samples,
+        progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
     )
 
     try:
