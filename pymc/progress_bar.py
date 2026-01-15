@@ -487,72 +487,39 @@ class ProgressBarManager:
 # CSS styling for marimo progress bars
 _MARIMO_PROGRESS_STYLE = """
 <style>
-.pymc-progress-container {
+.pymc-progress-table {
     font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
     font-size: 13px;
-    line-height: 1.5;
-    padding: 8px 0;
+    border-collapse: collapse;
 }
-.pymc-progress-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 4px 0;
-    flex-wrap: nowrap;
-}
-.pymc-chain-label {
-    min-width: 70px;
+.pymc-progress-table th {
+    text-align: left;
+    padding: 4px 10px;
     font-weight: 500;
+    color: #666;
+    border-bottom: 1px solid #ddd;
+}
+.pymc-progress-table td {
+    padding: 6px 10px;
+    white-space: nowrap;
 }
 .pymc-progress-bar-container {
-    width: 150px;
-    height: 16px;
+    width: 120px;
+    height: 14px;
     background-color: #e0e0e0;
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
-    flex-shrink: 0;
 }
 .pymc-progress-bar {
     height: 100%;
     background-color: #1f77b4;
     transition: width 0.1s ease-out;
 }
-.pymc-progress-bar.failing {
-    background-color: #d62728;
-}
-.pymc-progress-bar.finished {
-    background-color: #2ca02c;
-}
-.pymc-progress-text {
-    min-width: 120px;
-    white-space: nowrap;
-}
-.pymc-stats {
-    display: flex;
-    gap: 12px;
-    flex-wrap: nowrap;
-}
-.pymc-stat {
-    white-space: nowrap;
-}
-.pymc-stat-label {
-    color: #666;
-}
-.pymc-timing {
-    white-space: nowrap;
-    color: #666;
-}
-.pymc-warning {
-    color: #d62728;
-    margin-left: 4px;
-}
+.pymc-progress-bar.failing { background-color: #d62728; }
+.pymc-progress-bar.finished { background-color: #2ca02c; }
 @media (prefers-color-scheme: dark) {
-    .pymc-progress-bar-container {
-        background-color: #444;
-    }
-    .pymc-stat-label, .pymc-timing {
-        color: #aaa;
-    }
+    .pymc-progress-table th { color: #aaa; border-bottom-color: #444; }
+    .pymc-progress-bar-container { background-color: #444; }
 }
 </style>
 """
@@ -730,16 +697,28 @@ class MarimoProgressBarManager:
         self._mo_replace(mo.Html(html))
 
     def _render_html(self) -> str:
-        """Generate HTML for all progress bars."""
-        rows = []
+        """Generate HTML for all progress bars as a table with headers."""
+        # Build header row - get stat columns from first chain's state
+        stat_keys = []
+        if self.full_stats and self._chain_state and self._chain_state[0]["stats"]:
+            stat_keys = list(self._chain_state[0]["stats"].keys())
+
+        header_cells = ["Progress", "Draws"]
+        header_cells += [self._abbreviate_stat_name(k) for k in stat_keys]
+        header_cells += ["Speed", "Elapsed"]
+
+        header_row = "<tr>" + "".join(f"<th>{h}</th>" for h in header_cells) + "</tr>"
+
+        # Build data rows
+        data_rows = []
         for i, state in enumerate(self._chain_state):
-            rows.append(self._render_chain_row(i, state))
+            data_rows.append(self._render_chain_row(i, state, stat_keys))
 
-        rows_html = "\n".join(rows)
-        return f"{_MARIMO_PROGRESS_STYLE}\n<div class='pymc-progress-container'>{rows_html}</div>"
+        rows_html = "\n".join(data_rows)
+        return f"{_MARIMO_PROGRESS_STYLE}\n<table class='pymc-progress-table'><thead>{header_row}</thead><tbody>{rows_html}</tbody></table>"
 
-    def _render_chain_row(self, chain_idx: int, state: dict[str, Any]) -> str:
-        """Render a single chain's progress row."""
+    def _render_chain_row(self, chain_idx: int, state: dict[str, Any], stat_keys: list[str]) -> str:
+        """Render a single chain's progress as a table row."""
         draws = state["draws"]
         total = state["total"]
         failing = state["failing"]
@@ -750,9 +729,6 @@ class MarimoProgressBarManager:
         elapsed = perf_counter() - self._start_times[chain_idx]
         speed, unit = self.compute_draw_speed(elapsed, draws)
 
-        # Format elapsed time
-        elapsed_str = self._format_time(elapsed)
-
         # Determine bar class
         bar_class = "pymc-progress-bar"
         if failing:
@@ -760,42 +736,25 @@ class MarimoProgressBarManager:
         elif pct >= 100:
             bar_class += " finished"
 
-        # Chain label
-        if self.combined_progress:
-            label = "All chains"
-        else:
-            label = f"Chain {chain_idx}"
+        # Build cells
+        cells = [
+            f'<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>',
+            f"<td>{draws}/{total} ({pct:.0f}%)</td>",
+        ]
 
-        # Warning indicator
-        warning = '<span class="pymc-warning">⚠</span>' if failing else ""
+        # Add stat cells in consistent order
+        for key in stat_keys:
+            val = stats.get(key, "")
+            if isinstance(val, float):
+                cells.append(f"<td>{val:.3f}</td>")
+            else:
+                cells.append(f"<td>{val}</td>")
 
-        # Stats display
-        stats_html = ""
-        if self.full_stats and stats:
-            stat_items = []
-            for key, val in stats.items():
-                if isinstance(val, float):
-                    formatted = f"{val:.3f}"
-                else:
-                    formatted = str(val)
-                # Abbreviate stat names
-                short_key = self._abbreviate_stat_name(key)
-                stat_items.append(
-                    f'<span class="pymc-stat"><span class="pymc-stat-label">{short_key}:</span> {formatted}</span>'
-                )
-            stats_html = f'<div class="pymc-stats">{" ".join(stat_items)}</div>'
+        # Speed and elapsed
+        cells.append(f"<td>{speed:.1f} {unit}</td>")
+        cells.append(f"<td>{self._format_time(elapsed)}</td>")
 
-        return f"""
-        <div class="pymc-progress-row">
-            <span class="pymc-chain-label">{label}{warning}</span>
-            <div class="pymc-progress-bar-container">
-                <div class="{bar_class}" style="width: {pct:.1f}%"></div>
-            </div>
-            <span class="pymc-progress-text">{draws}/{total} ({pct:.0f}%)</span>
-            {stats_html}
-            <span class="pymc-timing">{speed:.1f} {unit} | {elapsed_str}</span>
-        </div>
-        """
+        return "<tr>" + "".join(cells) + "</tr>"
 
     @staticmethod
     def _format_time(seconds: float) -> str:
@@ -943,7 +902,7 @@ class MarimoSimpleProgress:
         self._mo_replace(mo.Html(html))
 
     def _render_html(self) -> str:
-        """Generate HTML for the progress bar."""
+        """Generate HTML for the progress bar as a table."""
         pct = (self.completed / self.total * 100) if self.total > 0 else 0
         elapsed = perf_counter() - self._start_time
 
@@ -970,19 +929,17 @@ class MarimoSimpleProgress:
         if pct >= 100:
             bar_class += " finished"
 
-        return f"""
-        {_MARIMO_PROGRESS_STYLE}
-        <div class="pymc-progress-container">
-            <div class="pymc-progress-row">
-                <span class="pymc-chain-label">{self.description}</span>
-                <div class="pymc-progress-bar-container">
-                    <div class="{bar_class}" style="width: {pct:.1f}%"></div>
-                </div>
-                <span class="pymc-progress-text">{self.completed}/{self.total} ({pct:.0f}%)</span>
-                <span class="pymc-timing">{speed_str} | {elapsed_str} / {remaining_str}</span>
-            </div>
-        </div>
-        """
+        return f"""{_MARIMO_PROGRESS_STYLE}
+<table class="pymc-progress-table">
+<thead><tr><th>Progress</th><th>Samples</th><th>Speed</th><th>Elapsed</th><th>Remaining</th></tr></thead>
+<tbody><tr>
+<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>
+<td>{self.completed}/{self.total} ({pct:.0f}%)</td>
+<td>{speed_str}</td>
+<td>{elapsed_str}</td>
+<td>{remaining_str}</td>
+</tr></tbody>
+</table>"""
 
 
 def create_simple_progress(
