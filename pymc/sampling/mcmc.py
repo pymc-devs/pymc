@@ -57,7 +57,6 @@ from pymc.model import Model, modelcontext
 from pymc.progress_bar import (
     ProgressBarManager,
     ProgressBarType,
-    create_progress_bar_manager,
     default_progress_theme,
 )
 from pymc.sampling.parallel import Draw, _cpu_count
@@ -1204,7 +1203,7 @@ def _sample_many(
         Step function
     """
     initial_step_state = step.sampling_state
-    progress_manager = create_progress_bar_manager(
+    progress_manager = ProgressBarManager(
         step_method=step,
         chains=chains,
         draws=draws - kwargs.get("tune", 0),

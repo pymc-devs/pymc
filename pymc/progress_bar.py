@@ -252,7 +252,15 @@ class RecolorOnFailureBarColumn(BarColumn):
 
 
 class ProgressBarManager:
-    """Manage progress bars displayed during sampling."""
+    """Manage progress bars displayed during sampling.
+
+    This class automatically detects the execution environment and uses the
+    appropriate rendering backend:
+    - Rich-based terminal rendering for standard Python/Jupyter environments
+    - HTML rendering for marimo notebooks
+
+    The `_is_marimo` attribute indicates which backend is active.
+    """
 
     def __init__(
         self,
@@ -332,33 +340,65 @@ class ProgressBarManager:
                     "one of 'combined', 'split', 'split+stats', or 'combined+stats."
                 )
 
-        progress_columns, progress_stats = step_method._progressbar_config(chains)
+        self._show_progress = show_progress
 
-        self._progress = self.create_progress_bar(
-            progress_columns,
-            progressbar=progressbar,
-            progressbar_theme=progressbar_theme,
-        )
+        # Detect environment: use marimo backend if in marimo notebook and progress is enabled
+        self._is_marimo = in_marimo_notebook() and show_progress
+
+        # Get progress bar config from step method
+        progress_columns, progress_stats = step_method._progressbar_config(chains)
         self.progress_stats = progress_stats
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
-        self._show_progress = show_progress
         self.completed_draws = 0
         self.total_draws = draws + tune
         self.desc = "Sampling chain"
         self.chains = chains
 
-        self._tasks: list[Task] | None = None  # type: ignore[annotation-unchecked]
+        if self._is_marimo:
+            # Marimo-specific initialization
+            self._mo_replace = _mo_create_replace()
+            self._chain_state: list[dict[str, Any]] = []
+            self._start_times: list[float] = []
+        else:
+            # Rich-specific initialization
+            self._progress = self.create_progress_bar(
+                progress_columns,
+                progressbar=progressbar,
+                progressbar_theme=progressbar_theme,
+            )
+            self.tasks: list[Task] | None = None  # type: ignore[annotation-unchecked]
 
     def __enter__(self):
         self._initialize_tasks()
 
-        return self._progress.__enter__()
+        if self._is_marimo:
+            if self._show_progress:
+                import marimo as mo
+
+                mo.output.clear()
+                self._render()
+            return self
+        else:
+            return self._progress.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        return self._progress.__exit__(exc_type, exc_val, exc_tb)
+        if self._is_marimo:
+            if self._show_progress:
+                self._render()
+            return False
+        else:
+            return self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self):
+        """Initialize progress tracking for all chains."""
+        if self._is_marimo:
+            self._initialize_tasks_marimo()
+        else:
+            self._initialize_tasks_rich()
+
+    def _initialize_tasks_rich(self):
+        """Initialize Rich progress bar tasks."""
         if self.combined_progress:
             self.tasks = [
                 self._progress.add_task(
@@ -373,7 +413,6 @@ class ProgressBarManager:
                     **{stat: value[0] for stat, value in self.progress_stats.items()},
                 )
             ]
-
         else:
             self.tasks = [
                 self._progress.add_task(
@@ -390,220 +429,8 @@ class ProgressBarManager:
                 for chain_idx in range(self.chains)
             ]
 
-    @staticmethod
-    def compute_draw_speed(elapsed, draws):
-        speed = draws / max(elapsed, 1e-6)
-
-        if speed > 1 or speed == 0:
-            unit = "draws/s"
-        else:
-            unit = "s/draw"
-            speed = 1 / speed
-
-        return speed, unit
-
-    def update(self, chain_idx, is_last, draw, tuning, stats):
-        if not self._show_progress:
-            return
-
-        self.completed_draws += 1
-        if self.combined_progress:
-            draw = self.completed_draws
-            chain_idx = 0
-
-        elapsed = self._progress.tasks[chain_idx].elapsed
-        speed, unit = self.compute_draw_speed(elapsed, draw)
-
-        failing = False
-        all_step_stats = {}
-
-        chain_progress_stats = [
-            update_stats_fn(step_stats)
-            for update_stats_fn, step_stats in zip(self.update_stats_functions, stats, strict=True)
-        ]
-        for step_stats in chain_progress_stats:
-            for key, val in step_stats.items():
-                if key == "failing":
-                    failing |= val
-                    continue
-                if not self.full_stats:
-                    # Only care about the "failing" flag
-                    continue
-
-                if key in all_step_stats:
-                    # TODO: Figure out how to integrate duplicate / non-scalar keys, ignoring them for now
-                    continue
-                else:
-                    all_step_stats[key] = val
-
-        self._progress.update(
-            self.tasks[chain_idx],
-            completed=draw,
-            draws=draw,
-            sampling_speed=speed,
-            speed_unit=unit,
-            failing=failing,
-            **all_step_stats,
-        )
-
-        if is_last:
-            self._progress.update(
-                self.tasks[chain_idx],
-                draws=draw + 1 if not self.combined_progress else draw,
-                failing=failing,
-                **all_step_stats,
-                refresh=True,
-            )
-
-    def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
-        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
-
-        if self.full_stats:
-            columns += step_columns
-
-        columns += [
-            TextColumn(
-                "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Sampling Speed", ratio=1),
-            ),
-            TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
-            TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
-        ]
-
-        return CustomProgress(
-            RecolorOnFailureBarColumn(
-                table_column=Column("Progress", ratio=2),
-                failing_color="tab:red",
-                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-                finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-            ),
-            *columns,
-            console=Console(theme=progressbar_theme),
-            disable=not progressbar,
-            include_headers=True,
-        )
-
-
-# CSS styling for marimo progress bars
-_MARIMO_PROGRESS_STYLE = """
-<style>
-.pymc-progress-table {
-    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
-    font-size: 13px;
-    border-collapse: collapse;
-}
-.pymc-progress-table th {
-    text-align: left;
-    padding: 4px 10px;
-    font-weight: 500;
-    color: #666;
-    border-bottom: 1px solid #ddd;
-}
-.pymc-progress-table td {
-    padding: 6px 10px;
-    white-space: nowrap;
-}
-.pymc-progress-bar-container {
-    width: 120px;
-    height: 14px;
-    background-color: #e0e0e0;
-    border-radius: 3px;
-    overflow: hidden;
-}
-.pymc-progress-bar {
-    height: 100%;
-    background-color: #1f77b4;
-    transition: width 0.1s ease-out;
-}
-.pymc-progress-bar.failing { background-color: #d62728; }
-.pymc-progress-bar.finished { background-color: #2ca02c; }
-@media (prefers-color-scheme: dark) {
-    .pymc-progress-table th { color: #aaa; border-bottom-color: #444; }
-    .pymc-progress-bar-container { background-color: #444; }
-}
-</style>
-"""
-
-
-class MarimoProgressBarManager:
-    """Progress bar manager for marimo notebooks using HTML rendering.
-
-    This class provides the same interface as ProgressBarManager but renders
-    progress using HTML/CSS via marimo's output system instead of Rich's
-    terminal-based rendering.
-    """
-
-    def __init__(
-        self,
-        step_method: "BlockedStep | CompoundStep",
-        chains: int,
-        draws: int,
-        tune: int,
-        progressbar: bool | ProgressBarType = True,
-        progressbar_theme: Theme | None = None,  # Unused, kept for API compatibility
-    ):
-        """Initialize the marimo progress bar manager.
-
-        Parameters are the same as ProgressBarManager for API compatibility.
-        """
-        # Pin marimo context immediately (before any work starts)
-        self._mo_replace = _mo_create_replace()
-
-        match progressbar:
-            case True:
-                self.combined_progress = False
-                self.full_stats = True
-                self._show_progress = True
-            case False:
-                self.combined_progress = False
-                self.full_stats = True
-                self._show_progress = False
-            case "combined":
-                self.combined_progress = True
-                self.full_stats = False
-                self._show_progress = True
-            case "split":
-                self.combined_progress = False
-                self.full_stats = False
-                self._show_progress = True
-            case "combined+stats" | "stats+combined":
-                self.combined_progress = True
-                self.full_stats = True
-                self._show_progress = True
-            case "split+stats" | "stats+split":
-                self.combined_progress = False
-                self.full_stats = True
-                self._show_progress = True
-            case _:
-                raise ValueError(
-                    "Invalid value for `progressbar`. Valid values are True (default), False (no progress bar), "
-                    "one of 'combined', 'split', 'split+stats', or 'combined+stats."
-                )
-
-        # Get stat column names from step method config
-        _, progress_stats = step_method._progressbar_config(chains)
-        self.progress_stats = progress_stats
-        self.stat_names = list(progress_stats.keys())
-        self.update_stats_functions = step_method._make_progressbar_update_functions()
-
-        self.chains = chains
-        self.total_draws = draws + tune
-        self.completed_draws = 0
-
-        # Per-chain state
-        self._chain_state: list[dict[str, Any]] = []
-        self._start_times: list[float] = []
-
-    def __enter__(self):
-        """Enter the context manager and initialize chain state."""
-        if not self._show_progress:
-            return self
-
-        import marimo as mo
-
-        mo.output.clear()
-
-        # Initialize per-chain state
+    def _initialize_tasks_marimo(self):
+        """Initialize marimo chain state."""
         if self.combined_progress:
             self._chain_state = [
                 {
@@ -626,17 +453,8 @@ class MarimoProgressBarManager:
             ]
             self._start_times = [perf_counter() for _ in range(self.chains)]
 
-        self._render()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager with final render."""
-        if self._show_progress:
-            self._render()
-        return False
-
     @staticmethod
-    def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
+    def compute_draw_speed(elapsed, draws):
         """Compute sampling speed and appropriate unit."""
         speed = draws / max(elapsed, 1e-6)
 
@@ -648,17 +466,16 @@ class MarimoProgressBarManager:
 
         return speed, unit
 
-    def update(self, chain_idx: int, is_last: bool, draw: int, tuning: bool, stats: list) -> None:
-        """Update progress bar with new sampling statistics."""
-        if not self._show_progress:
-            return
+    def _extract_stats(self, stats) -> tuple[bool, dict[str, Any]]:
+        """Extract and process stats from step methods.
 
-        self.completed_draws += 1
-        if self.combined_progress:
-            draw = self.completed_draws
-            chain_idx = 0
-
-        # Extract stats from step methods
+        Returns
+        -------
+        failing : bool
+            Whether any step method reported a failure condition
+        all_step_stats : dict
+            Aggregated statistics from all step methods
+        """
         failing = False
         all_step_stats: dict[str, Any] = {}
 
@@ -672,10 +489,61 @@ class MarimoProgressBarManager:
                     failing |= val
                     continue
                 if not self.full_stats:
+                    # Only care about the "failing" flag
                     continue
-                if key not in all_step_stats:
+                if key in all_step_stats:
+                    # TODO: Figure out how to integrate duplicate / non-scalar keys, ignoring them for now
+                    continue
+                else:
                     all_step_stats[key] = val
 
+        return failing, all_step_stats
+
+    def update(self, chain_idx, is_last, draw, tuning, stats):
+        """Update progress bar with new sampling statistics."""
+        if not self._show_progress:
+            return
+
+        self.completed_draws += 1
+        if self.combined_progress:
+            draw = self.completed_draws
+            chain_idx = 0
+
+        # Extract stats (shared between both backends)
+        failing, all_step_stats = self._extract_stats(stats)
+
+        # Dispatch to appropriate backend
+        if self._is_marimo:
+            self._update_marimo(chain_idx, is_last, draw, failing, all_step_stats)
+        else:
+            self._update_rich(chain_idx, is_last, draw, failing, all_step_stats)
+
+    def _update_rich(self, chain_idx, is_last, draw, failing, all_step_stats):
+        """Update Rich progress bar."""
+        elapsed = self._progress.tasks[chain_idx].elapsed
+        speed, unit = self.compute_draw_speed(elapsed, draw)
+
+        self._progress.update(
+            self.tasks[chain_idx],
+            completed=draw,
+            draws=draw,
+            sampling_speed=speed,
+            speed_unit=unit,
+            failing=failing,
+            **all_step_stats,
+        )
+
+        if is_last:
+            self._progress.update(
+                self.tasks[chain_idx],
+                draws=draw + 1 if not self.combined_progress else draw,
+                failing=failing,
+                **all_step_stats,
+                refresh=True,
+            )
+
+    def _update_marimo(self, chain_idx, is_last, draw, failing, all_step_stats):
+        """Update marimo HTML progress."""
         # Update chain state
         self._chain_state[chain_idx]["draws"] = draw
         self._chain_state[chain_idx]["failing"] = failing
@@ -782,6 +650,75 @@ class MarimoProgressBarManager:
             "tune": "Tune",
         }
         return abbreviations.get(name, name[:6].capitalize())
+
+    def create_progress_bar(self, step_columns, progressbar, progressbar_theme):
+        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
+
+        if self.full_stats:
+            columns += step_columns
+
+        columns += [
+            TextColumn(
+                "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
+                table_column=Column("Sampling Speed", ratio=1),
+            ),
+            TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
+            TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
+        ]
+
+        return CustomProgress(
+            RecolorOnFailureBarColumn(
+                table_column=Column("Progress", ratio=2),
+                failing_color="tab:red",
+                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+                finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+            ),
+            *columns,
+            console=Console(theme=progressbar_theme),
+            disable=not progressbar,
+            include_headers=True,
+        )
+
+
+# CSS styling for marimo progress bars
+_MARIMO_PROGRESS_STYLE = """
+<style>
+.pymc-progress-table {
+    font-family: ui-monospace, SFMono-Regular, SF Mono, Menlo, Consolas, Liberation Mono, monospace;
+    font-size: 13px;
+    border-collapse: collapse;
+}
+.pymc-progress-table th {
+    text-align: left;
+    padding: 4px 10px;
+    font-weight: 500;
+    color: #666;
+    border-bottom: 1px solid #ddd;
+}
+.pymc-progress-table td {
+    padding: 6px 10px;
+    white-space: nowrap;
+}
+.pymc-progress-bar-container {
+    width: 120px;
+    height: 14px;
+    background-color: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.pymc-progress-bar {
+    height: 100%;
+    background-color: #1f77b4;
+    transition: width 0.1s ease-out;
+}
+.pymc-progress-bar.failing { background-color: #d62728; }
+.pymc-progress-bar.finished { background-color: #2ca02c; }
+@media (prefers-color-scheme: dark) {
+    .pymc-progress-table th { color: #aaa; border-bottom-color: #444; }
+    .pymc-progress-bar-container { background-color: #444; }
+}
+</style>
+"""
 
 
 class MarimoSimpleProgress:
@@ -919,11 +856,11 @@ class MarimoSimpleProgress:
         # Estimate remaining time
         if self.completed > 0 and self.completed < self.total:
             remaining = (self.total - self.completed) / (self.completed / elapsed)
-            remaining_str = MarimoProgressBarManager._format_time(remaining)
+            remaining_str = ProgressBarManager._format_time(remaining)
         else:
             remaining_str = "--:--"
 
-        elapsed_str = MarimoProgressBarManager._format_time(elapsed)
+        elapsed_str = ProgressBarManager._format_time(elapsed)
 
         bar_class = "pymc-progress-bar"
         if pct >= 100:
@@ -991,56 +928,4 @@ def create_simple_progress(
         TimeElapsedColumn(),
         console=Console(theme=progressbar_theme),
         disable=not progressbar,
-    )
-
-
-def create_progress_bar_manager(
-    step_method: "BlockedStep | CompoundStep",
-    chains: int,
-    draws: int,
-    tune: int,
-    progressbar: bool | ProgressBarType = True,
-    progressbar_theme: Theme | None = None,
-) -> ProgressBarManager | MarimoProgressBarManager:
-    """Create the appropriate progress bar manager for the current environment.
-
-    Automatically detects marimo notebooks and returns a MarimoProgressBarManager,
-    otherwise returns the standard Rich-based ProgressBarManager.
-
-    Parameters
-    ----------
-    step_method : BlockedStep or CompoundStep
-        The step method being used to sample
-    chains : int
-        Number of chains being sampled
-    draws : int
-        Number of draws per chain
-    tune : int
-        Number of tuning steps per chain
-    progressbar : bool or ProgressBarType, optional
-        How and whether to display the progress bar
-    progressbar_theme : Theme, optional
-        The theme to use for the progress bar (Rich backend only)
-
-    Returns
-    -------
-    ProgressBarManager or MarimoProgressBarManager
-        The appropriate progress bar manager for the environment
-    """
-    if progressbar and in_marimo_notebook():
-        return MarimoProgressBarManager(
-            step_method=step_method,
-            chains=chains,
-            draws=draws,
-            tune=tune,
-            progressbar=progressbar,
-            progressbar_theme=progressbar_theme,
-        )
-    return ProgressBarManager(
-        step_method=step_method,
-        chains=chains,
-        draws=draws,
-        tune=tune,
-        progressbar=progressbar,
-        progressbar_theme=progressbar_theme,
     )

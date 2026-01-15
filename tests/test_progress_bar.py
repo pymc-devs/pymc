@@ -18,8 +18,7 @@ import pytest
 import pymc as pm
 
 from pymc.progress_bar import (
-    MarimoProgressBarManager,
-    create_progress_bar_manager,
+    ProgressBarManager,
     in_marimo_notebook,
 )
 
@@ -88,64 +87,58 @@ class TestMarimoDetection:
             assert in_marimo_notebook() is True
 
 
-class TestCreateProgressBarManager:
-    """Tests for the progress bar manager factory function."""
+class TestProgressBarManagerEnvironmentDetection:
+    """Tests for ProgressBarManager environment detection."""
 
-    def test_returns_rich_manager_when_not_marimo(self):
-        """Test that factory returns ProgressBarManager when not in marimo."""
+    @pytest.fixture
+    def step_method(self):
+        """Create a step method for testing."""
         with pm.Model():
             x = pm.Normal("x")
             step = pm.NUTS([x])
+        return step
 
+    def test_detects_non_marimo_environment(self, step_method):
+        """Test that _is_marimo is False when not in marimo."""
         with patch("pymc.progress_bar.in_marimo_notebook", return_value=False):
-            manager = create_progress_bar_manager(
-                step_method=step,
+            manager = ProgressBarManager(
+                step_method=step_method,
                 chains=2,
                 draws=100,
                 tune=50,
                 progressbar=True,
             )
-            # Use class name comparison to avoid module reimport identity issues
-            assert type(manager).__name__ == "ProgressBarManager"
+            assert manager._is_marimo is False
 
-    def test_returns_rich_manager_when_progressbar_false(self):
-        """Test that factory returns ProgressBarManager when progressbar=False."""
-        with pm.Model():
-            x = pm.Normal("x")
-            step = pm.NUTS([x])
-
-        # Even in marimo, if progressbar=False, we use Rich (it handles disabled state)
+    def test_detects_marimo_environment(self, step_method):
+        """Test that _is_marimo is True when in marimo."""
         with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
-            manager = create_progress_bar_manager(
-                step_method=step,
+            manager = ProgressBarManager(
+                step_method=step_method,
+                chains=2,
+                draws=100,
+                tune=50,
+                progressbar=True,
+            )
+            assert manager._is_marimo is True
+
+    def test_disabled_progressbar_not_marimo(self, step_method):
+        """Test that _is_marimo is False when progressbar=False regardless of environment."""
+        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
+            manager = ProgressBarManager(
+                step_method=step_method,
                 chains=2,
                 draws=100,
                 tune=50,
                 progressbar=False,
             )
-            # Use class name comparison to avoid module reimport identity issues
-            assert type(manager).__name__ == "ProgressBarManager"
-
-    def test_returns_marimo_manager_when_in_marimo(self):
-        """Test that factory returns MarimoProgressBarManager when in marimo."""
-        with pm.Model():
-            x = pm.Normal("x")
-            step = pm.NUTS([x])
-
-        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
-            manager = create_progress_bar_manager(
-                step_method=step,
-                chains=2,
-                draws=100,
-                tune=50,
-                progressbar=True,
-            )
-            # Use class name comparison to avoid module reimport identity issues
-            assert type(manager).__name__ == "MarimoProgressBarManager"
+            # When progressbar is disabled, _is_marimo should be False
+            # because we use the Rich backend (which handles disabled state)
+            assert manager._is_marimo is False
 
 
-class TestMarimoProgressBarManager:
-    """Tests for the MarimoProgressBarManager class."""
+class TestProgressBarManagerMarimoMode:
+    """Tests for ProgressBarManager when running in marimo mode."""
 
     @pytest.fixture
     def step_method(self):
@@ -157,85 +150,89 @@ class TestMarimoProgressBarManager:
 
     def test_init_split_mode(self, step_method):
         """Test initialization in split mode (default)."""
-        manager = MarimoProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar=True,
-        )
-        assert manager.combined_progress is False
-        assert manager.full_stats is True
-        assert manager._show_progress is True
-        assert manager.chains == 2
-        assert manager.total_draws == 150  # draws + tune
+        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
+            manager = ProgressBarManager(
+                step_method=step_method,
+                chains=2,
+                draws=100,
+                tune=50,
+                progressbar=True,
+            )
+            assert manager.combined_progress is False
+            assert manager.full_stats is True
+            assert manager._show_progress is True
+            assert manager.chains == 2
+            assert manager.total_draws == 150  # draws + tune
+            assert manager._is_marimo is True
 
     def test_init_combined_mode(self, step_method):
         """Test initialization in combined mode."""
-        manager = MarimoProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar="combined",
-        )
-        assert manager.combined_progress is True
-        assert manager.full_stats is False
+        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
+            manager = ProgressBarManager(
+                step_method=step_method,
+                chains=2,
+                draws=100,
+                tune=50,
+                progressbar="combined",
+            )
+            assert manager.combined_progress is True
+            assert manager.full_stats is False
+            assert manager._is_marimo is True
 
     def test_init_disabled(self, step_method):
         """Test initialization with progressbar disabled."""
-        manager = MarimoProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar=False,
-        )
-        assert manager._show_progress is False
+        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
+            manager = ProgressBarManager(
+                step_method=step_method,
+                chains=2,
+                draws=100,
+                tune=50,
+                progressbar=False,
+            )
+            assert manager._show_progress is False
 
     def test_compute_draw_speed(self):
         """Test speed calculation."""
-        speed, unit = MarimoProgressBarManager.compute_draw_speed(elapsed=1.0, draws=100)
+        speed, unit = ProgressBarManager.compute_draw_speed(elapsed=1.0, draws=100)
         assert speed == 100.0
         assert unit == "draws/s"
 
-        speed, unit = MarimoProgressBarManager.compute_draw_speed(elapsed=100.0, draws=1)
+        speed, unit = ProgressBarManager.compute_draw_speed(elapsed=100.0, draws=1)
         assert speed == 100.0
         assert unit == "s/draw"
 
     def test_format_time(self):
         """Test time formatting."""
-        assert MarimoProgressBarManager._format_time(65) == "1:05"
-        assert MarimoProgressBarManager._format_time(3665) == "1:01:05"
-        assert MarimoProgressBarManager._format_time(0) == "0:00"
+        assert ProgressBarManager._format_time(65) == "1:05"
+        assert ProgressBarManager._format_time(3665) == "1:01:05"
+        assert ProgressBarManager._format_time(0) == "0:00"
 
     def test_abbreviate_stat_name(self):
         """Test stat name abbreviation."""
-        assert MarimoProgressBarManager._abbreviate_stat_name("divergences") == "Div"
-        assert MarimoProgressBarManager._abbreviate_stat_name("step_size") == "Step"
-        assert MarimoProgressBarManager._abbreviate_stat_name("unknown_stat") == "Unknow"
+        assert ProgressBarManager._abbreviate_stat_name("divergences") == "Div"
+        assert ProgressBarManager._abbreviate_stat_name("step_size") == "Step"
+        assert ProgressBarManager._abbreviate_stat_name("unknown_stat") == "Unknow"
 
     def test_render_html_structure(self, step_method):
         """Test that rendered HTML has expected structure."""
-        manager = MarimoProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar=True,
-        )
-        # Initialize chain state manually for testing
-        manager._chain_state = [
-            {"draws": 50, "total": 150, "failing": False, "stats": {}},
-            {"draws": 75, "total": 150, "failing": True, "stats": {"divergences": 1}},
-        ]
-        manager._start_times = [0, 0]
+        with patch("pymc.progress_bar.in_marimo_notebook", return_value=True):
+            manager = ProgressBarManager(
+                step_method=step_method,
+                chains=2,
+                draws=100,
+                tune=50,
+                progressbar=True,
+            )
+            # Initialize chain state manually for testing
+            manager._chain_state = [
+                {"draws": 50, "total": 150, "failing": False, "stats": {}},
+                {"draws": 75, "total": 150, "failing": True, "stats": {"divergences": 1}},
+            ]
+            manager._start_times = [0, 0]
 
-        html = manager._render_html()
+            html = manager._render_html()
 
-        assert "pymc-progress-container" in html
-        assert "Chain 0" in html
-        assert "Chain 1" in html
-        assert "pymc-progress-bar" in html
-        # Chain 1 should have failing indicator
-        assert "failing" in html
+            assert "pymc-progress-table" in html
+            assert "pymc-progress-bar" in html
+            # Chain 1 should have failing indicator
+            assert "failing" in html

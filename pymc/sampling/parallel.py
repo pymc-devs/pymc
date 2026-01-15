@@ -33,7 +33,7 @@ from threadpoolctl import threadpool_limits
 from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.progress_bar import create_progress_bar_manager, default_progress_theme
+from pymc.progress_bar import ProgressBarManager, default_progress_theme
 from pymc.util import (
     RandomGeneratorState,
     get_state_from_generator,
@@ -482,7 +482,7 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-        self._progress = create_progress_bar_manager(
+        self._progress = ProgressBarManager(
             step_method=step_method,
             chains=chains,
             draws=draws,
