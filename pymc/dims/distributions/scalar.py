@@ -202,21 +202,20 @@ def create_scalar_dims_docstrings():
 
     import pymc.distributions.continuous as _regular_dists
 
-    from pymc.distributions import Continuous
-
-    # Get all subclasses of Continuous class
-    imported_dists = {
-        name: cls
-        for name, cls in inspect.getmembers(_regular_dists, inspect.isclass)
-        if issubclass(cls, Continuous) and cls is not Continuous
-    }
+    from pymc.distributions import Distribution
 
     # Get all classes declared in this file
-    dims_dists = {
-        name: cls
-        for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass)
-        if issubclass(cls, DimDistribution) and cls.__module__ == __name__
-    }
+    dims_dists = {}
+    for name, cls in inspect.getmembers(sys.modules[__name__], inspect.isclass):
+        if issubclass(cls, DimDistribution) and cls.__module__ == __name__:
+            dims_dists[name] = cls
+
+    # Get all subclasses of Distribution class that match the names of the Dims classes
+    imported_dists = {}
+    for name in dims_dists:
+        imported_cls = getattr(_regular_dists, name, None)
+        if imported_cls is not None and issubclass(imported_cls, Distribution):
+            imported_dists[name] = imported_cls
 
     # Copy docstring from regular distribution to dims distribution
     for dist_class_name in dims_dists:
@@ -225,4 +224,4 @@ def create_scalar_dims_docstrings():
         if imported_cls and imported_cls.__doc__ and dims_cls.__doc__ is None:
             dims_cls.__doc__ = imported_cls.__doc__.replace("tensor_like", "xtensor_like")
 
-    del _regular_dists, Continuous, inspect, sys
+    del _regular_dists, Distribution, inspect, sys
