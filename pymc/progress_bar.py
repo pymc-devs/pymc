@@ -44,10 +44,7 @@ def in_marimo_notebook() -> bool:
 
 
 def _mo_write_internal(cell_id: str, value: object) -> None:
-    """Write to marimo cell given cell_id.
-
-    Adapted from marimo's internal write_internal function.
-    """
+    """Write to marimo cell given cell_id."""
     from marimo._messaging.cell_output import CellChannel
     from marimo._messaging.notification_utils import CellNotificationUtils
     from marimo._messaging.tracebacks import write_traceback
@@ -70,8 +67,6 @@ def _mo_create_replace() -> Callable[[object], None] | None:
 
     This captures the cell context at creation time so that updates from
     callbacks work correctly even when called from different execution contexts.
-
-    Adapted from marimo's output.replace implementation.
     """
     from marimo._output import formatting
     from marimo._runtime.context import get_context
