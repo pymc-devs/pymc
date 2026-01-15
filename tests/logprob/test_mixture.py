@@ -90,12 +90,49 @@ def test_mixture_basics():
     i_vv = env["i_vv"]
     M_rv = env["M_rv"]
     m_vv = env["m_vv"]
+    p_at = env["p_at"]
 
     x_vv = X_rv.clone()
     x_vv.name = "x"
 
-    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-        conditional_logp({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+    mix_logp = conditional_logp({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+    mix_logp_combined = pt.add(*mix_logp.values())
+    assert_no_rvs(mix_logp_combined)
+
+    p_val = np.array(0.5, dtype=pytensor.config.floatX)
+    x_val = np.array(1.0, dtype=pytensor.config.floatX)
+
+    # if I == 0, then M == X; any mismatch should yield -inf
+    bad_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(0, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: np.array(0.0, dtype=pytensor.config.floatX),
+        }
+    )
+    assert np.isneginf(bad_logp)
+
+    good_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(0, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: x_val,
+        }
+    )
+    assert np.isfinite(good_logp)
+
+    # if I == 1, M comes from Y and is independent of X
+    y_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(1, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: np.array(1.0, dtype=pytensor.config.floatX),
+        }
+    )
+    assert np.isfinite(y_logp)
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
         axis_at = pt.lscalar("axis")
