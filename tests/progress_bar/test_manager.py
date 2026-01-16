@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Tests for ProgressBarManager and integration tests."""
 
 import pytest
 
@@ -48,27 +47,22 @@ def test_progressbar_nested_compound():
             "step": step,
         }
 
-        # We don't parametrize to avoid recompiling the model functions
         for cores in (1, 2):
-            pm.sample(**kwargs, cores=cores, progressbar=True)  # default is split+stats
+            pm.sample(**kwargs, cores=cores, progressbar=True)
             pm.sample(**kwargs, cores=cores, progressbar="combined")
             pm.sample(**kwargs, cores=cores, progressbar="split")
             pm.sample(**kwargs, cores=cores, progressbar=False)
 
 
 class TestProgressBarManagerConfiguration:
-    """Tests for ProgressBarManager configuration parsing."""
-
     @pytest.fixture
     def step_method(self):
-        """Create a step method for testing."""
         with pm.Model():
             x = pm.Normal("x")
             step = pm.NUTS([x])
         return step
 
     def test_init_split_mode(self, step_method):
-        """Test initialization in split mode (default)."""
         manager = ProgressBarManager(
             step_method=step_method,
             chains=2,
@@ -80,10 +74,9 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is True
         assert manager._show_progress is True
         assert manager.chains == 2
-        assert manager.total_draws == 150  # draws + tune
+        assert manager.total_draws == 150
 
     def test_init_combined_mode(self, step_method):
-        """Test initialization in combined mode."""
         manager = ProgressBarManager(
             step_method=step_method,
             chains=2,
@@ -95,7 +88,6 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is False
 
     def test_init_combined_stats_mode(self, step_method):
-        """Test initialization in combined+stats mode."""
         manager = ProgressBarManager(
             step_method=step_method,
             chains=2,
@@ -107,7 +99,6 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is True
 
     def test_init_split_stats_mode(self, step_method):
-        """Test initialization in split+stats mode."""
         manager = ProgressBarManager(
             step_method=step_method,
             chains=2,
@@ -119,7 +110,6 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is True
 
     def test_init_disabled(self, step_method):
-        """Test initialization with progressbar disabled."""
         manager = ProgressBarManager(
             step_method=step_method,
             chains=2,
@@ -130,7 +120,6 @@ class TestProgressBarManagerConfiguration:
         assert manager._show_progress is False
 
     def test_invalid_progressbar_value(self, step_method):
-        """Test that invalid progressbar value raises error."""
         with pytest.raises(ValueError, match="Invalid value for `progressbar`"):
             ProgressBarManager(
                 step_method=step_method,
@@ -142,51 +131,40 @@ class TestProgressBarManagerConfiguration:
 
 
 class TestUtilityFunctions:
-    """Tests for shared utility functions."""
-
     def test_compute_draw_speed_fast(self):
-        """Test speed calculation for fast sampling."""
         speed, unit = compute_draw_speed(elapsed=1.0, draws=100)
         assert speed == 100.0
         assert unit == "draws/s"
 
     def test_compute_draw_speed_slow(self):
-        """Test speed calculation for slow sampling."""
         speed, unit = compute_draw_speed(elapsed=100.0, draws=1)
         assert speed == 100.0
         assert unit == "s/draw"
 
     def test_compute_draw_speed_zero_draws(self):
-        """Test speed calculation with zero draws."""
         speed, unit = compute_draw_speed(elapsed=1.0, draws=0)
         assert speed == 0.0
         assert unit == "draws/s"
 
     def test_format_time_seconds(self):
-        """Test time formatting for seconds."""
         assert format_time(45) == "0:45"
 
     def test_format_time_minutes(self):
-        """Test time formatting for minutes."""
         assert format_time(65) == "1:05"
         assert format_time(125) == "2:05"
 
     def test_format_time_hours(self):
-        """Test time formatting for hours."""
         assert format_time(3665) == "1:01:05"
 
     def test_format_time_zero(self):
-        """Test time formatting for zero."""
         assert format_time(0) == "0:00"
 
     def test_abbreviate_stat_name_known(self):
-        """Test abbreviation of known stat names."""
         assert abbreviate_stat_name("divergences") == "Div"
         assert abbreviate_stat_name("step_size") == "Step"
         assert abbreviate_stat_name("tree_depth") == "Depth"
         assert abbreviate_stat_name("mean_tree_accept") == "Accept"
 
     def test_abbreviate_stat_name_unknown(self):
-        """Test abbreviation of unknown stat names."""
         assert abbreviate_stat_name("unknown_stat") == "Unknow"
         assert abbreviate_stat_name("xy") == "Xy"

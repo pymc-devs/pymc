@@ -249,21 +249,17 @@ class ProgressBarManager:
 
     @property
     def _is_marimo(self) -> bool:
-        """Whether the marimo backend is active (for backward compatibility)."""
         from pymc.progress_bar.marimo_progress import MarimoProgressBackend
 
         return isinstance(self._backend, MarimoProgressBackend)
 
     def __enter__(self):
-        """Enter the context manager."""
         return self._backend.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager."""
         return self._backend.__exit__(exc_type, exc_val, exc_tb)
 
     def _extract_stats(self, stats) -> tuple[bool, dict[str, Any]]:
-        """Extract and process stats from step methods."""
         failing = False
         all_step_stats: dict[str, Any] = {}
 
