@@ -534,7 +534,7 @@ class TestAR:
             t1.compile_logp()(t1.initial_point()),
         )
 
-        y_eval = draw(y, draws=2)
+        y_eval = draw(y, draws=2,random_seed=12345)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.allclose(y_eval[0], y_eval[1])
 
@@ -780,7 +780,7 @@ class TestGARCH11:
         with Model() as t0:
             y = GARCH11("y", **kwargs0)
 
-        y_eval = draw(y, draws=2, random_seed=800)
+        y_eval = draw(y, draws=2, random_seed=12345)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.allclose(y_eval[0], y_eval[1])
 
@@ -835,7 +835,7 @@ class TestEulerMaruyama:
     @pytest.mark.parametrize("batched_param", [1, 2])
     @pytest.mark.parametrize("explicit_shape", (True, False))
     def test_batched_size(self, explicit_shape, batched_param):
-        RANDOM_SEED = 42
+        RANDOM_SEED = 12345
         numpy_rng = np.random.default_rng(RANDOM_SEED)
 
         steps, batch_size = 100, 5
@@ -929,7 +929,7 @@ class TestEulerMaruyama:
         N = 300
         dt = 1e-1
 
-        RANDOM_SEED = 42
+        RANDOM_SEED = 12345
         numpy_rng = np.random.default_rng(RANDOM_SEED)
 
         def _gen_sde_path(sde, pars, dt, n, x0):
