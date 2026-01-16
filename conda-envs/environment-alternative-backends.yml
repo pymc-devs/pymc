@@ -32,6 +32,7 @@ dependencies:
 - typing-extensions>=3.7.4
 # Extra dependencies for testing
 - ipython>=7.16
+- marimo
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0

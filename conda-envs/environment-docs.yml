@@ -22,6 +22,7 @@ dependencies:
 - ipython>=7.16
 - jax
 - jupyter-sphinx
+- marimo
 - myst-nb<=1.0.0
 - numpydoc
 - polyagamma

@@ -22,6 +22,7 @@ dependencies:
 - zarr>=2.5.0,<3
 # Extra dependencies for dev, testing and docs build
 - ipython>=7.16
+- marimo
 - myst-nb<=1.0.0
 - numpydoc
 - polyagamma
