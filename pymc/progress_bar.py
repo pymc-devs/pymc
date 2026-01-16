@@ -341,9 +341,7 @@ class ProgressBarManager:
                 )
 
         self._show_progress = show_progress
-
-        # Detect environment: use marimo backend if in marimo notebook and progress is enabled
-        self._is_marimo = in_marimo_notebook() and show_progress
+        self._is_marimo = in_marimo_notebook()
 
         # Get progress bar config from step method
         progress_columns, progress_stats = step_method._progressbar_config(chains)
