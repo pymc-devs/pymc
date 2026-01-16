@@ -23,6 +23,7 @@ from rich.console import Console
 from rich.progress import (
     BarColumn,
     Progress,
+    ProgressColumn,
     Task,
     TextColumn,
     TimeElapsedColumn,
@@ -63,7 +64,7 @@ class CustomProgress(Progress):
         if self.is_enabled:
             super().__exit__(exc_type, exc_val, exc_tb)
 
-    def add_task(self, *args, **kwargs) -> TaskID | None:
+    def add_task(self, *args, **kwargs) -> TaskID | None:  # type: ignore[override]
         if self.is_enabled:
             return super().add_task(*args, **kwargs)
         return None
@@ -248,7 +249,9 @@ class RichProgressBackend:
         disable: bool,
     ) -> CustomProgress:
         """Create the Rich progress bar with appropriate columns."""
-        columns = [TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))]
+        columns: list[ProgressColumn] = [
+            TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))
+        ]
 
         if self.full_stats:
             columns += progress_columns
@@ -348,7 +351,7 @@ class RichProgressBackend:
         if task_id is None:
             return
 
-        elapsed = self._progress.tasks[chain_idx].elapsed
+        elapsed = self._progress.tasks[chain_idx].elapsed or 0.0
         speed, unit = compute_draw_speed(elapsed, draw)
 
         self._progress.update(

@@ -53,7 +53,7 @@ def _mo_write_internal(cell_id: str, value: object) -> None:
         channel=CellChannel.OUTPUT,
         mimetype=output.mimetype,
         data=output.data,
-        cell_id=cell_id,
+        cell_id=cell_id,  # type: ignore[arg-type]
         status=None,
     )
 
@@ -137,10 +137,9 @@ class MarimoProgressBackend:
         self._render()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
         self._render()
-        return False
 
     def _initialize_tasks(self) -> None:
         """Initialize progress tracking state for all chains."""
@@ -304,11 +303,10 @@ class MarimoSimpleProgress:
         self._render()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
         if self.is_enabled:
             self._render()
-        return False
 
     def add_task(
         self, description: str, completed: int = 0, total: int | None = None, **kwargs
