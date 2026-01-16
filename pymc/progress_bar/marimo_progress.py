@@ -19,8 +19,8 @@ from collections.abc import Callable
 from time import perf_counter
 from typing import Any
 
-from pymc.progress_bar._styles import MARIMO_PROGRESS_CSS
-from pymc.progress_bar.progress import abbreviate_stat_name, compute_draw_speed, format_time
+from pymc.progress_bar.styles import MARIMO_PROGRESS_CSS
+from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
 
 
 def in_marimo_notebook() -> bool:

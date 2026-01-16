@@ -21,11 +21,32 @@ from rich.console import Console
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
+from pymc.progress_bar.marimo_progress import (
+    MarimoProgressBackend,
+    MarimoSimpleProgress,
+    in_marimo_notebook,
+)
+from pymc.progress_bar.rich_progress import CustomProgress, RichProgressBackend
+from pymc.progress_bar.utils import (
+    abbreviate_stat_name,
+    compute_draw_speed,
+    default_progress_theme,
+    format_time,
+)
+
 if TYPE_CHECKING:
-    from pymc.progress_bar.marimo_progress import MarimoProgressBackend, MarimoSimpleProgress
-    from pymc.progress_bar.rich_progress import CustomProgress, RichProgressBackend
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
+# Re-export utilities for backward compatibility
+__all__ = [
+    "ProgressBarManager",
+    "ProgressBarType",
+    "abbreviate_stat_name",
+    "compute_draw_speed",
+    "create_simple_progress",
+    "default_progress_theme",
+    "format_time",
+]
 
 ProgressBarType = Literal[
     "combined",
@@ -36,38 +57,18 @@ ProgressBarType = Literal[
     "stats+split",
 ]
 
-default_progress_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "#1764f4",
-        "progress.remaining": "none",
-        "progress.elapsed": "none",
-    }
-)
-
 
 class ProgressBackend(Protocol):
-    """Protocol defining the interface for progress bar rendering backends.
-
-    Backends handle the actual rendering of progress bars, whether to terminal
-    (Rich) or HTML (marimo). The ProgressBarManager delegates rendering to
-    the appropriate backend based on the execution environment.
-    """
+    """Protocol defining the interface for progress bar rendering backends."""
 
     @property
-    def is_enabled(self) -> bool:
-        """Whether the progress bar is enabled."""
-        ...
+    def is_enabled(self) -> bool: ...
 
-    def __enter__(self) -> ProgressBackend:
-        """Enter the context manager."""
-        ...
+    def __enter__(self) -> ProgressBackend: ...
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
-    ) -> bool:
-        """Exit the context manager."""
-        ...
+    ) -> bool: ...
 
     def update(
         self,
@@ -76,63 +77,7 @@ class ProgressBackend(Protocol):
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
-    ) -> None:
-        """Update progress for a specific chain.
-
-        Parameters
-        ----------
-        chain_idx : int
-            Index of the chain being updated
-        draw : int
-            Current draw number
-        failing : bool
-            Whether the chain has encountered failures (e.g., divergences)
-        stats : dict
-            Statistics to display (e.g., step_size, divergences)
-        is_last : bool
-            Whether this is the final update for the chain
-        """
-        ...
-
-
-def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
-    """Compute sampling speed and appropriate unit (draws/s or s/draw)."""
-    speed = draws / max(elapsed, 1e-6)
-
-    if speed > 1 or speed == 0:
-        unit = "draws/s"
-    else:
-        unit = "s/draw"
-        speed = 1 / speed
-
-    return speed, unit
-
-
-def format_time(seconds: float) -> str:
-    """Format elapsed time as mm:ss or hh:mm:ss."""
-    minutes, secs = divmod(int(seconds), 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{secs:02d}"
-    return f"{minutes}:{secs:02d}"
-
-
-def abbreviate_stat_name(name: str) -> str:
-    """Abbreviate common statistic names for compact display."""
-    abbreviations = {
-        "divergences": "Div",
-        "diverging": "Div",
-        "step_size": "Step",
-        "tree_size": "Tree",
-        "tree_depth": "Depth",
-        "n_steps": "Steps",
-        "energy_error": "E-err",
-        "max_energy_error": "Max-E",
-        "mean_tree_accept": "Accept",
-        "scaling": "Scale",
-        "tune": "Tune",
-    }
-    return abbreviations.get(name, name[:6].capitalize())
+    ) -> None: ...
 
 
 class ProgressBarManager:
@@ -224,9 +169,6 @@ class ProgressBarManager:
         self.total_draws = draws + tune
         self.chains = chains
 
-        from pymc.progress_bar.marimo_progress import MarimoProgressBackend, in_marimo_notebook
-        from pymc.progress_bar.rich_progress import RichProgressBackend
-
         if in_marimo_notebook() and show_progress:
             self._backend: RichProgressBackend | MarimoProgressBackend = MarimoProgressBackend(
                 chains=chains,
@@ -249,8 +191,6 @@ class ProgressBarManager:
 
     @property
     def _is_marimo(self) -> bool:
-        from pymc.progress_bar.marimo_progress import MarimoProgressBackend
-
         return isinstance(self._backend, MarimoProgressBackend)
 
     def __enter__(self):
@@ -260,6 +200,7 @@ class ProgressBarManager:
         return self._backend.__exit__(exc_type, exc_val, exc_tb)
 
     def _extract_stats(self, stats) -> tuple[bool, dict[str, Any]]:
+        """Extract and process stats from step methods."""
         failing = False
         all_step_stats: dict[str, Any] = {}
 
@@ -273,10 +214,8 @@ class ProgressBarManager:
                     failing |= val
                     continue
                 if not self.full_stats:
-                    # Only care about the "failing" flag
                     continue
                 if key in all_step_stats:
-                    # TODO: Figure out how to integrate duplicate / non-scalar keys
                     continue
                 else:
                     all_step_stats[key] = val
@@ -284,21 +223,7 @@ class ProgressBarManager:
         return failing, all_step_stats
 
     def update(self, chain_idx: int, is_last: bool, draw: int, tuning: bool, stats) -> None:
-        """Update progress bar with new sampling statistics.
-
-        Parameters
-        ----------
-        chain_idx : int
-            Index of the chain being updated
-        is_last : bool
-            Whether this is the final draw
-        draw : int
-            Current draw number
-        tuning : bool
-            Whether currently in tuning phase (unused but kept for interface)
-        stats : list
-            Statistics from the step methods
-        """
+        """Update progress bar with new sampling statistics."""
         if not self._show_progress:
             return
 
@@ -324,33 +249,7 @@ def create_simple_progress(
     progressbar: bool = True,
     progressbar_theme: Theme | None = None,
 ) -> CustomProgress | MarimoSimpleProgress:
-    """Create a simple progress bar appropriate for the current environment.
-
-    Automatically detects marimo notebooks and returns a MarimoSimpleProgress,
-    otherwise returns a standard Rich-based CustomProgress.
-
-    This is intended for use by forward sampling functions like
-    sample_posterior_predictive and sample_prior_predictive.
-
-    Parameters
-    ----------
-    description : str
-        Description text for the progress bar
-    total : int
-        Total number of samples/steps
-    progressbar : bool
-        Whether to show the progress bar
-    progressbar_theme : Theme, optional
-        Theme for the Rich progress bar (non-marimo only)
-
-    Returns
-    -------
-    CustomProgress or MarimoSimpleProgress
-        The appropriate progress bar for the environment
-    """
-    from pymc.progress_bar.marimo_progress import MarimoSimpleProgress, in_marimo_notebook
-    from pymc.progress_bar.rich_progress import CustomProgress
-
+    """Create a simple progress bar appropriate for the current environment."""
     if progressbar and in_marimo_notebook():
         return MarimoSimpleProgress(
             description=description,

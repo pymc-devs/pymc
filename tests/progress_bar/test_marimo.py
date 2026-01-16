@@ -34,7 +34,7 @@ class TestMarimoProgressBackend:
         return step
 
     def test_init_split_mode(self, step_method):
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
             manager = ProgressBarManager(
                 step_method=step_method,
                 chains=2,
@@ -46,7 +46,7 @@ class TestMarimoProgressBackend:
             assert type(manager._backend).__name__ == "MarimoProgressBackend"
 
     def test_init_combined_mode(self, step_method):
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
             manager = ProgressBarManager(
                 step_method=step_method,
                 chains=2,
@@ -59,7 +59,7 @@ class TestMarimoProgressBackend:
             assert manager._is_marimo is True
 
     def test_render_html_structure(self, step_method):
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
             manager = ProgressBarManager(
                 step_method=step_method,
                 chains=2,
@@ -83,7 +83,7 @@ class TestMarimoProgressBackend:
             assert "failing" in html
 
     def test_render_html_with_stats(self, step_method):
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
             manager = ProgressBarManager(
                 step_method=step_method,
                 chains=1,
@@ -109,7 +109,7 @@ class TestMarimoProgressBackend:
             assert "0.25" in html or "Step" in html
 
     def test_backend_is_enabled(self, step_method):
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
             manager = ProgressBarManager(
                 step_method=step_method,
                 chains=1,
