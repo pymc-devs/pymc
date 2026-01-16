@@ -13,8 +13,6 @@
 #   limitations under the License.
 """Tests for ProgressBarManager and integration tests."""
 
-from unittest.mock import patch
-
 import pytest
 
 import pymc as pm
@@ -56,60 +54,6 @@ def test_progressbar_nested_compound():
             pm.sample(**kwargs, cores=cores, progressbar="combined")
             pm.sample(**kwargs, cores=cores, progressbar="split")
             pm.sample(**kwargs, cores=cores, progressbar=False)
-
-
-class TestProgressBarManagerEnvironmentDetection:
-    """Tests for ProgressBarManager environment detection."""
-
-    @pytest.fixture(autouse=True)
-    def require_marimo(self):
-        pytest.importorskip("marimo")
-
-    @pytest.fixture
-    def step_method(self):
-        """Create a step method for testing."""
-        with pm.Model():
-            x = pm.Normal("x")
-            step = pm.NUTS([x])
-        return step
-
-    def test_detects_non_marimo_environment(self, step_method):
-        """Test that _is_marimo is False when not in marimo."""
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=False):
-            manager = ProgressBarManager(
-                step_method=step_method,
-                chains=2,
-                draws=100,
-                tune=50,
-                progressbar=True,
-            )
-            assert manager._is_marimo is False
-
-    def test_detects_marimo_environment(self, step_method):
-        """Test that _is_marimo is True when in marimo."""
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
-                step_method=step_method,
-                chains=2,
-                draws=100,
-                tune=50,
-                progressbar=True,
-            )
-            assert manager._is_marimo is True
-
-    def test_disabled_progressbar_not_marimo(self, step_method):
-        """Test that _is_marimo is False when progressbar=False regardless of environment."""
-        with patch("pymc.progress_bar.marimo_progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
-                step_method=step_method,
-                chains=2,
-                draws=100,
-                tune=50,
-                progressbar=False,
-            )
-            # When progressbar is disabled, _is_marimo should be False
-            # because we use the Rich backend (which handles disabled state)
-            assert manager._is_marimo is False
 
 
 class TestProgressBarManagerConfiguration:

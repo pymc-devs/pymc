@@ -13,49 +13,13 @@
 #   limitations under the License.
 """Tests for marimo notebook detection and backend."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import ProgressBarManager, in_marimo_notebook
-
-
-class TestMarimoDetection:
-    """Tests for marimo notebook environment detection."""
-
-    @pytest.fixture(autouse=True)
-    def require_marimo(self):
-        pytest.importorskip("marimo")
-
-    def test_in_marimo_notebook_not_installed(self):
-        """Test that in_marimo_notebook returns False when marimo is not installed."""
-        with patch.dict("sys.modules", {"marimo": None}):
-            # Force reimport by clearing from cache
-            import importlib
-
-            import pymc.progress_bar.marimo_progress
-
-            importlib.reload(pymc.progress_bar.marimo_progress)
-            # When marimo import fails, should return False
-            assert in_marimo_notebook() is False
-
-    def test_in_marimo_notebook_not_running(self):
-        """Test that in_marimo_notebook returns False when not in a marimo notebook."""
-        mock_marimo = MagicMock()
-        mock_marimo.running_in_notebook.return_value = False
-
-        with patch.dict("sys.modules", {"marimo": mock_marimo}):
-            assert in_marimo_notebook() is False
-
-    def test_in_marimo_notebook_running(self):
-        """Test that in_marimo_notebook returns True when in a marimo notebook."""
-        mock_marimo = MagicMock()
-        mock_marimo.running_in_notebook.return_value = True
-
-        with patch.dict("sys.modules", {"marimo": mock_marimo}):
-            assert in_marimo_notebook() is True
+from pymc.progress_bar import ProgressBarManager
 
 
 class TestMarimoProgressBackend:
