@@ -164,9 +164,9 @@ class ProgressBarManager:
         self.completed_draws = 0
         self.total_draws = draws + tune
         self.chains = chains
-
+        self._backend: RichProgressBackend | MarimoProgressBackend
         if in_marimo_notebook() and show_progress:
-            self._backend: RichProgressBackend | MarimoProgressBackend = MarimoProgressBackend(
+            self._backend = MarimoProgressBackend(
                 chains=chains,
                 total_draws=self.total_draws,
                 combined=self.combined_progress,
