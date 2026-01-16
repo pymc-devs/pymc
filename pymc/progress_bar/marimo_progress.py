@@ -23,7 +23,6 @@ from typing import Any
 
 from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
 
-# Default CSS file bundled with PyMC
 DEFAULT_CSS = files("pymc.progress_bar").joinpath("progress.css")
 
 

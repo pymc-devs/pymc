@@ -36,7 +36,6 @@ from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, fo
 if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
-# Re-export utilities for backward compatibility
 __all__ = [
     "ProgressBarManager",
     "ProgressBarType",
@@ -58,7 +57,10 @@ ProgressBarType = Literal[
 
 
 class ProgressBackend(Protocol):
-    """Protocol defining the interface for progress bar rendering backends."""
+    """Protocol defining the interface for progress bar rendering backends.
+
+    Any backend that implements this protocol can be used with ProgressBarManager.
+    """
 
     @property
     def is_enabled(self) -> bool: ...
@@ -67,7 +69,7 @@ class ProgressBackend(Protocol):
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
-    ) -> bool: ...
+    ) -> None: ...
 
     def update(
         self,
@@ -164,7 +166,7 @@ class ProgressBarManager:
         self.completed_draws = 0
         self.total_draws = draws + tune
         self.chains = chains
-        self._backend: RichProgressBackend | MarimoProgressBackend
+        self._backend: ProgressBackend
         if in_marimo_notebook() and show_progress:
             self._backend = MarimoProgressBackend(
                 chains=chains,
@@ -188,7 +190,7 @@ class ProgressBarManager:
 
     @property
     def _is_marimo(self) -> bool:
-        return isinstance(self._backend, MarimoProgressBackend)
+        return type(self._backend).__name__ == "MarimoProgressBackend"
 
     def __enter__(self):
         return self._backend.__enter__()

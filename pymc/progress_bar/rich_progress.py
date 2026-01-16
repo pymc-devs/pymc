@@ -278,8 +278,8 @@ class RichProgressBackend:
             RecolorOnFailureBarColumn(
                 table_column=Column("Progress", ratio=2),
                 failing_color="tab:red",
-                complete_style=Style.parse("rgb(31,119,180)"),  # tab:blue
-                finished_style=Style.parse("rgb(31,119,180)"),  # tab:blue
+                complete_style=Style.parse("rgb(31,119,180)"),
+                finished_style=Style.parse("rgb(31,119,180)"),
             ),
             *columns,
             console=Console(theme=theme),
@@ -293,10 +293,9 @@ class RichProgressBackend:
         self._initialize_tasks()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb) -> bool:
+    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager."""
-        result = self._progress.__exit__(exc_type, exc_val, exc_tb)
-        return result if result is not None else False
+        self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
         """Initialize progress bar tasks for all chains."""
