@@ -58,6 +58,10 @@ def test_progressbar_nested_compound():
 class TestMarimoDetection:
     """Tests for marimo notebook environment detection."""
 
+    @pytest.fixture(autouse=True)
+    def require_marimo(self):
+        pytest.importorskip("marimo")
+
     def test_in_marimo_notebook_not_installed(self):
         """Test that in_marimo_notebook returns False when marimo is not installed."""
         with patch.dict("sys.modules", {"marimo": None}):
@@ -89,6 +93,10 @@ class TestMarimoDetection:
 
 class TestProgressBarManagerEnvironmentDetection:
     """Tests for ProgressBarManager environment detection."""
+
+    @pytest.fixture(autouse=True)
+    def require_marimo(self):
+        pytest.importorskip("marimo")
 
     @pytest.fixture
     def step_method(self):
@@ -139,6 +147,10 @@ class TestProgressBarManagerEnvironmentDetection:
 
 class TestProgressBarManagerMarimoMode:
     """Tests for ProgressBarManager when running in marimo mode."""
+
+    @pytest.fixture(autouse=True)
+    def require_marimo(self):
+        pytest.importorskip("marimo")
 
     @pytest.fixture
     def step_method(self):
