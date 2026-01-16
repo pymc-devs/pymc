@@ -26,6 +26,7 @@ from pytensor.tensor.random.op import RandomVariable
 from scipy.special import logsumexp
 
 from pymc.distributions import (
+    Beta,
     Categorical,
     DiracDelta,
     Dirichlet,
@@ -1730,10 +1731,10 @@ class TestHurdleDistributions:
         dist = HurdleGamma.dist(psi=psi_true, alpha=alpha_true, beta=beta_true)
         y = draw(dist, draws=50, random_seed=1)
 
-        with pm.Model() as model:
-            alpha = pm.HalfNormal("alpha", sigma=2.0)
-            beta = pm.HalfNormal("beta", sigma=2.0)
-            psi = pm.Beta("psi", alpha=2.0, beta=2.0)
+        with Model() as model:
+            alpha = HalfNormal("alpha", sigma=2.0)
+            beta = HalfNormal("beta", sigma=2.0)
+            psi = Beta("psi", alpha=2.0, beta=2.0)
             HurdleGamma("y_obs", psi=psi, alpha=alpha, beta=beta, observed=y)
 
         dlogp_fn = model.compile_dlogp()
@@ -1752,10 +1753,10 @@ class TestHurdleDistributions:
         dist = HurdleLogNormal.dist(psi=psi_true, mu=mu_true, sigma=sigma_true)
         y = draw(dist, draws=50, random_seed=1)
 
-        with pm.Model() as model:
-            mu = pm.Normal("mu", mu=0.0, sigma=1.0)
-            sigma = pm.HalfNormal("sigma", sigma=1.0)
-            psi = pm.Beta("psi", alpha=2.0, beta=2.0)
+        with Model() as model:
+            mu = Normal("mu", mu=0.0, sigma=1.0)
+            sigma = HalfNormal("sigma", sigma=1.0)
+            psi = Beta("psi", alpha=2.0, beta=2.0)
             HurdleLogNormal("y_obs", psi=psi, mu=mu, sigma=sigma, observed=y)
 
         dlogp_fn = model.compile_dlogp()
