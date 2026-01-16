@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-from pymc.progress_bar.marimo_progress import in_marimo_notebook
 from pymc.progress_bar.progress import (
     ProgressBarManager,
     ProgressBarType,
@@ -20,12 +19,3 @@ from pymc.progress_bar.progress import (
     default_progress_theme,
 )
 from pymc.progress_bar.rich_progress import CustomProgress
-
-__all__ = [
-    "CustomProgress",
-    "ProgressBarManager",
-    "ProgressBarType",
-    "create_simple_progress",
-    "default_progress_theme",
-    "in_marimo_notebook",
-]
