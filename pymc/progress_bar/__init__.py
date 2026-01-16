@@ -11,26 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Progress bar module for PyMC sampling.
-
-This module provides progress bar rendering during MCMC sampling, with support
-for multiple backends:
-- Rich-based terminal rendering (default)
-- HTML rendering for marimo notebooks (auto-detected)
-
-Public API
-----------
-ProgressBarManager
-    Main class for managing progress bars during sampling.
-create_simple_progress
-    Factory function for simple progress bars (forward sampling).
-ProgressBarType
-    Type alias for progress bar configuration options.
-default_progress_theme
-    Default Rich theme for progress bar colors.
-in_marimo_notebook
-    Function to detect marimo notebook environment.
-"""
 
 from pymc.progress_bar.marimo_progress import in_marimo_notebook
 from pymc.progress_bar.progress import (
