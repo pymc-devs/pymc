@@ -26,13 +26,12 @@ from pymc.progress_bar.marimo_progress import (
     MarimoSimpleProgress,
     in_marimo_notebook,
 )
-from pymc.progress_bar.rich_progress import CustomProgress, RichProgressBackend
-from pymc.progress_bar.utils import (
-    abbreviate_stat_name,
-    compute_draw_speed,
+from pymc.progress_bar.rich_progress import (
+    CustomProgress,
+    RichProgressBackend,
     default_progress_theme,
-    format_time,
 )
+from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
 
 if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep

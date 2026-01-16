@@ -33,7 +33,16 @@ from rich.style import Style
 from rich.table import Column, Table
 from rich.theme import Theme
 
-from pymc.progress_bar.utils import compute_draw_speed, default_progress_theme
+from pymc.progress_bar.utils import compute_draw_speed
+
+default_progress_theme = Theme(
+    {
+        "bar.complete": "#1764f4",
+        "bar.finished": "#1764f4",
+        "progress.remaining": "none",
+        "progress.elapsed": "none",
+    }
+)
 
 if TYPE_CHECKING:
     from rich.progress import TaskID

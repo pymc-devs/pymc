@@ -11,18 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Shared utilities for progress bar rendering (no internal dependencies)."""
-
-from rich.theme import Theme
-
-default_progress_theme = Theme(
-    {
-        "bar.complete": "#1764f4",
-        "bar.finished": "#1764f4",
-        "progress.remaining": "none",
-        "progress.elapsed": "none",
-    }
-)
+"""Shared utilities for progress bar rendering."""
 
 
 def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
