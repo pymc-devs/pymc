@@ -102,6 +102,25 @@ class ProgressBarManager:
         progressbar_theme: Theme | None = None,
         progressbar_css: str | None = None,
     ):
+        """Initialize the progress bar manager.
+
+        Parameters
+        ----------
+        step_method : BlockedStep or CompoundStep
+            The step method being used for sampling
+        chains : int
+            Number of chains being sampled
+        draws : int
+            Number of draws per chain
+        tune : int
+            Number of tuning steps per chain
+        progressbar : bool or ProgressBarType
+            Progress bar display mode
+        progressbar_theme : Theme, optional
+            Rich theme for terminal progress bars
+        progressbar_css : str, optional
+            Path to custom CSS file for marimo progress bars
+        """
         if progressbar_theme is None:
             progressbar_theme = default_progress_theme
 
