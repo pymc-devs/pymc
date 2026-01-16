@@ -27,7 +27,6 @@ if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
 
-# Type alias for progress bar display options
 ProgressBarType = Literal[
     "combined",
     "split",
@@ -37,11 +36,10 @@ ProgressBarType = Literal[
     "stats+split",
 ]
 
-# Default theme for Rich progress bars
 default_progress_theme = Theme(
     {
         "bar.complete": "#1764f4",
-        "bar.finished": "green",
+        "bar.finished": "#1764f4",
         "progress.remaining": "none",
         "progress.elapsed": "none",
     }
@@ -98,22 +96,7 @@ class ProgressBackend(Protocol):
 
 
 def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
-    """Compute sampling speed and appropriate unit.
-
-    Parameters
-    ----------
-    elapsed : float
-        Elapsed time in seconds
-    draws : int
-        Number of draws completed
-
-    Returns
-    -------
-    speed : float
-        The computed speed value
-    unit : str
-        Either "draws/s" or "s/draw" depending on speed
-    """
+    """Compute sampling speed and appropriate unit (draws/s or s/draw)."""
     speed = draws / max(elapsed, 1e-6)
 
     if speed > 1 or speed == 0:
@@ -126,18 +109,7 @@ def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
 
 
 def format_time(seconds: float) -> str:
-    """Format elapsed time as mm:ss or hh:mm:ss.
-
-    Parameters
-    ----------
-    seconds : float
-        Time in seconds
-
-    Returns
-    -------
-    str
-        Formatted time string
-    """
+    """Format elapsed time as mm:ss or hh:mm:ss."""
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     if hours > 0:
@@ -146,18 +118,7 @@ def format_time(seconds: float) -> str:
 
 
 def abbreviate_stat_name(name: str) -> str:
-    """Abbreviate common statistic names for compact display.
-
-    Parameters
-    ----------
-    name : str
-        Full statistic name
-
-    Returns
-    -------
-    str
-        Abbreviated name (max 6 chars for unknown names)
-    """
+    """Abbreviate common statistic names for compact display."""
     abbreviations = {
         "divergences": "Div",
         "diverging": "Div",
@@ -221,7 +182,6 @@ class ProgressBarManager:
         if progressbar_theme is None:
             progressbar_theme = default_progress_theme
 
-        # Parse progress bar configuration
         match progressbar:
             case True:
                 self.combined_progress = False
@@ -256,7 +216,6 @@ class ProgressBarManager:
 
         self._show_progress = show_progress
 
-        # Get progress bar config from step method
         progress_columns, progress_stats = step_method._progressbar_config(chains)
         self.progress_stats = progress_stats
         self.update_stats_functions = step_method._make_progressbar_update_functions()
@@ -265,11 +224,9 @@ class ProgressBarManager:
         self.total_draws = draws + tune
         self.chains = chains
 
-        # Import backends here to avoid circular imports
         from pymc.progress_bar.marimo_progress import MarimoProgressBackend, in_marimo_notebook
         from pymc.progress_bar.rich_progress import RichProgressBackend
 
-        # Select and create appropriate backend
         if in_marimo_notebook() and show_progress:
             self._backend: RichProgressBackend | MarimoProgressBackend = MarimoProgressBackend(
                 chains=chains,
@@ -306,20 +263,7 @@ class ProgressBarManager:
         return self._backend.__exit__(exc_type, exc_val, exc_tb)
 
     def _extract_stats(self, stats) -> tuple[bool, dict[str, Any]]:
-        """Extract and process stats from step methods.
-
-        Parameters
-        ----------
-        stats : list
-            Raw statistics from step methods
-
-        Returns
-        -------
-        failing : bool
-            Whether any step method reported a failure condition
-        all_step_stats : dict
-            Aggregated statistics from all step methods
-        """
+        """Extract and process stats from step methods."""
         failing = False
         all_step_stats: dict[str, Any] = {}
 
@@ -367,10 +311,8 @@ class ProgressBarManager:
             draw = self.completed_draws
             chain_idx = 0
 
-        # Extract stats (shared between both backends)
         failing, all_step_stats = self._extract_stats(stats)
 
-        # Delegate to backend
         self._backend.update(
             chain_idx=chain_idx,
             draw=draw,

@@ -40,15 +40,7 @@ def in_marimo_notebook() -> bool:
 
 
 def _mo_write_internal(cell_id: str, value: object) -> None:
-    """Write to marimo cell given cell_id.
-
-    Parameters
-    ----------
-    cell_id : str
-        The marimo cell ID to write to
-    value : object
-        The value to write/display
-    """
+    """Write to marimo cell given cell_id."""
     from marimo._messaging.cell_output import CellChannel
     from marimo._messaging.notification_utils import CellNotificationUtils
     from marimo._messaging.tracebacks import write_traceback
@@ -67,16 +59,7 @@ def _mo_write_internal(cell_id: str, value: object) -> None:
 
 
 def _mo_create_replace() -> Callable[[object], None] | None:
-    """Create mo.output.replace with current context pinned.
-
-    This captures the cell context at creation time so that updates from
-    callbacks work correctly even when called from different execution contexts.
-
-    Returns
-    -------
-    Callable or None
-        A function that replaces the cell output, or None if not in marimo context.
-    """
+    """Create mo.output.replace with current cell context pinned."""
     from marimo._output import formatting
     from marimo._runtime.context import get_context
     from marimo._runtime.context.types import ContextNotInitializedError
@@ -206,7 +189,6 @@ class MarimoProgressBackend:
         is_last : bool
             Whether this is the final update
         """
-        # Update chain state
         self._chain_state[chain_idx]["draws"] = draw
         self._chain_state[chain_idx]["failing"] = failing
         self._chain_state[chain_idx]["stats"] = stats
@@ -227,14 +209,7 @@ class MarimoProgressBackend:
         self._mo_replace(mo.Html(html))
 
     def _render_html(self) -> str:
-        """Generate HTML for all progress bars as a table with headers.
-
-        Returns
-        -------
-        str
-            Complete HTML string including CSS and table.
-        """
-        # Build header row - get stat columns from first chain's state
+        """Generate HTML for all progress bars as a table with headers."""
         stat_keys = []
         if self.full_stats and self._chain_state and self._chain_state[0]["stats"]:
             stat_keys = list(self._chain_state[0]["stats"].keys())
@@ -245,7 +220,6 @@ class MarimoProgressBackend:
 
         header_row = "<tr>" + "".join(f"<th>{h}</th>" for h in header_cells) + "</tr>"
 
-        # Build data rows
         data_rows = []
         for i, state in enumerate(self._chain_state):
             data_rows.append(self._render_chain_row(i, state, stat_keys))
@@ -254,46 +228,27 @@ class MarimoProgressBackend:
         return f"{MARIMO_PROGRESS_CSS}\n<table class='pymc-progress-table'><thead>{header_row}</thead><tbody>{rows_html}</tbody></table>"
 
     def _render_chain_row(self, chain_idx: int, state: dict[str, Any], stat_keys: list[str]) -> str:
-        """Render a single chain's progress as a table row.
-
-        Parameters
-        ----------
-        chain_idx : int
-            Index of the chain
-        state : dict
-            Current state of the chain
-        stat_keys : list
-            List of statistic keys to include
-
-        Returns
-        -------
-        str
-            HTML table row string.
-        """
+        """Render a single chain's progress as a table row."""
         draws = state["draws"]
         total = state["total"]
         failing = state["failing"]
         stats = state["stats"]
 
-        # Calculate progress
         pct = (draws / total * 100) if total > 0 else 0
         elapsed = perf_counter() - self._start_times[chain_idx]
         speed, unit = compute_draw_speed(elapsed, draws)
 
-        # Determine bar class
         bar_class = "pymc-progress-bar"
         if failing:
             bar_class += " failing"
         elif pct >= 100:
             bar_class += " finished"
 
-        # Build cells
         cells = [
             f'<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>',
             f"<td>{draws}/{total} ({pct:.0f}%)</td>",
         ]
 
-        # Add stat cells in consistent order
         for key in stat_keys:
             val = stats.get(key, "")
             if isinstance(val, float):
@@ -301,7 +256,6 @@ class MarimoProgressBackend:
             else:
                 cells.append(f"<td>{val}</td>")
 
-        # Speed and elapsed
         cells.append(f"<td>{speed:.1f} {unit}</td>")
         cells.append(f"<td>{format_time(elapsed)}</td>")
 
@@ -426,17 +380,10 @@ class MarimoSimpleProgress:
         self._mo_replace(mo.Html(html))
 
     def _render_html(self) -> str:
-        """Generate HTML for the progress bar as a table.
-
-        Returns
-        -------
-        str
-            Complete HTML string including CSS and table.
-        """
+        """Generate HTML for the progress bar as a table."""
         pct = (self.completed / self.total * 100) if self.total > 0 else 0
         elapsed = perf_counter() - self._start_time
 
-        # Calculate speed
         if elapsed > 0 and self.completed > 0:
             speed = self.completed / elapsed
             if speed > 1:
@@ -446,7 +393,6 @@ class MarimoSimpleProgress:
         else:
             speed_str = "-- samples/s"
 
-        # Estimate remaining time
         if self.completed > 0 and self.completed < self.total:
             remaining = (self.total - self.completed) / (self.completed / elapsed)
             remaining_str = format_time(remaining)

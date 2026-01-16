@@ -44,7 +44,7 @@ MARIMO_PROGRESS_CSS = """
     transition: width 0.1s ease-out;
 }
 .pymc-progress-bar.failing { background-color: #d62728; }
-.pymc-progress-bar.finished { background-color: #2ca02c; }
+.pymc-progress-bar.finished { background-color: #1f77b4; }
 @media (prefers-color-scheme: dark) {
     .pymc-progress-table th { color: #aaa; border-bottom-color: #444; }
     .pymc-progress-bar-container { background-color: #444; }

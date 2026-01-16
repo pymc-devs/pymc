@@ -116,7 +116,6 @@ class CustomProgress(Progress):
         """
 
         def call_column(column, task):
-            # Subclass rich.BarColumn and add a callback method to dynamically update display
             if hasattr(column, "callbacks"):
                 column.callbacks(task)
             return column(task)
@@ -177,7 +176,6 @@ class RecolorOnFailureBarColumn(BarColumn):
             self.complete_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
             self.finished_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
         else:
-            # Recovered from failing
             self.complete_style = self.default_complete_style
             self.finished_style = self.default_finished_style
 
@@ -231,7 +229,6 @@ class RichProgressBackend:
         if theme is None:
             theme = default_progress_theme
 
-        # Build progress bar columns
         self._progress = self._create_progress_bar(
             progress_columns=progress_columns,
             theme=theme,
