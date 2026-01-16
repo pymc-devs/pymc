@@ -151,7 +151,7 @@ class _Process:
             nullcontext()
             if self._mp_start_method == "fork"
             else threadpool_limits(limits=self._blas_cores)
-        )
+        ):
             try:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
