@@ -16,11 +16,21 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from importlib.resources import files
+from pathlib import Path
 from time import perf_counter
 from typing import Any
 
-from pymc.progress_bar.styles import MARIMO_PROGRESS_CSS
 from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
+
+# Default CSS file bundled with PyMC
+DEFAULT_CSS = files("pymc.progress_bar").joinpath("progress.css")
+
+
+def load_css(css_file: str | Path | None = None) -> str:
+    """Load CSS and wrap in <style> tags for HTML embedding."""
+    path = Path(css_file) if css_file else DEFAULT_CSS
+    return f"<style>\n{path.read_text()}</style>"
 
 
 def in_marimo_notebook() -> bool:
@@ -96,27 +106,14 @@ class MarimoProgressBackend:
         combined: bool,
         full_stats: bool,
         progress_stats: dict[str, list[Any]],
+        css_file: str | None = None,
     ):
-        """Initialize the marimo progress backend.
-
-        Parameters
-        ----------
-        chains : int
-            Number of chains being sampled
-        total_draws : int
-            Total number of draws per chain (including tuning)
-        combined : bool
-            Whether to show a single combined progress bar
-        full_stats : bool
-            Whether to show detailed statistics
-        progress_stats : dict
-            Initial values for statistics by chain
-        """
         self.chains = chains
         self.total_draws = total_draws
         self.combined = combined
         self.full_stats = full_stats
         self.progress_stats = progress_stats
+        self._css = load_css(css_file)
 
         self._mo_replace: Callable[[object], None] | None = None
         self._chain_state: list[dict[str, Any]] = []
@@ -224,7 +221,7 @@ class MarimoProgressBackend:
             data_rows.append(self._render_chain_row(i, state, stat_keys))
 
         rows_html = "\n".join(data_rows)
-        return f"{MARIMO_PROGRESS_CSS}\n<table class='pymc-progress-table'><thead>{header_row}</thead><tbody>{rows_html}</tbody></table>"
+        return f"{self._css}\n<table class='pymc-progress-table'><thead>{header_row}</thead><tbody>{rows_html}</tbody></table>"
 
     def _render_chain_row(self, chain_idx: int, state: dict[str, Any], stat_keys: list[str]) -> str:
         """Render a single chain's progress as a table row."""
@@ -268,26 +265,22 @@ class MarimoSimpleProgress:
     HTML in marimo notebooks for better display.
     """
 
-    def __init__(self, description: str, total: int, disable: bool = False):
-        """Initialize the simple progress bar.
-
-        Parameters
-        ----------
-        description : str
-            Description text to show with the progress bar
-        total : int
-            Total number of steps
-        disable : bool
-            If True, disable the progress bar
-        """
+    def __init__(
+        self,
+        description: str,
+        total: int,
+        disable: bool = False,
+        css_file: str | None = None,
+    ):
         self.description = description
         self.total = total
         self.completed = 0
         self.is_enabled = not disable
+        self._css = load_css(css_file)
 
         self._mo_replace: Callable[[object], None] | None = None
         self._start_time: float = 0.0
-        self._task_id = 0  # Dummy task ID for interface compatibility
+        self._task_id = 0
 
     def __enter__(self):
         """Enter the context manager."""
@@ -403,7 +396,7 @@ class MarimoSimpleProgress:
         if pct >= 100:
             bar_class += " finished"
 
-        return f"""{MARIMO_PROGRESS_CSS}
+        return f"""{self._css}
 <table class="pymc-progress-table">
 <thead><tr><th>Progress</th><th>Samples</th><th>Speed</th><th>Elapsed</th><th>Remaining</th></tr></thead>
 <tbody><tr>

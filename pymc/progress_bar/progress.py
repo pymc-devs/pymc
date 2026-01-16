@@ -100,30 +100,8 @@ class ProgressBarManager:
         tune: int,
         progressbar: bool | ProgressBarType = True,
         progressbar_theme: Theme | None = None,
+        progressbar_css: str | None = None,
     ):
-        """Initialize the progress bar manager.
-
-        Parameters
-        ----------
-        step_method : BlockedStep or CompoundStep
-            The step method being used to sample
-        chains : int
-            Number of chains being sampled
-        draws : int
-            Number of draws per chain
-        tune : int
-            Number of tuning steps per chain
-        progressbar : bool or ProgressBarType, optional
-            How and whether to display the progress bar. Options:
-            - True: Default "split+stats" mode
-            - False: No progress bar
-            - "combined": Single progress bar for all chains
-            - "split": Separate progress bar per chain
-            - "combined+stats" or "stats+combined": Combined with statistics
-            - "split+stats" or "stats+split": Split with statistics
-        progressbar_theme : Theme, optional
-            Rich theme for progress bar colors. Defaults to default_progress_theme.
-        """
         if progressbar_theme is None:
             progressbar_theme = default_progress_theme
 
@@ -176,6 +154,7 @@ class ProgressBarManager:
                 combined=self.combined_progress,
                 full_stats=self.full_stats,
                 progress_stats=progress_stats,
+                css_file=progressbar_css,
             )
         else:
             self._backend = RichProgressBackend(
@@ -248,6 +227,7 @@ def create_simple_progress(
     total: int,
     progressbar: bool = True,
     progressbar_theme: Theme | None = None,
+    progressbar_css: str | None = None,
 ) -> CustomProgress | MarimoSimpleProgress:
     """Create a simple progress bar appropriate for the current environment."""
     if progressbar and in_marimo_notebook():
@@ -255,6 +235,7 @@ def create_simple_progress(
             description=description,
             total=total,
             disable=not progressbar,
+            css_file=progressbar_css,
         )
 
     if progressbar_theme is None:
