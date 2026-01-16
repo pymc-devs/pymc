@@ -1,46 +1,45 @@
 # "dev" conda envs are to be used by devs in setting their local environments
 name: pymc-dev
 channels:
-- conda-forge
-- nodefaults
+    - conda-forge
+    - nodefaults
 dependencies:
-# Base dependencies
-- arviz>=0.13.0
-- blas
-- cachetools>=4.2.1
-- cloudpickle
-- numpy>=1.25.0
-- pandas>=0.24.0
-- pip
-- pytensor>=2.36.2,<2.37
-- python-graphviz
-- networkx
-- scipy>=1.4.1
-- typing-extensions>=3.7.4
-- threadpoolctl>=3.1.0
-- zarr>=2.5.0,<3
-# Extra dependencies for dev, testing and docs build
-- ipython>=7.16
-- jax
-- jupyter-sphinx
-- marimo
-- myst-nb<=1.0.0
-- numpydoc
-- pre-commit>=2.8.0
-- polyagamma
-- pytest-cov>=2.5
-- pytest>=3.0
-- rich>=13.7.1
-- sphinx-copybutton
-- sphinx-design
-- sphinx-notfound-page
-- sphinx>=1.5
-- sphinxext-rediraffe
-- watermark
-- sphinx-remove-toctrees
-- mypy=1.19.1
-- types-cachetools
-- pip:
-  - pymc-sphinx-theme>=0.16.0
-  - numdifftools>=0.9.40
-  - mcbackend>=0.4.0
+    # Base dependencies
+    - arviz>=0.13.0
+    - blas
+    - cachetools>=4.2.1
+    - cloudpickle
+    - numpy>=1.25.0
+    - pandas>=0.24.0
+    - pip
+    - pytensor>=2.36.2,<2.37
+    - python-graphviz
+    - networkx
+    - scipy>=1.4.1
+    - typing-extensions>=3.7.4
+    - threadpoolctl>=3.1.0
+    - zarr>=2.5.0,<3
+    # Extra dependencies for dev, testing and docs build
+    - ipython>=7.16
+    - jax
+    - jupyter-sphinx
+    - myst-nb<=1.0.0
+    - numpydoc
+    - pre-commit>=2.8.0
+    - polyagamma
+    - pytest-cov>=2.5
+    - pytest>=3.0
+    - rich>=13.7.1
+    - sphinx-copybutton
+    - sphinx-design
+    - sphinx-notfound-page
+    - sphinx>=1.5
+    - sphinxext-rediraffe
+    - watermark
+    - sphinx-remove-toctrees
+    - mypy=1.19.1
+    - types-cachetools
+    - pip:
+          - pymc-sphinx-theme>=0.16.0
+          - numdifftools>=0.9.40
+          - mcbackend>=0.4.0

@@ -6,7 +6,6 @@ cachetools>=4.2.1
 cloudpickle
 ipython>=7.16
 jupyter-sphinx
-marimo
 mcbackend>=0.4.0
 mypy==1.19.1
 myst-nb<=1.0.0
