@@ -65,7 +65,7 @@ def check_parameters(
     Note that check_parameter should not be used to enforce the logic of the
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
-    
+
     Parameters
     ----------
     expr : Variable
@@ -89,9 +89,13 @@ def check_parameters(
     ]
     all_true_scalar = pt.all([pt.all(cond) for cond in conditions_])
 
-    return CheckParameterValue(
-        msg, can_be_replaced_by_ninf, rv, param_idx, constraint_type
-    )(expr, all_true_scalar)
+    op = CheckParameterValue(
+        msg, can_be_replaced_by_ninf, param_idx=param_idx, constraint_type=constraint_type
+    )
+
+    if rv is not None:
+        return op(expr, all_true_scalar, rv)
+    return op(expr, all_true_scalar)
 
 
 check_icdf_parameters = partial(check_parameters, can_be_replaced_by_ninf=False)
