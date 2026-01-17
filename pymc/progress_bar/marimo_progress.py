@@ -305,7 +305,7 @@ class MarimoSimpleProgress:
     ) -> int:
         """Add a task (interface compatibility with CustomProgress).
 
-        Parameters are accepted but mostly ignored since MarimoSimpleProgress
+        Kwargs are ignored since MarimoSimpleProgress
         only supports a single task initialized at construction.
         """
         if not self.is_enabled:
