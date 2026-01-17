@@ -285,6 +285,7 @@ class ProgressBarManager:
 
         self._show_progress = show_progress
         self.completed_draws = 0
+        self.tune = tune
         self.total_draws = draws + tune
         self.desc = "Sampling chain"
         self.chains = chains

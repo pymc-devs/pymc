@@ -132,7 +132,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         else:
             manually_collected_draws.append(point)
             manually_collected_stats.append(stats)
-        trace.straces[0].record(point, stats)
+        trace.straces[0].record(point, stats, in_warmup=tuning)
     trace.straces[0].record_sampling_state(model_step)
     assert {group_name for group_name, _ in trace.root.groups()} == expected_groups
 

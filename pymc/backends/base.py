@@ -113,7 +113,13 @@ class IBaseTrace(ABC, Sized):
         """
         raise NotImplementedError()
 
-    def record(self, draw: Mapping[str, np.ndarray], stats: Sequence[Mapping[str, Any]]):
+    def record(
+        self,
+        draw: Mapping[str, np.ndarray],
+        stats: Sequence[Mapping[str, Any]],
+        *,
+        in_warmup: bool,
+    ):
         """Record results of a sampling iteration.
 
         Parameters
@@ -122,6 +128,9 @@ class IBaseTrace(ABC, Sized):
             Values mapped to variable names
         stats: list of dicts
             The diagnostic values for each sampler
+        in_warmup: bool
+            Whether this draw belongs to the warmup phase. This is a driver-owned
+            concept and is intended for storage/backends to persist warmup information.
         """
         raise NotImplementedError()
 

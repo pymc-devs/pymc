@@ -227,7 +227,7 @@ class _Process:
                 raise KeyboardInterrupt()
             elif msg[0] == "write_next":
                 if zarr_recording:
-                    self._zarr_chain.record(point, stats)
+                    self._zarr_chain.record(point, stats, in_warmup=tuning)
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
                 self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats))

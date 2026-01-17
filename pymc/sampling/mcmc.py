@@ -1099,18 +1099,10 @@ def _sample_return(
     else:
         traces, length = _choose_chains(traces, 0)
     mtrace = MultiTrace(traces)[:length]
-    # count the number of tune/draw iterations that happened
-    # ideally via the "tune" statistic, but not all samplers record it!
-    if "tune" in mtrace.stat_names:
-        # Get the tune stat directly from chain 0, sampler 0
-        stat = mtrace._straces[0].get_sampler_stats("tune", sampler_idx=0)
-        stat = tuple(stat)
-        n_tune = stat.count(True)
-        n_draws = stat.count(False)
-    else:
-        # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
-        n_tune = min(tune, len(mtrace))
-        n_draws = max(0, len(mtrace) - n_tune)
+    # Count the number of tune/draw iterations that happened.
+    # The warmup/draw boundary is owned by the sampling driver.
+    n_tune = min(tune, len(mtrace))
+    n_draws = max(0, len(mtrace) - n_tune)
 
     if discard_tuned_samples:
         mtrace = mtrace[n_tune:]
@@ -1279,7 +1271,7 @@ def _sample(
     try:
         for it, stats in enumerate(sampling_gen):
             progress_manager.update(
-                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
+                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune
             )
 
         if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
@@ -1350,7 +1342,7 @@ def _iter_sample(
                 step.stop_tuning()
 
             point, stats = step.step(point)
-            trace.record(point, stats)
+            trace.record(point, stats, in_warmup=i < tune)
             log_warning_stats(stats)
 
             if callback is not None:
@@ -1463,7 +1455,7 @@ def _mp_sample(
                     strace = traces[draw.chain]
                     if not zarr_recording:
                         # Zarr recording happens in each process
-                        strace.record(draw.point, draw.stats)
+                        strace.record(draw.point, draw.stats, in_warmup=draw.tuning)
                     log_warning_stats(draw.stats)
 
                     if callback is not None:

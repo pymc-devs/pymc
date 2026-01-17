@@ -97,7 +97,7 @@ class NDArray(base.BaseTrace):
                     new = np.zeros(draws, dtype=dtype)
                     data[varname] = np.concatenate([old, new])
 
-    def record(self, point, sampler_stats=None) -> None:
+    def record(self, point, sampler_stats=None, *, in_warmup: bool) -> None:
         """Record results of a sampling iteration.
 
         Parameters
@@ -238,5 +238,5 @@ def point_list_to_multitrace(
 
         chain.fn = point_fun
         for point in point_list:
-            chain.record(point)
+            chain.record(point, in_warmup=False)
     return MultiTrace([chain])

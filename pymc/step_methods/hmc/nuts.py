@@ -110,7 +110,6 @@ class NUTS(BaseHMC):
     stats_dtypes_shapes = {
         "depth": (np.int64, []),
         "step_size": (np.float64, []),
-        "tune": (bool, []),
         "mean_tree_accept": (np.float64, []),
         "step_size_bar": (np.float64, []),
         "tree_size": (np.float64, []),

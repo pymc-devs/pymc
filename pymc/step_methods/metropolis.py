@@ -146,7 +146,6 @@ class Metropolis(ArrayStepShared):
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
         "accepted": (np.float64, []),
-        "tune": (bool, []),
         "scaling": (np.float64, []),
     }
 
@@ -316,7 +315,6 @@ class Metropolis(ArrayStepShared):
         self.steps_until_tune -= 1
 
         stats = {
-            "tune": self.tune,
             "scaling": np.mean(self.scaling),
             "accept": np.mean(np.exp(self.accept_rate_iter)),
             "accepted": np.mean(self.accepted_iter),
@@ -331,7 +329,6 @@ class Metropolis(ArrayStepShared):
     @staticmethod
     def _progressbar_config(n_chains=1):
         columns = [
-            TextColumn("{task.fields[tune]}", table_column=Column("Tuning", ratio=1)),
             TextColumn("{task.fields[scaling]:0.2f}", table_column=Column("Scaling", ratio=1)),
             TextColumn(
                 "{task.fields[accept_rate]:0.2f}", table_column=Column("Accept Rate", ratio=1)
@@ -339,7 +336,6 @@ class Metropolis(ArrayStepShared):
         ]
 
         stats = {
-            "tune": [True] * n_chains,
             "scaling": [0] * n_chains,
             "accept_rate": [0.0] * n_chains,
         }
@@ -351,7 +347,7 @@ class Metropolis(ArrayStepShared):
         def update_stats(step_stats):
             return {
                 "accept_rate" if key == "accept" else key: step_stats[key]
-                for key in ("tune", "accept", "scaling")
+                for key in ("accept", "scaling")
             }
 
         return (update_stats,)
@@ -448,7 +444,6 @@ class BinaryMetropolis(ArrayStep):
 
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
-        "tune": (bool, []),
         "p_jump": (np.float64, []),
     }
 
@@ -505,7 +500,6 @@ class BinaryMetropolis(ArrayStep):
         self.accepted += accepted
 
         stats = {
-            "tune": self.tune,
             "accept": np.exp(accept),
             "p_jump": p_jump,
         }
@@ -537,7 +531,6 @@ class BinaryMetropolis(ArrayStep):
 
 @dataclass_state
 class BinaryGibbsMetropolisState(StepMethodState):
-    tune: bool
     transit_p: int
     shuffle_dims: bool
     order: list
@@ -574,9 +567,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     name = "binary_gibbs_metropolis"
 
-    stats_dtypes_shapes = {
-        "tune": (bool, []),
-    }
+    stats_dtypes_shapes = {}
 
     _state_class = BinaryGibbsMetropolisState
 
@@ -594,9 +585,6 @@ class BinaryGibbsMetropolis(ArrayStep):
     ):
         model = pm.modelcontext(model)
 
-        # Doesn't actually tune, but it's required to emit a sampler stat
-        # that indicates whether a draw was done in a tuning phase.
-        self.tune = True
         # transition probabilities
         self.transit_p = transit_p
 
@@ -649,10 +637,7 @@ class BinaryGibbsMetropolis(ArrayStep):
                 if accepted:
                     logp_curr = logp_prop
 
-        stats = {
-            "tune": self.tune,
-        }
-        return q, [stats]
+        return q, [{}]
 
     @staticmethod
     def competence(var):
@@ -695,9 +680,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     name = "categorical_gibbs_metropolis"
 
-    stats_dtypes_shapes = {
-        "tune": (bool, []),
-    }
+    stats_dtypes_shapes = {}
 
     _state_class = CategoricalGibbsMetropolisState
 
@@ -793,7 +776,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 logp_curr = logp_prop
 
         # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{}]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -811,7 +794,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
         # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{}]
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
@@ -919,7 +902,6 @@ class DEMetropolis(PopulationArrayStepShared):
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
         "accepted": (bool, []),
-        "tune": (bool, []),
         "scaling": (np.float64, []),
         "lambda": (np.float64, []),
     }
@@ -1011,7 +993,6 @@ class DEMetropolis(PopulationArrayStepShared):
         self.steps_until_tune -= 1
 
         stats = {
-            "tune": self.tune,
             "scaling": self.scaling,
             "lambda": self.lamb,
             "accept": np.exp(accept),
@@ -1090,7 +1071,6 @@ class DEMetropolisZ(ArrayStepShared):
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
         "accepted": (bool, []),
-        "tune": (bool, []),
         "scaling": (np.float64, []),
         "lambda": (np.float64, []),
     }
@@ -1213,7 +1193,6 @@ class DEMetropolisZ(ArrayStepShared):
         self.steps_until_tune -= 1
 
         stats = {
-            "tune": self.tune,
             "scaling": np.mean(self.scaling),
             "lambda": self.lamb,
             "accept": np.exp(accept),

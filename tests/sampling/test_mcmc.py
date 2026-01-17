@@ -414,6 +414,33 @@ class TestSampleReturn:
         assert idata.posterior.sizes["draw"] == 100
         assert idata.posterior.sizes["chain"] == 3
 
+    def test_categorical_gibbs_respects_driver_tune_boundary(self):
+        with pm.Model():
+            pm.Categorical("x", p=np.array([0.2, 0.3, 0.5]))
+            sample_kwargs = {
+                "tune": 5,
+                "draws": 7,
+                "chains": 1,
+                "cores": 1,
+                "return_inferencedata": False,
+                "compute_convergence_checks": False,
+                "progressbar": False,
+                "random_seed": 123,
+            }
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                mtrace = pm.sample(discard_tuned_samples=True, **sample_kwargs)
+            assert len(mtrace) == 7
+            assert mtrace.report.n_tune == 5
+            assert mtrace.report.n_draws == 7
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                with pytest.warns(UserWarning, match="will be included"):
+                    mtrace_warmup = pm.sample(discard_tuned_samples=False, **sample_kwargs)
+            assert len(mtrace_warmup) == 12
+            assert mtrace_warmup.report.n_tune == 5
+            assert mtrace_warmup.report.n_draws == 7
+
     @pytest.mark.parametrize("cores", [1, 2])
     def test_logs_sampler_warnings(self, caplog, cores):
         """Asserts that "warning" sampler stats are logged during sampling."""
