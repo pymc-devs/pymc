@@ -52,28 +52,28 @@ def test_switch_non_overlapping_logp_matches_change_of_variables(
 
     if cond_variant == "x_gt_0":
         cond = x > 0
-        value_implies_true = lambda vv: pt.gt(vv, 0)
+        op = "gt"
     elif cond_variant == "x_ge_0":
         cond = x >= 0
-        value_implies_true = lambda vv: pt.ge(vv, 0)
+        op = "ge"
     elif cond_variant == "0_lt_x":
         cond = 0 < x
-        value_implies_true = lambda vv: pt.gt(vv, 0)
+        op = "gt"
     elif cond_variant == "0_le_x":
         cond = 0 <= x
-        value_implies_true = lambda vv: pt.ge(vv, 0)
+        op = "ge"
     elif cond_variant == "x_lt_0":
         cond = x < 0
-        value_implies_true = lambda vv: pt.lt(vv, 0)
+        op = "lt"
     elif cond_variant == "x_le_0":
         cond = x <= 0
-        value_implies_true = lambda vv: pt.le(vv, 0)
+        op = "le"
     elif cond_variant == "0_gt_x":
         cond = 0 > x
-        value_implies_true = lambda vv: pt.lt(vv, 0)
+        op = "lt"
     elif cond_variant == "0_ge_x":
         cond = 0 >= x
-        value_implies_true = lambda vv: pt.le(vv, 0)
+        op = "le"
     else:
         raise AssertionError(f"Unexpected cond_variant: {cond_variant}")
 
@@ -87,7 +87,16 @@ def test_switch_non_overlapping_logp_matches_change_of_variables(
 
     logp_y = logp(y, vv)
 
-    cond_v = value_implies_true(vv)
+    if op == "gt":
+        cond_v = pt.gt(vv, 0)
+    elif op == "ge":
+        cond_v = pt.ge(vv, 0)
+    elif op == "lt":
+        cond_v = pt.lt(vv, 0)
+    elif op == "le":
+        cond_v = pt.le(vv, 0)
+    else:
+        raise AssertionError(f"Unexpected op: {op}")
 
     inv_true = vv / scale if true_branch_is_scaled else vv
     inv_false = vv if true_branch_is_scaled else vv / scale
