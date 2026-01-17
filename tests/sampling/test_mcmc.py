@@ -24,9 +24,9 @@ import pytensor.tensor as pt
 import pytest
 import scipy.special
 
-from arviz import InferenceData
 from pytensor import shared
 from pytensor.compile.ops import as_op
+from xarray import DataTree
 
 import pymc as pm
 
@@ -377,7 +377,7 @@ class TestSampleReturn:
         assert mtrace_pst.report.n_tune == 50
         assert mtrace_pst.report.n_draws == 100
 
-        # InferenceData with warmup
+        # DataTree with warmup
         idata_w = pm.sampling.mcmc._sample_return(
             run=None,
             traces=traces,
@@ -390,13 +390,13 @@ class TestSampleReturn:
             idata_kwargs={},
             model=model,
         )
-        assert isinstance(idata_w, InferenceData)
+        assert isinstance(idata_w, DataTree)
         assert hasattr(idata_w, "warmup_posterior")
         assert idata_w.warmup_posterior.sizes["draw"] == 50
         assert idata_w.posterior.sizes["draw"] == 100
         assert idata_w.posterior.sizes["chain"] == 3
 
-        # InferenceData without warmup
+        # DataTree without warmup
         idata = pm.sampling.mcmc._sample_return(
             run=None,
             traces=traces,
@@ -409,7 +409,7 @@ class TestSampleReturn:
             idata_kwargs={},
             model=model,
         )
-        assert isinstance(idata, InferenceData)
+        assert isinstance(idata, DataTree)
         assert not hasattr(idata, "warmup_posterior")
         assert idata.posterior.sizes["draw"] == 100
         assert idata.posterior.sizes["chain"] == 3
@@ -458,7 +458,7 @@ class TestSampleReturn:
         if keep_warning_stat:
             assert "warning" in idata.warmup_sample_stats
             assert "warning" in idata.sample_stats
-            # And end up in the InferenceData
+            # And end up in the DataTree
             assert "warning" in idata.sample_stats
             # NOTE: The stats are squeezed by default but this does not always work.
             #       This tests flattens so we don't have to be exact in accessing (non-)squeezed items.

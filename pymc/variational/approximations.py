@@ -15,11 +15,11 @@
 import numpy as np
 import pytensor
 
-from arviz import InferenceData
 from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor.variable import TensorVariable
+from xarray import DataTree
 
 import pymc as pm
 
@@ -234,9 +234,9 @@ class EmpiricalGroup(Group):
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if isinstance(trace, InferenceData):
+        if isinstance(trace, DataTree):
             raise NotImplementedError(
-                "The `Empirical` approximation does not yet support `InferenceData` inputs."
+                "The `Empirical` approximation does not yet support `DataTree` inputs."
                 " Pass `pm.sample(return_inferencedata=False)` to get a `MultiTrace` to use with `Empirical`."
                 " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
             )

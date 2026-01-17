@@ -20,7 +20,6 @@ from collections.abc import Sequence
 from copy import deepcopy
 from typing import cast
 
-import arviz
 import cloudpickle
 import numpy as np
 import xarray
@@ -241,35 +240,43 @@ def biwrap(wrapper):
     return enhanced
 
 
-def drop_warning_stat(idata: arviz.InferenceData) -> arviz.InferenceData:
-    """Return a new ``InferenceData`` object with the "warning" stat removed from sample stats groups.
+def drop_warning_stat(dt: xarray.DataTree) -> xarray.DataTree:
+    """Return a new ``DataTree`` object with the "warning" stat removed from sample stats groups.
 
-    This function should be applied to an ``InferenceData`` object obtained with
+    This function should be applied to an ``DataTree`` object obtained with
     ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
     """
-    nidata = arviz.InferenceData(attrs=idata.attrs)
-    for gname, group in idata.items():
-        if "sample_stat" in gname:
+    tree_dict = {}
+
+    for gname, group in dt.items():
+        ds = group.ds if hasattr(group, "ds") else group
+
+        if "sample_stat" in gname and ds is not None:
             warning_vars = [
                 name
-                for name in group.data_vars
+                for name in ds.data_vars
                 if name == "warning" or re.match(r"sampler_\d+__warning", str(name))
             ]
-            group = group.drop_vars(names=[*warning_vars, "warning_dim_0"], errors="ignore")
-        nidata.add_groups({gname: group}, coords=group.coords, dims=group.dims)
-    return nidata
+            ds = ds.drop_vars(names=[*warning_vars, "warning_dim_0"], errors="ignore")
+
+        if ds is not None:
+            tree_dict[gname] = ds
+
+    new_dt = xarray.DataTree.from_dict(tree_dict)
+    new_dt.attrs = dt.attrs
+    return new_dt
 
 
-def chains_and_samples(data: xarray.Dataset | arviz.InferenceData) -> tuple[int, int]:
+def chains_and_samples(data: xarray.Dataset | xarray.DataTree) -> tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
     dataset: xarray.Dataset
     if isinstance(data, xarray.Dataset):
         dataset = data
-    elif isinstance(data, arviz.InferenceData):
+    elif isinstance(data, xarray.DataTree):
         dataset = data["posterior"]
     else:
         raise ValueError(
-            "Argument must be xarray Dataset or arviz InferenceData. Got %s",
+            "Argument must be xarray Dataset or xarray DataTree. Got %s",
             data.__class__,
         )
 

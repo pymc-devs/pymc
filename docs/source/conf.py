@@ -66,7 +66,7 @@ numpydoc_xref_aliases = {
     "ndarray": ":class:`~numpy.ndarray`",
     "Covariance": ":mod:`Covariance <pymc.gp.cov>`",
     "Mean": ":mod:`Mean <pymc.gp.mean>`",
-    "InferenceData": ":class:`~arviz.InferenceData`",
+    "DataTree": ":class:`~xarray.DataTree`",
     "MultiTrace": ":class:`~pymc.backends.base.MultiTrace`",
     "BaseTrace": ":class:`~pymc.backends.base.BaseTrace`",
     "Point": ":class:`~pymc.Point`",

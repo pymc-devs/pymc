@@ -20,8 +20,6 @@ import pytest
 import xarray as xr
 import zarr
 
-from arviz import InferenceData
-
 import pymc as pm
 
 from pymc.backends.zarr import ZarrTrace
@@ -305,23 +303,26 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
     # Assert to inference data returns the expected groups
     idata = trace.to_inferencedata(save_warmup=True)
     expected_groups = {
-        "posterior",
-        "constant_data",
-        "observed_data",
-        "sample_stats",
-        "warmup_posterior",
-        "warmup_sample_stats",
+        "/",
+        "/posterior",
+        "/constant_data",
+        "/observed_data",
+        "/sample_stats",
+        "/warmup_posterior",
+        "/warmup_sample_stats",
     }
     if include_transformed:
-        expected_groups.add("unconstrained_posterior")
-        expected_groups.add("warmup_unconstrained_posterior")
-    assert set(idata.groups()) == expected_groups
-    for group in idata.groups():
+        expected_groups.add("/unconstrained_posterior")
+        expected_groups.add("/warmup_unconstrained_posterior")
+    assert set(idata.groups) == expected_groups
+    for group in idata.groups:
+        if group == "/":
+            continue
         for name, value in itertools.chain(
             idata[group].data_vars.items(), idata[group].coords.items()
         ):
             try:
-                array = getattr(trace, group)[name][:]
+                array = getattr(trace, group[1:])[name][:]
             except AttributeError:
                 array = trace.root[group][name][:]
             if "sample_stats" in group and "warning" in name:
@@ -436,7 +437,7 @@ def test_sample(
         assert isinstance(out_trace, ZarrTrace)
         assert out_trace.root.store is trace.root.store
     else:
-        assert isinstance(out_trace, InferenceData)
+        assert isinstance(out_trace, xr.DataTree)
 
     expected_groups = {"posterior", "constant_data", "observed_data", "sample_stats"}
     if include_transformed:
@@ -449,7 +450,13 @@ def test_sample(
         expected_groups |= {"_sampling_state"}
     elif log_likelihood:
         expected_groups |= {"log_likelihood"}
-    assert set(out_trace.groups()) == expected_groups
+
+    if return_inferencedata:
+        expected_groups = {"/" + g for g in expected_groups} | {"/"}
+
+        assert set(out_trace.groups) == expected_groups
+    else:
+        assert set(out_trace.groups()) == expected_groups
 
     if return_inferencedata:
         warning_stat = (

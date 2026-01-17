@@ -33,12 +33,13 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import InferenceData, dict_to_dataset
-from arviz.data.base import make_attrs
+from arviz import dict_to_dataset
+from arviz_base import make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
+from xarray import DataTree
 
 import pymc as pm
 
@@ -408,7 +409,7 @@ def _sample_external_nuts(
         )
         for k, v in attrs.items():
             idata.posterior.attrs[k] = v
-        idata.add_groups(
+        idata.update(
             {"constant_data": constant_data, "observed_data": observed_data},
             coords=coords,
             dims=dims,
@@ -472,7 +473,7 @@ def sample(
     blas_cores: int | None | Literal["auto"] = "auto",
     compile_kwargs: dict | None = None,
     **kwargs,
-) -> InferenceData: ...
+) -> DataTree: ...
 
 
 @overload
@@ -539,7 +540,7 @@ def sample(
     model: Model | None = None,
     compile_kwargs: dict | None = None,
     **kwargs,
-) -> InferenceData | MultiTrace | ZarrTrace:
+) -> DataTree | MultiTrace | ZarrTrace:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -1033,8 +1034,7 @@ def _sample_return(
     keep_warning_stat: bool,
     idata_kwargs: dict[str, Any],
     model: Model,
-    quiet: bool = False,
-) -> InferenceData | MultiTrace | ZarrTrace:
+) -> DataTree | MultiTrace | ZarrTrace:
     """Pick/slice chains, run diagnostics and convert to the desired return type.
 
     Final step of `pm.sampler`.
