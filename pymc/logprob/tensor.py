@@ -160,10 +160,8 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
 
     if is_join:
         axis, *base_vars = node.inputs
-        axis = typing.cast(TensorVariable, axis)
-        base_vars = typing.cast(list[TensorVariable], base_vars)
     else:
-        base_vars = typing.cast(list[TensorVariable], node.inputs)
+        base_vars = node.inputs
 
     # Allow mixing potentially measurable inputs with deterministic ones.
     new_base_vars: list[TensorVariable] = []
@@ -173,7 +171,8 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
             has_measurable = True
             new_base_vars.append(base_var)
         else:
-            new_base_vars.append(typing.cast(TensorVariable, dirac_delta(base_var)))
+            # `Op.__call__` is typed as returning `Variable | list[Variable]`, so mypy can't infer this is a TensorVariable
+            new_base_vars.append(dirac_delta(base_var))  # type: ignore[arg-type]
     if not has_measurable:
         return None
     base_vars = new_base_vars
@@ -187,7 +186,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     replacements = [(base_var, promised_valued_rv(base_var)) for base_var in base_vars]
     temp_fgraph = FunctionGraph(outputs=base_vars, clone=False)
     toposort_replace(temp_fgraph, replacements)  # type: ignore[arg-type]
-    new_base_vars = typing.cast(list[TensorVariable], temp_fgraph.outputs)
+    new_base_vars = temp_fgraph.outputs  # type: ignore[assignment]
 
     if is_join:
         measurable_stack = MeasurableJoin()(axis, *new_base_vars)
