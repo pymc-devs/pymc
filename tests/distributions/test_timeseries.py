@@ -534,7 +534,7 @@ class TestAR:
             t1.compile_logp()(t1.initial_point()),
         )
 
-        y_eval = draw(y, draws=2,random_seed=12345)
+        y_eval = draw(y, draws=2, random_seed=12345)
         assert y_eval[0].shape == (batch_size, steps)
         assert not np.allclose(y_eval[0], y_eval[1])
 
