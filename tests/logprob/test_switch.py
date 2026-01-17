@@ -23,16 +23,81 @@ from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 
 
-def test_switch_non_overlapping_logp_matches_change_of_variables():
+@pytest.mark.parametrize(
+    "cond_variant,true_branch_is_scaled",
+    [
+        ("x_gt_0", False),
+        ("x_ge_0", False),
+        ("0_lt_x", False),
+        ("0_le_x", False),
+        ("x_lt_0", False),
+        ("x_le_0", False),
+        ("0_gt_x", False),
+        ("0_ge_x", False),
+        ("x_gt_0", True),
+        ("x_ge_0", True),
+        ("0_lt_x", True),
+        ("0_le_x", True),
+        ("x_lt_0", True),
+        ("x_le_0", True),
+        ("0_gt_x", True),
+        ("0_ge_x", True),
+    ],
+)
+def test_switch_non_overlapping_logp_matches_change_of_variables(
+    cond_variant, true_branch_is_scaled
+):
     scale = pt.scalar("scale")
     x = pm.Normal.dist(mu=0, sigma=1, size=(3,))
-    y = pt.switch(x > 0, x, scale * x)
+
+    if cond_variant == "x_gt_0":
+        cond = x > 0
+        value_implies_true = lambda vv: pt.gt(vv, 0)
+    elif cond_variant == "x_ge_0":
+        cond = x >= 0
+        value_implies_true = lambda vv: pt.ge(vv, 0)
+    elif cond_variant == "0_lt_x":
+        cond = 0 < x
+        value_implies_true = lambda vv: pt.gt(vv, 0)
+    elif cond_variant == "0_le_x":
+        cond = 0 <= x
+        value_implies_true = lambda vv: pt.ge(vv, 0)
+    elif cond_variant == "x_lt_0":
+        cond = x < 0
+        value_implies_true = lambda vv: pt.lt(vv, 0)
+    elif cond_variant == "x_le_0":
+        cond = x <= 0
+        value_implies_true = lambda vv: pt.le(vv, 0)
+    elif cond_variant == "0_gt_x":
+        cond = 0 > x
+        value_implies_true = lambda vv: pt.lt(vv, 0)
+    elif cond_variant == "0_ge_x":
+        cond = 0 >= x
+        value_implies_true = lambda vv: pt.le(vv, 0)
+    else:
+        raise AssertionError(f"Unexpected cond_variant: {cond_variant}")
+
+    unscaled = x
+    scaled = scale * x
+    true_branch = scaled if true_branch_is_scaled else unscaled
+    false_branch = unscaled if true_branch_is_scaled else scaled
+    y = pt.switch(cond, true_branch, false_branch)
 
     vv = pt.vector("vv")
 
     logp_y = logp(y, vv)
-    inv = pt.switch(pt.gt(vv, 0), vv, vv / scale)
-    expected = logp(x, inv) + pt.switch(pt.gt(vv, 0), 0.0, -pt.log(scale))
+
+    cond_v = value_implies_true(vv)
+
+    inv_true = vv / scale if true_branch_is_scaled else vv
+    inv_false = vv if true_branch_is_scaled else vv / scale
+    inv = pt.switch(cond_v, inv_true, inv_false)
+
+    jac_true = -pt.log(scale) if true_branch_is_scaled else 0.0
+    jac_false = 0.0 if true_branch_is_scaled else -pt.log(scale)
+    jac = pt.switch(cond_v, jac_true, jac_false)
+
+    expected = logp(x, inv) + jac
 
     logp_y_fn = function([vv, scale], logp_y)
     expected_fn = function([vv, scale], expected)
