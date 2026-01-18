@@ -697,6 +697,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
     stats_dtypes_shapes = {
         "tune": (bool, []),
+        "diverging": (int, []),
     }
 
     _state_class = CategoricalGibbsMetropolisState
@@ -811,7 +812,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
         # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{"tune": False, "diverging": 0}]
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
