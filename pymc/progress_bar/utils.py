@@ -25,30 +25,3 @@ def compute_draw_speed(elapsed: float, draws: int) -> tuple[float, str]:
         speed = 1 / speed
 
     return speed, unit
-
-
-def format_time(seconds: float) -> str:
-    """Format elapsed time as mm:ss or hh:mm:ss."""
-    minutes, secs = divmod(int(seconds), 60)
-    hours, minutes = divmod(minutes, 60)
-    if hours > 0:
-        return f"{hours}:{minutes:02d}:{secs:02d}"
-    return f"{minutes}:{secs:02d}"
-
-
-def abbreviate_stat_name(name: str) -> str:
-    """Abbreviate common statistic names for compact display."""
-    abbreviations = {
-        "divergences": "Div",
-        "diverging": "Div",
-        "step_size": "Step",
-        "tree_size": "Tree",
-        "tree_depth": "Depth",
-        "n_steps": "Steps",
-        "energy_error": "E-err",
-        "max_energy_error": "Max-E",
-        "mean_tree_accept": "Accept",
-        "scaling": "Scale",
-        "tune": "Tune",
-    }
-    return abbreviations.get(name, name[:6].capitalize())

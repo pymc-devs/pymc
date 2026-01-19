@@ -16,7 +16,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from rich.box import SIMPLE_HEAD
 from rich.console import Console
@@ -25,6 +25,7 @@ from rich.progress import (
     Progress,
     ProgressColumn,
     Task,
+    TaskID,
     TextColumn,
     TimeElapsedColumn,
     TimeRemainingColumn,
@@ -44,69 +45,11 @@ default_progress_theme = Theme(
     }
 )
 
-if TYPE_CHECKING:
-    from rich.progress import TaskID
-
 
 class CustomProgress(Progress):
-    """A child of Progress that allows disabling progress bars and their container.
-
-    The implementation checks an `is_enabled` flag and generates the progress bar
-    only if it's True.
-    """
-
-    def __init__(self, *args, disable: bool = False, include_headers: bool = False, **kwargs):
-        self.is_enabled = not disable
+    def __init__(self, *args, include_headers: bool = False, **kwargs):
         self.include_headers = include_headers
-
-        if self.is_enabled:
-            super().__init__(*args, **kwargs)
-
-    def __enter__(self):
-        """Enter the context manager."""
-        if self.is_enabled:
-            self.start()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        """Exit the context manager."""
-        if self.is_enabled:
-            super().__exit__(exc_type, exc_val, exc_tb)
-
-    def add_task(self, *args, **kwargs) -> TaskID | None:  # type: ignore[override]
-        if self.is_enabled:
-            return super().add_task(*args, **kwargs)
-        return None
-
-    def advance(self, task_id, advance=1) -> None:
-        if self.is_enabled:
-            super().advance(task_id, advance)
-        return None
-
-    def update(
-        self,
-        task_id,
-        *,
-        total=None,
-        completed=None,
-        advance=None,
-        description=None,
-        visible=None,
-        refresh=False,
-        **fields,
-    ):
-        if self.is_enabled:
-            super().update(
-                task_id,
-                total=total,
-                completed=completed,
-                advance=advance,
-                description=description,
-                visible=visible,
-                refresh=refresh,
-                **fields,
-            )
-        return None
+        super().__init__(*args, **kwargs)
 
     def make_tasks_table(self, tasks: Iterable[Task]) -> Table:
         """Get a table to render the Progress display.
@@ -206,7 +149,6 @@ class RichProgressBackend:
         progress_columns: list,
         progress_stats: dict[str, list[Any]],
         theme: Theme | None = None,
-        disable: bool = False,
     ):
         """Initialize the Rich progress backend.
 
@@ -226,36 +168,23 @@ class RichProgressBackend:
             Initial values for statistics by chain
         theme : Theme, optional
             Rich theme for styling
-        disable : bool
-            Whether to disable the progress bar
         """
         self.chains = chains
         self.total_draws = total_draws
         self.combined = combined
         self.full_stats = full_stats
         self.progress_stats = progress_stats
-        self._disable = disable
-
-        if theme is None:
-            theme = default_progress_theme
 
         self._progress = self._create_progress_bar(
             progress_columns=progress_columns,
-            theme=theme,
-            disable=disable,
+            theme=default_progress_theme if theme is None else theme,
         )
         self._tasks: list[TaskID | None] = []
-
-    @property
-    def is_enabled(self) -> bool:
-        """Whether the progress bar is enabled."""
-        return not self._disable
 
     def _create_progress_bar(
         self,
         progress_columns: list,
         theme: Theme,
-        disable: bool,
     ) -> CustomProgress:
         """Create the Rich progress bar with appropriate columns."""
         columns: list[ProgressColumn] = [
@@ -283,7 +212,6 @@ class RichProgressBackend:
             ),
             *columns,
             console=Console(theme=theme),
-            disable=disable,
             include_headers=True,
         )
 
@@ -291,7 +219,6 @@ class RichProgressBackend:
         """Enter the context manager and initialize tasks."""
         self._progress.__enter__()
         self._initialize_tasks()
-        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager."""
@@ -352,15 +279,11 @@ class RichProgressBackend:
         is_last : bool
             Whether this is the final update
         """
-        if not self.is_enabled:
-            return
-
         task_id = self._tasks[chain_idx]
         if task_id is None:
             return
 
-        elapsed = self._progress.tasks[chain_idx].elapsed or 0.0
-        speed, unit = compute_draw_speed(elapsed, draw)
+        speed, unit = compute_draw_speed(self._progress.tasks[chain_idx].elapsed, draw)
 
         self._progress.update(
             task_id,
@@ -380,3 +303,15 @@ class RichProgressBackend:
                 **stats,
                 refresh=True,
             )
+
+
+def RichSimpleProgress(theme: Theme | None):
+    return CustomProgress(
+        "[progress.description]{task.description}",
+        BarColumn(),
+        "[progress.percentage]{task.percentage:>3.0f}%",
+        TimeRemainingColumn(),
+        TextColumn("/"),
+        TimeElapsedColumn(),
+        console=Console(theme=default_progress_theme if theme is None else theme),
+    )

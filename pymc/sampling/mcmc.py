@@ -56,7 +56,7 @@ from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import (
     ProgressBarManager,
-    ProgressBarType,
+    ProgressBarOptions,
     default_progress_theme,
 )
 from pymc.sampling.parallel import Draw, _cpu_count
@@ -454,7 +454,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
+    progressbar: bool | ProgressBarOptions = True,
     progressbar_theme: Theme | None = default_progress_theme,
     quiet: bool = False,
     step=None,
@@ -487,7 +487,7 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
+    progressbar: bool | ProgressBarOptions = True,
     progressbar_theme: Theme | None = default_progress_theme,
     quiet: bool = False,
     step=None,
@@ -520,8 +520,8 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
-    progressbar_theme: Theme | None = None,
+    progressbar: bool | ProgressBarOptions = True,
+    progressbar_theme: Theme | str | None = None,
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
@@ -1416,7 +1416,7 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    progressbar_theme : Theme
+    progressbar_theme : Theme or str
         Optional custom theme for the progress bar.
     traces
         Recording backends for each chain.
