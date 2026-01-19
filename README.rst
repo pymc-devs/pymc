@@ -186,6 +186,8 @@ Learn Bayesian statistics with a book together with PyMC
 -  `PyMC port of the book "Statistical Rethinking A Bayesian Course with Examples in R and Stan" by Richard McElreath <https://github.com/pymc-devs/resources/tree/master/Rethinking>`__
 -  `PyMC port of the book "Bayesian Cognitive Modeling" by Michael Lee and EJ Wagenmakers <https://github.com/pymc-devs/resources/tree/master/BCM>`__: Focused on using Bayesian statistics in cognitive modeling.
 
+See also the section on books using PyMC on `our website <https://www.pymc.io/projects/docs/en/stable/learn/books.html>`__.
+
 Audio & Video
 -------------
 
@@ -203,6 +205,21 @@ Citing PyMC
 Please choose from the following:
 
 - |DOIpaper| *PyMC: A Modern and Comprehensive Probabilistic Programming Framework in Python*, Abril-Pla O, Andreani V, Carroll C, Dong L, Fonnesbeck CJ, Kochurov M, Kumar R, Lao J, Luhmann CC, Martin OA, Osthege M, Vieira R, Wiecki T, Zinkov R. (2023)
+
+  - BibTex version
+
+    .. code:: bibtex
+
+       @article{pymc2023,
+         title = {{PyMC}: A Modern and Comprehensive Probabilistic Programming Framework in {P}ython},
+         author = {Oriol Abril-Pla and Virgile Andreani and Colin Carroll and Larry Dong and Christopher J. Fonnesbeck and Maxim Kochurov and Ravin Kumar and Junpeng Lao and Christian C. Luhmann and Osvaldo A. Martin and Michael Osthege and Ricardo Vieira and Thomas Wiecki and Robert Zinkov },
+         journal = {{PeerJ} Computer Science},
+         volume = {9},
+         number = {e1516},
+         doi = {10.7717/peerj-cs.1516},
+         year = {2023}
+       }
+
 - |DOIzenodo| A DOI for all versions.
 - DOIs for specific versions are shown on Zenodo and under `Releases <https://github.com/pymc-devs/pymc/releases>`_
 
@@ -217,6 +234,8 @@ Contact
 We are using `discourse.pymc.io <https://discourse.pymc.io/>`__ as our main communication channel.
 
 To ask a question regarding modeling or usage of PyMC we encourage posting to our Discourse forum under the `“Questions” Category <https://discourse.pymc.io/c/questions>`__. You can also suggest feature in the `“Development” Category <https://discourse.pymc.io/c/development>`__.
+Requests for non-technical information about the project are also welcome on Discourse,
+we also use Discourse internally for general announcements or governance related processes.
 
 You can also follow us on these social media platforms for updates and other announcements:
 
@@ -226,8 +245,6 @@ You can also follow us on these social media platforms for updates and other ann
 - `Mastodon @pymc@bayes.club <https://bayes.club/@pymc>`__
 
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
-
-Finally, if you need to get in touch for non-technical information about the project, `send us an e-mail <info@pymc-devs.org>`__.
 
 License
 =======
@@ -253,10 +270,10 @@ Domain specific
 
 - `Exoplanet <https://github.com/dfm/exoplanet>`__: a toolkit for modeling of transit and/or radial velocity observations of exoplanets and other astronomical time series.
 - `beat <https://github.com/hvasbath/beat>`__: Bayesian Earthquake Analysis Tool.
-- `CausalPy <https://github.com/pymc-labs/CausalPy>`__: A package focussing on causal inference in quasi-experimental settings.
+- `CausalPy <https://github.com/pymc-labs/CausalPy>`__: A package focusing on causal inference in quasi-experimental settings.
 - `PyMC-Marketing <https://github.com/pymc-labs/pymc-marketing>`__: Bayesian marketing toolbox for marketing mix modeling, customer lifetime value, and more.
 
-Please contact us if your software is not listed here.
+See also the `ecosystem page <https://www.pymc.io/about/ecosystem.html>`__ on our website. Please contact us if your software is not listed here.
 
 Papers citing PyMC
 ==================
@@ -266,13 +283,18 @@ See Google Scholar `here <https://scholar.google.com/scholar?cites=6357998555684
 Contributors
 ============
 
-See the `GitHub contributor
-page <https://github.com/pymc-devs/pymc/graphs/contributors>`__. Also read our `Code of Conduct <https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md>`__ guidelines for a better contributing experience.
+The `GitHub contributor page <https://github.com/pymc-devs/pymc/graphs/contributors>`__ shows the people who have added content to this repo
+which includes a large portion of contributors to the PyMC project but not all of them. Other
+contributors have added content to other repos of the ``pymc-devs`` GitHub organization or have contributed
+through other project spaces outside of GitHub like `our Discourse forum <https://discourse.pymc.io/>`__.
+
+If you are interested in contributing yourself, read our `Code of Conduct <https://github.com/pymc-devs/pymc/blob/main/CODE_OF_CONDUCT.md>`__
+and `Contributing guide <https://www.pymc.io/projects/docs/en/latest/contributing/index.html>`__.
 
 Support
 =======
 
-PyMC is a non-profit project under NumFOCUS umbrella. If you want to support PyMC financially, you can donate `here <https://numfocus.salsalabs.org/donate-to-pymc3/index.html>`__.
+PyMC is a non-profit project under NumFOCUS umbrella. If you want to support PyMC financially, you can donate `here <https://numfocus.org/donate-to-pymc>`__.
 
 Professional Consulting Support
 ===============================
@@ -286,9 +308,7 @@ Sponsors
 
 |PyMCLabs|
 
-|Mistplay|
-
-|ODSC|
+|OpenWoundResearch|
 
 Thanks to our contributors
 ==========================
@@ -308,11 +328,9 @@ Thanks to our contributors
 .. |NumFOCUS| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_numfocus.png?raw=true
    :target: http://www.numfocus.org/
 .. |PyMCLabs| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_pymc_labs.png?raw=true
-   :target: https://pymc-labs.io
-.. |Mistplay| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/sponsor_mistplay.png?raw=true
-   :target: https://www.mistplay.com/
-.. |ODSC| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/odsc/sponsor_odsc.png?raw=true
-   :target: https://odsc.com/california/?utm_source=pymc&utm_medium=referral
+   :target: https://pymc-labs.com
+.. |OpenWoundResearch| image:: https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/owr/sponsor_owr.png?raw=true
+   :target: https://www.openwoundresearch.com/
 .. |contributors| image:: https://contrib.rocks/image?repo=pymc-devs/pymc
    :target: https://github.com/pymc-devs/pymc/graphs/contributors
 .. |Conda Downloads| image:: https://anaconda.org/conda-forge/pymc/badges/downloads.svg

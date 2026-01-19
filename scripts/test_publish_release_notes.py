@@ -103,7 +103,7 @@ class TestFormatReleaseContent:
             "RELEASE_URL": "https://github.com/pymc-devs/pymc/releases/tag/v1.0.0",
         }
 
-        title, content = format_release_content(config)
+        _title, content = format_release_content(config)
 
         # Check that pymc-devs/pymc PR link is formatted
         assert "[#456](https://github.com/pymc-devs/pymc/pull/456)" in content
@@ -144,7 +144,7 @@ class TestFormatReleaseContent:
             "RELEASE_URL": "https://github.com/pymc-devs/pymc/releases/tag/v1.0.0",
         }
 
-        title, content = format_release_content(config)
+        _title, content = format_release_content(config)
 
         # Already formatted link should remain unchanged
         assert "[#123](https://github.com/pymc-devs/pymc/pull/123)" in content
@@ -153,3 +153,46 @@ class TestFormatReleaseContent:
 
         # Raw link should be formatted
         assert "[#456](https://github.com/pymc-devs/pymc/pull/456)" in content
+
+    def test_user_mentions_converted_to_links(self):
+        """Test that user mentions are converted to GitHub profile links."""
+        release_body = """<!-- Release notes generated using configuration in .github/release.yml at main -->
+
+## What's Changed
+### Major Changes 🛠
+* Bump PyTensor dependency by @ricardoV94 in https://github.com/pymc-devs/pymc/pull/7910
+* Remove deprecated parameter by @williambdean in https://github.com/pymc-devs/pymc/pull/7886
+
+### New Features 🎉
+* Implement feature by @asifzubair in https://github.com/pymc-devs/pymc/pull/7884
+
+### Bugfixes 🪲
+* Fix bug by @tomicapretto in https://github.com/pymc-devs/pymc/pull/7877
+
+## New Contributors
+* @asifzubair made their first contribution in https://github.com/pymc-devs/pymc/pull/7871
+* @user-with-dashes contributed in https://github.com/pymc-devs/pymc/pull/7872
+* @another_user123 helped out in https://github.com/pymc-devs/pymc/pull/7873
+
+**Full Changelog**: https://github.com/pymc-devs/pymc/compare/v5.25.1...v5.26.0"""
+
+        config = {
+            "RELEASE_TAG": "v5.26.0",
+            "REPO_NAME": "pymc-devs/pymc",
+            "RELEASE_BODY": release_body,
+            "RELEASE_URL": "https://github.com/pymc-devs/pymc/releases/tag/v5.26.0",
+        }
+
+        _title, content = format_release_content(config)
+
+        # Check that user mentions are converted to links
+        assert "[@ricardoV94](https://github.com/ricardoV94)" in content
+        assert "[@williambdean](https://github.com/williambdean)" in content
+        assert "[@asifzubair](https://github.com/asifzubair)" in content
+        assert "[@tomicapretto](https://github.com/tomicapretto)" in content
+        assert "[@user-with-dashes](https://github.com/user-with-dashes)" in content
+        assert "[@another_user123](https://github.com/another_user123)" in content
+
+        # Check that PR links are still formatted correctly
+        assert "[#7910](https://github.com/pymc-devs/pymc/pull/7910)" in content
+        assert "[#7886](https://github.com/pymc-devs/pymc/pull/7886)" in content

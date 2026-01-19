@@ -39,6 +39,7 @@
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
+    logccdf,
     logcdf,
     logp,
     transformed_conditional_logp,
@@ -53,12 +54,14 @@ import pymc.logprob.linalg
 import pymc.logprob.mixture
 import pymc.logprob.order
 import pymc.logprob.scan
+import pymc.logprob.switch
 import pymc.logprob.tensor
 import pymc.logprob.transforms
 
 
 __all__ = (
     "icdf",
+    "logccdf",
     "logcdf",
     "logp",
 )

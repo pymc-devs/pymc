@@ -45,6 +45,7 @@ from pymc.testing import (
     check_icdf,
     check_logcdf,
     check_logp,
+    check_selfconsistency_icdf,
     continuous_random_tester,
     seeded_numpy_distribution_builder,
     seeded_scipy_distribution_builder,
@@ -441,6 +442,10 @@ class TestMatchesScipy:
             {"a": Rplus, "b": Rplus},
             scipy_log_cdf,
         )
+        check_selfconsistency_icdf(
+            pm.Kumaraswamy,
+            {"a": Rplusbig, "b": Rplusbig},
+        )
 
     def test_exponential(self):
         check_logp(
@@ -575,6 +580,13 @@ class TestMatchesScipy:
             lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
         )
 
+    def test_halfstudentt_icdf(self):
+        check_icdf(
+            pm.HalfStudentT,
+            {"nu": Rplusbig, "sigma": Rplusbig},
+            lambda q, nu, sigma: st.t.ppf(0.5 * (q + 1.0), nu, 0.0, sigma),
+        )
+
     @pytest.mark.skipif(
         condition=(pytensor.config.floatX == "float32"),
         reason="Fails on float32 due to numerical issues",
@@ -685,6 +697,13 @@ class TestMatchesScipy:
             Rplus,
             {"alpha": Rplus, "beta": Rplus},
             lambda value, alpha, beta: st.invgamma.logcdf(value, alpha, scale=beta),
+        )
+
+    def test_inverse_gamma_icdf(self):
+        check_icdf(
+            pm.InverseGamma,
+            {"alpha": Rplusbig, "beta": Rplusbig},
+            lambda q, alpha, beta: st.invgamma.ppf(q, alpha, scale=beta),
         )
 
     @pytest.mark.skipif(
@@ -871,6 +890,12 @@ class TestMatchesScipy:
                 st.norm.logpdf(sp.logit(value), mu, sigma) - (np.log(value) + np.log1p(-value))
             ),
             decimal=select_by_precision(float64=6, float32=1),
+        )
+        check_icdf(
+            pm.LogitNormal,
+            {"mu": R, "sigma": Rplus},
+            lambda q, mu, sigma: sp.expit(mu + sigma * st.norm.ppf(q)),
+            decimal=select_by_precision(float64=12, float32=5),
         )
 
     @pytest.mark.skipif(
@@ -1899,7 +1924,7 @@ class TestGumbel(BaseTestDistributionRandom):
     reference_dist = seeded_scipy_distribution_builder("gumbel_r")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 
@@ -2296,19 +2321,22 @@ class TestCauchy(BaseTestDistributionRandom):
     reference_dist = seeded_scipy_distribution_builder("cauchy")
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 
 class TestHalfCauchy(BaseTestDistributionRandom):
+    def halfcauchy_rng_fn(self, scale, size, rng):
+        return np.abs(st.cauchy.rvs(scale=scale, size=size, random_state=rng))
+
     pymc_dist = pm.HalfCauchy
     pymc_dist_params = {"beta": 5.0}
-    expected_rv_op_params = {"alpha": 0.0, "beta": 5.0}
-    reference_dist_params = {"loc": 0.0, "scale": 5.0}
-    reference_dist = seeded_scipy_distribution_builder("halfcauchy")
+    expected_rv_op_params = {"beta": 5.0}
+    reference_dist_params = {"scale": 5.0}
+    reference_dist = lambda self: ft.partial(self.halfcauchy_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_pymc_draws_match_reference_not_numba",
     ]
 
 

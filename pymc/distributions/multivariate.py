@@ -25,7 +25,8 @@ from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.sparse.basic import DenseFromSparse, sp_sum
+from pytensor.sparse.basic import DenseFromSparse
+from pytensor.sparse.math import sp_sum
 from pytensor.tensor import (
     TensorConstant,
     TensorVariable,
@@ -2263,10 +2264,12 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         # This variable has an expensive validation check, that we want to constant-fold if possible
         # So it's passed as an explicit input
-        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
+        from pytensor.sparse import as_sparse_or_tensor_variable, sign
+
+        W = as_sparse_or_tensor_variable(W)
         if isinstance(W.type, pytensor.sparse.SparseTensorType):
-            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
-            W_is_valid = pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0)
+            abs_diff = sign(W - W.T) * (W - W.T)
+            W_is_valid = pt.isclose(abs_diff.sum(), 0)
         else:
             W_is_valid = pt.allclose(W, W.T)
 
@@ -2307,7 +2310,7 @@ class CAR(Continuous):
         if W.owner and isinstance(W.owner.op, DenseFromSparse):
             W = W.owner.inputs[0]
 
-        sparse = isinstance(W, pytensor.sparse.SparseVariable)
+        sparse = isinstance(W, pytensor.sparse.variable.SparseVariable)
         if sparse:
             D = sp_sum(W, axis=0)
             Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
@@ -2706,9 +2709,9 @@ class ZeroSumNormal(Distribution):
     .. math::
 
         \begin{align*}
-            ZSN(\sigma) = N \Big( 0, \sigma^2 (I - \tfrac{1}{n}J) \Big) \\
+            ZSN(\sigma) = N \Big( 0, \sigma^2 (I_K - \tfrac{1}{K}J_K) \Big) \\
             \text{where} \ ~ J_{ij} = 1 \ ~ \text{and} \\
-            n = \text{nbr of zero-sum axes}
+            K = \text{size (length) of the constrained axis}
         \end{align*}
 
     Parameters

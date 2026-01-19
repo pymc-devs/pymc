@@ -45,7 +45,7 @@ from pytensor.graph.basic import equal_computations
 
 from pymc.distributions.continuous import Cauchy, ChiSquared
 from pymc.distributions.discrete import Bernoulli
-from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
+from pymc.logprob.basic import conditional_logp, icdf, logccdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
     ArcsinhTransform,
@@ -219,6 +219,7 @@ def test_exp_transform_rv():
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
     )
+
     np.testing.assert_almost_equal(
         logcdf_fn(y_val),
         sp.stats.lognorm(s=1).logcdf(y_val),
@@ -379,9 +380,7 @@ class TestPowerRVTransform:
         x_vv = x_rv.clone()
         x_logp_fn = pytensor.function([x_vv], logp(x_rv, x_vv))
         x_logcdf_fn = pytensor.function([x_vv], logcdf(x_rv, x_vv))
-
-        with pytest.raises(NotImplementedError):
-            icdf(x_rv, x_vv)
+        x_icdf_fn = pytensor.function([x_vv], icdf(x_rv, x_vv))
 
         x_test_val = np.r_[-0.5, 1.5]
         np.testing.assert_allclose(
@@ -391,6 +390,10 @@ class TestPowerRVTransform:
         np.testing.assert_allclose(
             x_logcdf_fn(x_test_val),
             sp.stats.invgamma(shape, scale=scale * numerator).logcdf(x_test_val),
+        )
+        np.testing.assert_allclose(
+            x_icdf_fn(x_test_val),
+            sp.stats.invgamma(shape, scale=scale * numerator).ppf(x_test_val),
         )
 
     def test_reciprocal_real_rv_transform(self):
@@ -406,8 +409,10 @@ class TestPowerRVTransform:
             logcdf(test_rv, test_value).eval(),
             sp.stats.cauchy(1 / 5, 2 / 5).logcdf(test_value),
         )
-        with pytest.raises(NotImplementedError):
-            icdf(test_rv, test_value)
+        np.testing.assert_allclose(
+            icdf(test_rv, test_value).eval(),
+            sp.stats.cauchy(1 / 5, 2 / 5).ppf(test_value),
+        )
 
     def test_sqr_transform(self):
         # The square of a normal with unit variance is a noncentral chi-square with 1 df and nc = mean ** 2
@@ -542,6 +547,31 @@ def test_extra_bijective_rv_transforms(pt_transform, transform):
     np.testing.assert_allclose(
         rv_logp.eval({vv: vv_test}),
         np.nan_to_num(expected_logp.eval({vv: vv_test}), nan=-np.inf),
+    )
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform",
+    [
+        (pt.erfc, ErfcTransform()),
+        (pt.erfcx, ErfcxTransform()),
+    ],
+)
+def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
+    """Test logcdf for monotonically decreasing transforms (Erfc, Erfcx)."""
+    base_rv = pt.random.normal(0.5, 1, name="base_rv")
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_logcdf = logcdf(rv, vv)
+
+    # For decreasing transform: P(Y <= y) = P(X >= backward(y)) = 1 - P(X < backward(y))
+    expected_logcdf = logccdf(base_rv, transform.backward(vv))
+
+    vv_test = np.array(0.25)
+    np.testing.assert_allclose(
+        rv_logcdf.eval({vv: vv_test}),
+        expected_logcdf.eval({vv: vv_test}),
     )
 
 
@@ -705,6 +735,10 @@ def test_negated_discrete_rv_transform():
     logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
     np.testing.assert_allclose(logcdf_fn([-2, -1, 0, 1]), [-np.inf, np.log(p), 0, 0])
 
+    # logccdf: P(Y > y)
+    logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(logccdf_fn([-2, -1, 0, 1]), [0, np.log(1 - p), -np.inf, -np.inf])
+
     with pytest.raises(NotImplementedError):
         icdf(rv, [-2, -1, 0, 1])
 
@@ -725,6 +759,13 @@ def test_shifted_discrete_rv_transform():
     np.testing.assert_allclose(rv_logcdf_fn(5), np.log(1 - p))
     np.testing.assert_allclose(rv_logcdf_fn(6), 0)
     assert rv_logcdf_fn(7) == 0
+
+    # logccdf: P(Y > y)
+    rv_logccdf_fn = pytensor.function([vv], logccdf(rv, vv))
+    np.testing.assert_allclose(rv_logccdf_fn(4), 0)
+    np.testing.assert_allclose(rv_logccdf_fn(5), np.log(p))
+    assert rv_logccdf_fn(6) == -np.inf
+    assert rv_logccdf_fn(7) == -np.inf
 
     # icdf not supported yet
     with pytest.raises(NotImplementedError):

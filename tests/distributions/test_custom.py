@@ -55,7 +55,10 @@ from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
 # Raise for any warnings in this file
-pytestmark = pytest.mark.filterwarnings("error")
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    r"ignore:^Numba will use object mode to run.*perform method\.:UserWarning",
+)
 
 
 class TestCustomDist:
@@ -356,19 +359,24 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, expected)
 
     def test_custom_dist_default_support_point_scan(self):
-        def scan_step(left, right):
-            x = Uniform.dist(left, right)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(left, right, rng):
+            x = Uniform.dist(left, right, rng=rng)
+            x_update = collect_default_updates([x], must_be_shared=False)
+            return x, x_update[rng]
 
         def dist(size):
-            xs, updates = scan(
+            rng = pytensor.shared(np.random.default_rng())
+            xs, next_rng = scan(
                 fn=scan_step,
                 sequences=[
                     pt.as_tensor_variable(np.array([-4, -3])),
                     pt.as_tensor_variable(np.array([-2, -1])),
                 ],
+                outputs_info=[None, rng],
                 name="xs",
+                # There's a bug in the ordering of outputs when there's a mapped `None` output
+                # We have to stick with the deprecated API for now
+                return_updates=False,
             )
             return xs
 
@@ -377,17 +385,21 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, np.array([-3, -2]))
 
     def test_custom_dist_default_support_point_scan_recurring(self):
-        def scan_step(xtm1):
-            x = Normal.dist(xtm1 + 1)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(xtm1, rng):
+            next_rng, x = Normal.dist(xtm1 + 1, rng=rng).owner.outputs
+            return x, next_rng
 
         def dist(size):
-            xs, _ = scan(
+            rng = pytensor.shared(np.random.default_rng())
+            xs, _next_rng = scan(
                 fn=scan_step,
-                outputs_info=pt.as_tensor_variable(np.array([0])).astype(float),
+                outputs_info=[
+                    pt.as_tensor_variable(np.array([0])).astype(float),
+                    rng,
+                ],
                 n_steps=3,
                 name="xs",
+                return_updates=False,
             )
             return xs
 
@@ -527,16 +539,20 @@ class TestCustomSymbolicDist:
         def trw(nu, sigma, steps, size):
             if rv_size_is_none(size):
                 size = ()
+            rng = pytensor.shared(np.random.default_rng())
 
-            def step(xtm1, nu, sigma):
-                x = StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
-                return x, collect_default_updates([x])
+            def step(xtm1, rng, nu, sigma):
+                next_rng, x = StudentT.dist(
+                    nu=nu, mu=xtm1, sigma=sigma, shape=size, rng=rng
+                ).owner.outputs
+                return x, next_rng
 
-            xs, _ = scan(
+            xs, _next_rng = scan(
                 fn=step,
-                outputs_info=pt.zeros(size),
+                outputs_info=[pt.zeros(size), rng],
                 non_sequences=[nu, sigma],
                 n_steps=steps,
+                return_updates=False,
             )
 
             # Logprob inference cannot be derived yet  https://github.com/pymc-devs/pymc/issues/6360
@@ -662,17 +678,20 @@ class TestCustomSymbolicDist:
         batch = 2
 
         def scan_dist(seq, n_steps, size):
-            def step(s):
-                innov = Normal.dist()
-                traffic = s + innov
-                return traffic, {innov.owner.inputs[0]: innov.owner.outputs[0]}
+            rng = pytensor.shared(np.random.default_rng())
 
-            rv_seq, _ = pytensor.scan(
+            def step(s, rng):
+                next_rng, innov = Normal.dist(rng=rng).owner.outputs
+                traffic = s + innov
+                return traffic, next_rng
+
+            rv_seq, _next_rng = pytensor.scan(
                 fn=step,
                 sequences=[seq],
-                outputs_info=[None],
+                outputs_info=[None, rng],
                 n_steps=n_steps,
                 strict=True,
+                return_updates=False,
             )
             return rv_seq
 
@@ -708,3 +727,47 @@ class TestCustomSymbolicDist:
             observed_logp.eval({latent_vv: latent_vv_test, observed_vv: observed_vv_test}),
             expected_logp,
         )
+
+    def test_explicit_rng(self):
+        def custom_dist(mu, size):
+            return Normal.dist(mu, size=size)
+
+        x = CustomDist.dist(0, dist=custom_dist)
+        assert len(x.owner.op.rng_params(x.owner)) == 1  # Rng created by default
+
+        explicit_rng = pt.random.type.random_generator_type("rng")
+        x_explicit = CustomDist.dist(0, dist=custom_dist, rng=explicit_rng)
+        [used_rng] = x_explicit.owner.op.rng_params(x_explicit.owner)
+        assert used_rng is explicit_rng
+
+        # API for passing multiple explicit RNGs not supported
+        def custom_dist_multi_rng(mu, size):
+            return Normal.dist(mu, size=size) + Normal.dist(0, size=size)
+
+        x = CustomDist.dist(0, dist=custom_dist_multi_rng)
+        assert len(x.owner.op.rng_params(x.owner)) == 2
+
+        with pytest.raises(
+            ValueError,
+            match="CustomDist received an explicit rng but it actually requires 2 rngs",
+        ):
+            CustomDist.dist(
+                0,
+                dist=custom_dist_multi_rng,
+                rng=explicit_rng,
+            )
+
+        # But it can be done if the custom_dist uses only one RNG internally
+        def custom_dist_multi_rng_fixed(mu, size):
+            next_rng, x = Normal.dist(mu, size=size).owner.outputs
+            return x + Normal.dist(0, size=size, rng=next_rng)
+
+        x = CustomDist.dist(0, dist=custom_dist_multi_rng_fixed)
+        assert len(x.owner.op.rng_params(x.owner)) == 1
+        x_explicit = CustomDist.dist(
+            0,
+            dist=custom_dist_multi_rng_fixed,
+            rng=explicit_rng,
+        )
+        [used_rng] = x_explicit.owner.op.rng_params(x_explicit.owner)
+        assert used_rng is explicit_rng

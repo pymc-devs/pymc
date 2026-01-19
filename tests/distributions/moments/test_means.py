@@ -274,5 +274,5 @@ def test_mean_equal_expected(dist, dist_params, expected):
     ],
 )
 def test_no_mean(dist, dist_params):
-    with pytest.raises(UndefinedMomentException):
+    with pytest.raises((UndefinedMomentException, NotImplementedError)):
         mean(dist.dist(**dist_params))

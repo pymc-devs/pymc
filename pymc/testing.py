@@ -27,10 +27,11 @@ from numpy import random as nr
 from numpy import testing as npt
 from numpy.typing import NDArray
 from pytensor.compile import SharedVariable
-from pytensor.compile.mode import Mode
+from pytensor.compile.mode import Mode, get_default_mode
 from pytensor.graph.basic import Constant, Variable, equal_computations
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.traversal import graph_inputs
+from pytensor.link.numba import NumbaLinker
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
@@ -668,6 +669,52 @@ def check_selfconsistency_discrete_logcdf(
             )
 
 
+def check_selfconsistency_icdf(
+    distribution: Distribution,
+    paramdomains: dict[str, Domain],
+    *,
+    decimal: int | None = None,
+    n_samples: int = 100,
+) -> None:
+    """Check that the icdf and logcdf functions of the distribution are consistent.
+
+    Only works with continuous distributions.
+    """
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(distribution, paramdomains)
+    if dist.type.dtype.startswith("int"):
+        raise NotImplementedError(
+            "check_selfconsistency_icdf is not robust against discrete distributions."
+        )
+    value = dist.astype("float64").type("value")
+    dist_icdf = icdf(dist, value)
+    dist_cdf = pt.exp(logcdf(dist, value))
+
+    py_mode = Mode("py")
+    dist_icdf_fn = pytensor.function(list(inputvars(dist_icdf)), dist_icdf, mode=py_mode)
+    dist_cdf_fn = compile(list(inputvars(dist_cdf)), dist_cdf, mode=py_mode)
+
+    domains = paramdomains.copy()
+    domains["value"] = Domain(np.linspace(0, 1, 10))
+
+    for point in product(domains, n_samples=n_samples):
+        point = dict(point)
+        value = point.pop("value")
+        icdf_value = dist_icdf_fn(**point, value=value)
+        recovered_value = dist_cdf_fn(
+            **point,
+            value=icdf_value,
+        )
+        np.testing.assert_almost_equal(
+            value,
+            recovered_value,
+            decimal=decimal,
+            err_msg=f"point: {point}",
+        )
+
+
 def assert_support_point_is_expected(model, expected, check_finite_logp=True):
     fn = make_initial_point_fn(
         model=model,
@@ -901,6 +948,15 @@ class BaseTestDistributionRandom:
     def check_pymc_draws_match_reference(self):
         # need to re-instantiate it to make sure that the order of drawings match the reference distribution one
         # self._instantiate_pymc_rv()
+        npt.assert_array_almost_equal(
+            self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
+        )
+
+    def check_pymc_draws_match_reference_not_numba(self):
+        # This calls `check_pymc_draws_match_reference` but only if the default linker is NOT numba.
+        # It's used when the draws aren't expected to match in that backend.
+        if isinstance(get_default_mode().linker, NumbaLinker):
+            return
         npt.assert_array_almost_equal(
             self.pymc_rv.eval(), self.reference_dist_draws, decimal=self.decimal
         )

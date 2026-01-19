@@ -70,6 +70,10 @@ def format_release_content(config: dict[str, str]) -> tuple[str, str]:
         config["RELEASE_BODY"],
     )
 
+    # Convert user mentions to GitHub profile links to avoid Discourse API limit of 10 mentions per post
+    # Replace @username with [@username](https://github.com/username)
+    release_body = re.sub(r"@([\w-]+)", r"[@\1](https://github.com/\1)", release_body)
+
     content = f"""A new release of **{repo_name}** is now available!
 
 ## 📦 Release Information

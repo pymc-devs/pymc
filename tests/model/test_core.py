@@ -32,8 +32,10 @@ import scipy
 import scipy.sparse as sps
 import scipy.stats as st
 
+from pytensor.compile.mode import get_default_mode
 from pytensor.graph import graph_inputs
 from pytensor.graph.traversal import get_var_by_name
+from pytensor.link.numba import NumbaLinker
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
@@ -1667,11 +1669,15 @@ class TestModelDebug:
         if fn == "dlogp":
             # var dlogp is 0 or 1 without a likelihood
             assert "No problems found" in out
-        else:
+        elif fn == "logp":
             assert "The parameters evaluate to:\n0: [0.]\n1: [ 1. -1.  1.]" in out
-            if fn == "logp":
-                assert "This does not respect one of the following constraints: sigma > 0" in out
+            assert "This does not respect one of the following constraints: sigma > 0" in out
+        else:  # "random"
+            if isinstance(get_default_mode().linker, NumbaLinker):
+                # Numba doesn't raise for negative sigma in NormalRV
+                assert "No problems found" in out
             else:
+                assert "The parameters evaluate to:\n0: [0.]\n1: [ 1. -1.  1.]" in out
                 assert (
                     "The variable y random method raised the following exception: Domain error in arguments."
                     in out

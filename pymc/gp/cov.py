@@ -614,6 +614,49 @@ class RatQuad(Stationary):
             -1.0 * self.alpha,
         )
 
+    def power_spectral_density(self, omega: TensorLike) -> TensorVariable:
+        r"""
+        Power spectral density for the Rational Quadratic kernel.
+
+        .. math::
+           S(\boldsymbol\omega) = \frac{2 (2\pi\alpha)^{D/2} \prod_{i=1}^D \ell_i}{\Gamma(\alpha)}
+                                  \left(\frac{z}{2}\right)^{\nu}
+                                  K_{\nu}(z)
+        where :math:`z = \sqrt{2\alpha} \sqrt{\sum \ell_i^2 \omega_i^2}` and :math:`\nu = \alpha - D/2`.
+
+        Derivation
+        ----------
+        The Rational Quadratic kernel can be expressed as a scale mixture of Squared Exponential kernels:
+
+        .. math::
+            k_{RQ}(r) = \int_0^\infty k_{SE}(r; \lambda) p(\lambda) d\lambda
+
+        where :math:`k_{SE}(r; \lambda) = \exp\left(-\frac{\lambda r^2}{2}\right)` and the mixing distribution
+        on the precision parameter :math:`\lambda` is :math:`\lambda \sim \text{Gamma}(\alpha, \beta)`
+        with rate parameter :math:`\beta = \alpha \ell^2`.
+
+        By the linearity of the Fourier transform, the PSD of the Rational Quadratic kernel is the expectation
+        of the PSD of the Squared Exponential kernel with respect to the mixing distribution:
+
+        .. math::
+            S_{RQ}(\omega) = \int_0^\infty S_{SE}(\omega; \lambda) p(\lambda) d\lambda
+
+        Substituting the known PSD of the Squared Exponential kernel and evaluating the integral yields
+        the expression involving the modified Bessel function of the second kind, :math:`K_{\nu}(z)`.
+        """
+        ls = pt.ones(self.n_dims) * self.ls
+        alpha = self.alpha
+        D = self.n_dims
+        nu = alpha - D / 2.0
+
+        z = pt.sqrt(2 * alpha) * pt.sqrt(pt.dot(pt.square(omega), pt.square(ls)))
+        coeff = 2.0 * pt.power(2.0 * np.pi * alpha, D / 2.0) * pt.prod(ls) / pt.gamma(alpha)
+
+        # Handle singularity at z=0
+        term_z = pt.switch(pt.eq(z, 0), pt.gamma(nu) / 2.0, pt.power(z / 2.0, nu) * pt.kv(nu, z))
+
+        return coeff * term_z
+
 
 class Matern52(Stationary):
     r"""

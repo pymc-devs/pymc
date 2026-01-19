@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import pytensor.xtensor as ptx
-import pytensor.xtensor.random as pxr
+import pytensor.xtensor.random as ptxr
 
 from pytensor.xtensor import as_xtensor
 
@@ -23,7 +23,7 @@ from pymc.dims.distributions.core import (
 )
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
-from pymc.distributions.continuous import HalfStudentTRV, flat, halfflat
+from pymc.distributions.continuous import HalfCauchyRV, HalfStudentTRV, flat, halfflat
 
 
 def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
@@ -40,7 +40,7 @@ def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
 
 
 class Flat(DimDistribution):
-    xrv_op = pxr.as_xrv(flat)
+    xrv_op = ptxr.as_xrv(flat)
 
     @classmethod
     def dist(cls, **kwargs):
@@ -48,7 +48,7 @@ class Flat(DimDistribution):
 
 
 class HalfFlat(PositiveDimDistribution):
-    xrv_op = pxr.as_xrv(halfflat, [], ())
+    xrv_op = ptxr.as_xrv(halfflat, [], ())
 
     @classmethod
     def dist(cls, **kwargs):
@@ -56,7 +56,7 @@ class HalfFlat(PositiveDimDistribution):
 
 
 class Normal(DimDistribution):
-    xrv_op = pxr.normal
+    xrv_op = ptxr.normal
 
     @classmethod
     def dist(cls, mu=0, sigma=None, *, tau=None, **kwargs):
@@ -65,7 +65,7 @@ class Normal(DimDistribution):
 
 
 class HalfNormal(PositiveDimDistribution):
-    xrv_op = pxr.halfnormal
+    xrv_op = ptxr.halfnormal
 
     @classmethod
     def dist(cls, sigma=None, *, tau=None, **kwargs):
@@ -74,7 +74,7 @@ class HalfNormal(PositiveDimDistribution):
 
 
 class LogNormal(PositiveDimDistribution):
-    xrv_op = pxr.lognormal
+    xrv_op = ptxr.lognormal
 
     @classmethod
     def dist(cls, mu=0, sigma=None, *, tau=None, **kwargs):
@@ -83,7 +83,7 @@ class LogNormal(PositiveDimDistribution):
 
 
 class StudentT(DimDistribution):
-    xrv_op = pxr.t
+    xrv_op = ptxr.t
 
     @classmethod
     def dist(cls, nu, mu=0, sigma=None, *, lam=None, **kwargs):
@@ -102,12 +102,12 @@ class HalfStudentT(PositiveDimDistribution):
         nu = as_xtensor(nu)
         sigma = as_xtensor(sigma)
         core_rv = HalfStudentTRV.rv_op(nu=nu.values, sigma=sigma.values).owner.op
-        xop = pxr.as_xrv(core_rv)
+        xop = ptxr.as_xrv(core_rv)
         return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
 class Cauchy(DimDistribution):
-    xrv_op = pxr.cauchy
+    xrv_op = ptxr.cauchy
 
     @classmethod
     def dist(cls, alpha, beta, **kwargs):
@@ -115,15 +115,20 @@ class Cauchy(DimDistribution):
 
 
 class HalfCauchy(PositiveDimDistribution):
-    xrv_op = pxr.halfcauchy
-
     @classmethod
     def dist(cls, beta, **kwargs):
-        return super().dist([0.0, beta], **kwargs)
+        return super().dist([beta], **kwargs)
+
+    @classmethod
+    def xrv_op(self, beta, core_dims, extra_dims=None, rng=None):
+        beta = as_xtensor(beta)
+        core_rv = HalfCauchyRV.rv_op(beta=beta.values).owner.op
+        xop = ptxr.as_xrv(core_rv)
+        return xop(beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
 class Beta(UnitDimDistribution):
-    xrv_op = pxr.beta
+    xrv_op = ptxr.beta
 
     @classmethod
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, nu=None, **kwargs):
@@ -132,7 +137,7 @@ class Beta(UnitDimDistribution):
 
 
 class Laplace(DimDistribution):
-    xrv_op = pxr.laplace
+    xrv_op = ptxr.laplace
 
     @classmethod
     def dist(cls, mu=0, b=1, **kwargs):
@@ -140,7 +145,7 @@ class Laplace(DimDistribution):
 
 
 class Exponential(PositiveDimDistribution):
-    xrv_op = pxr.exponential
+    xrv_op = ptxr.exponential
 
     @classmethod
     def dist(cls, lam=None, *, scale=None, **kwargs):
@@ -154,7 +159,7 @@ class Exponential(PositiveDimDistribution):
 
 
 class Gamma(PositiveDimDistribution):
-    xrv_op = pxr.gamma
+    xrv_op = ptxr.gamma
 
     @classmethod
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):
@@ -173,7 +178,7 @@ class Gamma(PositiveDimDistribution):
 
 
 class InverseGamma(PositiveDimDistribution):
-    xrv_op = pxr.invgamma
+    xrv_op = ptxr.invgamma
 
     @classmethod
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):

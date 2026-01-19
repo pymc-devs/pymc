@@ -46,7 +46,7 @@ from pytensor.scalar import Exp, exp
 import pymc as pm
 
 from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logcdf_helper
-from pymc.logprob.basic import logcdf
+from pymc.logprob.basic import logccdf, logcdf
 
 
 def assert_equal_hash(classA, classB):
@@ -95,3 +95,67 @@ def test_logcdf_transformed_argument():
         pm.TruncatedNormal.dist(0, sigma_value, lower=None, upper=1.0), x_value
     ).eval()
     assert np.isclose(observed, expected)
+
+
+def test_logccdf():
+    value = pt.vector("value")
+    x = pm.Normal.dist(0, 1)
+
+    x_logccdf = logccdf(x, value)
+    np.testing.assert_almost_equal(x_logccdf.eval({value: [0, 1]}), sp.norm(0, 1).logsf([0, 1]))
+
+
+def test_logccdf_numerical_stability():
+    """Logccdf at 100 sigma should be finite, not -inf."""
+    x = pm.Normal.dist(0, 1)
+
+    result = logccdf(x, 100.0).eval()
+    expected = sp.norm(0, 1).logsf(100.0)
+
+    assert np.isfinite(result)
+    np.testing.assert_allclose(result, expected, rtol=1e-6)
+
+
+def test_logccdf_fallback():
+    """Distributions without logccdf should fall back to log1mexp(logcdf).
+
+    This test assumes Uniform does not implement logccdf. Implementing one would
+    not be very useful since the logcdf is very simple and there are no numerical
+    stability concerns. If Uniform ever gets a logccdf implementation, this test
+    should be updated to use a different distribution without one.
+
+    Before rewrites, the logccdf graph for Uniform should contain log1mexp.
+
+    Normal implements a specialized logccdf using erfc/erfcx, so its graph, even
+    before rewrites, should not contain log1mexp.
+    """
+    from pytensor.graph.traversal import ancestors
+    from pytensor.scalar.math import Log1mexp
+    from pytensor.tensor.elemwise import Elemwise
+
+    def graph_contains_log1mexp(var):
+        return any(
+            v.owner
+            and isinstance(v.owner.op, Elemwise)
+            and isinstance(v.owner.op.scalar_op, Log1mexp)
+            for v in ancestors([var])
+        )
+
+    # Uniform has no logccdf - should use fallback
+    uniform_logccdf = logccdf(pm.Uniform.dist(0, 1), 0.5)
+    assert graph_contains_log1mexp(uniform_logccdf)
+
+    # Normal has logccdf - should NOT use fallback
+    normal_logccdf = logccdf(pm.Normal.dist(0, 1), 0.5)
+    assert not graph_contains_log1mexp(normal_logccdf)
+
+
+def test_logccdf_discrete():
+    mu = 3.0
+    x = pm.Poisson.dist(mu=mu)
+
+    test_values = np.array([0, 1, 2, 3, 5, 10])
+    result = logccdf(x, test_values).eval()
+    expected = sp.poisson(mu).logsf(test_values)
+
+    np.testing.assert_allclose(result, expected, rtol=1e-6)

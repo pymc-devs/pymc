@@ -1,5 +1,7 @@
 name: devcontainer-docker-image
 
+permissions: {}
+
 on:
   workflow_dispatch:
   schedule:
@@ -18,7 +20,6 @@ jobs:
     # Set permissions for GitHub token
     # <https://docs.github.com/en/packages/managing-github-packages-using-github-actions-workflows/publishing-and-installing-a-package-with-github-actions#authenticating-to-package-registries-on-github>
     permissions:
-      contents: read
       packages: write
 
     steps:
@@ -32,7 +33,7 @@ jobs:
 
     - name: Prepare metadata
       id: meta
-      uses: docker/metadata-action@c1e51972afc2121e065aed6d45c65596fe445f3f # v5.8.0
+      uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |

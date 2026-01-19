@@ -1,12 +1,12 @@
 name: tests
 
+permissions: {}
+
 on:
   pull_request:
   push:
     branches:
       - main
-
-
 
 # Cancel running workflows for updated PRs
 # https://turso.tech/blog/simple-trick-to-save-environment-and-money-when-using-github-actions
@@ -24,7 +24,6 @@ concurrency:
 # enforces that test run just once per OS / floatX setting.
 
 jobs:
-
   changes:
     name: "Check for changes"
     runs-on: ubuntu-latest
@@ -54,9 +53,8 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        floatx: [float64]
-        python-version: ["3.13"]
+        linker: [cvm, numba]
+        python-version: ["3.14"]
         test-subset:
           - |
             tests/test_util.py
@@ -69,7 +67,8 @@ jobs:
             tests/distributions/test_shape_utils.py
             tests/distributions/test_mixture.py
             tests/test_testing.py
-            tests/test_progress_bar.py
+            tests/progress_bar/test_manager.py
+            tests/progress_bar/test_marimo.py
 
           - |
             tests/distributions/test_continuous.py
@@ -132,6 +131,7 @@ jobs:
             tests/logprob/test_rewriting.py
             tests/logprob/test_scan.py
             tests/logprob/test_tensor.py
+            tests/logprob/test_switch.py
             tests/logprob/test_transform_value.py
             tests/logprob/test_transforms.py
             tests/logprob/test_utils.py
@@ -143,10 +143,10 @@ jobs:
             tests/dims/test_model.py
 
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
+      PYTENSOR_FLAGS: linker=${{ matrix.linker }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -173,9 +173,9 @@ jobs:
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          token: ${{ secrets.CODECOV_TOKEN }}
           env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          name: Ubuntu py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
   windows:
@@ -183,8 +183,7 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
-        os: [windows-latest]
-        floatx: [float64]
+        linker: [cvm, numba]
         python-version: ["3.11"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
@@ -193,13 +192,13 @@ jobs:
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
 
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: windows-latest
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
+      PYTENSOR_FLAGS: linker=${{ matrix.linker }}
     defaults:
       run:
-        shell: cmd /C call {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -210,7 +209,7 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
-          init-shell: cmd.exe
+          init-shell: bash
           cache-environment: true
       - name: Install-pymc
         run: |
@@ -218,16 +217,14 @@ jobs:
           python --version
           micromamba list
       - name: Run tests
-        # This job uses a cmd shell, therefore the environment variable syntax is different!
-        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
-        run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
-          token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
+          token: ${{ secrets.CODECOV_TOKEN }}
           env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          name: Windows py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
   macos:
@@ -235,9 +232,8 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
-        os: [macos-latest]
-        floatx: [float64]
-        python-version: ["3.13"]
+        linker: [cvm, numba]
+        python-version: ["3.14"]
         test-subset:
           - |
             tests/sampling/test_parallel.py
@@ -253,10 +249,10 @@ jobs:
             tests/backends/test_zarr.py
             tests/variational/test_updates.py
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
+      PYTENSOR_FLAGS: linker=${{ matrix.linker }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -285,7 +281,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          name: MacOS py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
   alternative_backends:
@@ -293,8 +289,9 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
-        os: [ubuntu-latest]
-        floatx: [float64]
+        linker: [cvm, numba]
+        # nutpie depends on PyMC, and it will require an extra release cycle to support
+        # the next PyMC release and therefore Python 3.14.
         python-version: ["3.13"]
         test-subset:
           - |
@@ -303,10 +300,10 @@ jobs:
             tests/sampling/test_mcmc_external.py
 
       fail-fast: false
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
+      PYTENSOR_FLAGS: linker=${{ matrix.linker }}
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -335,7 +332,7 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
-          name: Alternative backend tests - ${{ matrix.os }} ${{ matrix.floatx }}
+          name: Alternative backends py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
   float32:
@@ -343,19 +340,19 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
+        linker: [cvm, numba]
         os: [windows-latest]
-        floatx: [float32]
-        python-version: ["3.13"]
+        python-version: ["3.14"]
         test-subset:
-        - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
+          - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=${{ matrix.floatx }}
+      PYTENSOR_FLAGS: floatX=float32
     defaults:
       run:
-        shell: cmd /C call {0}
+        shell: bash -leo pipefail {0}
     steps:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
@@ -366,7 +363,7 @@ jobs:
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
-          init-shell: cmd.exe
+          init-shell: bash
           cache-environment: true
       - name: Install-pymc
         run: |
@@ -374,28 +371,26 @@ jobs:
           python --version
           micromamba list
       - name: Run tests
-        # This job uses a cmd shell, therefore the environment variable syntax is different!
-        # The ">-" in the next line replaces newlines with spaces (see https://stackoverflow.com/a/66809682).
-        run: >-
-          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 %TEST_SUBSET%
+        run: |
+          python -m pytest -vv --cov=pymc --cov-report=xml --no-cov-on-fail --cov-report term --durations=50 $TEST_SUBSET
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.1
         with:
           token: ${{ secrets.CODECOV_TOKEN }} # use token for more robust uploads
           env_vars: TEST_SUBSET
-          name: ${{ matrix.os }} ${{ matrix.floatx }}
+          name: float32 ${{ matrix.os }} py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
   all_tests:
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [ changes, ubuntu, windows, macos, alternative_backends, float32 ]
+    needs: [changes, ubuntu, windows, macos, alternative_backends, float32]
     steps:
       - name: Check build matrix status
         if: ${{ needs.changes.outputs.changes == 'true' &&
-                ( needs.ubuntu.result != 'success' ||
-                  needs.windows.result != 'success' ||
-                  needs.macos.result != 'success' ||
-                  needs.alternative_backends.result != 'success' ||
-                  needs.float32.result != 'success' ) }}
+          ( needs.ubuntu.result != 'success' ||
+          needs.windows.result != 'success' ||
+          needs.macos.result != 'success' ||
+          needs.alternative_backends.result != 'success' ||
+          needs.float32.result != 'success' ) }}
         run: exit 1

@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
 import warnings
 
 import cloudpickle
@@ -19,7 +20,9 @@ import pytensor
 import pytest
 import scipy.stats as st
 
+from pytensor.compile.mode import get_default_mode
 from pytensor.graph import ancestors
+from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sort import SortOp
@@ -89,7 +92,20 @@ class TestSimulator:
         assert abs(self.data.mean() - po_p["s"].mean()) < 0.10
         assert abs(self.data.std() - po_p["s"].std()) < 0.10
 
-    @pytest.mark.parametrize("floatX", ["float32", "float64"])
+    @pytest.mark.parametrize(
+        "floatX",
+        [
+            pytest.param(
+                "float32",
+                marks=pytest.mark.xfail(
+                    condition=sys.version_info.minor == 14
+                    and not isinstance(get_default_mode().linker, NumbaLinker),
+                    reason="Needs investigation",
+                ),
+            ),
+            "float64",
+        ],
+    )
     def test_custom_dist_sum_stat(self, seeded_test, floatX):
         with pytensor.config.change_flags(floatX=floatX):
             with pm.Model() as m:

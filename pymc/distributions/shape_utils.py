@@ -409,7 +409,7 @@ def get_support_shape(
         ]
 
     if inferred_support_shape is None and observed is not None:
-        observed = convert_observed_data(observed)
+        observed = cast(TensorVariable | np.ndarray, convert_observed_data(observed))
         if observed.ndim < ndim_supp:
             raise ValueError(
                 f"Number of observed dimensions is too small for ndim_supp of {ndim_supp}"

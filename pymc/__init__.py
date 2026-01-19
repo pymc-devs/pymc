@@ -47,7 +47,7 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from pymc import _version, gp, ode, sampling
+from pymc import _version, gp, math, ode, sampling
 from pymc.backends import *
 from pymc.blocking import *
 from pymc.data import *

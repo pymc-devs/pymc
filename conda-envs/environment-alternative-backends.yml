@@ -2,7 +2,7 @@
 name: pymc-test
 channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 # Base dependencies
 - arviz>=0.13.0
@@ -22,7 +22,7 @@ dependencies:
 - numpyro>=0.8.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.35.0,<2.36
+- pytensor>=2.36.2,<2.37
 - python-graphviz
 - networkx
 - rich>=13.7.1
@@ -35,7 +35,7 @@ dependencies:
 - pre-commit>=2.8.0
 - pytest-cov>=2.5
 - pytest>=3.0
-- mypy=1.15.0
+- mypy=1.19.1
 - types-cachetools
 - pip:
   - numdifftools>=0.9.40

@@ -1,5 +1,7 @@
 name: Publish Release Notes to Discourse
 
+permissions: {}
+
 on:
   release:
     types: [published]

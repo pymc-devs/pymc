@@ -135,11 +135,15 @@ def test_original_values_output_dict():
             lambda mu, sigma: sp.stats.lognorm(s=sigma, scale=np.exp(mu)),
             (),
         ),
-        (
+        pytest.param(
             pt.random.halfcauchy,
             (1.5, 10.5),
             lambda alpha, beta: sp.stats.halfcauchy(loc=alpha, scale=beta),
             (),
+            marks=pytest.mark.xfail(
+                reason="We don't use PyTensor's HalfCauchy operator",
+                raises=NotImplementedError,
+            ),
         ),
         (
             pt.random.gamma,
@@ -517,18 +521,20 @@ def test_mixture_transform():
 def test_scan_transform():
     """Test that Scan valued variables can be transformed"""
 
-    init = pt.random.beta(1, 1, name="init")
+    rng, init = pt.random.beta(1, 1, name="init").owner.outputs
     init_vv = init.clone()
 
-    def scan_step(prev_innov):
-        next_innov = pt.random.beta(prev_innov * 10, (1 - prev_innov) * 10)
-        update = {next_innov.owner.inputs[0]: next_innov.owner.outputs[0]}
-        return next_innov, update
+    def scan_step(prev_innov, prev_rng):
+        next_rng, next_innov = pt.random.beta(
+            prev_innov * 10, (1 - prev_innov) * 10, rng=prev_rng
+        ).owner.outputs
+        return next_innov, next_rng
 
-    innov, _ = scan(
+    innov, _next_rng = scan(
         fn=scan_step,
-        outputs_info=[init],
+        outputs_info=[init, rng],
         n_steps=4,
+        return_updates=False,
     )
     innov.name = "innov"
     innov_vv = innov.clone()
