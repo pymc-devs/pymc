@@ -312,3 +312,28 @@ def test_systematic():
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 1, 2])
     weights = [0.99, 0.01]
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 0])
+
+
+def test_sample_stats_warning_suppressed():
+    """Regression test for issue #7821.
+
+    sample_smc should not emit 'More chains than draws' warning since
+    sample_stats represent stages, not draws.
+    """
+    with pm.Model():
+        x = pm.Normal("x", 0, 1)
+        pm.Normal("y", x, 1, observed=0)
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            pm.sample_smc(draws=100, chains=2, random_seed=42, progressbar=False)
+
+            # Check that the specific warning is NOT present
+            chain_draw_warnings = [
+                warning
+                for warning in w
+                if "More chains" in str(warning.message) and "than draws" in str(warning.message)
+            ]
+            assert len(chain_draw_warnings) == 0, (
+                f"Expected no 'More chains than draws' warnings, got {len(chain_draw_warnings)}"
+            )
