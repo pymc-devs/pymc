@@ -264,11 +264,22 @@ def _save_sample_stats(
             else:
                 sample_stats_dict[stat] = np.array(value)
 
-        sample_stats = dict_to_dataset(
-            sample_stats_dict,
-            attrs=sample_settings_dict,
-            library=pymc,
-        )
+        # Suppress ArviZ convention warning about chains/draws shape.
+        # SMC sample_stats represent stages (not draws), so the shape mismatch is expected.
+        # See: https://github.com/pymc-devs/pymc/issues/7821
+        import warnings as _warnings
+
+        with _warnings.catch_warnings():
+            _warnings.filterwarnings(
+                "ignore",
+                message="More chains.*than draws",
+                category=UserWarning,
+            )
+            sample_stats = dict_to_dataset(
+                sample_stats_dict,
+                attrs=sample_settings_dict,
+                library=pymc,
+            )
 
         ikwargs: dict[str, Any] = {"model": model}
         if idata_kwargs is not None:
