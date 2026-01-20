@@ -23,59 +23,69 @@ from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 
 
+def _cond_x_gt_0(x):
+    return x > 0
+
+
+def _cond_x_ge_0(x):
+    return x >= 0
+
+
+def _cond_0_lt_x(x):
+    return 0 < x
+
+
+def _cond_0_le_x(x):
+    return 0 <= x
+
+
+def _cond_x_lt_0(x):
+    return x < 0
+
+
+def _cond_x_le_0(x):
+    return x <= 0
+
+
+def _cond_0_gt_x(x):
+    return 0 > x
+
+
+def _cond_0_ge_x(x):
+    return 0 >= x
+
+
 @pytest.mark.parametrize(
-    "cond_variant,true_branch_is_scaled",
+    "cond_builder,includes_zero_in_true,true_is_positive_side",
     [
-        ("x_gt_0", False),
-        ("x_ge_0", False),
-        ("0_lt_x", False),
-        ("0_le_x", False),
-        ("x_lt_0", False),
-        ("x_le_0", False),
-        ("0_gt_x", False),
-        ("0_ge_x", False),
-        ("x_gt_0", True),
-        ("x_ge_0", True),
-        ("0_lt_x", True),
-        ("0_le_x", True),
-        ("x_lt_0", True),
-        ("x_le_0", True),
-        ("0_gt_x", True),
-        ("0_ge_x", True),
+        (_cond_x_gt_0, False, True),
+        (_cond_x_ge_0, True, True),
+        (_cond_0_lt_x, False, True),
+        (_cond_0_le_x, True, True),
+        (_cond_x_lt_0, False, False),
+        (_cond_x_le_0, True, False),
+        (_cond_0_gt_x, False, False),
+        (_cond_0_ge_x, True, False),
+    ],
+    ids=[
+        "x_gt_0",
+        "x_ge_0",
+        "0_lt_x",
+        "0_le_x",
+        "x_lt_0",
+        "x_le_0",
+        "0_gt_x",
+        "0_ge_x",
     ],
 )
+@pytest.mark.parametrize("true_branch_is_scaled", [False, True], ids=["x_true", "scaled_true"])
 def test_switch_non_overlapping_logp_matches_change_of_variables(
-    cond_variant, true_branch_is_scaled
+    cond_builder, includes_zero_in_true, true_is_positive_side, true_branch_is_scaled
 ):
     scale = pt.scalar("scale")
     x = pm.Normal.dist(mu=0, sigma=1, size=(3,))
 
-    if cond_variant == "x_gt_0":
-        cond = x > 0
-        op = "gt"
-    elif cond_variant == "x_ge_0":
-        cond = x >= 0
-        op = "ge"
-    elif cond_variant == "0_lt_x":
-        cond = 0 < x
-        op = "gt"
-    elif cond_variant == "0_le_x":
-        cond = 0 <= x
-        op = "ge"
-    elif cond_variant == "x_lt_0":
-        cond = x < 0
-        op = "lt"
-    elif cond_variant == "x_le_0":
-        cond = x <= 0
-        op = "le"
-    elif cond_variant == "0_gt_x":
-        cond = 0 > x
-        op = "lt"
-    elif cond_variant == "0_ge_x":
-        cond = 0 >= x
-        op = "le"
-    else:
-        raise AssertionError(f"Unexpected cond_variant: {cond_variant}")
+    cond = cond_builder(x)
 
     unscaled = x
     scaled = scale * x
@@ -87,16 +97,10 @@ def test_switch_non_overlapping_logp_matches_change_of_variables(
 
     logp_y = logp(y, vv)
 
-    if op == "gt":
-        cond_v = pt.gt(vv, 0)
-    elif op == "ge":
-        cond_v = pt.ge(vv, 0)
-    elif op == "lt":
-        cond_v = pt.lt(vv, 0)
-    elif op == "le":
-        cond_v = pt.le(vv, 0)
+    if true_is_positive_side:
+        cond_v = pt.ge(vv, 0) if includes_zero_in_true else pt.gt(vv, 0)
     else:
-        raise AssertionError(f"Unexpected op: {op}")
+        cond_v = pt.le(vv, 0) if includes_zero_in_true else pt.lt(vv, 0)
 
     inv_true = vv / scale if true_branch_is_scaled else vv
     inv_false = vv if true_branch_is_scaled else vv / scale

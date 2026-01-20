@@ -36,8 +36,6 @@
 
 """Measurable switch-based transforms."""
 
-from typing import cast
-
 import pytensor.tensor as pt
 
 from pytensor.graph.rewriting.basic import node_rewriter
@@ -104,61 +102,49 @@ def _zero_x_threshold_true_branch_semantics(
         except NotScalarConstantError:
             return False
 
-    def _direct_form() -> tuple[bool, bool] | None:
-        # x ? 0
-        if left is x and _is_zero(cast(TensorVariable, right)):
-            if isinstance(scalar_op, GT):
-                return (False, True)
-            if isinstance(scalar_op, GE):
-                return (True, True)
-            if isinstance(scalar_op, LT):
-                return (False, False)
-            if isinstance(scalar_op, LE):
-                return (True, False)
+    if left is x and _is_zero(right):
+        if isinstance(scalar_op, GT):
+            return (False, True)
+        if isinstance(scalar_op, GE):
+            return (True, True)
+        if isinstance(scalar_op, LT):
+            return (False, False)
+        if isinstance(scalar_op, LE):
+            return (True, False)
         return None
 
-    def _swapped_form() -> tuple[bool, bool] | None:
+    if right is x and _is_zero(left):
         # 0 ? x
-        if right is x and _is_zero(cast(TensorVariable, left)):
-            if isinstance(scalar_op, LT):
-                # 0 < x  <=>  x > 0
-                return (False, True)
-            if isinstance(scalar_op, LE):
-                # 0 <= x  <=>  x >= 0
-                return (True, True)
-            if isinstance(scalar_op, GT):
-                # 0 > x  <=>  x < 0
-                return (False, False)
-            if isinstance(scalar_op, GE):
-                # 0 >= x  <=>  x <= 0
-                return (True, False)
+        if isinstance(scalar_op, LT):
+            # 0 < x  <=>  x > 0
+            return (False, True)
+        if isinstance(scalar_op, LE):
+            # 0 <= x  <=>  x >= 0
+            return (True, True)
+        if isinstance(scalar_op, GT):
+            # 0 > x  <=>  x < 0
+            return (False, False)
+        if isinstance(scalar_op, GE):
+            # 0 >= x  <=>  x <= 0
+            return (True, False)
         return None
-
-    return _direct_form() or _swapped_form()
-
-
-def _match_scaled_switch_branches(
-    true_branch: TensorVariable, false_branch: TensorVariable
-) -> tuple[TensorVariable, TensorVariable, TensorVariable] | None:
-    """Match a scaled-branch switch pattern.
-
-    Accepts either `(x, a * x)` or `(a * x, x)`.
-
-    Returns
-    -------
-    (x, scaled_branch, a)
-        Where `x` is the base measurable random variable and `scaled_branch` is the branch
-        that represents `a * x`.
-    """
-    for x, scaled_branch in ((true_branch, false_branch), (false_branch, true_branch)):
-        if x.owner is None or not isinstance(x.owner.op, RandomVariable):
-            continue
-        a = _extract_scale_from_measurable_mul(scaled_branch, x)
-        if a is None:
-            continue
-        return x, scaled_branch, a
 
     return None
+
+
+def _cond_from_semantics(
+    x: TensorVariable, *, includes_zero_in_true: bool, true_is_positive_side: bool
+) -> TensorVariable:
+    if true_is_positive_side:
+        return pt.ge(x, 0) if includes_zero_in_true else pt.gt(x, 0)
+    return pt.le(x, 0) if includes_zero_in_true else pt.lt(x, 0)
+
+
+def _negate_semantics(
+    includes_zero_in_true: bool, true_is_positive_side: bool
+) -> tuple[bool, bool]:
+    # Negation swaps side and toggles strictness: > <-> <=, >= <-> <
+    return (not includes_zero_in_true, not true_is_positive_side)
 
 
 def _extract_scale_from_measurable_mul(
@@ -185,9 +171,7 @@ def _extract_scale_from_measurable_mul(
     if neg_branch.owner.inputs[op.measurable_input_idx] is not x:
         return None
 
-    scale = neg_branch.owner.inputs[1 - op.measurable_input_idx]
-    return cast(TensorVariable, scale)
-
+    return neg_branch.owner.inputs[1 - op.measurable_input_idx]
 
 @node_rewriter([tensor_switch])
 def find_measurable_switch_non_overlapping(fgraph, node):
@@ -206,13 +190,21 @@ def find_measurable_switch_non_overlapping(fgraph, node):
     if set(filter_measurable_variables([true_branch, false_branch])) != {true_branch, false_branch}:
         return None
 
-    match = _match_scaled_switch_branches(
-        cast(TensorVariable, true_branch), cast(TensorVariable, false_branch)
-    )
-    if match is None:
+    # Identify base RV output and the scaled transform branch
+    x = None
+    scaled_branch = None
+    if true_branch.owner is not None and isinstance(true_branch.owner.op, RandomVariable):
+        x = true_branch
+        scaled_branch = false_branch
+    elif false_branch.owner is not None and isinstance(false_branch.owner.op, RandomVariable):
+        x = false_branch
+        scaled_branch = true_branch
+    else:
         return None
 
-    x, _scaled_branch, a = match
+    a = _extract_scale_from_measurable_mul(scaled_branch, x)
+    if a is None:
+        return None
 
     if x.type.numpy_dtype.kind != "f":
         return None
@@ -222,41 +214,54 @@ def find_measurable_switch_non_overlapping(fgraph, node):
     if x.type.broadcastable != node.outputs[0].type.broadcastable:
         return None
 
-    cond_semantics = _zero_x_threshold_true_branch_semantics(cast(TensorVariable, cond), x)
+    cond_semantics = _zero_x_threshold_true_branch_semantics(cond, x)
     if cond_semantics is None:
         return None
+
+    includes_zero_in_true, true_is_positive_side = cond_semantics
+
+    # Normalize representation to avoid having to guess branch order in the logprob.
+    # Ensure the measurable switch is always `switch(cond, x, scaled_branch)`.
+    if x is not true_branch:
+        true_branch = x
+        false_branch = scaled_branch
+        includes_zero_in_true, true_is_positive_side = _negate_semantics(
+            includes_zero_in_true, true_is_positive_side
+        )
+    else:
+        true_branch = x
+        false_branch = scaled_branch
+
+    # Normalize the condition to a direct comparison on `x`
+    cond = _cond_from_semantics(
+        x,
+        includes_zero_in_true=includes_zero_in_true,
+        true_is_positive_side=true_is_positive_side,
+    )
 
     # Disallow slope `a` that could be (directly or indirectly) measurable.
     # This rewrite targets deterministic, non-overlapping transforms parametrized by non-RVs.
     if check_potential_measurability([a]):
         return None
 
-    return [
-        measurable_switch_non_overlapping(
-            cast(TensorVariable, cond),
-            cast(TensorVariable, true_branch),
-            cast(TensorVariable, false_branch),
-        )
-    ]
+    return [measurable_switch_non_overlapping(cond, true_branch, false_branch)]
 
 
 @_logprob.register(MeasurableSwitchNonOverlapping)
 def logprob_switch_non_overlapping(op, values, cond, true_branch, false_branch, **kwargs):
     (value,) = values
 
-    match = _match_scaled_switch_branches(
-        cast(TensorVariable, true_branch), cast(TensorVariable, false_branch)
-    )
-    if match is None:
+    # `find_measurable_switch_non_overlapping` normalizes to `switch(cond, x, a * x)`
+    x = true_branch
+    a = _extract_scale_from_measurable_mul(false_branch, x)
+    if a is None:
         raise NotImplementedError("Could not identify non-overlapping switch branches")
-
-    x, _scaled_branch, a = match
 
     # Must be strictly positive: a == 0 is not invertible (collapses a region) and
     # invalidates the non-overlapping branch inference.
     a_is_positive = pt.all(pt.gt(a, 0))
 
-    cond_semantics = _zero_x_threshold_true_branch_semantics(cast(TensorVariable, cond), x)
+    cond_semantics = _zero_x_threshold_true_branch_semantics(cond, x)
     if cond_semantics is None:
         raise NotImplementedError("Could not identify zero-threshold condition")
 
