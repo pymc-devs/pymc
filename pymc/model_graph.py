@@ -82,7 +82,7 @@ def safe_eval_shape(var):
 
     This function tries multiple approaches to get the variable's shape:
     1. Use static shape information if fully known
-    2. Try fast_eval if static shape is incomplete  
+    2. Try fast_eval if static shape is incomplete
     3. Fall back to empty tuple if evaluation fails (e.g., for Flat distributions)
 
     This fixes issues with distributions like Flat that raise NotImplementedError
