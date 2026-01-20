@@ -77,6 +77,41 @@ def fast_eval(var):
     return function([], var, mode=_cheap_eval_mode)()
 
 
+def safe_eval_shape(var):
+    """Safely evaluate the shape of a variable.
+
+    This function tries multiple approaches to get the variable's shape:
+    1. Use static shape information if fully known
+    2. Try fast_eval if static shape is incomplete  
+    3. Fall back to empty tuple if evaluation fails (e.g., for Flat distributions)
+
+    This fixes issues with distributions like Flat that raise NotImplementedError
+    when sampled during shape evaluation (#8024).
+
+    Returns
+    -------
+    tuple[int, ...]
+        The shape of the variable, or empty tuple if shape cannot be determined.
+    """
+    # First try to get fully static shape from the type
+    static_shape = var.type.shape
+    if static_shape is not None and all(s is not None for s in static_shape):
+        return tuple(static_shape)
+
+    # Try to evaluate the shape expression
+    try:
+        return tuple(map(int, fast_eval(var.shape)))
+    except NotImplementedError:
+        # Some distributions (like Flat) cannot be sampled during shape eval
+        # Fall back to static shape if available, replacing None with 1
+        if static_shape is not None:
+            return tuple(s if s is not None else 1 for s in static_shape)
+        return ()
+    except Exception:
+        # For any other unexpected errors, return empty shape
+        return ()
+
+
 class NodeType(str, Enum):
     """Enum for the types of nodes in the graph."""
 
@@ -346,7 +381,7 @@ class ModelGraph:
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
+            var_name: safe_eval_shape(self.model[var_name])
             for var_name in self.vars_to_plot(var_names)
         }
 

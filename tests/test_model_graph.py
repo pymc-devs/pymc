@@ -694,3 +694,19 @@ def test_model_to_mermaid_with_variable_with_space():
     %% Plates:
     """)
     assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
+
+
+def test_flat_distribution():
+    """Test that model_to_graphviz works with Flat distributions.
+    
+    Regression test for https://github.com/pymc-devs/pymc/issues/8024
+    """
+    with pm.Model() as model:
+        pm.Flat("f")
+        pm.Flat("g", shape=5)
+    
+    # This should not raise NotImplementedError
+    g = model_to_graphviz(model)
+    assert "f" in g.source
+    assert "g" in g.source
+    assert "Flat" in g.source
