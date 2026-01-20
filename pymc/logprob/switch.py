@@ -173,6 +173,7 @@ def _extract_scale_from_measurable_mul(
 
     return neg_branch.owner.inputs[1 - op.measurable_input_idx]
 
+
 @node_rewriter([tensor_switch])
 def find_measurable_switch_non_overlapping(fgraph, node):
     """Detect a non-overlapping scaled-branch switch and replace it by a measurable op.
