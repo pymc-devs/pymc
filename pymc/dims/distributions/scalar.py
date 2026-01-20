@@ -22,19 +22,15 @@ from pymc.dims.distributions.core import (
     DimDistribution,
     PositiveDimDistribution,
     UnitDimDistribution,
+    copy_docstring,
 )
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
 from pymc.distributions.continuous import HalfCauchyRV, HalfStudentTRV, flat, halfflat
 
 
-def _copy_docstring(regular_cls):
-    def get_regular_docstring(dims_cls):
-        if regular_cls and regular_cls.__doc__ and dims_cls.__doc__ is None:
-            dims_cls.__doc__ = regular_cls.__doc__.replace("tensor_like", "xtensor_like")
-        return dims_cls
-
-    return get_regular_docstring
+def _change_docstring_words(docstring):
+    return docstring.replace("tensor_like", "xtensor_like")
 
 
 def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
@@ -50,7 +46,7 @@ def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
     return ptx.math.reciprocal(ptx.math.sqrt(tau))
 
 
-@_copy_docstring(regular_dists.Flat)
+@copy_docstring(regular_dists.Flat, _change_docstring_words)
 class Flat(DimDistribution):
     xrv_op = ptxr.as_xrv(flat)
 
@@ -59,7 +55,7 @@ class Flat(DimDistribution):
         return super().dist([], **kwargs)
 
 
-@_copy_docstring(regular_dists.HalfFlat)
+@copy_docstring(regular_dists.HalfFlat, _change_docstring_words)
 class HalfFlat(PositiveDimDistribution):
     xrv_op = ptxr.as_xrv(halfflat, [], ())
 
@@ -68,7 +64,7 @@ class HalfFlat(PositiveDimDistribution):
         return super().dist([], **kwargs)
 
 
-@_copy_docstring(regular_dists.Normal)
+@copy_docstring(regular_dists.Normal, _change_docstring_words)
 class Normal(DimDistribution):
     xrv_op = ptxr.normal
 
@@ -78,7 +74,7 @@ class Normal(DimDistribution):
         return super().dist([mu, sigma], **kwargs)
 
 
-@_copy_docstring(regular_dists.HalfNormal)
+@copy_docstring(regular_dists.HalfNormal, _change_docstring_words)
 class HalfNormal(PositiveDimDistribution):
     xrv_op = ptxr.halfnormal
 
@@ -88,7 +84,7 @@ class HalfNormal(PositiveDimDistribution):
         return super().dist([0.0, sigma], **kwargs)
 
 
-@_copy_docstring(regular_dists.LogNormal)
+@copy_docstring(regular_dists.LogNormal, _change_docstring_words)
 class LogNormal(PositiveDimDistribution):
     xrv_op = ptxr.lognormal
 
@@ -98,7 +94,7 @@ class LogNormal(PositiveDimDistribution):
         return super().dist([mu, sigma], **kwargs)
 
 
-@_copy_docstring(regular_dists.StudentT)
+@copy_docstring(regular_dists.StudentT, _change_docstring_words)
 class StudentT(DimDistribution):
     xrv_op = ptxr.t
 
@@ -108,7 +104,7 @@ class StudentT(DimDistribution):
         return super().dist([nu, mu, sigma], **kwargs)
 
 
-@_copy_docstring(regular_dists.HalfStudentT)
+@copy_docstring(regular_dists.HalfStudentT, _change_docstring_words)
 class HalfStudentT(PositiveDimDistribution):
     @classmethod
     def dist(cls, nu, sigma=None, *, lam=None, **kwargs):
@@ -124,7 +120,7 @@ class HalfStudentT(PositiveDimDistribution):
         return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
-@_copy_docstring(regular_dists.Cauchy)
+@copy_docstring(regular_dists.Cauchy, _change_docstring_words)
 class Cauchy(DimDistribution):
     xrv_op = ptxr.cauchy
 
@@ -133,7 +129,7 @@ class Cauchy(DimDistribution):
         return super().dist([alpha, beta], **kwargs)
 
 
-@_copy_docstring(regular_dists.HalfCauchy)
+@copy_docstring(regular_dists.HalfCauchy, _change_docstring_words)
 class HalfCauchy(PositiveDimDistribution):
     @classmethod
     def dist(cls, beta, **kwargs):
@@ -147,7 +143,7 @@ class HalfCauchy(PositiveDimDistribution):
         return xop(beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
 
 
-@_copy_docstring(regular_dists.Beta)
+@copy_docstring(regular_dists.Beta, _change_docstring_words)
 class Beta(UnitDimDistribution):
     xrv_op = ptxr.beta
 
@@ -157,7 +153,7 @@ class Beta(UnitDimDistribution):
         return super().dist([alpha, beta], **kwargs)
 
 
-@_copy_docstring(regular_dists.Laplace)
+@copy_docstring(regular_dists.Laplace, _change_docstring_words)
 class Laplace(DimDistribution):
     xrv_op = ptxr.laplace
 
@@ -166,7 +162,7 @@ class Laplace(DimDistribution):
         return super().dist([mu, b], **kwargs)
 
 
-@_copy_docstring(regular_dists.Exponential)
+@copy_docstring(regular_dists.Exponential, _change_docstring_words)
 class Exponential(PositiveDimDistribution):
     xrv_op = ptxr.exponential
 
@@ -181,7 +177,7 @@ class Exponential(PositiveDimDistribution):
         return super().dist([scale], **kwargs)
 
 
-@_copy_docstring(regular_dists.Gamma)
+@copy_docstring(regular_dists.Gamma, _change_docstring_words)
 class Gamma(PositiveDimDistribution):
     xrv_op = ptxr.gamma
 
@@ -201,7 +197,7 @@ class Gamma(PositiveDimDistribution):
         return super().dist([alpha, ptx.math.reciprocal(beta)], **kwargs)
 
 
-@_copy_docstring(regular_dists.InverseGamma)
+@copy_docstring(regular_dists.InverseGamma, _change_docstring_words)
 class InverseGamma(PositiveDimDistribution):
     xrv_op = ptxr.invgamma
 
