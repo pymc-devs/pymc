@@ -13,6 +13,8 @@
 #   limitations under the License.
 """PyMC-ArviZ conversion code."""
 
+from __future__ import annotations
+
 import logging
 import warnings
 
@@ -20,8 +22,7 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
-    Union,
+    TypeAlias,
     cast,
 )
 
@@ -38,13 +39,16 @@ from xarray import Dataset
 
 import pymc
 
-from pymc.model import Model, modelcontext
-from pymc.progress_bar import CustomProgress, default_progress_theme
-from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import get_default_varnames
+from pymc.model import modelcontext
+from pymc.util import StrongCoords
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
+    from pymc.model import Model
+
+from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.pytensorf import PointFunc, extract_obs_data
+from pymc.util import get_default_varnames
 
 ___all__ = [""]
 
@@ -56,6 +60,7 @@ RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
 
 # random variable object ...
 Var = Any
+DimsDict: TypeAlias = Mapping[str, Sequence[str]]
 
 
 def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **kwargs):
@@ -85,7 +90,7 @@ def dict_to_dataset_drop_incompatible_coords(vars_dict, *args, dims, coords, **k
     return dict_to_dataset(vars_dict, *args, dims=dims, coords=safe_coords, **kwargs)
 
 
-def find_observations(model: "Model") -> dict[str, Var]:
+def find_observations(model: Model) -> dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
@@ -102,7 +107,7 @@ def find_observations(model: "Model") -> dict[str, Var]:
     return observations
 
 
-def find_constants(model: "Model") -> dict[str, Var]:
+def find_constants(model: Model) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     model_vars = model.basic_RVs + model.deterministics + model.potentials
     value_vars = set(model.rvs_to_values.values())
@@ -123,7 +128,9 @@ def find_constants(model: "Model") -> dict[str, Var]:
     return constant_data
 
 
-def coords_and_dims_for_inferencedata(model: Model) -> tuple[dict[str, Any], dict[str, Any]]:
+def coords_and_dims_for_inferencedata(
+    model: Model,
+) -> tuple[StrongCoords, DimsDict]:
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
@@ -265,7 +272,7 @@ class InferenceDataConverter:
 
         self.observations = find_observations(self.model)
 
-    def split_trace(self) -> tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(self) -> tuple[None | MultiTrace, None | MultiTrace]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns
@@ -491,7 +498,7 @@ class InferenceDataConverter:
 
 
 def to_inference_data(
-    trace: Optional["MultiTrace"] = None,
+    trace: MultiTrace | None = None,
     *,
     prior: Mapping[str, Any] | None = None,
     posterior_predictive: Mapping[str, Any] | None = None,
@@ -500,7 +507,7 @@ def to_inference_data(
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    model: Optional["Model"] = None,
+    model: Model | None = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> InferenceData:
@@ -568,8 +575,8 @@ def to_inference_data(
 ### perhaps we should have an inplace argument?
 def predictions_to_inference_data(
     predictions,
-    posterior_trace: Optional["MultiTrace"] = None,
-    model: Optional["Model"] = None,
+    posterior_trace: MultiTrace | None = None,
+    model: Model | None = None,
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,

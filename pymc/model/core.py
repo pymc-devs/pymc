@@ -67,6 +67,9 @@ from pymc.pytensorf import (
 )
 from pymc.util import (
     UNSET,
+    Coords,
+    CoordValue,
+    StrongCoords,
     WithMemoization,
     _UnsetType,
     get_transformed_name,
@@ -453,7 +456,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def __init__(
         self,
         name="",
-        coords=None,
+        coords: Coords | None = None,
         check_bounds=True,
         *,
         model: _UnsetType | None | Model = UNSET,
@@ -488,7 +491,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             self.deterministics = treelist()
             self.potentials = treelist()
             self.data_vars = treelist()
-            self._coords = {}
+            self._coords: StrongCoords = {}
             self._dim_lengths = {}
         self.add_coords(coords)
 
@@ -907,7 +910,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         return self.free_RVs + self.deterministics
 
     @property
-    def coords(self) -> dict[str, tuple | None]:
+    def coords(self) -> StrongCoords:
         """Coordinate values for model dimensions."""
         return self._coords
 
@@ -919,7 +922,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         return self._dim_lengths
 
-    def shape_from_dims(self, dims):
+    def symbolic_shape_from_dims(self, dims):
         shape = []
         if len(set(dims)) != len(dims):
             raise ValueError("Can not contain the same dimension name twice.")
@@ -937,7 +940,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def add_coord(
         self,
         name: str,
-        values: Sequence | np.ndarray | None = None,
+        values: CoordValue = None,
         *,
         length: int | Variable | None = None,
     ):
