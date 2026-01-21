@@ -11,6 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
+import pytest
+
+from pytensor.xtensor import as_xtensor
+
 from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
@@ -28,6 +33,8 @@ from pymc.dims import (
     LogNormal,
     Normal,
     StudentT,
+    TruncatedNormal,
+    Uniform,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
@@ -54,6 +61,47 @@ def test_halfflat():
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_uniform():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Uniform("x", dims="a")
+        Uniform("y", lower=-1, upper=2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Uniform("x", dims="a")
+        regular_distributions.Uniform("y", lower=-1, upper=2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_uniform_transposed():
+    lower = as_xtensor([1, 2, 3], dims="b")
+    coords = {"a": range(2), "b": range(3)}
+    with Model(coords=coords) as model:
+        Uniform("x", lower=lower, upper=4, dims=("a", "b"))
+        Uniform("y", lower=lower, upper=4, dims=("b", "a"))
+
+    np.testing.assert_allclose(
+        model.compile_logp()(
+            {
+                "x_interval__": np.zeros((2, 3)),
+                "y_interval__": np.zeros((3, 2)),
+            }
+        ),
+        -16.635532,  # Reference value obtained manually
+    )
+
+
+def test_conditionally_constrained_transform_not_supported():
+    coords = {"a": range(2), "b": range(3)}
+    with Model(coords=coords):
+        x = Uniform("x", dims=("a", "b"))
+        with pytest.raises(NotImplementedError, match="must be a constant"):
+            # We don't have good infrastructure to allow conditionally constrained transforms for derived/transposed RVs
+            y = Uniform("y", lower=-abs(x), upper=abs(x).T, dims=("b", "a"))
 
 
 def test_normal():
@@ -83,6 +131,22 @@ def test_halfnormal():
         regular_distributions.HalfNormal("x", dims="a")
         regular_distributions.HalfNormal("y", sigma=3, dims="a")
         regular_distributions.HalfNormal("z", tau=3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_truncated_normal():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        TruncatedNormal("x", lower=-1, dims="a")
+        TruncatedNormal("y", upper=1, dims="a")
+        TruncatedNormal("z", lower=-1, upper=1, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.TruncatedNormal("x", lower=-1, dims="a")
+        regular_distributions.TruncatedNormal("y", upper=1, dims="a")
+        regular_distributions.TruncatedNormal("z", lower=-1, upper=1, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)

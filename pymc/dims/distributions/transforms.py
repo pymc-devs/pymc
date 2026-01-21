@@ -11,8 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 import pytensor.tensor as pt
 import pytensor.xtensor as ptx
+
+from pytensor.xtensor import as_xtensor
+from pytensor.xtensor.type import XTensorConstant
 
 from pymc.logprob.transforms import Transform
 
@@ -52,6 +56,87 @@ class LogOddsTransform(DimTransform):
 
 
 log_odds_transform = LogOddsTransform()
+
+
+class IntervalTransform(DimTransform):
+    name = "interval"
+
+    def __init__(self, lower, upper):
+        lower = as_xtensor(lower)
+        upper = as_xtensor(upper)
+        if not isinstance(lower, XTensorConstant):
+            raise NotImplementedError(
+                f"lower bound of IntervalTransform {lower} must be a constant"
+            )
+        if not isinstance(upper, XTensorConstant):
+            raise NotImplementedError(
+                f"upper bound of IntervalTransform {upper} must be a constant"
+            )
+        self.lower = lower
+        self.upper = upper
+
+    def forward(self, value, *inputs):
+        lower = self.lower
+        upper = self.upper
+
+        log_lower_distance = ptx.math.log(value - lower)
+        log_upper_distance = ptx.math.log(upper - value)
+
+        res = ptx.math.where(
+            (ptx.math.neq(lower, -pt.inf) & ptx.math.neq(upper, pt.inf)),
+            log_lower_distance - log_upper_distance,
+            ptx.math.where(
+                ptx.math.neq(lower, -pt.inf),
+                log_lower_distance,
+                ptx.math.where(
+                    ptx.math.neq(upper, pt.inf),
+                    log_upper_distance,
+                    value,
+                ),
+            ),
+        )
+        return res.transpose(*value.dims)
+
+    def backward(self, value, *inputs):
+        lower = self.lower
+        upper = self.upper
+
+        exp_value = ptx.math.exp(value)
+        sigmoid_x = ptx.math.sigmoid(value)
+        lower_distance = exp_value + lower
+        upper_distance = upper - exp_value
+
+        res = ptx.math.where(
+            (ptx.math.neq(lower, -pt.inf) & ptx.math.neq(upper, pt.inf)),
+            sigmoid_x * upper + (1 - sigmoid_x) * lower,
+            ptx.math.where(
+                ptx.math.neq(lower, -pt.inf),
+                lower_distance,
+                ptx.math.where(
+                    ptx.math.neq(upper, pt.inf),
+                    upper_distance,
+                    value,
+                ),
+            ),
+        )
+        return res.transpose(*value.dims)
+
+    def log_jac_det(self, value, *inputs):
+        lower = self.lower
+        upper = self.upper
+
+        s = ptx.math.softplus(-value)
+
+        res = ptx.math.where(
+            (ptx.math.neq(lower, -pt.inf) & ptx.math.neq(upper, pt.inf)),
+            ptx.math.log(upper - lower) - 2 * s - value,
+            ptx.math.where(
+                (ptx.math.neq(lower, -pt.inf) | ptx.math.neq(upper, pt.inf)),
+                value,
+                ptx.zeros_like(value),
+            ),
+        )
+        return res.transpose(*value.dims)
 
 
 class SimplexTransform(DimTransform):
