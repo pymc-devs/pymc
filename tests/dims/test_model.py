@@ -58,6 +58,14 @@ def test_simple_model():
     for value, xvalue in zip(ip.values(), xip.values()):
         np.testing.assert_allclose(value, xvalue)
 
+    rv_shapes = model.eval_rv_shapes()
+    assert rv_shapes == {
+        "x": (3, 5),
+        "sigma_log__": (3,),
+        "sigma": (3,),
+        "y": (5, 3),
+    }
+
     logp = model.compile_logp()(ip)
     xlogp = xmodel.compile_logp()(xip)
     np.testing.assert_allclose(logp, xlogp)
