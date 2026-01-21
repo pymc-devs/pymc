@@ -12,8 +12,10 @@ Scalar distributions
 
    Flat
    HalfFlat
+   Uniform,
    Normal
    HalfNormal
+   TruncatedNormal
    LogNormal
    StudentT
    HalfStudentT

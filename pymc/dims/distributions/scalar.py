@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
 import pytensor.xtensor as ptx
 import pytensor.xtensor.random as ptxr
 
@@ -24,9 +25,17 @@ from pymc.dims.distributions.core import (
     UnitDimDistribution,
     copy_docstring,
 )
+from pymc.dims.distributions.transforms import IntervalTransform
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
-from pymc.distributions.continuous import HalfCauchyRV, HalfStudentTRV, flat, halfflat
+from pymc.distributions.continuous import (
+    HalfCauchyRV,
+    HalfStudentTRV,
+    flat,
+    halfflat,
+    truncated_normal,
+)
+from pymc.util import UNSET
 
 
 def _get_sigma_from_either_sigma_or_tau(*, sigma, tau):
@@ -60,6 +69,28 @@ class HalfFlat(PositiveDimDistribution):
         return super().dist([], **kwargs)
 
 
+@copy_docstring(regular_dists.Uniform)
+class Uniform(DimDistribution):
+    xrv_op = ptxr.uniform
+
+    def __new__(cls, name, lower=0, upper=1, default_transform=UNSET, observed=None, **kwargs):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(lower, upper)
+        return super().__new__(
+            cls,
+            name,
+            lower=lower,
+            upper=upper,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, lower=0, upper=1, **kwargs):
+        return super().dist([lower, upper], **kwargs)
+
+
 @copy_docstring(regular_dists.Normal)
 class Normal(DimDistribution):
     xrv_op = ptxr.normal
@@ -78,6 +109,39 @@ class HalfNormal(PositiveDimDistribution):
     def dist(cls, sigma=None, *, tau=None, **kwargs):
         sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=tau)
         return super().dist([0.0, sigma], **kwargs)
+
+
+@copy_docstring(regular_dists.TruncatedNormal)
+class TruncatedNormal(DimDistribution):
+    xrv_op = ptxr.as_xrv(truncated_normal)
+
+    def __new__(
+        cls,
+        name,
+        *args,
+        lower=-np.inf,
+        upper=np.inf,
+        default_transform=UNSET,
+        observed=None,
+        **kwargs,
+    ):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(lower, upper)
+        return super().__new__(
+            cls,
+            name,
+            *args,
+            lower=lower,
+            upper=upper,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, mu=0, sigma=None, *, tau=None, lower=-np.inf, upper=np.inf, **kwargs):
+        sigma = _get_sigma_from_either_sigma_or_tau(sigma=sigma, tau=tau)
+        return super().dist([mu, sigma, lower, upper], **kwargs)
 
 
 @copy_docstring(regular_dists.LogNormal)
