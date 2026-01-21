@@ -41,19 +41,63 @@ from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.math import Max
+from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.sort import SortOp
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
-    MeasurableElemwise,
     MeasurableOp,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import filter_measurable_variables
+from pymc.logprob.utils import (
+    CheckParameterValue,
+    check_potential_measurability,
+    filter_measurable_variables,
+)
 from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
+
+
+def _underlying_iid_rv(variable) -> TensorVariable | None:
+    # Check whether an IID base RV is connected to the variable through identical elemwise operations
+    from pymc.distributions.distribution import SymbolicRandomVariable
+    from pymc.logprob.transforms import MeasurableTransform
+
+    def iid_elemwise_root(var: TensorVariable) -> TensorVariable | None:
+        node = var.owner
+        if isinstance(node.op, RandomVariable | SymbolicRandomVariable):
+            return var
+        elif isinstance(node.op, MeasurableTransform):
+            if len(node.inputs == 1):
+                return iid_elemwise_root(node.inputs[0])
+            else:
+                # If the non-measurable inputs are broadcasted, it is still an IID operation.
+                measurable_inp = node.op.measurable_input_idx
+                other_inputs = [inp for i, inp in node.inputs if i != measurable_inp]
+                if all(all(other_inp.type.broadcastable) for other_inp in other_inputs):
+                    return iid_elemwise_root(node.inputs[measurable_inp])
+        return None
+
+    # Check that the root is a univariate distribution linked by only elemwise operations
+    latent_base_var = iid_elemwise_root(variable)
+
+    if latent_base_var is None:
+        return None
+
+    latent_op = latent_base_var.owner.op
+
+    if not (hasattr(latent_op, "dist_params") and getattr(latent_op, "ndim_supp") == 0):
+        return None
+
+    if not all(
+        all(params.type.broadcastable) for params in latent_op.dist_params(latent_base_var.owner)
+    ):
+        return None
+
+    return cast(TensorVariable, latent_base_var)
 
 
 class MeasurableMax(MeasurableOp, Max):
@@ -77,30 +121,11 @@ def find_measurable_max(fgraph: FunctionGraph, node: Apply) -> list[TensorVariab
     if not filter_measurable_variables(node.inputs):
         return None
 
-    # We allow Max of RandomVariables or Elemwise of univariate RandomVariables
-    if isinstance(base_var.owner.op, MeasurableElemwise):
-        latent_base_vars = [
-            var
-            for var in base_var.owner.inputs
-            if (var.owner and isinstance(var.owner.op, MeasurableOp))
-        ]
-        if len(latent_base_vars) != 1:
-            return None
-        [latent_base_var] = latent_base_vars
-    else:
-        latent_base_var = base_var
+    # We allow Max of RandomVariables or IID Elemwise of univariate RandomVariables
+    latent_base_var = _underlying_iid_rv(base_var)
 
-    latent_op = latent_base_var.owner.op
-    if not (hasattr(latent_op, "dist_params") and getattr(latent_op, "ndim_supp") == 0):
+    if not latent_base_var:
         return None
-
-    # univariate i.i.d. test which also rules out other distributions
-    if not all(
-        all(params.type.broadcastable) for params in latent_op.dist_params(latent_base_var.owner)
-    ):
-        return None
-
-    base_var = cast(TensorVariable, base_var)
 
     if node.op.axis is None:
         axis = tuple(range(base_var.ndim))
@@ -119,7 +144,7 @@ def find_measurable_max(fgraph: FunctionGraph, node: Apply) -> list[TensorVariab
 
 
 measurable_ir_rewrites_db.register(
-    "find_measurable_max",
+    find_measurable_max.__name__,
     find_measurable_max,
     "basic",
     "max",
@@ -158,3 +183,54 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
 
     n = pt.prod(base_rv_shape)
     return logdiffexp(n * logcdf, n * logcdf_prev)
+
+
+class MeasurableSort(MeasurableOp, SortOp):
+    """A placeholder used to specify a log-likelihood for a sort sub-graph."""
+
+
+@_logprob.register(MeasurableSort)
+def sort_logprob(op, values, base_rv, axis, **kwargs):
+    r"""Compute the log-likelihood graph for the `Sort` operation."""
+    (value,) = values
+
+    logprob = _logprob_helper(base_rv, value).sum(axis=-1)
+
+    base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
+    n = pt.prod(base_rv_shape, axis=-1)
+    sorted_logp = pt.gammaln(n + 1) + logprob
+
+    # The sorted value is not really a parameter, but we include the check in
+    # `CheckParameterValue` to avoid costly sorting if `check_bounds=False` in a PyMC model
+    return CheckParameterValue("value must be sorted", can_be_replaced_by_ninf=True)(
+        sorted_logp, pt.eq(value, value.sort(axis=axis, kind=op.kind)).all()
+    )
+
+
+@node_rewriter(tracks=[SortOp])
+def find_measurable_sort(fgraph, node):
+    if isinstance(node.op, MeasurableSort):
+        return None
+
+    if not filter_measurable_variables(node.inputs):
+        return None
+
+    [base_var, axis] = node.inputs
+
+    # We allow Max of RandomVariables or IID Elemwise of univariate RandomVariables
+    if _underlying_iid_rv(base_var) is None:
+        return None
+
+    # Check axis is not potentially measurable
+    if check_potential_measurability([axis]):
+        return None
+
+    return [MeasurableSort(**node.op._props_dict())(base_var, axis)]
+
+
+measurable_ir_rewrites_db.register(
+    find_measurable_sort.__name__,
+    find_measurable_sort,
+    "basic",
+    "sort",
+)

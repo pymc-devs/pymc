@@ -103,6 +103,7 @@ from pymc.distributions.multivariate import (
     WishartBartlett,
     ZeroSumNormal,
 )
+from pymc.distributions.ordered import Ordered
 from pymc.distributions.simulator import Simulator
 from pymc.distributions.timeseries import (
     AR,
@@ -178,6 +179,7 @@ __all__ = [
     "NegativeBinomial",
     "Normal",
     "NormalMixture",
+    "Ordered",
     "OrderedLogistic",
     "OrderedMultinomial",
     "OrderedProbit",
