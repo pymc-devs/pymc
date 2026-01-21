@@ -173,6 +173,10 @@ class Binomial(Discrete):
             msg="n >= 0, 0 <= p <= 1",
         )
 
+    def icdf(value, n, p):
+        cdf_vals = Binomial.logcdf(pt.arange(0, n), n, p)
+        return pt.argmax(cdf_vals > pt.log(value))
+
 
 class BetaBinomial(Discrete):
     R"""
