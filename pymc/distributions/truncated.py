@@ -283,9 +283,9 @@ class Truncated(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower: tensor_like of float or None
+    lower: tensor_like of float, int, or None
         Lower (left) truncation point. If `None` the distribution will not be left truncated.
-    upper: tensor_like of float or None
+    upper: tensor_like of float, int, or None
         Upper (right) truncation point. If `None`, the distribution will not be right truncated.
     max_n_steps: int, defaults 10_000
         Maximum number of resamples that are attempted when performing rejection sampling.
@@ -302,12 +302,20 @@ class Truncated(Distribution):
 
     Examples
     --------
+    Truncation with upper & lower points set to +/-1
     .. code-block:: python
 
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             truncated_normal = pm.Truncated("truncated_normal", normal_dist, lower=-1, upper=1)
 
+    Partial truncatin of normal distributions achieved by passing +/-inf truncation points.
+    Examples of 4 truncation conditions: untruncated (-inf, inf), upper truncated (-inf, 1),
+    lower truncated (-1, inf), and both truncated (-1, 1)
+    .. code-block:: python
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+            partially_truncated_normal = pm.Truncated("partially_truncated_normal", normal_dist, lower=[-np.inf, -np.inf, -1, -1], upper=[np.inf, 1, np.inf, 1], shape=(4,))
     """
 
     rv_type = TruncatedRV

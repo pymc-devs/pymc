@@ -87,9 +87,9 @@ class Censored(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower : float or None
+    lower : float, int, array-like or None
         Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper : float or None
+    upper : float, int, array-like or None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
     Warnings
@@ -104,11 +104,20 @@ class Censored(Distribution):
 
     Examples
     --------
+    Censoring with upper & lower points set to +/-1
     .. code-block:: python
 
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
+
+    Partial censoring of normal distributions achienved by passing +/-inf censor points.
+    Examples of 4 censor conditions: uncensored (-inf, inf), upper censored (-inf, 1),
+    lower censored (-1, inf), and both censored (-1, 1)
+    .. code-block:: python
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+            partially_censored_normals = pm.Censored("partially_censored_normals", normal_dist, lower=[-np.inf, -np.inf, -1, -1], upper=[np.inf, 1, np.inf, 1], shape=(4,))
     """
 
     rv_type = CensoredRV
