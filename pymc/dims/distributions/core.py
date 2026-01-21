@@ -120,13 +120,11 @@ measurable_ir_rewrites_db.register(
 )
 
 
-def copy_docstring(regular_cls, change_doc=None):
+def copy_docstring(regular_cls):
     # Copy docstring from regular distribution class to dims class
     def get_regular_docstring(dims_cls):
         if regular_cls and regular_cls.__doc__ and dims_cls.__doc__ is None:
-            dims_cls.__doc__ = (
-                change_doc(regular_cls.__doc__) if change_doc else regular_cls.__doc__
-            )
+            dims_cls.__doc__ = regular_cls.__doc__.replace("tensor_like", "xtensor_like")
         return dims_cls
 
     return get_regular_docstring
