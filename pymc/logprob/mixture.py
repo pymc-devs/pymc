@@ -82,6 +82,7 @@ from pymc.logprob.rewriting import (
 )
 from pymc.logprob.utils import (
     check_potential_measurability,
+    dirac_delta,
     filter_measurable_variables,
     get_related_valued_nodes,
 )
@@ -414,21 +415,40 @@ def find_measurable_switch_mixture(fgraph, node):
 
     switch_cond, *components = node.inputs
 
+    # Require at least one measurable component, otherwise there's no logprob to compute
+    measurable_components = filter_measurable_variables(components)
+    if not measurable_components:
+        return None
+
+    measurable_set = set(measurable_components)
+
+    new_components: list[TensorVariable] = []
+    for comp in components:
+        if comp in measurable_set:
+            new_components.append(comp)
+            continue
+
+        # Deterministic branches must not depend on measurable variables
+        if check_potential_measurability([comp]):
+            return None
+
+        # Treat deterministic branches as point-masses; broadcasting happens during logp evaluation
+        new_components.append(dirac_delta(comp))
+
     # We don't support broadcasting of components, as that yields dependent (identical) values.
     # The current logp implementation assumes all component values are independent.
     # Broadcasting of the switch condition is fine
     out_bcast = node.outputs[0].type.broadcastable
-    if any(comp.type.broadcastable != out_bcast for comp in components):
-        return None
-
-    if set(filter_measurable_variables(components)) != set(components):
+    if any(
+        comp.type.broadcastable != out_bcast for comp in new_components if comp in measurable_set
+    ):
         return None
 
     # Check that `switch_cond` is not potentially measurable
     if check_potential_measurability([switch_cond]):
         return None
 
-    return [measurable_switch_mixture(switch_cond, *components)]
+    return [measurable_switch_mixture(switch_cond, *new_components)]
 
 
 @_logprob.register(MeasurableSwitchMixture)

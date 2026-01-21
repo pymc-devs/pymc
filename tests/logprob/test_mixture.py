@@ -92,12 +92,49 @@ def test_mixture_basics():
     i_vv = env["i_vv"]
     M_rv = env["M_rv"]
     m_vv = env["m_vv"]
+    p_at = env["p_at"]
 
     x_vv = X_rv.clone()
     x_vv.name = "x"
 
-    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
-        conditional_logp({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+    mix_logp = conditional_logp({M_rv: m_vv, I_rv: i_vv, X_rv: x_vv})
+    mix_logp_combined = pt.add(*mix_logp.values())
+    assert_no_rvs(mix_logp_combined)
+
+    p_val = np.array(0.5, dtype=pytensor.config.floatX)
+    x_val = np.array(1.0, dtype=pytensor.config.floatX)
+
+    # if I == 0, then M == X; any mismatch should yield -inf
+    bad_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(0, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: np.array(0.0, dtype=pytensor.config.floatX),
+        }
+    )
+    assert np.isneginf(bad_logp)
+
+    good_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(0, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: x_val,
+        }
+    )
+    assert np.isfinite(good_logp)
+
+    # if I == 1, M comes from Y and is independent of X
+    y_logp = mix_logp_combined.eval(
+        {
+            p_at: p_val,
+            i_vv: np.array(1, dtype=i_vv.dtype),
+            x_vv: x_val,
+            m_vv: np.array(1.0, dtype=pytensor.config.floatX),
+        }
+    )
+    assert np.isfinite(y_logp)
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
         axis_at = pt.lscalar("axis")
@@ -971,6 +1008,35 @@ def test_switch_mixture_invalid_bcast():
     invalid_mix = pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch)
     fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
     assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
+
+
+def test_switch_mixture_constant_branch_broadcast_ok():
+    t = pt.arange(10)
+
+    p = pt.as_tensor(np.array([0.5, 0.5], dtype=pytensor.config.floatX))
+    cat = pt.random.categorical(p=p, size=(10,))
+
+    cat_fixed_const = pt.where(t > 5, cat, -1)
+
+    dirac_branch = dirac_delta(pt.full_like(t, -1, dtype=cat.dtype))
+    cat_fixed_dirac = pt.where(t > 5, cat, dirac_branch)
+
+    vv_const = cat_fixed_const.clone()
+    vv_dirac = cat_fixed_dirac.clone()
+    logp_const = logp(cat_fixed_const, vv_const)
+    logp_dirac = logp(cat_fixed_dirac, vv_dirac)
+    test_value = np.where(np.arange(10) > 5, 0, -1).astype(vv_const.dtype)
+    np.testing.assert_allclose(
+        logp_const.eval({vv_const: test_value}),
+        logp_dirac.eval({vv_dirac: test_value.astype(vv_dirac.dtype)}),
+    )
+
+    bad_value = test_value.copy()
+    bad_value[0] = 0  # violates the deterministic branch requirement (-1)
+    bad_const = logp_const.eval({vv_const: bad_value})
+    bad_dirac = logp_dirac.eval({vv_dirac: bad_value.astype(vv_dirac.dtype)})
+    assert np.isneginf(bad_const[0])
+    assert np.isneginf(bad_dirac[0])
 
 
 def test_ifelse_mixture_one_component():
