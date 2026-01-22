@@ -147,6 +147,43 @@ def _negate_semantics(
     return (not includes_zero_in_true, not true_is_positive_side)
 
 
+def _canonical_zero_x_threshold_true_branch_semantics(
+    cond: TensorVariable, x: TensorVariable
+) -> tuple[bool, bool] | None:
+    """Parse a canonical zero-threshold comparison on `x`.
+
+    This assumes the condition has already been normalized by
+    `find_measurable_switch_non_overlapping` to one of:
+    `x > 0`, `x >= 0`, `x < 0`, `x <= 0`.
+    """
+    if cond.owner is None or not isinstance(cond.owner.op, Elemwise):
+        return None
+
+    scalar_op = cond.owner.op.scalar_op
+    if not isinstance(scalar_op, GT | GE | LT | LE):
+        return None
+
+    left, right = cond.owner.inputs
+    if left is not x:
+        return None
+
+    try:
+        if pt.get_underlying_scalar_constant_value(right) != 0:
+            return None
+    except NotScalarConstantError:
+        return None
+
+    if isinstance(scalar_op, GT):
+        return (False, True)
+    if isinstance(scalar_op, GE):
+        return (True, True)
+    if isinstance(scalar_op, LT):
+        return (False, False)
+    if isinstance(scalar_op, LE):
+        return (True, False)
+    return None
+
+
 def _extract_scale_from_measurable_mul(
     neg_branch: TensorVariable, x: TensorVariable
 ) -> TensorVariable | None:
@@ -262,9 +299,9 @@ def logprob_switch_non_overlapping(op, values, cond, true_branch, false_branch, 
     # invalidates the non-overlapping branch inference.
     a_is_positive = pt.all(pt.gt(a, 0))
 
-    cond_semantics = _zero_x_threshold_true_branch_semantics(cond, x)
+    cond_semantics = _canonical_zero_x_threshold_true_branch_semantics(cond, x)
     if cond_semantics is None:
-        raise NotImplementedError("Could not identify zero-threshold condition")
+        raise NotImplementedError("Could not identify canonical zero-threshold condition")
 
     includes_zero_in_true, true_is_positive_side = cond_semantics
 
