@@ -127,27 +127,6 @@ def test_observe_sum_normal():
     )
 
 
-def test_observe_sum_normal_non_iid():
-    mu = np.array([1.0, 2.0, 3.0])
-    sigma = np.array([1.0, 2.0, 3.0])
-    mu_sum = mu.sum()
-    sigma_sum = np.sqrt((sigma**2).sum())
-
-    with pm.Model() as m_old:
-        y = pm.Normal.dist(mu=mu, sigma=sigma, shape=(3,))
-        y_sum = pm.Deterministic("y_sum", pm.math.sum(y))
-
-    m_new = observe(m_old, {y_sum: 2.0})
-
-    with pm.Model() as m_ref:
-        pm.Normal("y_sum", mu=mu_sum, sigma=sigma_sum, observed=2.0)
-
-    np.testing.assert_allclose(
-        m_new.compile_logp()({}),
-        m_ref.compile_logp()({}),
-    )
-
-
 def test_observe_dims():
     with pm.Model(coords={"test_dim": range(5)}) as m_old:
         x = pm.Normal("x", dims="test_dim")

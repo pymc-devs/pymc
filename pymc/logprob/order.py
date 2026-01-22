@@ -40,10 +40,7 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.extra_ops import broadcast_shape
-from pytensor.tensor.math import Max, Sum
-from pytensor.tensor.random.basic import NormalRV
-from pytensor.tensor.type_other import NoneConst, NoneTypeT
+from pytensor.tensor.math import Max
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -126,58 +123,6 @@ measurable_ir_rewrites_db.register(
     find_measurable_max,
     "basic",
     "max",
-)
-
-
-@node_rewriter([Sum])
-def find_measurable_sum(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
-    [base_var] = node.inputs
-    if base_var.owner is None:
-        return None
-    if not filter_measurable_variables(node.inputs):
-        return None
-    latent_op = base_var.owner.op
-    if not isinstance(latent_op, NormalRV):
-        return None
-    if getattr(latent_op, "ndim_supp", None) != 0:
-        return None
-    base_var = cast(TensorVariable, base_var)
-    if node.op.axis is None:
-        axis = tuple(range(base_var.ndim))
-    else:
-        axis = tuple(sorted(node.op.axis))
-        if axis != tuple(range(base_var.ndim)):
-            return None
-
-    mu, sigma = latent_op.dist_params(base_var.owner)
-    mu_t = pt.as_tensor_variable(mu)
-    sigma_t = pt.as_tensor_variable(sigma)
-    size = base_var.owner.inputs[1]
-
-    # If size is specified, it defines the broadcast target; otherwise derive from params
-    if isinstance(size.type, NoneTypeT):
-        target_shape = broadcast_shape(mu_t, sigma_t)
-    else:
-        target_shape = size
-
-    mu_b = pt.broadcast_to(mu_t, target_shape)
-    sigma_b = pt.broadcast_to(sigma_t, target_shape)
-
-    mu_sum = pt.sum(mu_b)
-    sigma_sum = pt.sqrt(pt.sum(pt.square(sigma_b)))
-
-    # Create a scalar NormalRV for the sum
-    rng = base_var.owner.inputs[0]
-    sum_node = latent_op.make_node(rng, NoneConst, mu_sum, sigma_sum)
-    sum_rv = cast(TensorVariable, sum_node.outputs[1])
-    return [sum_rv]
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_sum",
-    find_measurable_sum,
-    "basic",
-    "sum",
 )
 
 
