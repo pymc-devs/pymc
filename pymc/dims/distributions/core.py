@@ -134,7 +134,7 @@ class DimDistribution:
             raise ValueError(
                 f"Variable {x} must have dims associated with it.\n"
                 "To avoid subtle bugs, PyMC does not make any assumptions about the dims of parameters.\n"
-                "Use `pytensor.xtensor.as_xtensor(..., dims=...)` to specify the dims explicitly."
+                "Use `pymc.dims.as_xtensor(..., dims=...)` to specify the dims explicitly."
             )
 
     def __new__(
