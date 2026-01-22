@@ -23,7 +23,7 @@ from pytensor.scan.basic import scan
 from pytensor.scan.utils import until
 from pytensor.tensor.basic import eye, ones_like, switch, zeros_like
 from pytensor.tensor.extra_ops import broadcast_arrays
-from pytensor.tensor.math import and_, argmax, ceil, cos, exp, floor, log, sqrt
+from pytensor.tensor.math import and_, argmax, ceil, cos, exp, log, sqrt
 from pytensor.tensor.random.basic import (
     BernoulliRV,
     CategoricalRV,
@@ -132,13 +132,18 @@ def inv_gamma_reparametrization(fgraph, node):
 
 def gamma_reparametrization_impl(rng, size, shape, scale):
     # We'll implement the Marsaglia-Tsang boosted algorithm to sample
-    # from the Gamma(alpha, 1) distribution. The process is divided into 3 parts:
-    # 1. Gamma(floor(alpha), 1) ~ sum_0^{floor(alpha)}(Exponential(1)) when floor(alpha) > 0
-    # 2. delta = alpha - floor(alpha) -> Gamma(delta + 1, 1) is sampled via rejection method that uses a uniform and a Normal
-    # 3. Gamma(delta, 1) = Gamma(delta + 1, 1) * Uniform(0, 1) ** (1/delta) which is called boosting
-    # The rejection method from step 2 cannot be used directly on delta because for delta < 1, it
-    # does not converge in constant time. That's why we need to boost it to be bigger than 1.
-    # The Gamma(alpha, beta) can be computed as Gamma(alpha, 1) * beta
+    # We follow the implementation used in jax
+    # For context, shape is equal to alpha in all of the following math.
+    # Sampling for alpha >= 1 is done with a rejection algorithm that finishes in constant time.
+    # For alpha < 1, we need to boost the samples using:
+    # Gamma(alpha, 1) = Gamma(alpha + 1, 1) * Uniform(0, 1) ** (1/alpha)
+    # But this can cause numerical issues, so we'll use log samples from the boosting process:
+    # log(Gamma(alpha, 1)) = log(Gamma(alpha + 1, 1)) + log(Uniform(0, 1)) / alpha
+    # We can note that log(Uniform(0, 1)) = -Exponential(1)
+    # and we have to guard agains the case where the exponential sample is equal to 0.
+    #
+    # Jax's implementation of the rejection algorithm does not match with what's
+    # written in wikipedia.
     assert size == (), (
         "Gamma reparametrization requires that you first apply the local_rv_size_lift "
         "rewrite in order to have size equal to an empty tuple."
@@ -146,76 +151,77 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
 
     shape, scale = broadcast_arrays(shape, scale)
 
-    # TODO: Spawn 3 RNGs from the supplied rng and use those in the scans and boosting uniform
+    must_boost = pt.lt(shape, 1)
+    alpha_orig = shape
+    alpha = pt.switch(must_boost, shape + 1, shape)
 
-    # Part 1: Integer part of alpha by summing IID exponentials
-    def branch_floor_alpha(step, output, rng, int_alpha):
-        next_rng, summand = ExponentialRV()(
-            ones_like(int_alpha).astype("floatX"),
-            rng=rng,
-        ).owner.outputs
+    d = alpha - 1 / 3
+    c = 1 / (3 * sqrt(d))
 
-        return step + 1, switch(step < int_alpha, output + summand, output), next_rng
-
-    int_alpha = floor(shape).astype("int")
-    _, gamma_int_samples, _ = scan(
-        branch_floor_alpha,
-        outputs_info=[pt.zeros((), dtype="int"), zeros_like(shape), rng],
-        non_sequences=[int_alpha],
-        n_steps=pt.max(int_alpha),
-        return_updates=False,
-    )
-
-    delta = shape - int_alpha
-
-    # Part 2: Marsaglia-Tsang rejection algorithm
-    d = (delta + 1) - 1 / 3
-    c = 1 / sqrt(9 * d)
-
-    def rejection_step(output, chosen, rng, c, d):
+    def rejection_step(output, chosen, rng, c, d, alpha):
         next_rng, U = UniformRV()(
-            zeros_like(delta),
-            ones_like(delta),
+            zeros_like(alpha),
+            ones_like(alpha),
             rng=rng,
         ).owner.outputs
-        next_rng, X = NormalRV()(
-            zeros_like(delta),
-            ones_like(delta),
-            rng=next_rng,
-        ).owner.outputs
-        v = (1 + c * X) ** 3
+
+        def inner_step(x, v, chosen, rng, c):
+            next_rng, X = NormalRV()(
+                zeros_like(c),
+                ones_like(c),
+                rng=rng,
+            ).owner.outputs
+            v = 1 + c * X
+            indicators = and_(pt.ge(v, 0), ~chosen)
+            chosen = switch(indicators, ones_like(chosen, dtype="bool"), chosen)
+            return (X, v, chosen, next_rng), until(pt.all(chosen))
+
+        xs, vs, _, next_rng = scan(
+            inner_step,
+            outputs_info=[
+                zeros_like(alpha),  # X
+                -ones_like(alpha),  # V
+                zeros_like(alpha, dtype="bool"),  # Chosen
+                next_rng,
+            ],
+            non_sequences=[c],
+            n_steps=10_000,
+            return_updates=False,
+        )
+
+        x = xs[-1]
+        v = vs[-1]
+
+        X = x * x
+        V = v**3
+
         indicators = and_(
-            ~chosen, and_(pt.gt(v, 0), pt.lt(log(U), (0.5 * X**2 + d - d * v + d * log(v))))
+            ~chosen,
+            ~and_(pt.gt(U, 1 - 0.0331 * X * X), pt.gt(log(U), X / 2 + d * (1 - V + log(V)))),
         )
         chosen = switch(indicators, ones_like(chosen, dtype="bool"), chosen)
-        output = switch(indicators, d * v, output)
+        output = switch(indicators, V, output)
         return (output, chosen, next_rng), until(pt.all(chosen))
 
-    gamma_delta_samples, _, _ = scan(
+    Vs, _, next_rng = scan(
         rejection_step,
-        outputs_info=[zeros_like(delta), zeros_like(delta, dtype="bool"), rng],
-        non_sequences=[c, d],
+        outputs_info=[zeros_like(alpha), zeros_like(alpha, dtype="bool"), rng],
+        non_sequences=[c, d, alpha],
         n_steps=10_000,
         return_updates=False,
     )
+    V = Vs[-1]
 
-    # Part 3: Invert the boosting to get delta instead of delta + 1 and sum
-    boosting_uniform = UniformRV()(
-        zeros_like(delta),
-        ones_like(delta),
-        rng=rng,
+    log_boosting_dist = -ExponentialRV()(
+        ones_like(alpha),
+        rng=next_rng,
     )
-
-    # Part 2 and 3 only have to be included if delta is different than zero
-
-    return (
-        gamma_int_samples[-1]
-        + pt.switch(
-            pt.gt(delta, 0),
-            (gamma_delta_samples[-1] * boosting_uniform) ** (1 / delta),
-            zeros_like(delta),
-        )
-    ) * scale
+    log_boost = pt.switch(
+        must_boost & pt.neq(log_boosting_dist, 0),
+        log_boosting_dist / alpha_orig,
+        0,
+    )
+    return exp(log(d) + log(V) + log_boost) * scale
 
 
 @register_random_reparametrization
