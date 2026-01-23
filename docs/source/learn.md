@@ -18,7 +18,7 @@ glossary
 
 
 ### Intermediate
-  - {ref}`pymc_overview` shows PyMC 4.0 code in action
+  - {ref}`pymc_overview` shows PyMC code in action
   - Example notebooks: {doc}`nb:gallery`
     - {ref}`GLM_linear`
     - {ref}`posterior_predictive`
