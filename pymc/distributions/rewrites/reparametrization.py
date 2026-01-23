@@ -132,7 +132,11 @@ def inv_gamma_reparametrization(fgraph, node):
 
 def gamma_reparametrization_impl(rng, size, shape, scale):
     # We'll implement the Marsaglia-Tsang boosted algorithm to sample
-    # We follow the implementation used in jax
+    # https://dl.acm.org/doi/epdf/10.1145/358407.358414
+    # We follow the algorithm from section 3 without squeezing.
+    # The squeeze algorithm from section 4 is more efficient if we can avoid
+    # computing all branches of the if-else clauses, which is not possible
+    # when using pytensor switches.
     # For context, shape is equal to alpha in all of the following math.
     # Sampling for alpha >= 1 is done with a rejection algorithm that finishes in constant time.
     # For alpha < 1, we need to boost the samples using:
@@ -141,9 +145,6 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
     # log(Gamma(alpha, 1)) = log(Gamma(alpha + 1, 1)) + log(Uniform(0, 1)) / alpha
     # We can note that log(Uniform(0, 1)) = -Exponential(1)
     # and we have to guard agains the case where the exponential sample is equal to 0.
-    #
-    # Jax's implementation of the rejection algorithm does not match with what's
-    # written in wikipedia.
     assert size == (), (
         "Gamma reparametrization requires that you first apply the local_rv_size_lift "
         "rewrite in order to have size equal to an empty tuple."
@@ -164,40 +165,21 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
             ones_like(alpha),
             rng=rng,
         ).owner.outputs
-
-        def inner_step(x, v, chosen, rng, c):
-            next_rng, X = NormalRV()(
-                zeros_like(c),
-                ones_like(c),
-                rng=rng,
-            ).owner.outputs
-            v = 1 + c * X
-            indicators = and_(pt.ge(v, 0), ~chosen)
-            chosen = switch(indicators, ones_like(chosen, dtype="bool"), chosen)
-            return (X, v, chosen, next_rng), until(pt.all(chosen))
-
-        xs, vs, _, next_rng = scan(
-            inner_step,
-            outputs_info=[
-                zeros_like(alpha),  # X
-                -ones_like(alpha),  # V
-                zeros_like(alpha, dtype="bool"),  # Chosen
-                next_rng,
-            ],
-            non_sequences=[c],
-            n_steps=10_000,
-            return_updates=False,
-        )
-
-        x = xs[-1]
-        v = vs[-1]
+        next_rng, x = NormalRV()(
+            zeros_like(c),
+            ones_like(c),
+            rng=next_rng,
+        ).owner.outputs
+        V = (1 + c * x) ** 3
 
         X = x * x
-        V = v**3
 
         indicators = and_(
             ~chosen,
-            ~and_(pt.gt(U, 1 - 0.0331 * X * X), pt.gt(log(U), X / 2 + d * (1 - V + log(V)))),
+            and_(
+                V > 0,
+                pt.lt(log(U), X / 2 + d * (1 - V + log(V))),
+            ),
         )
         chosen = switch(indicators, ones_like(chosen, dtype="bool"), chosen)
         output = switch(indicators, V, output)
