@@ -23,12 +23,11 @@ Underdispersion
   In statistics, underdispersion is the presence of lower {term}`variability <dispersion>` in a data set than would be expected based on a given statistical model.
 
 Bayesian Workflow
-  The Bayesian workflow involves all the steps needed for model building. This includes {term}`Bayesian inference` but also other tasks such as i) diagnoses of the quality of the inference, ii) model criticism, including evaluations of both model assumptions and model predictions, iii) comparison of models, not
-  just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://joss.theoj.org/papers/10.21105/joss.01143).
+  The Bayesian workflow involves all the steps needed for model building. This includes {term}`Bayesian inference` but also other tasks such as i) diagnoses of the quality of the inference, ii) model criticism, including evaluations of both model assumptions and model predictions, iii) comparison of models, not just for the purpose of model selection or model averaging but more importantly to better understand these models and iv) Preparation of the results for a particular audience. These non-inferencial tasks require both numerical and visual summaries to help practitioners analyse their models. And they are sometimes collectively known as [Exploratory Analysis of Bayesian Models](https://arviz-devs.github.io/EABM/).
   - For a compact overview, see Bayesian statistics and modelling by van de Schoot, R., Depaoli, S., King, R. et al in Nat Rev Methods - Primers 1, 1 (2021).
   - For an in-depth overview, see Bayesian Workflow by Andrew Gelman, Aki Vehtari, Daniel Simpson, Charles C. Margossian, Bob Carpenter, Yuling Yao, Lauren Kennedy, Jonah Gabry, Paul-Christian Bürkner, Martin Modrák
   - For an exercise-based material, see Think Bayes 2e: Bayesian Statistics Made Simple by Allen B. Downey
-  - For an upcoming textbook that uses PyMC, Tensorflow Probability, and ArviZ libraries, see Bayesian Modeling and Computation by Osvaldo A. Martin, Ravin Kumar and Junpeng Lao
+  - For a textbook that uses PyMC and ArviZ libraries, see [Bayesian Analysis with Python](https://bap.com.ar/) by Osvaldo A. Martin
 
 Bayesian inference
   Once we have defined the statistical model, Bayesian inference processes the data and model to produce a {term}`posterior` distribution. That is a joint distribution of all parameters in the model. This distribution is used to represent plausibility, and is the logical consequence of the model and data.
@@ -44,6 +43,7 @@ Prior
   To understand the implications of a prior and likelihood we can simulate predictions from the model, before seeing any data. This can be done by taking samples from the prior predictive distribution.
 
   - For an in-depth guide to priors, consider Statistical Rethinking 2nd Edition By Richard McElreath, especially chapters 2.3
+  - For software that help to set up priors see the [PreliZ](https://preliz.readthedocs.io)
 
 Likelihood
   There are many perspectives on likelihood, but conceptually we can think about it as the probability of the data, given the parameters. Or in other words, as the relative number of ways the data could have been produced.

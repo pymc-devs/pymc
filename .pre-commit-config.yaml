@@ -89,7 +89,7 @@ repos:
                contributing/versioning_schemes_explanation.md|
                learn/examples.md)
       entry: >
-          (?x)(arviz-devs.github.io|
+          (?x)(arviz-devs.github.io/arviz|
                python.arviz.org|
                pytensor.readthedocs.io|
                pymc-experimental.readthedocs.io|
