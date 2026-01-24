@@ -153,7 +153,7 @@ class Transform(abc.ABC):
             return pt.log(pt.abs(jac))
         else:
             phi_inv = self.backward(value, *inputs)
-            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+            return pt.log(pt.abs(pt.linalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
     def __str__(self):
         """Return a string representation of the object."""

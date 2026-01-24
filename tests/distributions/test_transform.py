@@ -103,7 +103,7 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = pt.log(pt.abs(pt.nlinalg.det(jacobian(x, [y]))))
+        jac = pt.log(pt.abs(pt.linalg.det(jacobian(x, [y]))))
     else:
         jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
