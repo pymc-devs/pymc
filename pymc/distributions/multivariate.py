@@ -36,7 +36,7 @@ from pytensor.tensor import (
 )
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
-from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
+from pytensor.tensor.linalg import det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
 from pytensor.tensor.random import chisquare
 from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
@@ -124,13 +124,6 @@ def simplex_cont_transform(op, rv):
     return transforms.simplex
 
 
-# Step methods and advi do not catch LinAlgErrors at the
-# moment. We work around that by using a cholesky op
-# that returns a nan as first entry instead of raising
-# an error.
-nan_lower_cholesky = partial(cholesky, lower=True, on_error="nan")
-
-
 def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
     if len([i for i in [tau, cov, chol] if i is not None]) != 1:
         raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
@@ -176,12 +169,8 @@ def quaddist_chol(value, mu, cov):
     else:
         onedim = False
 
-    chol_cov = nan_lower_cholesky(cov)
+    chol_cov = pt.linalg.cholesky(cov, lower=True)
     logdet, posdef = _logdet_from_cholesky(chol_cov)
-
-    # solve_triangular will raise if there are nans
-    # (which happens if the cholesky fails)
-    chol_cov = pt.switch(posdef[..., None, None], chol_cov, 1)
 
     delta = value - mu
     delta_trans = solve_lower(chol_cov, delta, b_ndim=1)
@@ -347,7 +336,7 @@ def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, ta
 
     delta = value - mean
     quadratic_form = delta.T @ tau @ delta
-    logdet, posdef = _logdet_from_cholesky(nan_lower_cholesky(tau))
+    logdet, posdef = _logdet_from_cholesky(pt.linalg.cholesky(tau, lower=True))
     logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
 
     return check_parameters(
@@ -1861,8 +1850,6 @@ class MatrixNormal(Continuous):
         *args,
         **kwargs,
     ):
-        lower_cholesky = partial(cholesky, lower=True, on_error="raise")
-
         # Among-row matrices
         if len([i for i in [rowcov, rowchol] if i is not None]) != 1:
             raise ValueError(
@@ -1871,7 +1858,7 @@ class MatrixNormal(Continuous):
         if rowcov is not None:
             if rowcov.ndim != 2:
                 raise ValueError("rowcov must be two dimensional.")
-            rowchol_cov = lower_cholesky(rowcov)
+            rowchol_cov = pt.linalg.cholesky(rowcov, lower=True)
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
@@ -1886,7 +1873,7 @@ class MatrixNormal(Continuous):
             colcov = pt.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
-            colchol_cov = lower_cholesky(colcov)
+            colchol_cov = pt.linalg.cholesky(colcov, lower=True)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
