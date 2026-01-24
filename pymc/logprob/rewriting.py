@@ -59,6 +59,7 @@ from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
 from pytensor.tensor.rewriting.basic import register_canonicalize
 from pytensor.tensor.rewriting.math import local_exp_over_1_plus_exp
 from pytensor.tensor.rewriting.shape import ShapeFeature
+from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
     AdvancedIncSubtensor1,
@@ -211,6 +212,14 @@ logprob_rewrites_db.register(
 
 cleanup_ir_rewrites_db.register("remove_DiracDelta", remove_DiracDelta, "cleanup")
 cleanup_ir_rewrites_db.register("local_remove_valued_rv", local_remove_valued_rv, "cleanup")
+
+
+@node_rewriter([SpecifyShape])
+def local_remove_specify_shape(fgraph, node):
+    return [node.inputs[0]]
+
+
+cleanup_ir_rewrites_db.register("local_remove_specify_shape", local_remove_specify_shape, "cleanup")
 
 
 def construct_ir_fgraph(

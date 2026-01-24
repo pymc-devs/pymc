@@ -36,6 +36,7 @@
 
 from typing import cast
 
+import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
@@ -75,6 +76,7 @@ from pymc.logprob.abstract import (
     valued_rv,
 )
 from pymc.logprob.rewriting import (
+    cleanup_ir,
     early_measurable_ir_rewrites_db,
     local_lift_DiracDelta,
     measurable_ir_rewrites_db,
@@ -85,7 +87,7 @@ from pymc.logprob.utils import (
     filter_measurable_variables,
     get_related_valued_nodes,
 )
-from pymc.pytensorf import constant_fold
+from pymc.pytensorf import constant_fold, replace_vars_in_graphs
 
 
 def is_newaxis(x):
@@ -474,6 +476,10 @@ def split_valued_ifelse(fgraph, node):
     if not valued_output_nodes:
         return None
 
+    # If all outputs are valued we can handle the multi output IfElse directly.
+    if len(valued_output_nodes) == op.n_outs:
+        return None
+
     cond, *all_outputs = node.inputs
     then_outputs = all_outputs[: op.n_outs]
     else_outputs = all_outputs[op.n_outs :]
@@ -540,19 +546,24 @@ def find_measurable_ifelse_mixture(fgraph, node):
     if isinstance(op, MeasurableOp):
         return None
 
-    if op.n_outs > 1:
-        # The rewrite split_measurable_ifelse should take care of this
-        return None
-
-    if_var, then_rv, else_rv = node.inputs
+    if_var, *then_else_rvs = node.inputs
 
     if check_potential_measurability([if_var]):
         return None
 
-    if len(filter_measurable_variables([then_rv, else_rv])) != 2:
+    if op.n_outs == 1:
+        then_rv, else_rv = then_else_rvs
+        if len(filter_measurable_variables([then_rv, else_rv])) != 2:
+            return None
+
+        return MeasurableIfElse(n_outs=op.n_outs)(if_var, then_rv, else_rv, return_list=True)
+
+    # Multi-output IfElse: only make measurable when all outputs are valued.
+    valued_output_nodes = get_related_valued_nodes(fgraph, node)
+    if len(valued_output_nodes) != op.n_outs:
         return None
 
-    return MeasurableIfElse(n_outs=op.n_outs)(if_var, then_rv, else_rv, return_list=True)
+    return MeasurableIfElse(n_outs=op.n_outs)(if_var, *then_else_rvs, return_list=True)
 
 
 early_measurable_ir_rewrites_db.register(
@@ -571,9 +582,97 @@ measurable_ir_rewrites_db.register(
 
 
 @_logprob.register(MeasurableIfElse)
-def logprob_ifelse(op, values, if_var, rv_then, rv_else, **kwargs):
+def logprob_ifelse(op, values, if_var, *then_else_rvs, **kwargs):
     """Compute the log-likelihood graph for an `IfElse`."""
-    [value] = values
-    logps_then = _logprob_helper(rv_then, value, **kwargs)
-    logps_else = _logprob_helper(rv_else, value, **kwargs)
-    return ifelse(if_var, logps_then, logps_else)
+
+    def _coerce_value_to_branch(value: TensorVariable, branch_rv: TensorVariable) -> TensorVariable:
+        """Coerce `value` to the shape of `branch_rv` without runtime shape assertions.
+
+        The coerced value is exact when shapes already match.
+        """
+        if value.ndim != branch_rv.ndim:
+            return value
+
+        # Using `branch_rv.shape[...]` directly can introduce shape graphs that
+        # depend on `branch_rv` itself (including RandomVariables), which then
+        # leak into the logp graph and break `assert_no_rvs`.
+        branch_shape = getattr(branch_rv.type, "shape", None) or ()
+
+        # Fall back to symbolic shapes if there is no static shape metadata.
+        if not branch_shape:
+            branch_shape = constant_fold(tuple(branch_rv.shape), raise_not_constant=False)
+
+        out = value
+        for axis, axis_size in enumerate(branch_shape):
+            if isinstance(axis_size, Constant):
+                axis_size = axis_size.data
+            if isinstance(axis_size, int | np.integer):
+                out = pt.take(out, pt.arange(axis_size), axis=axis, mode="clip")
+        return out
+
+    if op.n_outs == 1:
+        (rv_then, rv_else) = then_else_rvs
+        [value] = values
+        value_then = _coerce_value_to_branch(value, rv_then)  # type: ignore[arg-type]
+        value_else = _coerce_value_to_branch(value, rv_else)  # type: ignore[arg-type]
+        logps_then = _logprob_helper(rv_then, value_then, **kwargs)
+        logps_else = _logprob_helper(rv_else, value_else, **kwargs)
+        return ifelse(if_var, logps_then, logps_else)
+
+    if len(values) != op.n_outs:
+        raise ValueError(
+            "Multi-output IfElse logp requires the number of values to match the number of outputs"
+        )
+
+    n_outs = op.n_outs
+    then_rvs = then_else_rvs[:n_outs]
+    else_rvs = then_else_rvs[n_outs:]
+
+    # Derive per-branch logps by first conditioning each output graph on the
+    # values of the other outputs, then running the usual
+    # measurable-IR construction so rewrites can turn those graphs measurable.
+    from pymc.logprob.rewriting import construct_ir_fgraph
+
+    # Compute branch-safe values:
+    # - In the selected branch we keep the original value (so invalid shapes still error).
+    # - In the non-selected branch we use a coerced value to avoid backend eager evaluation errors.
+    then_values = []
+    else_values = []
+    for i, v in enumerate(values):
+        then_coerced = _coerce_value_to_branch(v, then_rvs[i])  # type: ignore[arg-type]
+        else_coerced = _coerce_value_to_branch(v, else_rvs[i])  # type: ignore[arg-type]
+
+        then_values.append(ifelse(if_var, v, then_coerced))
+        else_values.append(ifelse(if_var, else_coerced, v))
+
+    then_logps = []
+    else_logps = []
+    for j in range(n_outs):
+        then_replacements = {then_rvs[i]: then_values[i] for i in range(n_outs) if i != j}
+        then_replacements.update({else_rvs[i]: then_values[i] for i in range(n_outs) if i != j})
+        else_replacements = {then_rvs[i]: else_values[i] for i in range(n_outs) if i != j}
+        else_replacements.update({else_rvs[i]: else_values[i] for i in range(n_outs) if i != j})
+
+        (then_rv_j,) = replace_vars_in_graphs([then_rvs[j]], then_replacements)
+        (else_rv_j,) = replace_vars_in_graphs([else_rvs[j]], else_replacements)
+
+        then_value_j = _coerce_value_to_branch(then_values[j], then_rv_j)  # type: ignore[arg-type]
+        else_value_j = _coerce_value_to_branch(else_values[j], else_rv_j)  # type: ignore[arg-type]
+
+        # THEN branch
+        then_fgraph = construct_ir_fgraph({then_rv_j: then_value_j})
+        [then_ir_valued] = then_fgraph.outputs
+        [then_ir_rv, then_ir_value] = then_ir_valued.owner.inputs
+        then_logp_j = _logprob_helper(then_ir_rv, then_ir_value, **kwargs)
+        [then_logp_j] = cleanup_ir([then_logp_j])
+        then_logps.append(then_logp_j)
+
+        # ELSE branch
+        else_fgraph = construct_ir_fgraph({else_rv_j: else_value_j})
+        [else_ir_valued] = else_fgraph.outputs
+        [else_ir_rv, else_ir_value] = else_ir_valued.owner.inputs
+        else_logp_j = _logprob_helper(else_ir_rv, else_ir_value, **kwargs)
+        [else_logp_j] = cleanup_ir([else_logp_j])
+        else_logps.append(else_logp_j)
+
+    return ifelse(if_var, then_logps, else_logps)

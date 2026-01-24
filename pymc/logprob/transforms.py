@@ -45,6 +45,7 @@ from pytensor.gradient import jacobian
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.graph.traversal import walk
 from pytensor.scalar import (
     Abs,
     Add,
@@ -104,11 +105,13 @@ from pytensor.tensor.math import (
     tanh,
     true_div,
 )
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
+    ValuedRV,
     _icdf,
     _icdf_helper,
     _logccdf_helper,
@@ -473,8 +476,21 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
     if isinstance(node.op, MeasurableOp):
         return None
 
-    # Check that we have a single source of measurement
-    measurable_inputs = filter_measurable_variables(node.inputs)
+    def expand_fn(var: Variable):
+        if var.owner and not isinstance(var.owner.op, ValuedRV):
+            return var.owner.inputs
+        return []
+
+    def has_rv_ancestor(var: Variable) -> bool:
+        return any(
+            ancestor.owner and isinstance(ancestor.owner.op, RandomVariable)
+            for ancestor in walk([var], expand=expand_fn, bfs=False)
+        )
+
+    # Check that we have a single source of randomness/measurement.
+    # We intentionally ignore deterministic wrappers (even if `MeasurableOp`s)
+    # that do not contain any `RandomVariable` ancestors.
+    measurable_inputs = [inp for inp in node.inputs if has_rv_ancestor(inp)]
 
     if len(measurable_inputs) != 1:
         return None
@@ -492,11 +508,14 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
         if not measurable_output.type.dtype.startswith("int"):
             return None
 
-    # Check that other inputs are not potentially measurable, in which case this rewrite
-    # would be invalid
+    # Check that other inputs do not contain additional sources of randomness, in which
+    # case this rewrite would be invalid.
     other_inputs = tuple(inp for inp in node.inputs if inp is not measurable_input)
 
-    if check_potential_measurability(other_inputs):
+    if any(
+        ancestor.owner and isinstance(ancestor.owner.op, RandomVariable)
+        for ancestor in walk(other_inputs, expand=expand_fn, bfs=False)
+    ):
         return None
 
     scalar_op = node.op.scalar_op
