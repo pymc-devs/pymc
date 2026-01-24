@@ -20,7 +20,6 @@ import numpy as np
 import pytensor
 import pytensor.sparse
 import pytensor.tensor as pt
-import pytensor.tensor.slinalg
 
 from pytensor.graph.basic import Apply
 from pytensor.graph.op import Op
@@ -90,8 +89,8 @@ from pytensor.tensor import (
     zeros,
     zeros_like,
 )
+from pytensor.tensor.linalg import inv as matrix_inverse
 from pytensor.tensor.linalg import solve_triangular
-from pytensor.tensor.nlinalg import matrix_inverse
 from pytensor.tensor.special import log_softmax, softmax
 
 from pymc.pytensorf import floatX
@@ -203,7 +202,7 @@ def kronecker(*Ks):
     np.ndarray :
         Block matrix Kroncker product of the argument matrices.
     """
-    return reduce(pt.slinalg.kron, Ks)
+    return reduce(pt.linalg.kron, Ks)
 
 
 def cartesian(*arrays):
@@ -474,7 +473,7 @@ def batched_diag(C):
 
 
 def block_diagonal(matrices, sparse=False, format="csr"):
-    r"""See pt.slinalg.block_diag or pytensor.sparse.basic.block_diag for reference.
+    r"""See pt.linalg.block_diag or pytensor.sparse.basic.block_diag for reference.
 
     Parameters
     ----------
@@ -489,11 +488,12 @@ def block_diagonal(matrices, sparse=False, format="csr"):
     matrix
     """
     warnings.warn(
-        "pymc.math.block_diagonal is deprecated in favor of `pytensor.tensor.linalg.block_diag` and `pytensor.sparse.block_diag` functions. This function will be removed in a future release",
+        "pymc.math.block_diagonal is deprecated in favor of `pytensor.tensor.linalg.block_diag` and "
+        "`pytensor.sparse.block_diag` functions. This function will be removed in a future release",
     )
     if len(matrices) == 1:  # graph optimization
         return matrices[0]
     if sparse:
         return pytensor.sparse.basic.block_diag(*matrices, format=format)
     else:
-        return pt.slinalg.block_diag(*matrices)
+        return pt.linalg.block_diag(*matrices)

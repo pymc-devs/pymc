@@ -42,7 +42,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = pt.slinalg.kron(a, pt.slinalg.kron(b, c))
+    nested = pt.linalg.kron(a, pt.linalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -112,7 +112,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = pt.slinalg.solve_triangular(big, x, lower=True)
+    slow_ans = pt.linalg.solve_triangular(big, x, lower=True)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
