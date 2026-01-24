@@ -296,8 +296,7 @@ def test_duplicate_vars():
 
 def test_empty_observed():
     pd = pytest.importorskip("pandas")
-    data = pd.DataFrame(np.ones((2, 3)) / 3)
-    data.values[:] = np.nan
+    data = pd.DataFrame(np.full((2, 3), np.nan))
     with pm.Model():
         a = pm.Normal("a", observed=data)
         assert not hasattr(a.tag, "observations")
