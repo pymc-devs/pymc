@@ -21,6 +21,7 @@ import pytest
 import scipy.stats as st
 
 from arviz.data.inference_data import InferenceData
+from pytensor.compile.ops import wrap_py
 
 import pymc as pm
 
@@ -148,6 +149,27 @@ class TestSMC:
             mu = pm.CustomDist("mu", 0, logp=_logp, dist=_dist)
             pm.CustomDist("y", mu, logp=_logp, class_name="", random=_random, observed=[1, 2])
             pm.sample_smc(draws=6, cores=2)
+
+    @pytest.mark.parametrize("chains", [1, 2], ids=["1_chain", "2_chains"])
+    def test_sequential(self, chains, caplog):
+        """Test sequential SMC sampling by setting cores=1"""
+        with self.fast_model:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                trace = pm.sample_smc(
+                    draws=50,
+                    chains=chains,
+                    cores=1,
+                    return_inferencedata=False,
+                    progressbar=not _IS_WINDOWS,
+                )
+
+                # Easiest way to check that we hit the sequential code path is to check which log message was emitted
+                msg = "Sampling 1 chain" if chains == 1 else "Sampling 2 chains sequentially"
+                assert msg in caplog.text
+
+                assert trace.nchains == chains
+                assert len(trace) == 50
 
     def test_marginal_likelihood(self):
         """
@@ -312,3 +334,22 @@ def test_systematic():
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 1, 2])
     weights = [0.99, 0.01]
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 0])
+
+
+@wrap_py(itypes=[pt.dvector], otypes=[pt.dvector])
+def _twice(x):
+    # Pickle fails if this is defined inside the test function namespace.
+    return 2 * x
+
+
+def test_smc_with_custom_op():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7078
+
+    with pm.Model() as model:
+        x = pm.Normal("x", mu=[0, 0], sigma=1)
+        y = _twice(x)
+        pm.Normal(name="z", mu=y, observed=[1, 1])
+
+        trace = pm.sample_smc(10, cores=2, chains=2)
+
+    assert trace is not None

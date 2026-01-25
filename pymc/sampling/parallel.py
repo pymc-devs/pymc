@@ -77,6 +77,28 @@ def rebuild_exc(exc, tb):
     return exc
 
 
+def _initialize_multiprocessing_context(
+    mp_ctx: str | multiprocessing.context.BaseContext | None, quiet: bool = False
+) -> multiprocessing.context.BaseContext:
+    if mp_ctx is None or isinstance(mp_ctx, str):
+        # Closes issue https://github.com/pymc-devs/pymc/issues/3849
+        # Related issue https://github.com/pymc-devs/pymc/issues/5339
+        if mp_ctx is None and platform.system() == "Darwin":
+            if platform.processor() == "arm":
+                mp_ctx = "fork"
+                if not quiet:
+                    logger.debug(
+                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
+                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
+                    )
+            else:
+                mp_ctx = "forkserver"
+
+        mp_ctx = multiprocessing.get_context(mp_ctx)
+
+    return mp_ctx
+
+
 # Messages
 # ('writing_done', is_last, sample_idx, tuning, stats)
 # ('error', *exception_info)
@@ -441,22 +463,8 @@ class ParallelSampler:
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
-
         if mp_ctx is None or isinstance(mp_ctx, str):
-            # Closes issue https://github.com/pymc-devs/pymc/issues/3849
-            # Related issue https://github.com/pymc-devs/pymc/issues/5339
-            if mp_ctx is None and platform.system() == "Darwin":
-                if platform.processor() == "arm":
-                    mp_ctx = "fork"
-                    logger.debug(
-                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
-                    )
-                else:
-                    mp_ctx = "forkserver"
-
-            mp_ctx = multiprocessing.get_context(mp_ctx)
-
+            mp_ctx = _initialize_multiprocessing_context(mp_ctx)
         step_method_pickled = None
         zarr_chains_pickled = None
         self.zarr_recording = False
