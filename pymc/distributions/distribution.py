@@ -12,10 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import contextvars
-import functools
 import re
 import sys
-import types
 import warnings
 
 from abc import ABCMeta
@@ -53,7 +51,6 @@ from pymc.distributions.shape_utils import (
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates_inner_fgraph,
     constant_fold,
@@ -548,12 +545,6 @@ class Distribution(metaclass=DistributionMeta):
             transform=transform,
             default_transform=default_transform,
             initval=initval,
-        )
-
-        # add in pretty-printing support
-        rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
-        rv_out._repr_latex_ = types.MethodType(
-            functools.partial(str_for_dist, formatting="latex"), rv_out
         )
         return rv_out
 
