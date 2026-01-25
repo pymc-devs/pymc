@@ -309,16 +309,18 @@ class Metropolis(ArrayStepShared):
         else:
             accept_rate = self.delta_logp(q, q0d)
             q, accepted = metrop_select(accept_rate, q, q0d, rng=self.rng)
-            self.accept_rate_iter = accept_rate
+            self.accept_rate_iter[0] = accept_rate
             self.accepted_iter[0] = accepted
             self.accepted_sum += accepted
 
         self.steps_until_tune -= 1
 
+        log_N = np.log(self.accept_rate_iter.shape[0])
+
         stats = {
             "tune": self.tune,
             "scaling": np.mean(self.scaling),
-            "accept": np.mean(np.exp(self.accept_rate_iter)),
+            "accept": np.exp(scipy.special.logsumexp(self.accept_rate_iter) - log_N),
             "accepted": np.mean(self.accepted_iter),
         }
 
