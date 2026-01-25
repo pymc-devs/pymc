@@ -42,6 +42,7 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as sp
 
+from pymc.distributions import Weibull
 from pymc.logprob import conditional_logp, logp
 from pymc.testing import assert_no_rvs
 
@@ -280,3 +281,169 @@ class TestMax:
 
         # Test that calling gradient does not raise a NotImplementedError
         pt.grad(joint_logp, x_vv)
+
+
+class TestCategoricalFromArgmax:
+    # np.pi, np.e, are used throughout to emphasize they don't matter in the end
+
+    def test_exponential(self):
+        axis = 1
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        scale = 1 / (probs * np.e)[None, :, None]
+
+        s = pt.random.exponential(scale=1, size=size) * scale
+        x = pt.argmin(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
+
+        # Test same result for lifted scale
+        equiv_s = pt.random.exponential(scale=scale, size=size)
+        equiv_x = pt.argmin(equiv_s, axis=axis)
+        equiv_x_prob = pt.exp(logp(equiv_x, x_vv))
+        np.testing.assert_allclose(equiv_x_prob.eval({x_vv: x_vv_test}), expected_probs)
+
+        # Test argmax not supported
+        invalid_x = pt.argmax(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+    def test_weibull(self):
+        axis = 1
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        # scale is IID on the argmax axis
+        iid_shape = np.array([np.pi, np.e])[:, None, None]
+        scale = probs[None, :, None] ** (1 / iid_shape)
+
+        s = Weibull.dist(alpha=iid_shape, beta=1, size=size) * scale
+        x = pt.argmin(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
+
+        # Test argmax not supported
+        invalid_x = pt.argmax(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+        # Test non-iid shape on argmin axis not supported
+        non_iid_shape = np.array([1, np.pi, np.e])[None, :, None]
+        invalid_s = Weibull.dist(alpha=non_iid_shape, beta=1, size=size) * scale
+        invalid_x = pt.argmin(invalid_s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+    def test_gumbel(self):
+        axis = -2
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        loc = pt.log(probs * np.e)[None, :, None]
+        # scale is IID on the argmax axis
+        iid_scale = np.array([np.pi, np.e])[:, None, None]
+
+        s = pt.random.gumbel(loc=0, scale=1, size=size) * iid_scale + loc
+        x = pt.argmax(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
+
+        # Test same result for lifted loc / scale
+        equiv_s = pt.random.gumbel(loc=loc, scale=iid_scale, size=size)
+        equiv_x = pt.argmax(equiv_s, axis=axis)
+        equiv_x_prob = pt.exp(logp(equiv_x, x_vv))
+        np.testing.assert_allclose(equiv_x_prob.eval({x_vv: x_vv_test}), expected_probs)
+
+        # Test argmin not supported
+        invalid_x = pt.argmin(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+        # Test non-iid scale on argmax axis not supported
+        non_iid_scale = np.array([1, np.pi, np.e])[None, :, None]
+        invalid_s = pt.random.gumbel(
+            loc=loc,
+            scale=non_iid_scale,
+            size=size,
+        )
+        invalid_x = pt.argmax(invalid_s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+    def test_implicit_size(self):
+        probs = np.array([[0.1, 0.5], [0.9, 0.5]])
+        s = pt.random.exponential(scale=1 / probs)
+        x = pt.argmin(s, axis=0)
+
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [0, 0]
+        np.testing.assert_allclose(x_prob.eval({x_vv: x_vv_test}), [0.1, 0.5])
+
+    def test_multiple_axes(self):
+        probs = np.array([0.1, 0.2, 0.7])
+        s = pt.random.exponential(scale=1 / probs, size=(2, 4, 3))
+        x = pt.argmin(s, axis=(0, -1))
+        assert x.type.shape == (4,)
+        x_vv = x.type()
+
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = [0, 1, 0, 5]
+        # We are selecting among 2x repeated scales
+        expected = (np.tile(probs, 2) / 2)[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected,
+        )
+
+        x = pt.argmin(s, axis=None)
+        assert x.type.shape == ()
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = 15
+        # We are selecting among 8x repeated scales
+        expected = (np.broadcast_to(probs / 8, (2, 4, 3)).ravel()[x_vv_test],)
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected,
+        )
+
+    @pytest.mark.xfail(
+        raises=NotImplementedError,
+        reason="Implicitly depends on https://github.com/pymc-devs/pytensor/issues/1851",
+    )
+    def test_derived_frechet(self):
+        probs = np.array([0.1, 0.2, 0.7])
+        # Frechet is simply an exponentiated gumbel
+        # Since exponentiation is monotonic it doesn't change the result of argmax,
+        # and the probability is therefore the same as that of the argmin(gumbel)
+        s = pt.exp(pt.random.gumbel(loc=pt.log(probs)))
+        x = pt.argmax(s)
+        x_vv = x.type()
+
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = 1
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            probs[x_vv_test],
+        )
