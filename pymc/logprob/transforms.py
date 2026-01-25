@@ -103,6 +103,8 @@ from pytensor.tensor.math import (
     sub,
     tanh,
     true_div,
+    variadic_add,
+    variadic_mul,
 )
 from pytensor.tensor.variable import TensorVariable
 
@@ -517,12 +519,12 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
         transform_inputs = (measurable_input, power)
         transform = PowerTransform(power=power)
     elif isinstance(scalar_op, Add):
-        transform_inputs = (measurable_input, pt.add(*other_inputs))
+        transform_inputs = (measurable_input, variadic_add(*other_inputs))
         transform = LocTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
     elif isinstance(scalar_op, Mul):
-        transform_inputs = (measurable_input, pt.mul(*other_inputs))
+        transform_inputs = (measurable_input, variadic_mul(*other_inputs))
         transform = ScaleTransform(
             transform_args_fn=lambda *inputs: inputs[-1],
         )
