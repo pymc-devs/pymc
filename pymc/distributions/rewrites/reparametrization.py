@@ -26,6 +26,7 @@ from pytensor.tensor.extra_ops import broadcast_arrays
 from pytensor.tensor.math import and_, argmax, ceil, cos, exp, log, sqrt
 from pytensor.tensor.random.basic import (
     BernoulliRV,
+    BetaRV,
     CategoricalRV,
     CauchyRV,
     DirichletRV,
@@ -49,6 +50,7 @@ from pytensor.tensor.random.basic import (
     WeibullRV,
 )
 from pytensor.tensor.slinalg import cholesky
+from pytensor.tensor.special import softmax
 
 reparametrization_trick_db = RewriteDatabaseQuery(include=["random_reparametrization_trick"])
 
@@ -80,6 +82,21 @@ def bernoulli_reparametrization(fgraph, node):
 
 
 @register_random_reparametrization
+@node_rewriter([BetaRV])
+def beta_reparametrization(fgraph, node):
+    rng, size, alpha, beta = node.inputs
+    alpha, beta = broadcast_arrays(alpha, beta)
+    next_rng, gamma_a = gamma_reparametrization_impl(rng, size, alpha, 1).owner.outputs
+    log_gamma_a = log(gamma_a)
+    log_gamma_b = log(gamma_reparametrization_impl(next_rng, size, beta, 1))
+    # Compute gamma_a / (gamma_a + gamma_b) without losing precision.
+    log_max = pt.max(pt.stack([log_gamma_a, log_gamma_b], axis=0), axis=0)
+    gamma_a_scaled = exp(log_gamma_a - log_max)
+    gamma_b_scaled = exp(log_gamma_b - log_max)
+    return gamma_a_scaled / (gamma_a_scaled + gamma_b_scaled)
+
+
+@register_random_reparametrization
 @node_rewriter([CategoricalRV])
 def categorical_reparametrization(fgraph, node):
     rng, size, p = node.inputs
@@ -106,7 +123,9 @@ def loc_scale_reparametrization(fgraph, node):
 @register_random_reparametrization
 @node_rewriter([DirichletRV])
 def dirichlet_reparametrization(fgraph, node):
-    raise NotImplementedError("DirichletRV is not reparametrizable")
+    rng, size, alpha = node.inputs
+    log_gamma_samples = log(gamma_reparametrization_impl(rng, size, alpha, 1))
+    return softmax(log_gamma_samples, -1)
 
 
 @register_random_reparametrization
@@ -127,7 +146,7 @@ def gamma_reparametrization(fgraph, node):
 @node_rewriter([InvGammaRV])
 def inv_gamma_reparametrization(fgraph, node):
     rng, size, shape, scale = node.inputs
-    return 1 / gamma_reparametrization_impl(rng, size, shape, scale)
+    return 1 / gamma_reparametrization_impl(rng, size, shape, 1 / scale)
 
 
 def gamma_reparametrization_impl(rng, size, shape, scale):
@@ -203,7 +222,7 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
         log_boosting_dist / alpha_orig,
         0,
     )
-    return exp(log(d) + log(V) + log_boost) * scale
+    return exp(log(d) + log(V) + log_boost + log(scale))
 
 
 @register_random_reparametrization
