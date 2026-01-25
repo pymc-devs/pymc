@@ -150,6 +150,7 @@ class ProgressBarManager:
         self.total_draws = draws + tune
         self.chains = chains
         self._backend: ProgressBackend
+
         if not show_progress:
             self._backend = NullProgressBackend()
         elif in_marimo_notebook():
@@ -158,7 +159,7 @@ class ProgressBarManager:
                 total_draws=self.total_draws,
                 combined=self.combined_progress,
                 full_stats=self.full_stats,
-                css_theme=progressbar_theme,
+                css_theme=progressbar_theme if isinstance(progressbar_theme, str) else None,
             )
         else:
             self._backend = RichProgressBackend(
@@ -168,7 +169,7 @@ class ProgressBarManager:
                 full_stats=self.full_stats,
                 progress_columns=progress_columns,
                 progress_stats=progress_stats,
-                theme=progressbar_theme,
+                theme=progressbar_theme if isinstance(progressbar_theme, Theme) else None,
             )
 
     def __enter__(self) -> ProgressBackend:
@@ -255,7 +256,11 @@ def create_simple_progress(
         return NullSimpleProgress()
 
     elif in_marimo_notebook():
-        return MarimoSimpleProgress(theme=progressbar_theme)
+        return MarimoSimpleProgress(
+            theme=progressbar_theme if isinstance(progressbar_theme, str) else None
+        )
 
     else:
-        return RichSimpleProgress(theme=progressbar_theme)
+        return RichSimpleProgress(
+            theme=progressbar_theme if isinstance(progressbar_theme, Theme) else None
+        )

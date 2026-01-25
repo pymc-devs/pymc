@@ -13,7 +13,7 @@
 #   limitations under the License.
 
 from collections.abc import Iterable
-from typing import Any
+from typing import Any, Self
 
 from rich.box import SIMPLE_HEAD
 from rich.console import Console
@@ -212,11 +212,11 @@ class RichProgressBackend:
             include_headers=True,
         )
 
-    def __enter__(self) -> Progress:
+    def __enter__(self) -> Self:
         """Enter the context manager and initialize tasks."""
-        progress = self._progress.__enter__()
+        self._progress.__enter__()
         self._initialize_tasks()
-        return progress
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager."""
@@ -281,7 +281,8 @@ class RichProgressBackend:
         if task_id is None:
             return
 
-        speed, unit = compute_draw_speed(self._progress.tasks[chain_idx].elapsed, draw)
+        elapsed = self._progress.tasks[chain_idx].elapsed
+        speed, unit = compute_draw_speed(elapsed if elapsed is not None else 0.0, draw)
 
         self._progress.update(
             task_id,
