@@ -33,7 +33,7 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import InferenceData, dict_to_dataset
+from arviz import InferenceData
 from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
@@ -45,6 +45,7 @@ import pymc as pm
 from pymc.backends import RunType, TraceOrBackend, init_traces
 from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
+    dict_to_dataset_drop_incompatible_coords,
     find_constants,
     find_observations,
 )
@@ -389,14 +390,14 @@ def _sample_external_nuts(
         # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
         # gather observed and constant data as nutpie.sample() has no access to the PyMC model
         coords, dims = coords_and_dims_for_inferencedata(model)
-        constant_data = dict_to_dataset(
+        constant_data = dict_to_dataset_drop_incompatible_coords(
             find_constants(model),
             library=pm,
             coords=coords,
             dims=dims,
             default_dims=[],
         )
-        observed_data = dict_to_dataset(
+        observed_data = dict_to_dataset_drop_incompatible_coords(
             find_observations(model),
             library=pm,
             coords=coords,
