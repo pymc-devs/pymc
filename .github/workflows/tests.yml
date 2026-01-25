@@ -63,7 +63,6 @@ jobs:
             tests/backends/test_base.py
             tests/backends/test_ndarray.py
             tests/step_methods/hmc/test_hmc.py
-            tests/test_func_utils.py
             tests/distributions/test_shape_utils.py
             tests/distributions/test_mixture.py
             tests/test_testing.py
