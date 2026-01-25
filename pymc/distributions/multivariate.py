@@ -329,15 +329,22 @@ class PrecisionMvNormalRV(SymbolicMVNormalUsedInternally):
         )(rng, size, mean, tau)
 
 
-@_logprob.register
-def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, tau, **kwargs):
-    [value] = value
+def _precision_mv_normal_logp(value, mean, tau):
     k = value.shape[-1].astype("floatX")
 
     delta = value - mean
     quadratic_form = delta.T @ tau @ delta
     logdet, posdef = _logdet_from_cholesky(pt.linalg.cholesky(tau, lower=True))
     logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
+
+    return logp, posdef
+
+
+@_logprob.register
+def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, tau, **kwargs):
+    [value] = value
+
+    logp, posdef = _precision_mv_normal_logp(value, mean, tau)
 
     return check_parameters(
         logp,
