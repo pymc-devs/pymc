@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import pytest
+
 from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
@@ -32,25 +34,23 @@ from pymc.dims import (
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
 
-def test_flat():
+@pytest.mark.parametrize(
+    "dims_dist,regular_dist,dim_kwargs",
+    [
+        (Flat, regular_distributions.Flat, {}),
+        (HalfFlat, regular_distributions.HalfFlat, {}),
+        (Cauchy, regular_distributions.Cauchy, {"alpha": 1, "beta": 2}),
+        (HalfCauchy, regular_distributions.HalfCauchy, {"beta": 2}),
+        (Gamma, regular_distributions.Gamma, {"mu": 2, "sigma": 3}),
+    ],
+)
+def test_distribution(dims_dist, regular_dist, dim_kwargs):
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
-        Flat("x", dims="a")
+        dims_dist("x", dims="a", **dim_kwargs)
 
     with Model(coords=coords) as reference_model:
-        regular_distributions.Flat("x", dims="a")
-
-    assert_equivalent_random_graph(model, reference_model)
-    assert_equivalent_logp_graph(model, reference_model)
-
-
-def test_halfflat():
-    coords = {"a": range(3)}
-    with Model(coords=coords) as model:
-        HalfFlat("x", dims="a")
-
-    with Model(coords=coords) as reference_model:
-        regular_distributions.HalfFlat("x", dims="a")
+        regular_dist("x", dims="a", **dim_kwargs)
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
@@ -136,30 +136,6 @@ def test_halfstudentt():
     assert_equivalent_logp_graph(model, reference_model)
 
 
-def test_cauchy():
-    coords = {"a": range(3)}
-    with Model(coords=coords) as model:
-        Cauchy("x", alpha=1, beta=2, dims="a")
-
-    with Model(coords=coords) as reference_model:
-        regular_distributions.Cauchy("x", alpha=1, beta=2, dims="a")
-
-    assert_equivalent_random_graph(model, reference_model)
-    assert_equivalent_logp_graph(model, reference_model)
-
-
-def test_halfcauchy():
-    coords = {"a": range(3)}
-    with Model(coords=coords) as model:
-        HalfCauchy("x", beta=2, dims="a")
-
-    with Model(coords=coords) as reference_model:
-        regular_distributions.HalfCauchy("x", beta=2, dims="a")
-
-    assert_equivalent_random_graph(model, reference_model)
-    assert_equivalent_logp_graph(model, reference_model)
-
-
 def test_beta():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
@@ -201,20 +177,6 @@ def test_exponential():
         regular_distributions.Exponential("x", dims="a")
         regular_distributions.Exponential("y", lam=2, dims="a")
         regular_distributions.Exponential("z", scale=3, dims="a")
-
-    assert_equivalent_random_graph(model, reference_model)
-    assert_equivalent_logp_graph(model, reference_model)
-
-
-def test_gamma():
-    coords = {"a": range(3)}
-    with Model(coords=coords) as model:
-        # Gamma("w", alpha=1, beta=1, dims="a")
-        Gamma("x", mu=2, sigma=3, dims="a")
-
-    with Model(coords=coords) as reference_model:
-        # regular_distributions.Gamma("w", alpha=1, beta=1, dims="a")
-        regular_distributions.Gamma("x", mu=2, sigma=3, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
