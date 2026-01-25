@@ -53,7 +53,6 @@ from pymc.distributions.shape_utils import (
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates_inner_fgraph,
     constant_fold,
@@ -510,9 +509,9 @@ class Distribution(metaclass=DistributionMeta):
         rv : TensorVariable
             The created random variable tensor, registered in the Model.
         """
-        try:
-            from pymc.model import Model
+        from pymc.model.core import Model
 
+        try:
             model = Model.get_context()
         except TypeError:
             raise TypeError(
@@ -551,6 +550,8 @@ class Distribution(metaclass=DistributionMeta):
         )
 
         # add in pretty-printing support
+        from pymc.printing import str_for_dist
+
         rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
         rv_out._repr_latex_ = types.MethodType(
             functools.partial(str_for_dist, formatting="latex"), rv_out
