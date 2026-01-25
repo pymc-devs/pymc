@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Functions for prior and posterior predictive sampling."""
-
 import logging
 import warnings
 

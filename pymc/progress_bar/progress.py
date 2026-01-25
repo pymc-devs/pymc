@@ -11,12 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Core progress bar types, utilities, and manager."""
-
 from __future__ import annotations
 
 from contextlib import nullcontext
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
+
+from rich.theme import Theme
 
 from pymc.progress_bar.marimo_progress import (
     MarimoProgressBackend,
@@ -29,8 +29,6 @@ from pymc.progress_bar.rich_progress import (
 )
 
 if TYPE_CHECKING:
-    from rich.theme import Theme
-
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
 
@@ -50,7 +48,7 @@ class ProgressBackend(Protocol):
     Any backend that implements this protocol can be used with ProgressBarManager.
     """
 
-    def __enter__(self) -> None: ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
@@ -173,7 +171,7 @@ class ProgressBarManager:
                 theme=progressbar_theme,
             )
 
-    def __enter__(self):
+    def __enter__(self) -> ProgressBackend:
         return self._backend.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -224,7 +222,7 @@ class ProgressBarManager:
 
 
 class SimpleProgressBackend(Protocol):
-    def __enter__(self) -> None: ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
@@ -238,13 +236,13 @@ class SimpleProgressBackend(Protocol):
 
 
 class NullSimpleProgress(nullcontext):
-    def add_task(self, *args, **kwargs):
+    def add_task(self, *args, **kwargs) -> int:
         return 0
 
-    def advance(self, *args, **kwargs):
+    def advance(self, *args, **kwargs) -> None:
         return
 
-    def update(self, *args, **kwargs):
+    def update(self, *args, **kwargs) -> None:
         return
 
 

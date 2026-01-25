@@ -11,13 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Marimo-based progress bar backend for HTML rendering in marimo notebooks."""
-
-from __future__ import annotations
-
 from collections.abc import Callable
 from time import perf_counter
-from typing import Any
+from typing import Any, Self
 
 from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
 from pymc.progress_bar.utils import compute_draw_speed
@@ -310,7 +306,7 @@ class MarimoSimpleProgress:
         self._start_time: float = 0.0
         self._task_id = 0
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Enter the context manager."""
         self._mo_replace = _mo_create_replace()
         self._start_time = perf_counter()
@@ -356,8 +352,8 @@ class MarimoSimpleProgress:
     def update(
         self,
         task_id: int | None = None,
-        completed: int | None = None,
         refresh: bool = False,
+        completed: int | None = None,
         **kwargs,
     ) -> None:
         """Update the progress bar state.
@@ -366,10 +362,10 @@ class MarimoSimpleProgress:
         ----------
         task_id : int, optional
             Ignored (for interface compatibility)
-        completed : int, optional
-            Set completed count
         refresh : bool
             If True, force a render
+        completed : int, optional
+            Set completed count
         **kwargs
             Additional arguments ignored for compatibility
         """

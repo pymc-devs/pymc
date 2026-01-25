@@ -11,9 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Rich-based progress bar backend for terminal rendering."""
-
-from __future__ import annotations
 
 from collections.abc import Iterable
 from typing import Any
@@ -215,10 +212,11 @@ class RichProgressBackend:
             include_headers=True,
         )
 
-    def __enter__(self) -> RichProgressBackend:
+    def __enter__(self) -> Progress:
         """Enter the context manager and initialize tasks."""
-        self._progress.__enter__()
+        progress = self._progress.__enter__()
         self._initialize_tasks()
+        return progress
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager."""
