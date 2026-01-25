@@ -28,24 +28,6 @@ def format_time(seconds: float) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def abbreviate_stat_name(name: str) -> str:
-    """Abbreviate common statistic names for compact display."""
-    abbreviations = {
-        "divergences": "Div",
-        "diverging": "Div",
-        "step_size": "Step",
-        "tree_size": "Tree",
-        "tree_depth": "Depth",
-        "n_steps": "Steps",
-        "energy_error": "E-err",
-        "max_energy_error": "Max-E",
-        "mean_tree_accept": "Accept",
-        "scaling": "Scale",
-        "tune": "Tune",
-    }
-    return abbreviations.get(name, name[:6].capitalize())
-
-
 def in_marimo_notebook() -> bool:
     """Check if running inside a marimo notebook.
 
