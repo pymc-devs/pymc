@@ -895,6 +895,7 @@ def compile(
     outputs,
     random_seed: SeedSequenceSeed = None,
     mode=None,
+    check_parameter_opt=None,
     **kwargs,
 ) -> Function:
     """Use ``pytensor.function`` with specialized pymc rewrites always enabled.
@@ -945,17 +946,10 @@ def compile(
         rngs = cast(list[SharedVariable], list(rng_updates))
         reseed_rngs(rngs, random_seed)
 
-    # If called inside a model context, see if check_bounds flag is set to False
-    try:
-        from pymc.model import modelcontext
-
-        model = modelcontext(None)
-        check_bounds = model.check_bounds
-    except TypeError:
-        check_bounds = True
-    check_parameter_opt = (
-        "local_check_parameter_to_ninf_switch" if check_bounds else "local_remove_check_parameter"
-    )
+    # Use provided check_parameter_opt or default to local_check_parameter_to_ninf_switch
+    # The caller (typically Model.compile_fn) is responsible for determining the right rewrite
+    if check_parameter_opt is None:
+        check_parameter_opt = "local_check_parameter_to_ninf_switch"
 
     mode = get_mode(mode)
     opt_qry = mode.provided_optimizer.including("random_make_inplace", check_parameter_opt)
