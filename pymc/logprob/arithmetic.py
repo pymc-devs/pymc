@@ -33,36 +33,49 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
+"""Measurable rewrites for arithmetic operations."""
 
-"""Conversion of PyMC graphs into logp graphs."""
+from pytensor import tensor as pt
+from pytensor.graph.basic import Apply
+from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor.math import Sum
+from pytensor.tensor.random.basic import NormalRV
+from pytensor.tensor.type_other import NoneTypeT
+from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.basic import (
-    conditional_logp,
-    icdf,
-    logccdf,
-    logcdf,
-    logp,
-    transformed_conditional_logp,
-)
-
-# Add rewrites to the DBs
-import pymc.logprob.binary
-import pymc.logprob.censoring
-import pymc.logprob.arithmetic
-import pymc.logprob.cumsum
-import pymc.logprob.checks
-import pymc.logprob.linalg
-import pymc.logprob.mixture
-import pymc.logprob.order
-import pymc.logprob.scan
-import pymc.logprob.switch
-import pymc.logprob.tensor
-import pymc.logprob.transforms
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
-__all__ = (
-    "icdf",
-    "logccdf",
-    "logcdf",
-    "logp",
+@node_rewriter([Sum])
+def sum_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    [base_var] = node.inputs
+    if base_var.owner is None:
+        return None
+
+    latent_op = base_var.owner.op
+    if not isinstance(latent_op, NormalRV):
+        return None
+
+    rng, size, mu, sigma = base_var.owner.inputs
+
+    if isinstance(size.type, NoneTypeT):
+        mu_b, sigma_b = pt.broadcast_arrays(mu, sigma)
+    else:
+        mu_b = pt.broadcast_to(mu, size)  # type: ignore[arg-type]
+        sigma_b = pt.broadcast_to(sigma, size)  # type: ignore[arg-type]
+
+    axis = node.op.axis
+    mu_sum = pt.sum(mu_b, axis=axis)
+    sigma_sum = pt.sqrt(pt.sum(pt.square(sigma_b), axis=axis))
+
+    sum_rv = latent_op(mu_sum, sigma_sum, rng=rng, size=None)
+    return [sum_rv]
+
+
+measurable_ir_rewrites_db.register(
+    "sum_of_normals",
+    sum_of_normals,
+    "basic",
+    "arithmetic",
 )

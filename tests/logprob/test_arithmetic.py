@@ -34,35 +34,33 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-"""Conversion of PyMC graphs into logp graphs."""
+import numpy as np
+import pytest
 
-from pymc.logprob.basic import (
-    conditional_logp,
-    icdf,
-    logccdf,
-    logcdf,
-    logp,
-    transformed_conditional_logp,
-)
+from pytensor import tensor as pt
 
-# Add rewrites to the DBs
-import pymc.logprob.binary
-import pymc.logprob.censoring
-import pymc.logprob.arithmetic
-import pymc.logprob.cumsum
-import pymc.logprob.checks
-import pymc.logprob.linalg
-import pymc.logprob.mixture
-import pymc.logprob.order
-import pymc.logprob.scan
-import pymc.logprob.switch
-import pymc.logprob.tensor
-import pymc.logprob.transforms
+from pymc.logprob.basic import logp
 
 
-__all__ = (
-    "icdf",
-    "logccdf",
-    "logcdf",
-    "logp",
-)
+@pytest.mark.parametrize("axis", (None, 0))
+def test_sum_of_normals_logprob(axis):
+    mu = pt.constant([[1.0, 2.0, 3.0], [0.5, 1.5, 2.5]])
+    sigma = pt.constant([[1.0, 2.0, 3.0], [1.5, 2.5, 3.5]])
+
+    x_rv = pt.random.normal(mu, sigma, name="x")
+    x_sum = pt.sum(x_rv, axis=axis)
+    x_sum_vv = pt.scalar("x_sum")
+
+    sum_logp = logp(x_sum, x_sum_vv)
+
+    ref_mu = pt.sum(mu, axis=axis)
+    ref_sigma = pt.sqrt(pt.sum(pt.square(sigma), axis=axis))
+    ref_rv = pt.random.normal(ref_mu, ref_sigma, name="ref")
+    ref_vv = pt.scalar("ref_vv")
+    ref_logp = logp(ref_rv, ref_vv)
+
+    test_val = 0.5
+    np.testing.assert_allclose(
+        sum_logp.eval({x_sum_vv: test_val}),
+        ref_logp.eval({ref_vv: test_val}),
+    )

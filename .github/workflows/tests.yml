@@ -119,6 +119,7 @@ jobs:
             tests/backends/test_zarr.py
             tests/distributions/test_truncated.py
             tests/logprob/test_abstract.py
+            tests/logprob/test_arithmetic.py
             tests/logprob/test_basic.py
             tests/logprob/test_binary.py
             tests/logprob/test_checks.py
