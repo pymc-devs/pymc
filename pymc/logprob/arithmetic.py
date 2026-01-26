@@ -39,10 +39,9 @@ from pytensor import tensor as pt
 from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import Sum
 from pytensor.tensor.random.basic import NormalRV
-from pytensor.tensor.type_other import NoneConst, NoneTypeT
+from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
@@ -58,23 +57,19 @@ def sum_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
     if not isinstance(latent_op, NormalRV):
         return None
 
-    mu, sigma = latent_op.dist_params(base_var.owner)
+    rng, size, mu, sigma = base_var.owner.inputs
 
-    size = latent_op.size_param(base_var.owner)
-    if size is None or isinstance(size.type, NoneTypeT):
-        target_shape = broadcast_shape(mu, sigma)  # type: ignore[arg-type]
+    if isinstance(size.type, NoneTypeT):
+        mu_b, sigma_b = pt.broadcast_arrays(mu, sigma)
     else:
-        target_shape = size  # type: ignore[assignment]
-
-    mu_b = pt.broadcast_to(mu, target_shape)  # type: ignore[arg-type]
-    sigma_b = pt.broadcast_to(sigma, target_shape)  # type: ignore[arg-type]
+        mu_b = pt.broadcast_to(mu, size)  # type: ignore[arg-type]
+        sigma_b = pt.broadcast_to(sigma, size)  # type: ignore[arg-type]
 
     axis = node.op.axis
     mu_sum = pt.sum(mu_b, axis=axis)
     sigma_sum = pt.sqrt(pt.sum(pt.square(sigma_b), axis=axis))
 
-    rng = base_var.owner.inputs[0]
-    sum_rv = latent_op.make_node(rng, NoneConst, mu_sum, sigma_sum).outputs[1]
+    sum_rv = latent_op(mu_sum, sigma_sum, rng=rng, size=None)
     return [sum_rv]
 
 
