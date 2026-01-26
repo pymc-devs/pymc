@@ -13,7 +13,6 @@
 #   limitations under the License.
 import warnings
 
-import numpy as np
 import pytensor
 import pytest
 
@@ -42,11 +41,6 @@ def strict_float32():
             yield
     else:
         yield
-
-
-@pytest.fixture(scope="function", autouse=False)
-def seeded_test():
-    np.random.seed(20160911)
 
 
 @pytest.fixture
