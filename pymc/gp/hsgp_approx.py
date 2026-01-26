@@ -17,6 +17,7 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
+from typing import Literal
 
 import numpy as np
 import pytensor.tensor as pt
@@ -28,6 +29,7 @@ from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
 TensorLike = np.ndarray | pt.TensorVariable
+BoundaryConditionType = Literal["dirichlet", "neumann"]
 
 
 def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
@@ -44,12 +46,222 @@ def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     return L
 
 
-def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
-    """Calculate eigenvalues of the Laplacian."""
+def calc_eigenvalues_dirichlet(L: TensorLike, m: Sequence[int]) -> np.ndarray:
+    """Calculate eigenvalues of the Laplacian for Dirichlet boundary conditions.
+
+    Computes eigenvalues λ_j = (πj/(2L))² for indices j = 1, 2, ..., m.
+
+    Parameters
+    ----------
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    m : Sequence[int]
+        The number of basis vectors to use for each dimension.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array of shape ``(prod(m), len(m))`` containing the eigenvalues.
+
+    See Also
+    --------
+    calc_eigenvalues_neumann : Eigenvalues for Neumann boundary conditions.
+    calc_eigenvectors_dirichlet : Corresponding eigenvectors (sine basis).
+
+    Notes
+    -----
+    For Dirichlet boundary conditions, the eigenfunctions satisfy f(±L) = 0
+    (function values are zero at the boundaries).
+
+    References
+    ----------
+    .. [1] Solin, A., Särkkä, S. (2019). Hilbert Space Methods for Reduced-Rank
+           Gaussian Process Regression. Statistics and Computing, 30, 419-446.
+    """
     S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
-
     return np.square((np.pi * S_arr) / (2 * L))
+
+
+def calc_eigenvalues_neumann(L: TensorLike, m: Sequence[int]) -> np.ndarray:
+    """Calculate eigenvalues of the Laplacian for Neumann boundary conditions.
+
+    Computes eigenvalues λ_j = (πj/(2L))² for indices j = 1, 2, ..., m.
+
+    The constant eigenfunction (j=0) is intentionally excluded to avoid
+    identifiability issues with the model intercept or mean function.
+
+    Parameters
+    ----------
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    m : Sequence[int]
+        The number of basis vectors to use for each dimension.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array of shape ``(prod(m), len(m))`` containing the eigenvalues.
+
+    See Also
+    --------
+    calc_eigenvalues_dirichlet : Eigenvalues for Dirichlet boundary conditions.
+    calc_eigenvectors_neumann : Corresponding eigenvectors (cosine basis).
+
+    Notes
+    -----
+    For Neumann boundary conditions, the eigenfunctions satisfy f'(±L) = 0
+    (zero derivative at the boundaries). Unlike the theoretical Neumann
+    spectrum which starts at j=0, we start at j=1 to exclude the constant
+    eigenfunction and prevent non-identifiable models.
+
+    References
+    ----------
+    .. [1] Solin, A., Särkkä, S. (2019). Hilbert Space Methods for Reduced-Rank
+           Gaussian Process Regression. Statistics and Computing, 30, 419-446.
+    """
+    # Start at j=1 to exclude constant eigenfunction (identifiability)
+    S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
+    S_arr = np.vstack([s.flatten() for s in S]).T
+    return np.square((np.pi * S_arr) / (2 * L))
+
+
+def calc_eigenvalues(
+    L: TensorLike,
+    m: Sequence[int],
+    boundary: BoundaryConditionType = "dirichlet",
+) -> np.ndarray:
+    """Calculate eigenvalues of the Laplacian.
+
+    Parameters
+    ----------
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    m : Sequence[int]
+        The number of basis vectors to use for each dimension.
+    boundary : {"dirichlet", "neumann"}, default "dirichlet"
+        The type of boundary condition for the Laplacian eigenbasis.
+
+    Returns
+    -------
+    np.ndarray
+        A 2D array of shape ``(prod(m), len(m))`` containing the eigenvalues.
+
+    See Also
+    --------
+    calc_eigenvalues_dirichlet : Eigenvalues for Dirichlet boundary conditions.
+    calc_eigenvalues_neumann : Eigenvalues for Neumann boundary conditions.
+    """
+    match boundary:
+        case "dirichlet":
+            return calc_eigenvalues_dirichlet(L, m)
+        case "neumann":
+            return calc_eigenvalues_neumann(L, m)
+
+
+def calc_eigenvectors_dirichlet(
+    Xs: TensorLike,
+    L: TensorLike,
+    eigvals: TensorLike,
+    m: Sequence[int],
+) -> pt.TensorVariable:
+    """Calculate eigenvectors of the Laplacian for Dirichlet boundary conditions.
+
+    Computes sine-based eigenfunctions φ_j(x) = (1/√L) · sin(√λ_j · (x + L)).
+
+    Parameters
+    ----------
+    Xs : array-like
+        Input locations of shape ``(n, D)`` where ``n`` is the number of points
+        and ``D`` is the number of active dimensions.
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    eigvals : array-like
+        Eigenvalues from ``calc_eigenvalues_dirichlet``.
+    m : Sequence[int]
+        The number of basis vectors for each dimension.
+
+    Returns
+    -------
+    pt.TensorVariable
+        A 2D tensor of shape ``(n, prod(m))`` containing the basis vectors.
+
+    See Also
+    --------
+    calc_eigenvectors_neumann : Eigenvectors for Neumann boundary conditions.
+    calc_eigenvalues_dirichlet : Corresponding eigenvalues.
+
+    Notes
+    -----
+    For Dirichlet boundary conditions, eigenfunctions satisfy f(±L) = 0.
+
+    References
+    ----------
+    .. [1] Solin, A., Särkkä, S. (2019). Hilbert Space Methods for Reduced-Rank
+           Gaussian Process Regression. Statistics and Computing, 30, 419-446.
+    """
+    m_star = int(np.prod(m))
+    phi = pt.ones((Xs.shape[0], m_star))
+    for d in range(len(m)):
+        c = 1.0 / pt.sqrt(L[d])
+        term1 = pt.sqrt(eigvals[:, d])
+        term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * pt.sin(term1 * term2)
+    return phi
+
+
+def calc_eigenvectors_neumann(
+    Xs: TensorLike,
+    L: TensorLike,
+    eigvals: TensorLike,
+    m: Sequence[int],
+) -> pt.TensorVariable:
+    """Calculate eigenvectors of the Laplacian for Neumann boundary conditions.
+
+    Computes cosine-based eigenfunctions φ_j(x) = (1/√L) · cos(√λ_j · (x + L))
+    for j = 1, 2, ..., m.
+
+    Parameters
+    ----------
+    Xs : array-like
+        Input locations of shape ``(n, D)`` where ``n`` is the number of points
+        and ``D`` is the number of active dimensions.
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    eigvals : array-like
+        Eigenvalues from ``calc_eigenvalues_neumann``.
+    m : Sequence[int]
+        The number of basis vectors for each dimension.
+
+    Returns
+    -------
+    pt.TensorVariable
+        A 2D tensor of shape ``(n, prod(m))`` containing the basis vectors.
+
+    See Also
+    --------
+    calc_eigenvectors_dirichlet : Eigenvectors for Dirichlet boundary conditions.
+    calc_eigenvalues_neumann : Corresponding eigenvalues.
+
+    Notes
+    -----
+    For Neumann boundary conditions, eigenfunctions satisfy f'(±L) = 0.
+    The constant eigenfunction (j=0) is excluded to avoid identifiability
+    issues with the model intercept or mean function.
+
+    References
+    ----------
+    .. [1] Solin, A., Särkkä, S. (2019). Hilbert Space Methods for Reduced-Rank
+           Gaussian Process Regression. Statistics and Computing, 30, 419-446.
+    """
+    m_star = int(np.prod(m))
+    phi = pt.ones((Xs.shape[0], m_star))
+    for d in range(len(m)):
+        c = 1.0 / pt.sqrt(L[d])  # Same normalization as Dirichlet
+        term1 = pt.sqrt(eigvals[:, d])
+        term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
+        phi *= c * pt.cos(term1 * term2)
+    return phi
 
 
 def calc_eigenvectors(
@@ -57,21 +269,40 @@ def calc_eigenvectors(
     L: TensorLike,
     eigvals: TensorLike,
     m: Sequence[int],
-):
+    boundary: BoundaryConditionType = "dirichlet",
+) -> pt.TensorVariable:
     """Calculate eigenvectors of the Laplacian.
 
     These are used as basis vectors in the HSGP approximation.
+
+    Parameters
+    ----------
+    Xs : array-like
+        Input locations of shape ``(n, D)``.
+    L : array-like
+        The boundary of the approximation domain for each dimension.
+    eigvals : array-like
+        Eigenvalues from the corresponding ``calc_eigenvalues`` function.
+    m : Sequence[int]
+        The number of basis vectors for each dimension.
+    boundary : {"dirichlet", "neumann"}, default "dirichlet"
+        The type of boundary condition for the Laplacian eigenbasis.
+
+    Returns
+    -------
+    pt.TensorVariable
+        A 2D tensor of shape ``(n, prod(m))`` containing the basis vectors.
+
+    See Also
+    --------
+    calc_eigenvectors_dirichlet : Eigenvectors for Dirichlet boundary conditions.
+    calc_eigenvectors_neumann : Eigenvectors for Neumann boundary conditions.
     """
-    m_star = int(np.prod(m))
-
-    phi = pt.ones((Xs.shape[0], m_star))
-    for d in range(len(m)):
-        c = 1.0 / pt.sqrt(L[d])
-        term1 = pt.sqrt(eigvals[:, d])
-        term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
-        phi *= c * pt.sin(term1 * term2)
-
-    return phi
+    match boundary:
+        case "dirichlet":
+            return calc_eigenvectors_dirichlet(Xs, L, eigvals, m)
+        case "neumann":
+            return calc_eigenvectors_neumann(Xs, L, eigvals, m)
 
 
 def calc_basis_periodic(
@@ -208,6 +439,29 @@ class HSGP(Base):
     parametrization: str
         Whether to use the `centered` or `noncentered` parametrization when multiplying the
         basis by the coefficients.
+    boundary : {"dirichlet", "neumann"}, default "dirichlet"
+        The type of boundary condition for the Laplacian eigenbasis.
+
+        - ``"dirichlet"``: Eigenfunctions are sine-based and satisfy f(±L) = 0.
+          This forces the GP approximation toward zero at the domain boundaries.
+        - ``"neumann"``: Eigenfunctions are cosine-based and satisfy f'(±L) = 0.
+          The derivative is flat at boundaries, which is often more natural for
+          regression problems where boundary effects are not desired.
+
+        Both options use the same number of basis vectors (m) and exclude any
+        constant eigenfunctions to ensure model identifiability.
+
+        **Note**: Neumann boundary conditions typically require significantly larger
+        values of `m` and/or `c` compared to Dirichlet to achieve equivalent
+        approximation quality, since cosine basis functions don't vanish at boundaries.
+        As a practical guideline:
+
+        - For standard applications: use 1.5-2x more basis vectors (e.g., `m=[300]`
+          instead of `m=[200]`) and increase `c` by 50% (e.g., `c=3.0` instead of
+          `c=2.0`)
+        - The approximation quality improves with larger `m` and `c`, but at higher
+          computational cost
+        - Validate approximation quality against a full GP on a hold-out set if needed
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
     mean_func: None, instance of Mean
@@ -262,6 +516,7 @@ class HSGP(Base):
         c: numbers.Real | None = None,
         drop_first: bool = False,
         parametrization: str | None = "noncentered",
+        boundary: BoundaryConditionType = "dirichlet",
         *,
         mean_func: Mean = Zero(),
         cov_func: Covariance,
@@ -293,6 +548,9 @@ class HSGP(Base):
         if parametrization not in ["centered", "noncentered"]:
             raise ValueError("`parametrization` must be either 'centered' or 'noncentered'.")
 
+        if boundary not in ("dirichlet", "neumann"):
+            raise ValueError("`boundary` must be 'dirichlet' or 'neumann'.")
+
         if drop_first:
             warnings.warn(
                 "The drop_first argument will be deprecated in future versions."
@@ -308,6 +566,7 @@ class HSGP(Base):
             self._L = pt.as_tensor(L).eval()  # make sure L cannot be changed
         self._c = c
         self._parametrization = parametrization
+        self._boundary = boundary
         self._X_center = None
 
         super().__init__(mean_func=mean_func, cov_func=cov_func)
@@ -416,8 +675,8 @@ class HSGP(Base):
         else:
             self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
+        eigvals = calc_eigenvalues(self.L, self._m, self._boundary)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, self._boundary)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
@@ -487,8 +746,8 @@ class HSGP(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m)
+        eigvals = calc_eigenvalues(self.L, self._m, self._boundary)
+        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m, self._boundary)
         i = int(self._drop_first is True)
 
         if self._parametrization == "noncentered":
