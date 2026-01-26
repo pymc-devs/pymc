@@ -905,6 +905,11 @@ def sample(
         if isinstance(step, list):
             step = CompoundStep(step)
 
+    # Validate that InferenceData conversion will work before sampling
+    # This catches shape/dimension mismatches early to avoid wasting compute time
+    if return_inferencedata:
+        _validate_idata_conversion(model, initial_points[0], idata_kwargs or {})
+
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
         trace_vars = model.replace_rvs_by_values(trace_vars)
@@ -1148,6 +1153,113 @@ def _sample_return(
                 return drop_warning_stat(idata)
             return idata
     return mtrace
+
+
+def _validate_idata_conversion(
+    model: Model, initial_point: PointType, idata_kwargs: dict[str, Any]
+) -> None:
+    """Validate that InferenceData can be created from the model before sampling.
+
+    This smoke test catches shape mismatches between model coords/dims and variable
+    shapes before expensive sampling operations begin. It checks that variable shapes
+    match their declared dims.
+
+    Parameters
+    ----------
+    model : pm.Model
+        The PyMC model to validate.
+    initial_point : dict
+        Starting point dictionary mapping variable names to initial values.
+    idata_kwargs : dict
+        Additional keyword arguments to pass to to_inference_data.
+
+    Raises
+    ------
+    ValueError
+        If dimensions don't match between coords and variable shapes.
+
+    See Also
+    --------
+    https://github.com/pymc-devs/pymc/issues/7891
+    """
+    try:
+        # Get coords and dims from the model
+        coords, dims = coords_and_dims_for_inferencedata(model)
+
+        # Override with user-provided values if any
+        if "coords" in idata_kwargs:
+            coords.update(idata_kwargs["coords"])
+        if "dims" in idata_kwargs:
+            dims.update(idata_kwargs["dims"])
+
+        # Get shapes for all unobserved RVs and deterministics
+        # We'll evaluate their shapes using PyTensor's shape computation
+        vars_to_check = model.unobserved_RVs + model.deterministics
+
+        # Create givens dict to substitute observed values
+        givens = [(obs, model.rvs_to_values[obs]) for obs in model.observed_RVs]
+
+        # Compile a function to get shapes of all variables
+        shape_outputs = [var.shape for var in vars_to_check]
+
+        import pytensor
+
+        shape_func = pytensor.function(
+            inputs=[],
+            outputs=shape_outputs,
+            givens=givens,
+            mode=pytensor.compile.mode.FAST_COMPILE,
+            on_unused_input="ignore",
+        )
+
+        # Evaluate to get actual shapes
+        actual_shapes_list = shape_func()
+
+        # Create mapping of variable names to shapes
+        var_shapes = {}
+        for var, shape_tuple in zip(vars_to_check, actual_shapes_list):
+            var_shapes[var.name] = tuple(shape_tuple)
+
+        # Now validate that dims specifications match actual shapes
+        for var_name, actual_shape in var_shapes.items():
+            if var_name in dims:
+                declared_dims = dims[var_name]
+
+                # Check that number of dimensions matches
+                if len(declared_dims) != len(actual_shape):
+                    raise ValueError(
+                        f"Variable '{var_name}' has shape {actual_shape} ({len(actual_shape)} dimensions) "
+                        f"but dims={declared_dims} specifies {len(declared_dims)} dimensions. "
+                        f"The number of dimensions must match."
+                    )
+
+                # Check that each dimension's length matches the coordinate length
+                for i, (dim_name, actual_len) in enumerate(zip(declared_dims, actual_shape)):
+                    if dim_name in coords:
+                        expected_len = len(coords[dim_name])
+                        if expected_len != actual_len:
+                            raise ValueError(
+                                f"Shape mismatch for variable '{var_name}':\n"
+                                f"  Dimension '{dim_name}' (axis {i}): variable has length {actual_len}, "
+                                f"but coord '{dim_name}' has length {expected_len}.\n"
+                                f"  Variable shape: {actual_shape}\n"
+                                f"  Declared dims: {declared_dims}\n"
+                                f"  Coord lengths: {{{', '.join(f'{d}: {len(coords[d])}' for d in declared_dims if d in coords)}}}\n\n"
+                                f"This mismatch will cause InferenceData conversion to fail after sampling.\n"
+                                f"Check that the dims specification matches the actual variable shape."
+                            )
+
+    except Exception as e:
+        # If this is already our ValueError, re-raise it as-is
+        if isinstance(e, ValueError) and "Shape mismatch for variable" in str(e):
+            raise ValueError(
+                f"Pre-sampling validation failed: {e}\n\n"
+                f"See https://github.com/pymc-devs/pymc/issues/7891 for more information."
+            ) from None
+
+        # For other exceptions, just skip validation - don't break existing code
+        # The user will get the error during idata conversion anyway
+        _log.debug(f"Pre-sampling validation skipped due to error: {type(e).__name__}: {e}")
 
 
 def _check_start_shape(model, start: PointType):
