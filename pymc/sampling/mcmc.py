@@ -627,6 +627,12 @@ def sample(
         of their execution will write the partial results onto the storage. If the
         storage persist on disk, these results should be available even after a server
         crash. See :class:`~pymc.backends.zarr.ZarrTrace` for more information.
+        .. note::
+
+            The ``ZarrTrace`` backend is currently only supported when using
+            PyMC’s built-in samplers. It is not compatible with external samplers
+            such as NumPyro (``nuts_sampler="numpyro"``), which bypass PyMC’s
+            internal sampling loop.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
