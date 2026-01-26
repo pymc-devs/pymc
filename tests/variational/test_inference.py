@@ -28,7 +28,7 @@ from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
 
-pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test", "fail_on_warning")
+pytestmark = pytest.mark.usefixtures("strict_float32", "rng", "fail_on_warning")
 
 
 @pytest.mark.parametrize("score", [True, False])
