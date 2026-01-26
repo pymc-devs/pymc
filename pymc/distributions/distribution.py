@@ -854,7 +854,7 @@ def partial_observed_rv_logprob(op, values, dist, mask, **kwargs):
     antimask = ~mask
     # We don't need it to be completely folded, just to avoid any RVs in the graph of the shape
     [folded_shape] = constant_fold([dist.shape], raise_not_constant=False)
-    joined_value = pt.empty(folded_shape)
+    joined_value = pt.empty(folded_shape, dtype=obs_value.dtype)
     joined_value = pt.set_subtensor(joined_value[mask], unobs_value)
     joined_value = pt.set_subtensor(joined_value[antimask], obs_value)
     joined_logp = logp(dist, joined_value)
