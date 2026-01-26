@@ -23,6 +23,7 @@ import pytest
 
 from pytensor import shared
 from pytensor.tensor.variable import TensorVariable
+from scipy import stats
 
 import pymc as pm
 
@@ -336,20 +337,6 @@ class TestData:
         assert "columns" in pmodel.dim_lengths
         assert pmodel.dim_lengths["columns"].eval() == 7
 
-    def test_set_coords_through_pmdata(self):
-        with pm.Model() as pmodel:
-            pm.Data("population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]})
-            pm.Data(
-                "temperature",
-                [[15, 20, 22, 17], [18, 22, 21, 12]],
-                dims=("city", "season"),
-                coords={"season": ["winter", "spring", "summer", "fall"]},
-            )
-        assert "city" in pmodel.coords
-        assert "season" in pmodel.coords
-        assert pmodel.coords["city"] == ("Tinyvil", "Minitown")
-        assert pmodel.coords["season"] == ("winter", "spring", "summer", "fall")
-
     def test_symbolic_coords(self):
         """
         Since v4 dimensions can be created without passing coordinate values.
@@ -369,140 +356,6 @@ class TestData:
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
 
-    def test_implicit_coords_series(self, seeded_test):
-        pd = pytest.importorskip("pandas")
-        ser_sales = pd.Series(
-            data=np.random.randint(low=0, high=30, size=22),
-            index=pd.date_range(start="2020-05-01", periods=22, freq="24h", name="date"),
-            name="sales",
-        )
-        with pm.Model() as pmodel:
-            pm.Data("sales", ser_sales, dims="date", infer_dims_and_coords=True)
-
-        assert "date" in pmodel.coords
-        assert len(pmodel.coords["date"]) == 22
-        assert pmodel.named_vars_to_dims == {"sales": ("date",)}
-
-    def test_implicit_coords_dataframe(self, seeded_test):
-        pd = pytest.importorskip("pandas")
-        N_rows = 5
-        N_cols = 7
-        df_data = pd.DataFrame()
-        for c in range(N_cols):
-            df_data[f"Column {c + 1}"] = np.random.normal(size=(N_rows,))
-        df_data.index.name = "rows"
-        df_data.columns.name = "columns"
-
-        # infer coordinates from index and columns of the DataFrame
-        with pm.Model() as pmodel:
-            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
-
-        assert "rows" in pmodel.coords
-        assert "columns" in pmodel.coords
-        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
-
-    def test_implicit_coords_polars_series(self):
-        pl = pytest.importorskip("polars")
-
-        ser_sales = pl.Series(
-            "sales",
-            np.random.randint(low=0, high=30, size=22),
-        )
-
-        with pm.Model(coords={"date": range(22)}) as pmodel:
-            pm.Data("sales", ser_sales, dims=["date"], infer_dims_and_coords=True)
-
-            with pytest.raises(
-                ValueError,
-                match="Dimension 'date2' not found in DataFrame index or model coordinates",
-            ):
-                pm.Data("sales_invalid", ser_sales, dims=["date2"], infer_dims_and_coords=True)
-
-        assert "date" in pmodel.coords
-        assert len(pmodel.coords["date"]) == 22
-
-    def test_implicit_coords_polars_dataframe(self):
-        pl = pytest.importorskip("polars")
-
-        size = (5, 7)
-        df_data = pl.DataFrame(
-            np.random.normal(size=size),
-            schema={f"Column {c + 1}": pl.Float64 for c in range(size[1])},
-        )
-
-        # We currently count on the presence of an index in the DataFrame to infer dims. Polars has no index, so
-        # this case errors because we can't find the 'rows' dim.
-
-        with pytest.raises(
-            ValueError, match="Dimension 'rows' not found in DataFrame index or model coordinates"
-        ):
-            with pm.Model() as pmodel:
-                pm.Data(
-                    "observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True
-                )
-
-    def test_implicit_coords_agnostic(self):
-        pl = pytest.importorskip("polars")
-        pd = pytest.importorskip("pandas")
-
-        size = (5, 7)
-        data_np = np.random.normal(size=size)
-        columns = [f"C{c + 1}" for c in range(size[1])]
-        rows = [f"R{r + 1}" for r in range(size[0])]
-        df_pd = pd.DataFrame(data_np, columns=columns, index=rows)
-        df_pd.index.name = "rows"
-        df_pl = pl.DataFrame(
-            data_np,
-            schema=dict.fromkeys(columns, pl.Float64),
-        )
-
-        def make_model(coords, df, dims, infer_dims_and_coords) -> pm.Model:
-            with pm.Model(coords=coords) as pmodel:
-                pm.Data("X", df, dims=dims, infer_dims_and_coords=infer_dims_and_coords)
-            return pmodel
-
-        expected_coords = {"rows": tuple(rows), "columns": tuple(columns)}
-        dims = ("rows", "columns")
-
-        m = make_model(coords=None, df=df_pd, dims=dims, infer_dims_and_coords=True)
-        assert m.coords == expected_coords
-        np.testing.assert_allclose(m["X"].eval(), df_pd.values)
-
-        # TODO: Is infer_dims_and_coords supposed to infer dims? The current behavior is that it doesn't, it only
-        #  infers the dimension labels.
-        for df in [df_pd, df_pl]:
-            m = make_model(coords=None, df=df, dims=None, infer_dims_and_coords=True)
-            assert m.coords == {}
-
-            m = make_model(coords=None, df=df, dims=dims, infer_dims_and_coords=False)
-            assert m.coords == {"rows": None, "columns": None}
-
-            m = make_model(coords=None, df=df, dims=None, infer_dims_and_coords=False)
-            assert m.coords == {}
-
-        # Pandas is special because we will infer the index dim from the DataFrame index, if one exists.
-        m = make_model(coords=None, df=df_pd, dims=dims, infer_dims_and_coords=True)
-        assert m.coords == expected_coords
-
-        # Polars (and other dataframe backends with no index concept) won't infer dims from index. This case currently
-        # errors, because we can't find the 'rows' dim in either the DataFrame columns or the model coords.
-        with pytest.raises(
-            ValueError,
-            match="Dimension 'rows' not found in DataFrame index or model coordinates",
-        ):
-            make_model(coords=None, df=df_pl, dims=dims, infer_dims_and_coords=True)
-
-    def test_implicit_coords_xarray(self):
-        xr = pytest.importorskip("xarray")
-        data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))
-        with pm.Model() as pmodel:
-            pm.Data("observations", data, dims=("x", "y"), infer_dims_and_coords=True)
-        assert "x" in pmodel.coords
-        assert "y" in pmodel.coords
-        assert pmodel.named_vars_to_dims == {"observations": ("x", "y")}
-        assert tuple(pmodel.coords["x"]) == tuple(data.coords["x"].to_numpy())
-        assert tuple(pmodel.coords["y"]) == tuple(data.coords["y"].to_numpy())
-
     def test_data_kwargs(self):
         strict_value = True
         allow_downcast_value = False
@@ -515,6 +368,70 @@ class TestData:
             )
         assert data.container.strict is strict_value
         assert data.container.allow_downcast is allow_downcast_value
+
+    @pytest.mark.parametrize(
+        "input_type",
+        [
+            "ndarray",
+            "list",
+            "pytensor_constant",
+            "pandas",
+            "polars",
+            "dask",
+            "xarray",
+            "tensor_constant",
+            "shared_variable",
+        ],
+    )
+    def test_data_input_types(self, input_type):
+        """Test that pm.Data accepts various input data types."""
+        input_data = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        expected = stats.norm(loc=0, scale=1).logpdf(input_data)
+
+        match input_type:
+            case "ndarray":
+                value = input_data.copy()
+            case "list":
+                value = input_data.tolist()
+            case "pytensor_constant":
+                value = pt.constant(input_data)
+            case "pandas":
+                pd = pytest.importorskip("pandas")
+                value = pd.DataFrame(input_data)
+            case "polars":
+                pl = pytest.importorskip("polars")
+                value = pl.DataFrame(input_data)
+            case "dask":
+                dd = pytest.importorskip("dask.dataframe")
+                pd = pytest.importorskip("pandas")
+                value = dd.from_pandas(pd.DataFrame(input_data), npartitions=1)
+            case "xarray":
+                xr = pytest.importorskip("xarray")
+                value = xr.DataArray(
+                    input_data[None],
+                    dims=["x", "y", "z"],
+                    coords={
+                        "x": [0],
+                        "y": [0, 1, 2],
+                        "z": [
+                            0,
+                            1,
+                        ],
+                    },
+                )
+            case "tensor_constant":
+                value = pytensor.tensor.constant(input_data)
+            case "shared_variable":
+                value = pytensor.shared(input_data)
+            case _:
+                raise ValueError(f"Unknown input_type: {input_type}")
+
+        with pm.Model():
+            data = pm.Data("test_data", value)
+            x = pm.Normal("x", mu=0, sigma=1)
+            result = pm.logp(x, data).eval()
+
+        np.testing.assert_array_almost_equal(*np.broadcast_arrays(result, expected))
 
     def test_masked_array_error(self):
         with pm.Model():

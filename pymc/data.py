@@ -11,15 +11,14 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import importlib
 import io
 import typing
 import urllib.request
+import warnings
 
 from collections.abc import Sequence
 from copy import copy
 from functools import singledispatch
-from typing import Union, cast
 
 import narwhals as nw
 import numpy as np
@@ -27,13 +26,15 @@ import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
-from narwhals.typing import IntoFrameT, IntoSeriesT
+from narwhals.typing import IntoDataFrame, IntoSeries
 from pytensor.compile import SharedVariable
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.basic import IntegersRV
 from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.xtensor.type import XTensorConstant
+from scipy.sparse import sparray, spmatrix
 
 from pymc.exceptions import ShapeError
 from pymc.pytensorf import convert_data, rvs_in_graph
@@ -41,6 +42,18 @@ from pymc.vartypes import isgenerator
 
 if typing.TYPE_CHECKING:
     from pymc.model.core import Model
+
+InputDataType: typing.TypeAlias = (
+    np.ndarray
+    | np.ma.MaskedArray
+    | list
+    | sparray
+    | spmatrix
+    | IntoDataFrame
+    | IntoSeries
+    | xr.DataArray
+    | Variable
+)
 
 __all__ = [
     "Data",
@@ -163,181 +176,109 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     return mb_tensors if len(variables) else mb_tensors[0]
 
 
-def _handle_none_dims(
-    dims: Sequence[str | None] | None, ndim: int
-) -> Sequence[str | None] | Sequence[None]:
-    if dims is None:
-        return [None] * ndim
-    else:
-        return dims
-
-
 @singledispatch
-def determine_coords(
-    value: typing.Any,
-    model: "Model",
-    dims: Sequence[str | None] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    """Determine coordinate values from data or the model (via ``dims``)."""
-    raise NotImplementedError(
-        f"Cannot determine coordinates for data of type {type(value)}, please provide `coords` explicitly or "
-        f"convert the data to a supported type"
-    )
-
-
-@determine_coords.register(np.ndarray)
-def determine_array_coords(
-    value: np.ndarray,
-    model: "Model",
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    if coords is None:
-        coords = {}
-
-    if dims is None:
-        return coords, _handle_none_dims(dims, value.ndim)
-
-    if len(dims) != value.ndim:
-        raise ShapeError(
-            "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-            actual=value.shape,
-            expected=len(value.shape),
-        )
-
-    for size, dim in zip(value.shape, dims):
-        coord = model.coords.get(dim, None)
-        if coord is None and dim is not None:
-            coords[dim] = range(size)
-
-    return coords, _handle_none_dims(dims, value.ndim)
-
-
-@determine_coords.register(xr.DataArray)
-def determine_xarray_coords(
-    value: xr.DataArray,
-    model: "Model",
-    dims: Sequence[str | None] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    if coords is None:
-        coords = {}
-
-    if dims is None:
-        return coords, _handle_none_dims(dims, value.ndim)
-
-    for dim in dims:
-        dim_name = dim
-        # str is applied because dim entries may be None
-        coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
-
-    return coords, _handle_none_dims(dims, value.ndim)
-
-
-def _dataframe_agnostic_coords(
-    value: IntoFrameT | IntoSeriesT,
-    model: "Model",
-    ndim_in: int = 2,
-    dims: Sequence[str | None] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    if coords is None:
-        coords = {}
-
-    value = nw.from_native(value, allow_series=ndim_in == 1)  # type: ignore[call-overload]
-    if isinstance(value, nw.LazyFrame):
-        value = value.collect()
-
-    if dims is None:
-        return coords, _handle_none_dims(dims, ndim_in)
-
-    index = nw.maybe_get_index(value)  # type: ignore[arg-type]
-
-    if len(dims) != ndim_in:
-        raise ShapeError(
-            "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-            actual=value.shape,  # type: ignore[union-attr]
-            expected=len(dims),
-        )
-
-    index_dim = dims[0]
-    if index_dim is not None:
-        if index is not None:
-            coords[index_dim] = tuple(index)
-        elif index_dim in model.coords:
-            coords[index_dim] = model.coords[index_dim]  # type: ignore[assignment]
-        else:
-            raise ValueError(
-                f"Dimension '{index_dim}' not found in DataFrame index or model coordinates. Cannot infer "
-                "index coordinates."
-            )
-
-    if len(dims) > 1:
-        column_dim = dims[1]
-        if column_dim is not None:
-            coords[column_dim] = value.columns  # type: ignore[union-attr]
-
-    return coords, _handle_none_dims(dims, ndim_in)
-
-
-def _series_agnostic_coords(
-    value: IntoSeriesT,
-    model: "Model",
-    dims: Sequence[str | None] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-    return _dataframe_agnostic_coords(
-        value,
-        ndim_in=1,
-        model=model,
-        dims=dims,
-        coords=coords,
-    )
-
-
-def _register_dataframe_backend(library_name: str):
+def prepare_user_data(data):
     try:
-        library = importlib.import_module(library_name)
-
-        @determine_coords.register(library.Series)
-        def determine_series_coords(
-            value: IntoSeriesT,
-            model: "Model",
-            dims: Sequence[str] | None = None,
-            coords: dict[str, Sequence | np.ndarray] | None = None,
-        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-            return _series_agnostic_coords(value, model=model, dims=dims, coords=coords)
-
-        @determine_coords.register(library.DataFrame)
-        def determine_dataframe_coords(
-            value: IntoFrameT,
-            model: "Model",
-            dims: Sequence[str] | None = None,
-            coords: dict[str, Sequence | np.ndarray] | None = None,
-        ) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None] | Sequence[None]]:
-            return _dataframe_agnostic_coords(value, model=model, dims=dims, coords=coords)
-
-    except ImportError:
-        # Dataframe backends are optional
-        pass
+        # We can't explicitly dispatch on all possible DataFrame/Series types supported by narwhals without making them
+        # package dependencies. So in the generic function we can just try to convert using narwhals, then
+        # dispatch based on the native Narwhals types if it works.
+        df = nw.from_native(data, allow_series=True)
+        return prepare_user_data(df)
+    except TypeError:
+        raise TypeError(f"Cannot convert data of type {type(data)}")
 
 
-_register_dataframe_backend("pandas")
-_register_dataframe_backend("polars")
-_register_dataframe_backend("dask.dataframe")
+@prepare_user_data.register(float | int | complex | bool)
+def _prepare_scalar(data: float | int | complex | bool) -> np.ndarray:
+    return np.array(data)
+
+
+@prepare_user_data.register(nw.DataFrame)
+def _prepare_dataframe(data: nw.DataFrame) -> np.ndarray | np.ma.MaskedArray:
+    array = data.to_numpy()
+
+    # Some backends (like polars) distinguish between NaN and null/missing values.
+    # We consider both as missing values to be masked.
+    mask = data.with_columns(nw.all().fill_nan(None).is_null()).to_numpy()
+    if mask.any():
+        return np.ma.MaskedArray(array, mask=mask)
+    return array
+
+
+@prepare_user_data.register(nw.Series)
+def _prepare_series(data: nw.Series) -> np.ndarray | np.ma.MaskedArray:
+    array = data.to_numpy()
+
+    # Some backends (like polars) distinguish between NaN and null/missing values.
+    # We consider both as missing values to be masked.
+    mask = data.fill_nan(None).is_null().to_numpy()
+    if mask.any():
+        return np.ma.MaskedArray(array, mask=mask)
+    return array
+
+
+@prepare_user_data.register(nw.LazyFrame)
+def _prepare_lazyframe(data: nw.LazyFrame) -> np.ndarray | np.ma.MaskedArray:
+    df = data.collect()
+    return prepare_user_data(df)
+
+
+@prepare_user_data.register(np.ndarray)
+def _prepare_ndarray(data: np.ndarray) -> np.ndarray | np.ma.MaskedArray:
+    mask = np.isnan(data)
+    if mask.any():
+        return np.ma.MaskedArray(data, mask=mask)
+    return data
+
+
+@prepare_user_data.register(list)
+def _prepare_list(data: list) -> np.ndarray | np.ma.MaskedArray:
+    array = np.array(data)
+    return prepare_user_data(array)
+
+
+@prepare_user_data.register(np.ma.MaskedArray)
+def _prepare_masked_array(data: np.ma.MaskedArray) -> np.ndarray | np.ma.MaskedArray:
+    if not data.mask.any():
+        return data.filled()
+    return data
+
+
+@prepare_user_data.register(sparray)
+@prepare_user_data.register(spmatrix)
+def _prepare_sparse(data: sparray | spmatrix) -> sparray | spmatrix:
+    # TODO: Handle missing values?
+    return data
+
+
+@prepare_user_data.register(xr.DataArray)
+def _prepare_data_array(data: xr.DataArray) -> np.ndarray | np.ma.MaskedArray:
+    values = data.to_numpy()
+    return prepare_user_data(values)
+
+
+@prepare_user_data.register(TensorConstant | XTensorConstant)
+def _prepare_pytensor_variable(
+    data: TensorConstant | XTensorConstant,
+) -> np.ndarray | np.ma.MaskedArray:
+    return prepare_user_data(data.data)
+
+
+@prepare_user_data.register(SharedVariable)
+def _prepare_shared_variable(data: SharedVariable) -> np.ndarray | np.ma.MaskedArray:
+    return prepare_user_data(data.get_value(borrow=True))
 
 
 def Data(
     name: str,
-    value: IntoFrameT | IntoSeriesT | xr.DataArray | np.ndarray,
+    value: InputDataType,
     *,
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    model: Union["Model", None] = None,
+    infer_dims_and_coords: bool = False,
+    model: "Model | None" = None,
     **kwargs,
-) -> SharedVariable | TensorConstant:
+) -> SharedVariable:
     """Create a data container that registers a data variable with the model.
 
     Depending on the ``mutable`` setting (default: True), the variable
@@ -359,23 +300,30 @@ def Data(
     ----------
     name : str
         The name for this variable.
-    value : array_like or Narwhals-compatible Series or DataFrame
-        A value to associate with this variable.
-    dims : str, tuple of str or tuple of None, optional
-        Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when ``value`` is a Series or DataFrame. The
-        ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
-        documentation for more information about dimensions and coordinates:
-        :ref:`arviz:quickstart`.
-        If this parameter is not specified, the random variables will not have dimension
+    value : array_like or narwhals-compatible DataFrame/Series
+        A value to associate with this variable. Accepts numpy arrays, lists, or any
+        narwhals-compatible DataFrame/Series (pandas, polars, dask, pyarrow, etc.).
+        Will be converted to a numpy array.
+    dims : str or tuple of str, optional
+        Dimension names of the data variable. See ArviZ documentation for more
+        information about dimensions and coordinates: :ref:`arviz:quickstart`.
+        If this parameter is not specified, the data variable will not have dimension
         names.
     coords : dict, optional
         Coordinate values to set for new dimensions introduced by this ``Data`` variable.
-    export_index_as_coords : bool
-        Deprecated, previous version of "infer_dims_and_coords"
+
+        .. warning::
+            This parameter is deprecated and will be removed in future versions. Add coordinates
+            explicitly by passing them to :class:`pymc.Model` during model creation instead.
+
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
+
+        .. warning::
+            This parameter is deprecated and will be removed in future versions. Add coordinates
+            explicitly by passing them to :class:`pymc.Model` during model creation instead.
+
     model : pymc.Model, optional
         Model to which to add the data variable. If not specified, the data variable
         will be added to the model on the context stack.
@@ -405,13 +353,24 @@ def Data(
     """
     from pymc.model.core import modelcontext
 
-    if coords is None:
-        coords = {}
+    if coords is not None:
+        warnings.warn(
+            "`coords` parameter in `pm.Data` is deprecated and will be removed in future versions. It is "
+            "no longer respected. Add coordinates explicitly by passing them to `pymc.Model` during model creation "
+            "instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
-    if isinstance(value, list):
-        value = np.array(value)
+    if infer_dims_and_coords:
+        warnings.warn(
+            "`infer_dims_and_coords` parameter in `pm.Data` is deprecated and will be removed in future "
+            "versions. It is no longer respected. Add coordinates explicitly by passing them to `pymc.Model` during "
+            "model creation instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
-    # Add data container to the named variables of the model.
     try:
         model = modelcontext(model)
     except TypeError:
@@ -427,8 +386,9 @@ def Data(
             "Generator type data is no longer supported with pm.Data.",
             # It messes up InferenceData and can't be the input to a SharedVariable.
         )
-    else:
-        arr = convert_data(value)
+
+    value = prepare_user_data(value)
+    arr = convert_data(value)
 
     if isinstance(arr, np.ma.MaskedArray):
         raise NotImplementedError(
@@ -447,25 +407,19 @@ def Data(
             expected=x.ndim,
         )
 
-    new_dims: Sequence[str | None] | Sequence[None] | None
-    if infer_dims_and_coords:
-        coords, new_dims = determine_coords(value, model, dims)
-    else:
-        new_dims = dims
-
-    if new_dims:
+    if dims:
         xshape = x.shape
         # Register new dimension lengths
-        for d, dname in enumerate(new_dims):
+        for d, dname in enumerate(dims):
             if dname not in model.dim_lengths and dname is not None:
                 model.add_coord(
                     name=dname,
                     # Note: Coordinate values can't be taken from
                     # the value, because it could be N-dimensional.
-                    values=coords.get(dname, None),
+                    values=None,
                     length=xshape[d],
                 )
 
-    model.register_data_var(x, dims=new_dims)
+    model.register_data_var(x, dims=dims)
 
     return x
