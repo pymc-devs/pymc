@@ -22,8 +22,7 @@ import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph import node_rewriter
-from pytensor.graph.basic import Apply, Variable
-from pytensor.graph.op import Op
+from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.sparse.basic import DenseFromSparse
 from pytensor.sparse.math import sp_sum
@@ -44,7 +43,6 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     normalize_size_param,
 )
-from pytensor.tensor.type import TensorType
 from scipy import stats
 
 import pymc as pm
@@ -74,7 +72,11 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     to_tuple,
 )
-from pymc.distributions.transforms import Interval, ZeroSumTransform, _default_transform
+from pymc.distributions.transforms import (
+    CholeskyCorrTransform,
+    ZeroSumTransform,
+    _default_transform,
+)
 from pymc.logprob.abstract import _logprob
 from pymc.logprob.rewriting import (
     specialization_ir_rewrites_db,
@@ -897,50 +899,9 @@ class OrderedMultinomial:
         return _OrderedMultinomial.dist(*args, **kwargs)
 
 
-def posdef(AA):
-    try:
-        scipy.linalg.cholesky(AA)
-        return True
-    except scipy.linalg.LinAlgError:
-        return False
-
-
-class PosDefMatrix(Op):
-    """Check if input is positive definite. Input should be a square matrix."""
-
-    # Properties attribute
-    __props__ = ()
-
-    # Compulsory if itypes and otypes are not defined
-
-    def make_node(self, x):
-        x = pt.as_tensor_variable(x)
-        assert x.ndim == 2
-        o = TensorType(dtype="bool", shape=[])()
-        return Apply(self, [x], [o])
-
-    # Python implementation:
-    def perform(self, node, inputs, outputs):
-        (x,) = inputs
-        (z,) = outputs
-        try:
-            z[0] = np.array(posdef(x), dtype="bool")
-        except Exception:
-            pm._log.exception("Failed to check if %s positive definite", x)
-            raise
-
-    def infer_shape(self, fgraph, node, shapes):
-        return [[]]
-
-    def grad(self, inp, grads):
-        (x,) = inp
-        return [x.zeros_like(pytensor.config.floatX)]
-
-    def __str__(self):
-        return "MatrixIsPositiveDefinite"
-
-
-matrix_pos_def = PosDefMatrix()
+def matrix_pos_def(X):
+    vec_eigh = pt.vectorize(eigh, "(n,n)->(n),(n)")
+    return pt.all(vec_eigh(X)[0] > 0)
 
 
 class WishartRV(RandomVariable):
@@ -1138,37 +1099,36 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
 
 def _lkj_normalizing_constant(eta, n):
-    # TODO: This is mixing python branching with the potentially symbolic n and eta variables
-    if not isinstance(eta, int | float):
-        raise NotImplementedError("eta must be an int or float")
-    if not isinstance(n, int):
-        raise NotImplementedError("n must be an integer")
-    if eta == 1:
-        result = gammaln(2.0 * pt.arange(1, int((n - 1) / 2) + 1)).sum()
-        if n % 2 == 1:
-            result += (
+    result_1 = gammaln(2.0 * pt.arange(1, ((n - 1) / 2) + 1)).sum()
+    result_2 = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
+    k = pt.arange(1, n)
+
+    return pt.switch(
+        pt.eq(eta, 1.0),
+        pt.switch(
+            pt.eq(n % 2, 1.0),
+            result_1
+            + (
                 0.25 * (n**2 - 1) * pt.log(np.pi)
                 - 0.25 * (n - 1) ** 2 * pt.log(2.0)
-                - (n - 1) * gammaln(int((n + 1) / 2))
-            )
-        else:
-            result += (
+                - (n - 1) * gammaln((n + 1) / 2)
+            ),
+            result_1
+            + (
                 0.25 * n * (n - 2) * pt.log(np.pi)
                 + 0.25 * (3 * n**2 - 4 * n) * pt.log(2.0)
                 + n * gammaln(n / 2)
                 - (n - 1) * gammaln(n)
-            )
-    else:
-        result = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
-        k = pt.arange(1, n)
-        result += (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum()
-    return result
+            ),
+        ),
+        result_2 + (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum(),
+    )
 
 
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
 # be safely resized. Because of this, we add the thin SymbolicRandomVariable wrapper
 class _LKJCholeskyCovRV(SymbolicRandomVariable):
-    extended_signature = "[rng],(),(),(n)->[rng],(n)"
+    extended_signature = "[rng],[rng],(),(),(n)->[rng],[rng],(n)"
     _print_name = ("_lkjcholeskycov", "\\operatorname{_lkjcholeskycov}")
 
     @classmethod
@@ -1176,7 +1136,11 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
         n = pt.as_tensor(n, dtype="int64", ndim=0)
         eta = pt.as_tensor_variable(eta, ndim=0)
-        rng = pytensor.shared(np.random.default_rng())
+
+        # LKJCorr requries 2 random number generators
+        outer_rng = pytensor.shared(np.random.default_rng())
+        scan_rng = pytensor.shared(np.random.default_rng())
+
         size = normalize_size_param(size)
 
         # We resize the sd_dist automatically so that it has (size x n) independent
@@ -1200,12 +1164,11 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
         D = sd_dist.type(name="D")  # Make sd_dist opaque to OpFromGraph
         size = D.shape[:-1]
 
-        # We flatten the size to make operations easier, and then rebuild it
-        flat_size = pt.prod(size, dtype="int64")
-
-        next_rng, C = LKJCorrRV._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-        D_matrix = D.reshape((flat_size, n))
-        C *= D_matrix[..., :, None] * D_matrix[..., None, :]
+        next_outer_rng, next_scan_rng, C = LKJCorrRV._random_corr_matrix(
+            outer_rng=outer_rng, scan_rng=scan_rng, n=n, eta=eta, size=size
+        )
+        vec_diag = pt.vectorize(pt.diag, signature="(n)->(n,n)")
+        C = vec_diag(D) @ C @ vec_diag(D)
 
         tril_idx = pt.tril_indices(n, k=0)
         samples = pt.linalg.cholesky(C)[..., tril_idx[0], tril_idx[1]]
@@ -1217,12 +1180,12 @@ class _LKJCholeskyCovRV(SymbolicRandomVariable):
             samples = pt.reshape(samples, (*size, dist_shape))
 
         return _LKJCholeskyCovRV(
-            inputs=[rng, n, eta, D],
-            outputs=[next_rng, samples],
-        )(rng, n, eta, sd_dist)
+            inputs=[outer_rng, scan_rng, n, eta, D],
+            outputs=[next_outer_rng, next_scan_rng, samples],
+        )(outer_rng, scan_rng, n, eta, sd_dist)
 
     def update(self, node):
-        return {node.inputs[0]: node.outputs[0]}
+        return {node.inputs[0]: node.outputs[0], node.inputs[1]: node.outputs[1]}
 
 
 class _LKJCholeskyCov(Distribution):
@@ -1250,7 +1213,7 @@ class _LKJCholeskyCov(Distribution):
 
 @_change_dist_size.register(_LKJCholeskyCovRV)
 def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
-    n, eta, sd_dist = dist.owner.inputs[1:]
+    n, eta, sd_dist = dist.owner.inputs[2:]
 
     if expand:
         old_size = sd_dist.shape[:-1]
@@ -1260,7 +1223,7 @@ def change_LKJCholeksyCovRV_size(op, dist, new_size, expand=False):
 
 
 @_support_point.register(_LKJCholeskyCovRV)
-def _LKJCholeksyCovRV_support_point(op, rv, rng, n, eta, sd_dist):
+def _LKJCholeksyCovRV_support_point(op, rv, outer_rng, scan_rng, n, eta, sd_dist):
     diag_idxs = (pt.cumsum(pt.arange(1, n + 1)) - 1).astype("int32")
     support_point = pt.zeros_like(rv)
     support_point = pt.set_subtensor(support_point[..., diag_idxs], 1)
@@ -1269,12 +1232,12 @@ def _LKJCholeksyCovRV_support_point(op, rv, rng, n, eta, sd_dist):
 
 @_default_transform.register(_LKJCholeskyCovRV)
 def _LKJCholeksyCovRV_default_transform(op, rv):
-    _, n, _, _ = rv.owner.inputs
+    _, _, n, _, _ = rv.owner.inputs
     return transforms.CholeskyCovPacked(n)
 
 
 @_logprob.register(_LKJCholeskyCovRV)
-def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
+def _LKJCholeksyCovRV_logp(op, values, outer_rng, scan_rng, n, eta, sd_dist, **kwargs):
     (value,) = values
 
     if value.ndim > 1:
@@ -1491,10 +1454,10 @@ class LKJCholeskyCov:
 
 class LKJCorrRV(SymbolicRandomVariable):
     name = "lkjcorr"
-    extended_signature = "[rng],[size],(),()->[rng],(n)"
+    extended_signature = "[rng],[rng],[size],(),()->[rng],[rng],(n,n)"
     _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
 
-    def make_node(self, rng, size, n, eta):
+    def make_node(self, outer_rng, scan_rng, size, n, eta):
         n = pt.as_tensor_variable(n)
         if not all(n.type.broadcastable):
             raise ValueError("n must be a scalar.")
@@ -1503,78 +1466,84 @@ class LKJCorrRV(SymbolicRandomVariable):
         if not all(eta.type.broadcastable):
             raise ValueError("eta must be a scalar.")
 
-        return super().make_node(rng, size, n, eta)
+        return super().make_node(outer_rng, scan_rng, size, n, eta)
 
     @classmethod
-    def rv_op(cls, n: int, eta, *, rng=None, size=None):
-        # We flatten the size to make operations easier, and then rebuild it
+    def rv_op(cls, n: int, eta, *, outer_rng=None, scan_rng=None, size=None):
         n = pt.as_tensor(n, ndim=0, dtype=int)
         eta = pt.as_tensor(eta, ndim=0)
-        rng = normalize_rng_param(rng)
+        outer_rng = normalize_rng_param(outer_rng)
+        scan_rng = normalize_rng_param(scan_rng)
         size = normalize_size_param(size)
 
-        if rv_size_is_none(size):
-            flat_size = 1
-        else:
-            flat_size = pt.prod(size, dtype="int64")
-
-        next_rng, C = cls._random_corr_matrix(rng=rng, n=n, eta=eta, flat_size=flat_size)
-
-        triu_idx = pt.triu_indices(n, k=1)
-        samples = C[..., triu_idx[0], triu_idx[1]]
-
-        if rv_size_is_none(size):
-            samples = samples[0]
-        else:
-            dist_shape = (n * (n - 1)) // 2
-            samples = pt.reshape(samples, (*size, dist_shape))
+        outer_rng_out, scan_rng_out, C = cls._random_corr_matrix(
+            outer_rng=outer_rng, scan_rng=scan_rng, n=n, eta=eta, size=size
+        )
 
         return cls(
-            inputs=[rng, size, n, eta],
-            outputs=[next_rng, samples],
-        )(rng, size, n, eta)
-
-        return samples
+            inputs=[outer_rng, scan_rng, size, n, eta], outputs=[outer_rng_out, scan_rng_out, C]
+        )(outer_rng, scan_rng, size, n, eta)
 
     @classmethod
     def _random_corr_matrix(
-        cls, rng: Variable, n: int, eta: TensorVariable, flat_size: TensorVariable
+        cls,
+        outer_rng: Variable,
+        scan_rng: Variable,
+        n: int,
+        eta: TensorVariable,
+        size: TensorVariable,
     ) -> tuple[Variable, TensorVariable]:
-        # original implementation in R see:
-        # https://github.com/rmcelreath/rethinking/blob/master/R/distributions.r
+        size_is_none = rv_size_is_none(size)
+        size = () if size_is_none else size
 
-        beta = eta - 1.0 + n / 2.0
-        next_rng, beta_rvs = pt.random.beta(
-            alpha=beta, beta=beta, size=flat_size, rng=rng
+        beta0 = eta - 1.0 + n / 2.0
+
+        outer_rng_out, y0 = pt.random.beta(
+            alpha=beta0, beta=beta0, size=size, rng=outer_rng
         ).owner.outputs
-        r12 = 2.0 * beta_rvs - 1.0
-        P = pt.full((flat_size, n, n), pt.eye(n))
-        P = P[..., 0, 1].set(r12)
-        P = P[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
-        n = get_underlying_scalar_constant_value(n)
-        for mp1 in range(2, n):
-            beta -= 0.5
-            next_rng, y = pt.random.beta(
-                alpha=mp1 / 2.0, beta=beta, size=flat_size, rng=next_rng
+
+        r12 = 2.0 * y0 - 1.0
+
+        P0 = pt.full((*size, n, n), pt.eye(n))
+        P0 = P0[..., 0, 1].set(r12)
+        P0 = P0[..., 1, 1].set(pt.sqrt(1.0 - r12**2))
+
+        def step(mp1, beta, P, prev_rng):
+            beta_next = beta - 0.5
+
+            middle_rng, y = pt.random.beta(
+                alpha=mp1 / 2.0, beta=beta, size=size, rng=prev_rng
             ).owner.outputs
+
             next_rng, z = pt.random.normal(
-                loc=0, scale=1, size=(flat_size, mp1), rng=next_rng
+                loc=0, scale=1, size=(*size, mp1), rng=middle_rng
             ).owner.outputs
-            z = z / pt.sqrt(pt.einsum("ij,ij->i", z, z.copy()))[..., np.newaxis]
-            P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., np.newaxis]) * z)
+
+            ein_sig_z = "i, i->" if z.ndim == 1 else "...ij, ...ij->...i"
+
+            z = z / pt.sqrt(pt.einsum(ein_sig_z, z, z.copy()))[..., None]
+            P = P[..., 0:mp1, mp1].set(pt.sqrt(y[..., None]) * z)
             P = P[..., mp1, mp1].set(pt.sqrt(1.0 - y))
+
+            return (beta_next, P), {prev_rng: next_rng}
+
+        (_, P_seq), updates = pytensor.scan(
+            fn=step,
+            outputs_info=[beta0, P0],
+            sequences=[pt.arange(2, n)],
+            non_sequences=[scan_rng],
+            strict=True,
+        )
+
+        # This concatenation handles the case where n=2, and the output of the scan is 0-length.
+        P = pt.concatenate([P0[None], P_seq], axis=0)[-1]
+
         C = pt.einsum("...ji,...jk->...ik", P, P.copy())
-        return next_rng, C
+        (scan_rng_out,) = tuple(updates.values())
+
+        return outer_rng_out, scan_rng_out, C
 
 
-class MultivariateIntervalTransform(Interval):
-    name = "interval"
-
-    def log_jac_det(self, *args):
-        return super().log_jac_det(*args).sum(-1)
-
-
-# Returns list of upper triangular values
 class _LKJCorr(BoundedContinuous):
     rv_type = LKJCorrRV
     rv_op = LKJCorrRV.rv_op
@@ -1583,12 +1552,26 @@ class _LKJCorr(BoundedContinuous):
     def dist(cls, n, eta, **kwargs):
         n = pt.as_tensor_variable(n).astype(int)
         eta = pt.as_tensor_variable(eta)
+
+        # In general, RVs are expected to take an "rng" argument. We allow it here to prevent API break, but
+        # ignore it. This can be changed in the future if we relax the requirement that rng be a shared variable
+        # in a scan.
+        rng = kwargs.pop("rng", None)
+        if rng is not None:
+            warnings.warn(
+                "You passed a random generator to LKJCorr via the `rng` keyword argument, but it is not "
+                "used. To seed LKJCorr, pass two random generators via the `outer_rng` and `scan_rng` "
+                "keyword arguments.",
+            )
+
         return super().dist([n, eta], **kwargs)
 
-    def support_point(rv, *args):
-        return pt.zeros_like(rv)
+    @staticmethod
+    def support_point(rv: TensorVariable, *args):
+        return pt.broadcast_to(pt.eye(rv.shape[-1]), rv.shape)
 
-    def logp(value, n, eta):
+    @staticmethod
+    def logp(value: TensorVariable, n, eta):
         """
         Calculate logp of LKJ distribution at specified value.
 
@@ -1601,31 +1584,15 @@ class _LKJCorr(BoundedContinuous):
         -------
         TensorVariable
         """
-        if value.ndim > 1:
-            raise NotImplementedError("LKJCorr logp is only implemented for vector values (ndim=1)")
-
-        # TODO: PyTensor does not have a `triu_indices`, so we can only work with constant
-        #  n (or else find a different expression)
+        # n has to be a constant, otherwise the shape of the RV would not be fixed between draws.
         try:
             n = int(get_underlying_scalar_constant_value(n))
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
 
-        shape = n * (n - 1) // 2
-        tri_index = np.zeros((n, n), dtype="int32")
-        tri_index[np.triu_indices(n, k=1)] = np.arange(shape)
-        tri_index[np.triu_indices(n, k=1)[::-1]] = np.arange(shape)
-
-        value = pt.take(value, tri_index)
-        value = pt.fill_diagonal(value, 1)
-
-        # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-        try:
-            eta = float(get_underlying_scalar_constant_value(eta))
-        except NotScalarConstantError:
-            raise NotImplementedError("logp only implemented for constant `eta`")
         result = _lkj_normalizing_constant(eta, n)
         result += (eta - 1.0) * pt.log(det(value))
+
         return check_parameters(
             result,
             value >= -1,
@@ -1637,7 +1604,8 @@ class _LKJCorr(BoundedContinuous):
 
 @_default_transform.register(_LKJCorr)
 def lkjcorr_default_transform(op, rv):
-    return MultivariateIntervalTransform(-1.0, 1.0)
+    rng, scan_rng, shape, n, eta, *_ = rv.owner.inputs
+    return CholeskyCorrTransform(n=n, upper=False)
 
 
 class LKJCorr:
@@ -1660,10 +1628,6 @@ class LKJCorr:
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
-    return_matrix : bool, default=False
-        If True, returns the full correlation matrix.
-        False only returns the values of the upper triangular matrix excluding
-        diagonal in a single vector of length n(n-1)/2 for memory efficiency
 
     Notes
     -----
@@ -1678,7 +1642,7 @@ class LKJCorr:
             # Define the vector of fixed standard deviations
             sds = 3 * np.ones(10)
 
-            corr = pm.LKJCorr("corr", eta=4, n=10, return_matrix=True)
+            corr = pm.LKJCorr("corr", eta=4, n=10)
 
             # Define a new MvNormal with the given correlation matrix
             vals = sds * pm.MvNormal("vals", mu=np.zeros(10), cov=corr, shape=10)
@@ -1687,10 +1651,6 @@ class LKJCorr:
             vals_raw = pm.Normal("vals_raw", shape=10)
             chol = pt.linalg.cholesky(corr)
             vals = sds * pt.dot(chol, vals_raw)
-
-            # The matrix is internally still sampled as a upper triangular vector
-            # If you want access to it in matrix form in the trace, add
-            pm.Deterministic("corr_mat", corr)
 
 
     References
@@ -1701,26 +1661,28 @@ class LKJCorr:
         100(9), pp.1989-2001.
     """
 
-    def __new__(cls, name, n, eta, *, return_matrix=False, **kwargs):
-        c_vec = _LKJCorr(name, eta=eta, n=n, **kwargs)
-        if not return_matrix:
-            return c_vec
-        else:
-            return cls.vec_to_corr_mat(c_vec, n)
+    def __new__(cls, name, n, eta, **kwargs):
+        return_matrix = kwargs.pop("return_matrix", None)
+        if return_matrix is not None:
+            warnings.warn(
+                "The `return_matrix` argument is deprecated and has no effect. "
+                "LKJCorr always returns the correlation matrix.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return _LKJCorr(name, eta=eta, n=n, **kwargs)
 
     @classmethod
-    def dist(cls, n, eta, *, return_matrix=False, **kwargs):
-        c_vec = _LKJCorr.dist(eta=eta, n=n, **kwargs)
-        if not return_matrix:
-            return c_vec
-        else:
-            return cls.vec_to_corr_mat(c_vec, n)
-
-    @classmethod
-    def vec_to_corr_mat(cls, vec, n):
-        tri = pt.zeros(pt.concatenate([vec.shape[:-1], (n, n)]))
-        tri = pt.subtensor.set_subtensor(tri[(..., *np.triu_indices(n, 1))], vec)
-        return tri + pt.moveaxis(tri, -2, -1) + pt.diag(pt.ones(n))
+    def dist(cls, n, eta, **kwargs):
+        return_matrix = kwargs.pop("return_matrix", None)
+        if return_matrix is not None:
+            warnings.warn(
+                "The `return_matrix` argument is deprecated and has no effect. "
+                "LKJCorr always returns the correlation matrix.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        return _LKJCorr.dist(eta=eta, n=n, **kwargs)
 
 
 class MatrixNormalRV(RandomVariable):
