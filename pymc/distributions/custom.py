@@ -37,7 +37,6 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, rv_size_is_none
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import _logcdf, _logprob
-from pymc.model.core import new_or_existing_block_model_access
 from pymc.pytensorf import collect_default_updates
 
 
@@ -261,6 +260,8 @@ class _CustomSymbolicDist(Distribution):
         class_name: str,
         rng=None,
     ):
+        from pymc.model.core import new_or_existing_block_model_access
+
         size = normalize_size_param(size)
         # If it's NoneConst, just use that as the dummy
         dummy_size_param = size.type() if isinstance(size, TensorVariable) else size
@@ -821,11 +822,13 @@ class CustomDist:
 
     @classmethod
     def is_symbolic_random(self, random, dist_params):
+        from pymc.model.core import new_or_existing_block_model_access
+
         if random is None:
             return False
         # Try calling random with symbolic inputs
+        size = normalize_size_param(None)
         try:
-            size = normalize_size_param(None)
             with new_or_existing_block_model_access(
                 error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API to create such variables."
             ):

@@ -42,253 +42,408 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as sp
 
-import pymc as pm
-
-from pymc import logp
-from pymc.logprob import conditional_logp
+from pymc.distributions import Weibull
+from pymc.logprob import conditional_logp, logp
 from pymc.testing import assert_no_rvs
 
 
-def test_argmax():
-    """Test whether the logprob for ```pt.argmax``` is correctly rejected"""
-    x = pt.random.normal(0, 1, size=(3,))
-    x.name = "x"
-    x_argmax = pt.argmax(x, axis=-1)
-    x_max_value = pt.scalar("x_max_value", dtype=x_argmax.type.dtype)
+class TestMax:
+    def test_argmax(self):
+        """Test whether the logprob for ```pt.argmax``` is correctly rejected"""
+        x = pt.random.normal(0, 1, size=(3,))
+        x.name = "x"
+        x_argmax = pt.argmax(x, axis=-1)
+        x_max_value = pt.scalar("x_max_value", dtype=x_argmax.type.dtype)
 
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented for Argmax")):
-        logp(x_argmax, x_max_value)
+        with pytest.raises(
+            RuntimeError, match=re.escape("Logprob method not implemented for Argmax")
+        ):
+            logp(x_argmax, x_max_value)
 
-
-@pytest.mark.parametrize(
-    "pt_op",
-    [
-        pt.max,
-        pt.min,
-    ],
-)
-def test_non_iid_fails(pt_op):
-    """Test whether the logprob for ```pt.max``` or ```pt.min``` for non i.i.d is correctly rejected"""
-    x = pm.Normal.dist([0, 1, 2, 3, 4], 1, shape=(5,))
-    x.name = "x"
-    x_m = pt_op(x, axis=-1)
-    x_m_value = pt.scalar("x_value")
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        logp(x_m, x_m_value)
-
-
-@pytest.mark.parametrize(
-    "pt_op",
-    [
-        pt.max,
-        pt.min,
-    ],
-)
-def test_multivariate_rv_fails(pt_op):
-    _alpha = pt.scalar()
-    _k = pt.iscalar()
-    x = pm.StickBreakingWeights.dist(_alpha, _k)
-    x.name = "x"
-    x_m = pt_op(x, axis=-1)
-    x_m_value = pt.scalar("x_value")
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        logp(x_m, x_m_value)
-
-
-@pytest.mark.parametrize(
-    "pt_op",
-    [
-        pt.max,
-        pt.min,
-    ],
-)
-def test_categorical(pt_op):
-    """Test whether the logprob for ```pt.max``` for unsupported distributions is correctly rejected"""
-    x = pm.Categorical.dist([1, 1, 1, 1], shape=(5,))
-    x.name = "x"
-    x_m = pt_op(x, axis=-1)
-    x_m_value = pt.scalar("x_value", dtype=x.type.dtype)
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        logp(x_m, x_m_value)
-
-
-@pytest.mark.parametrize(
-    "pt_op",
-    [
-        pt.max,
-        pt.min,
-    ],
-)
-def test_non_supp_axis(pt_op):
-    """Test whether the logprob for ```pt.max``` for unsupported axis is correctly rejected"""
-    x = pt.random.normal(0, 1, size=(3, 3))
-    x.name = "x"
-    x_m = pt_op(x, axis=-1)
-    x_m_value = pt.vector("x_value")
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        x_max_logprob = logp(x_m, x_m_value)
-
-
-@pytest.mark.parametrize(
-    "shape, value, axis",
-    [
-        (3, 0.85, -1),
-        (3, 0.01, 0),
-        (2, 0.2, None),
-        (4, 0.5, 0),
-        ((3, 4), 0.9, None),
-        ((3, 4), 0.75, (1, 0)),
-    ],
-)
-def test_max_logprob(shape, value, axis):
-    """Test whether the logprob for ```pt.max``` produces the corrected
-
-    The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
-        U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
-    for all 1<=k<=n
-    """
-    x = pt.random.uniform(0, 1, size=shape)
-    x.name = "x"
-    x_max = pt.max(x, axis=axis)
-    x_max_value = pt.scalar("x_max_value")
-    x_max_logprob = logp(x_max, x_max_value)
-
-    assert_no_rvs(x_max_logprob)
-
-    test_value = value
-
-    n = np.prod(shape)
-    beta_rv = pt.random.beta(n, 1, name="beta")
-    beta_vv = beta_rv.clone()
-    beta_rv_logprob = logp(beta_rv, beta_vv)
-
-    np.testing.assert_allclose(
-        beta_rv_logprob.eval({beta_vv: test_value}),
-        (x_max_logprob.eval({x_max_value: test_value})),
-        rtol=1e-06,
+    @pytest.mark.parametrize(
+        "pt_op",
+        [
+            pt.max,
+            pt.min,
+        ],
     )
+    def test_non_iid_fails(self, pt_op):
+        """Test whether the logprob for ```pt.max``` or ```pt.min``` for non i.i.d is correctly rejected"""
+        x = pt.random.normal([0, 1, 2, 3, 4], 1, size=(5,))
+        x.name = "x"
+        x_m = pt_op(x, axis=-1)
+        x_m_value = pt.scalar("x_value")
+        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+            logp(x_m, x_m_value)
 
-
-@pytest.mark.parametrize(
-    "shape, value, axis",
-    [
-        (3, 0.85, -1),
-        (3, 0.01, 0),
-        (2, 0.2, None),
-        (4, 0.5, 0),
-        ((3, 4), 0.9, None),
-        ((3, 4), 0.75, (1, 0)),
-    ],
-)
-def test_min_logprob(shape, value, axis):
-    """Test whether the logprob for ```pt.mix``` produces the corrected
-    The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
-        U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
-    for all 1<=k<=n
-    """
-    x = pt.random.uniform(0, 1, size=shape)
-    x.name = "x"
-    x_min = pt.min(x, axis=axis)
-    x_min_value = pt.scalar("x_min_value")
-    x_min_logprob = logp(x_min, x_min_value)
-
-    assert_no_rvs(x_min_logprob)
-
-    test_value = value
-
-    n = np.prod(shape)
-    beta_rv = pt.random.beta(1, n, name="beta")
-    beta_vv = beta_rv.clone()
-    beta_rv_logprob = logp(beta_rv, beta_vv)
-
-    np.testing.assert_allclose(
-        beta_rv_logprob.eval({beta_vv: test_value}),
-        (x_min_logprob.eval({x_min_value: test_value})),
-        rtol=1e-06,
+    @pytest.mark.parametrize(
+        "pt_op",
+        [
+            pt.max,
+            pt.min,
+        ],
     )
+    def test_multivariate_rv_fails(self, pt_op):
+        _alpha = pt.vector()
+        x = pt.random.dirichlet(_alpha)
+        x.name = "x"
+        x_m = pt_op(x, axis=-1)
+        x_m_value = pt.scalar("x_value")
+        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+            logp(x_m, x_m_value)
 
-
-def test_min_non_mul_elemwise_fails():
-    """Test whether the logprob for ```pt.min``` for non-mul elemwise RVs is rejected correctly"""
-    x = pt.log(pt.random.beta(0, 1, size=(3,)))
-    x.name = "x"
-    x_min = pt.min(x, axis=-1)
-    x_min_value = pt.scalar("x_min_value")
-    with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-        logp(x_min, x_min_value)
-
-
-@pytest.mark.parametrize(
-    "mu, size, value, axis",
-    [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
-)
-def test_max_discrete(mu, size, value, axis):
-    x = pm.Poisson.dist(name="x", mu=mu, size=size)
-    x_max = pt.max(x, axis=axis)
-    x_max_value = pt.scalar("x_max_value", dtype=x.type.dtype)
-    x_max_logprob = logp(x_max, x_max_value)
-
-    test_value = value
-
-    n = size
-    exp_rv = sp.poisson(mu).cdf(test_value) ** n
-    exp_rv_prev = sp.poisson(mu).cdf(test_value - 1) ** n
-
-    np.testing.assert_allclose(
-        np.log(exp_rv - exp_rv_prev),
-        (x_max_logprob.eval({x_max_value: test_value})),
-        rtol=1e-06,
+    @pytest.mark.parametrize(
+        "pt_op",
+        [
+            pt.max,
+            pt.min,
+        ],
     )
+    def test_categorical(self, pt_op):
+        """Test whether the logprob for ```pt.max``` for unsupported distributions is correctly rejected"""
+        x = pt.random.categorical([1, 1, 1, 1], size=(5,))
+        x.name = "x"
+        x_m = pt_op(x, axis=-1)
+        x_m_value = pt.scalar("x_value", dtype=x.type.dtype)
+        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+            logp(x_m, x_m_value)
 
-
-@pytest.mark.parametrize(
-    "mu, n, test_value, axis",
-    [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
-)
-def test_min_discrete(mu, n, test_value, axis):
-    x = pm.Poisson.dist(name="x", mu=mu, size=(n,))
-    x_min = pt.min(x, axis=axis)
-    x_min_value = pt.scalar("x_min_value", dtype=x.type.dtype)
-    x_min_logprob = logp(x_min, x_min_value)
-
-    sf_before = 1 - sp.poisson(mu).cdf(test_value - 1)
-    sf = 1 - sp.poisson(mu).cdf(test_value)
-
-    expected_logp = np.log(sf_before**n - sf**n)
-
-    np.testing.assert_allclose(
-        x_min_logprob.eval({x_min_value: test_value}),
-        expected_logp,
-        rtol=1e-06,
+    @pytest.mark.parametrize(
+        "pt_op",
+        [
+            pt.max,
+            pt.min,
+        ],
     )
+    def test_non_supp_axis(self, pt_op):
+        """Test whether the logprob for ```pt.max``` for unsupported axis is correctly rejected"""
+        x = pt.random.normal(0, 1, size=(3, 3))
+        x.name = "x"
+        x_m = pt_op(x, axis=-1)
+        x_m_value = pt.vector("x_value")
+        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+            x_max_logprob = logp(x_m, x_m_value)
+
+    @pytest.mark.parametrize(
+        "shape, value, axis",
+        [
+            (3, 0.85, -1),
+            (3, 0.01, 0),
+            (2, 0.2, None),
+            (4, 0.5, 0),
+            ((3, 4), 0.9, None),
+            ((3, 4), 0.75, (1, 0)),
+        ],
+    )
+    def test_max_logprob(self, shape, value, axis):
+        """Test whether the logprob for ```pt.max``` produces the corrected
+
+        The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
+            U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
+        for all 1<=k<=n
+        """
+        x = pt.random.uniform(0, 1, size=shape)
+        x.name = "x"
+        x_max = pt.max(x, axis=axis)
+        x_max_value = pt.scalar("x_max_value")
+        x_max_logprob = logp(x_max, x_max_value)
+
+        assert_no_rvs(x_max_logprob)
+
+        test_value = value
+
+        n = np.prod(shape)
+        beta_rv = pt.random.beta(n, 1, name="beta")
+        beta_vv = beta_rv.clone()
+        beta_rv_logprob = logp(beta_rv, beta_vv)
+
+        np.testing.assert_allclose(
+            beta_rv_logprob.eval({beta_vv: test_value}),
+            (x_max_logprob.eval({x_max_value: test_value})),
+            rtol=1e-06,
+        )
+
+    @pytest.mark.parametrize(
+        "shape, value, axis",
+        [
+            (3, 0.85, -1),
+            (3, 0.01, 0),
+            (2, 0.2, None),
+            (4, 0.5, 0),
+            ((3, 4), 0.9, None),
+            ((3, 4), 0.75, (1, 0)),
+        ],
+    )
+    def test_min_logprob(self, shape, value, axis):
+        """Test whether the logprob for ```pt.mix``` produces the corrected
+        The fact that order statistics of i.i.d. uniform RVs ~ Beta is used here:
+            U_1, \\dots, U_n \\stackrel{\text{i.i.d.}}{\\sim} \text{Uniform}(0, 1) \\Rightarrow U_{(k)} \\sim \text{Beta}(k, n + 1- k)
+        for all 1<=k<=n
+        """
+        x = pt.random.uniform(0, 1, size=shape)
+        x.name = "x"
+        x_min = pt.min(x, axis=axis)
+        x_min_value = pt.scalar("x_min_value")
+        x_min_logprob = logp(x_min, x_min_value)
+
+        assert_no_rvs(x_min_logprob)
+
+        test_value = value
+
+        n = np.prod(shape)
+        beta_rv = pt.random.beta(1, n, name="beta")
+        beta_vv = beta_rv.clone()
+        beta_rv_logprob = logp(beta_rv, beta_vv)
+
+        np.testing.assert_allclose(
+            beta_rv_logprob.eval({beta_vv: test_value}),
+            (x_min_logprob.eval({x_min_value: test_value})),
+            rtol=1e-06,
+        )
+
+    def test_min_non_mul_elemwise_fails(self):
+        """Test whether the logprob for ```pt.min``` for non-mul elemwise RVs is rejected correctly"""
+        x = pt.log(pt.random.beta(0, 1, size=(3,)))
+        x.name = "x"
+        x_min = pt.min(x, axis=-1)
+        x_min_value = pt.scalar("x_min_value")
+        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
+            logp(x_min, x_min_value)
+
+    @pytest.mark.parametrize(
+        "lam, size, value, axis",
+        [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
+    )
+    def test_max_discrete(self, lam, size, value, axis):
+        x = pt.random.poisson(name="x", lam=lam, size=size)
+        x_max = pt.max(x, axis=axis)
+        x_max_value = pt.scalar("x_max_value", dtype=x.type.dtype)
+        x_max_logprob = logp(x_max, x_max_value)
+
+        test_value = value
+
+        n = size
+        exp_rv = sp.poisson(lam).cdf(test_value) ** n
+        exp_rv_prev = sp.poisson(lam).cdf(test_value - 1) ** n
+
+        np.testing.assert_allclose(
+            np.log(exp_rv - exp_rv_prev),
+            (x_max_logprob.eval({x_max_value: test_value})),
+            rtol=1e-06,
+        )
+
+    @pytest.mark.parametrize(
+        "lam, n, test_value, axis",
+        [(2, 3, 1, -1), (2, 3, 1, 0), (1, 2, 2, None), (0, 4, 0, 0)],
+    )
+    def test_min_discrete(self, lam, n, test_value, axis):
+        x = pt.random.poisson(name="x", lam=lam, size=(n,))
+        x_min = pt.min(x, axis=axis)
+        x_min_value = pt.scalar("x_min_value", dtype=x.type.dtype)
+        x_min_logprob = logp(x_min, x_min_value)
+
+        sf_before = 1 - sp.poisson(lam).cdf(test_value - 1)
+        sf = 1 - sp.poisson(lam).cdf(test_value)
+
+        expected_logp = np.log(sf_before**n - sf**n)
+
+        np.testing.assert_allclose(
+            x_min_logprob.eval({x_min_value: test_value}),
+            expected_logp,
+            rtol=1e-06,
+        )
+
+    def test_min_max_bernoulli(self):
+        p = 0.7
+        q = 1 - p
+        n = 3
+        x = pt.random.bernoulli(name="x", p=p, size=(n,))
+        value = pt.scalar("value", dtype=int)
+
+        max_logp_fn = pytensor.function([value], logp(pt.max(x), value))
+        np.testing.assert_allclose(max_logp_fn(0), np.log(q**n))
+        np.testing.assert_allclose(max_logp_fn(1), np.log(1 - q**n))
+
+        min_logp_fn = pytensor.function([value], logp(pt.min(x), value))
+        np.testing.assert_allclose(min_logp_fn(1), np.log(p**n))
+        np.testing.assert_allclose(min_logp_fn(0), np.log(1 - p**n))
+
+    def test_non_measurable_max_grad(self):
+        # Regression test for https://github.com/pymc-devs/pytensor/issues/711
+        x = pt.random.normal(0, 1, size=(3,))
+        max_x = x.max()
+        y = pt.random.normal(max_x, 1)
+
+        x_vv = x.type()
+        y_vv = y.type()
+        logp_terms = conditional_logp({x: x_vv, y: y_vv}).values()
+        joint_logp = pt.sum([term.sum() for term in logp_terms])
+
+        # Test that calling gradient does not raise a NotImplementedError
+        pt.grad(joint_logp, x_vv)
 
 
-def test_min_max_bernoulli():
-    p = 0.7
-    q = 1 - p
-    n = 3
-    x = pm.Bernoulli.dist(name="x", p=p, shape=(n,))
-    value = pt.scalar("value", dtype=int)
+class TestCategoricalFromArgmax:
+    # np.pi, np.e, are used throughout to emphasize they don't matter in the end
 
-    max_logp_fn = pytensor.function([value], pm.logp(pt.max(x), value))
-    np.testing.assert_allclose(max_logp_fn(0), np.log(q**n))
-    np.testing.assert_allclose(max_logp_fn(1), np.log(1 - q**n))
+    def test_exponential(self):
+        axis = 1
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        scale = 1 / (probs * np.e)[None, :, None]
 
-    min_logp_fn = pytensor.function([value], pm.logp(pt.min(x), value))
-    np.testing.assert_allclose(min_logp_fn(1), np.log(p**n))
-    np.testing.assert_allclose(min_logp_fn(0), np.log(1 - p**n))
+        s = pt.random.exponential(scale=1, size=size) * scale
+        x = pt.argmin(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
 
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
 
-def test_non_measurable_max_grad():
-    # Regression test for https://github.com/pymc-devs/pytensor/issues/711
-    x = pt.random.normal(0, 1, size=(3,))
-    max_x = x.max()
-    y = pt.random.normal(max_x, 1)
+        # Test same result for lifted scale
+        equiv_s = pt.random.exponential(scale=scale, size=size)
+        equiv_x = pt.argmin(equiv_s, axis=axis)
+        equiv_x_prob = pt.exp(logp(equiv_x, x_vv))
+        np.testing.assert_allclose(equiv_x_prob.eval({x_vv: x_vv_test}), expected_probs)
 
-    x_vv = x.type()
-    y_vv = y.type()
-    logp_terms = conditional_logp({x: x_vv, y: y_vv}).values()
-    joint_logp = pt.sum([term.sum() for term in logp_terms])
+        # Test argmax not supported
+        invalid_x = pt.argmax(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
 
-    # Test that calling gradient does not raise a NotImplementedError
-    pt.grad(joint_logp, x_vv)
+    def test_weibull(self):
+        axis = 1
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        # scale is IID on the argmax axis
+        iid_shape = np.array([np.pi, np.e])[:, None, None]
+        scale = probs[None, :, None] ** (1 / iid_shape)
+
+        s = Weibull.dist(alpha=iid_shape, beta=1, size=size) * scale
+        x = pt.argmin(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
+
+        # Test argmax not supported
+        invalid_x = pt.argmax(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+        # Test non-iid shape on argmin axis not supported
+        non_iid_shape = np.array([1, np.pi, np.e])[None, :, None]
+        invalid_s = Weibull.dist(alpha=non_iid_shape, beta=1, size=size) * scale
+        invalid_x = pt.argmin(invalid_s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+    def test_gumbel(self):
+        axis = -2
+        size = (2, 3, 4)
+        probs = np.array([0.1, 0.3, 0.6])
+        loc = pt.log(probs * np.e)[None, :, None]
+        # scale is IID on the argmax axis
+        iid_scale = np.array([np.pi, np.e])[:, None, None]
+
+        s = pt.random.gumbel(loc=0, scale=1, size=size) * iid_scale + loc
+        x = pt.argmax(s, axis=axis)
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [[0, 1, 2, 0], [1, 2, 2, 2]]
+        expected_probs = probs[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected_probs,
+        )
+
+        # Test same result for lifted loc / scale
+        equiv_s = pt.random.gumbel(loc=loc, scale=iid_scale, size=size)
+        equiv_x = pt.argmax(equiv_s, axis=axis)
+        equiv_x_prob = pt.exp(logp(equiv_x, x_vv))
+        np.testing.assert_allclose(equiv_x_prob.eval({x_vv: x_vv_test}), expected_probs)
+
+        # Test argmin not supported
+        invalid_x = pt.argmin(s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+        # Test non-iid scale on argmax axis not supported
+        non_iid_scale = np.array([1, np.pi, np.e])[None, :, None]
+        invalid_s = pt.random.gumbel(
+            loc=loc,
+            scale=non_iid_scale,
+            size=size,
+        )
+        invalid_x = pt.argmax(invalid_s, axis=axis)
+        with pytest.raises(NotImplementedError):
+            logp(invalid_x, x_vv)
+
+    def test_implicit_size(self):
+        probs = np.array([[0.1, 0.5], [0.9, 0.5]])
+        s = pt.random.exponential(scale=1 / probs)
+        x = pt.argmin(s, axis=0)
+
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+
+        x_vv_test = [0, 0]
+        np.testing.assert_allclose(x_prob.eval({x_vv: x_vv_test}), [0.1, 0.5])
+
+    def test_multiple_axes(self):
+        probs = np.array([0.1, 0.2, 0.7])
+        s = pt.random.exponential(scale=1 / probs, size=(2, 4, 3))
+        x = pt.argmin(s, axis=(0, -1))
+        assert x.type.shape == (4,)
+        x_vv = x.type()
+
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = [0, 1, 0, 5]
+        # We are selecting among 2x repeated scales
+        expected = (np.tile(probs, 2) / 2)[x_vv_test]
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected,
+        )
+
+        x = pt.argmin(s, axis=None)
+        assert x.type.shape == ()
+        x_vv = x.type()
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = 15
+        # We are selecting among 8x repeated scales
+        expected = (np.broadcast_to(probs / 8, (2, 4, 3)).ravel()[x_vv_test],)
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            expected,
+        )
+
+    @pytest.mark.xfail(
+        raises=NotImplementedError,
+        reason="Implicitly depends on https://github.com/pymc-devs/pytensor/issues/1851",
+    )
+    def test_derived_frechet(self):
+        probs = np.array([0.1, 0.2, 0.7])
+        # Frechet is simply an exponentiated gumbel
+        # Since exponentiation is monotonic it doesn't change the result of argmax,
+        # and the probability is therefore the same as that of the argmin(gumbel)
+        s = pt.exp(pt.random.gumbel(loc=pt.log(probs)))
+        x = pt.argmax(s)
+        x_vv = x.type()
+
+        x_prob = pt.exp(logp(x, x_vv))
+        x_vv_test = 1
+        np.testing.assert_allclose(
+            x_prob.eval({x_vv: x_vv_test}),
+            probs[x_vv_test],
+        )
