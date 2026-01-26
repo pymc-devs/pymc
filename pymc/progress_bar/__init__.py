@@ -14,8 +14,7 @@
 
 from pymc.progress_bar.progress import (
     ProgressBarManager,
-    ProgressBarType,
+    ProgressBarOptions,
     create_simple_progress,
-    default_progress_theme,
 )
-from pymc.progress_bar.rich_progress import CustomProgress
+from pymc.progress_bar.rich_progress import CustomProgress, default_progress_theme

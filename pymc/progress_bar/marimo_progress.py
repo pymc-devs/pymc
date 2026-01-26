@@ -11,25 +11,21 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Marimo-based progress bar backend for HTML rendering in marimo notebooks."""
-
-from __future__ import annotations
-
 from collections.abc import Callable
-from importlib.resources import files
-from pathlib import Path
 from time import perf_counter
-from typing import Any
+from typing import Any, Self
 
-from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
+from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
+from pymc.progress_bar.utils import compute_draw_speed
 
-DEFAULT_CSS = files("pymc.progress_bar").joinpath("progress.css")
 
-
-def load_css(css_file: str | Path | None = None) -> str:
-    """Load CSS and wrap in <style> tags for HTML embedding."""
-    path = Path(css_file) if css_file else DEFAULT_CSS
-    return f"<style>\n{path.read_text()}</style>"
+def format_time(seconds: float) -> str:
+    """Format elapsed time as mm:ss or hh:mm:ss."""
+    minutes, secs = divmod(int(seconds), 60)
+    hours, minutes = divmod(minutes, 60)
+    if hours > 0:
+        return f"{hours}:{minutes:02d}:{secs:02d}"
+    return f"{minutes}:{secs:02d}"
 
 
 def in_marimo_notebook() -> bool:
@@ -104,15 +100,13 @@ class MarimoProgressBackend:
         total_draws: int,
         combined: bool,
         full_stats: bool,
-        progress_stats: dict[str, list[Any]],
-        css_file: str | None = None,
+        css_theme: str | None = None,
     ):
         self.chains = chains
         self.total_draws = total_draws
         self.combined = combined
         self.full_stats = full_stats
-        self.progress_stats = progress_stats
-        self._css = load_css(css_file)
+        self._css_theme = DEFAULT_CSS if css_theme is None else css_theme
 
         self._mo_replace: Callable[[object], None] | None = None
         self._chain_state: list[dict[str, Any]] = []
@@ -123,7 +117,7 @@ class MarimoProgressBackend:
         """Whether the progress bar is enabled (always True for marimo backend)."""
         return True
 
-    def __enter__(self) -> MarimoProgressBackend:
+    def __enter__(self):
         """Enter the context manager and initialize display."""
         import marimo as mo
 
@@ -131,7 +125,6 @@ class MarimoProgressBackend:
         self._initialize_tasks()
         mo.output.clear()
         self._render()
-        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
@@ -210,7 +203,22 @@ class MarimoProgressBackend:
             stat_keys = list(self._chain_state[0]["stats"].keys())
 
         header_cells = ["Progress", "Draws"]
-        header_cells += [abbreviate_stat_name(k) for k in stat_keys]
+
+        abbreviations = {
+            "divergences": "Div",
+            "diverging": "Div",
+            "step_size": "Step",
+            "tree_size": "Tree",
+            "tree_depth": "Depth",
+            "n_steps": "Steps",
+            "energy_error": "E-err",
+            "max_energy_error": "Max-E",
+            "mean_tree_accept": "Accept",
+            "scaling": "Scale",
+            "tune": "Tune",
+        }
+        header_cells += [abbreviations.get(k, k[:6].capitalize()) for k in stat_keys]
+
         header_cells += ["Speed", "Elapsed"]
 
         header_row = "<tr>" + "".join(f"<th>{h}</th>" for h in header_cells) + "</tr>"
@@ -220,7 +228,13 @@ class MarimoProgressBackend:
             data_rows.append(self._render_chain_row(i, state, stat_keys))
 
         rows_html = "\n".join(data_rows)
-        return f"{self._css}\n<table class='pymc-progress-table'><thead>{header_row}</thead><tbody>{rows_html}</tbody></table>"
+        return f"""
+            <style>{self._css_theme}</style>
+            <table class='pymc-progress-table'>
+                <thead>{header_row}</thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+        """
 
     def _render_chain_row(self, chain_idx: int, state: dict[str, Any], stat_keys: list[str]) -> str:
         """Render a single chain's progress as a table row."""
@@ -264,28 +278,18 @@ class MarimoSimpleProgress:
     HTML in marimo notebooks for better display.
     """
 
-    def __init__(
-        self,
-        description: str,
-        total: int,
-        disable: bool = False,
-        css_file: str | None = None,
-    ):
-        self.description = description
-        self.total = total
+    def __init__(self, theme: str | None = None):
+        self.description = ""
+        self.total = 0
         self.completed = 0
-        self.is_enabled = not disable
-        self._css = load_css(css_file)
+        self._css_theme = DEFAULT_CSS if theme is None else theme
 
         self._mo_replace: Callable[[object], None] | None = None
         self._start_time: float = 0.0
         self._task_id = 0
 
-    def __enter__(self):
+    def __enter__(self) -> Self:
         """Enter the context manager."""
-        if not self.is_enabled:
-            return self
-
         self._mo_replace = _mo_create_replace()
         self._start_time = perf_counter()
 
@@ -297,8 +301,7 @@ class MarimoSimpleProgress:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
-        if self.is_enabled:
-            self._render()
+        self._render()
 
     def add_task(
         self, description: str, completed: int = 0, total: int | None = None, **kwargs
@@ -308,8 +311,6 @@ class MarimoSimpleProgress:
         Kwargs are ignored since MarimoSimpleProgress
         only supports a single task initialized at construction.
         """
-        if not self.is_enabled:
-            return self._task_id
         self.description = description
         self.completed = completed
         if total is not None:
@@ -327,16 +328,14 @@ class MarimoSimpleProgress:
         advance : int
             Amount to advance by
         """
-        if not self.is_enabled:
-            return
         self.completed += advance
         self._render()
 
     def update(
         self,
         task_id: int | None = None,
-        completed: int | None = None,
         refresh: bool = False,
+        completed: int | None = None,
         **kwargs,
     ) -> None:
         """Update the progress bar state.
@@ -345,15 +344,13 @@ class MarimoSimpleProgress:
         ----------
         task_id : int, optional
             Ignored (for interface compatibility)
-        completed : int, optional
-            Set completed count
         refresh : bool
             If True, force a render
+        completed : int, optional
+            Set completed count
         **kwargs
             Additional arguments ignored for compatibility
         """
-        if not self.is_enabled:
-            return
         if completed is not None:
             self.completed = completed
         if refresh:
@@ -395,7 +392,7 @@ class MarimoSimpleProgress:
         if pct >= 100:
             bar_class += " finished"
 
-        return f"""{self._css}
+        return f"""<style>{self._css_theme}</style>
 <table class="pymc-progress-table">
 <thead><tr><th>Progress</th><th>Samples</th><th>Speed</th><th>Elapsed</th><th>Remaining</th></tr></thead>
 <tbody><tr>

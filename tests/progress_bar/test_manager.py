@@ -17,11 +17,6 @@ import pytest
 import pymc as pm
 
 from pymc.progress_bar import ProgressBarManager
-from pymc.progress_bar.progress import (
-    abbreviate_stat_name,
-    compute_draw_speed,
-    format_time,
-)
 
 
 def test_progressbar_nested_compound():
@@ -128,43 +123,3 @@ class TestProgressBarManagerConfiguration:
                 tune=50,
                 progressbar="invalid",
             )
-
-
-class TestUtilityFunctions:
-    def test_compute_draw_speed_fast(self):
-        speed, unit = compute_draw_speed(elapsed=1.0, draws=100)
-        assert speed == 100.0
-        assert unit == "draws/s"
-
-    def test_compute_draw_speed_slow(self):
-        speed, unit = compute_draw_speed(elapsed=100.0, draws=1)
-        assert speed == 100.0
-        assert unit == "s/draw"
-
-    def test_compute_draw_speed_zero_draws(self):
-        speed, unit = compute_draw_speed(elapsed=1.0, draws=0)
-        assert speed == 0.0
-        assert unit == "draws/s"
-
-    def test_format_time_seconds(self):
-        assert format_time(45) == "0:45"
-
-    def test_format_time_minutes(self):
-        assert format_time(65) == "1:05"
-        assert format_time(125) == "2:05"
-
-    def test_format_time_hours(self):
-        assert format_time(3665) == "1:01:05"
-
-    def test_format_time_zero(self):
-        assert format_time(0) == "0:00"
-
-    def test_abbreviate_stat_name_known(self):
-        assert abbreviate_stat_name("divergences") == "Div"
-        assert abbreviate_stat_name("step_size") == "Step"
-        assert abbreviate_stat_name("tree_depth") == "Depth"
-        assert abbreviate_stat_name("mean_tree_accept") == "Accept"
-
-    def test_abbreviate_stat_name_unknown(self):
-        assert abbreviate_stat_name("unknown_stat") == "Unknow"
-        assert abbreviate_stat_name("xy") == "Xy"

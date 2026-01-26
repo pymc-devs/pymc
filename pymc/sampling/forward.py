@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Functions for prior and posterior predictive sampling."""
-
 import logging
 import warnings
 
@@ -920,8 +918,6 @@ def sample_posterior_predictive(
     ppc_trace_t = _DefaultTrace(samples)
 
     progress = create_simple_progress(
-        description="Sampling ...",
-        total=samples,
         progressbar=progressbar,
         progressbar_theme=progressbar_theme,
     )
@@ -935,7 +931,7 @@ def sample_posterior_predictive(
                     if hasattr(_trace, "_straces"):
                         chain_idx, point_idx = np.divmod(idx, len_trace)
                         chain_idx = chain_idx % nchain
-                        param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
+                        param = _trace._straces[chain_idx].point(point_idx)
                     # ... or a PointList
                     else:
                         param = cast(PointList, _trace)[idx % (len_trace * nchain)]

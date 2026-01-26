@@ -11,14 +11,11 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Core progress bar types, utilities, and manager."""
-
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Literal, Protocol
+from contextlib import nullcontext
+from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
 
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 from pymc.progress_bar.marimo_progress import (
@@ -27,26 +24,15 @@ from pymc.progress_bar.marimo_progress import (
     in_marimo_notebook,
 )
 from pymc.progress_bar.rich_progress import (
-    CustomProgress,
     RichProgressBackend,
-    default_progress_theme,
+    RichSimpleProgress,
 )
-from pymc.progress_bar.utils import abbreviate_stat_name, compute_draw_speed, format_time
 
 if TYPE_CHECKING:
     from pymc.step_methods.compound import BlockedStep, CompoundStep
 
-__all__ = [
-    "ProgressBarManager",
-    "ProgressBarType",
-    "abbreviate_stat_name",
-    "compute_draw_speed",
-    "create_simple_progress",
-    "default_progress_theme",
-    "format_time",
-]
 
-ProgressBarType = Literal[
+ProgressBarOptions = Literal[
     "combined",
     "split",
     "combined+stats",
@@ -62,10 +48,7 @@ class ProgressBackend(Protocol):
     Any backend that implements this protocol can be used with ProgressBarManager.
     """
 
-    @property
-    def is_enabled(self) -> bool: ...
-
-    def __enter__(self) -> ProgressBackend: ...
+    def __enter__(self) -> Self: ...
 
     def __exit__(
         self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
@@ -79,6 +62,10 @@ class ProgressBackend(Protocol):
         stats: dict[str, Any],
         is_last: bool,
     ) -> None: ...
+
+
+class NullProgressBackend(nullcontext):
+    def update(self, *args, **kwargs): ...
 
 
 class ProgressBarManager:
@@ -99,9 +86,8 @@ class ProgressBarManager:
         chains: int,
         draws: int,
         tune: int,
-        progressbar: bool | ProgressBarType = True,
-        progressbar_theme: Theme | None = None,
-        progressbar_css: str | None = None,
+        progressbar: bool | ProgressBarOptions = True,
+        progressbar_theme: Theme | str | None = None,
     ):
         """Initialize the progress bar manager.
 
@@ -122,9 +108,6 @@ class ProgressBarManager:
         progressbar_css : str, optional
             Path to custom CSS file for marimo progress bars
         """
-        if progressbar_theme is None:
-            progressbar_theme = default_progress_theme
-
         match progressbar:
             case True:
                 self.combined_progress = False
@@ -167,14 +150,16 @@ class ProgressBarManager:
         self.total_draws = draws + tune
         self.chains = chains
         self._backend: ProgressBackend
-        if in_marimo_notebook() and show_progress:
+
+        if not show_progress:
+            self._backend = NullProgressBackend()
+        elif in_marimo_notebook():
             self._backend = MarimoProgressBackend(
                 chains=chains,
                 total_draws=self.total_draws,
                 combined=self.combined_progress,
                 full_stats=self.full_stats,
-                progress_stats=progress_stats,
-                css_file=progressbar_css,
+                css_theme=progressbar_theme if isinstance(progressbar_theme, str) else None,
             )
         else:
             self._backend = RichProgressBackend(
@@ -184,15 +169,10 @@ class ProgressBarManager:
                 full_stats=self.full_stats,
                 progress_columns=progress_columns,
                 progress_stats=progress_stats,
-                theme=progressbar_theme,
-                disable=not show_progress,
+                theme=progressbar_theme if isinstance(progressbar_theme, Theme) else None,
             )
 
-    @property
-    def _is_marimo(self) -> bool:
-        return type(self._backend).__name__ == "MarimoProgressBackend"
-
-    def __enter__(self):
+    def __enter__(self) -> ProgressBackend:
         return self._backend.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -242,32 +222,45 @@ class ProgressBarManager:
         )
 
 
+class SimpleProgressBackend(Protocol):
+    def __enter__(self) -> Self: ...
+
+    def __exit__(
+        self, exc_type: type[BaseException] | None, exc_val: BaseException | None, exc_tb: Any
+    ) -> None: ...
+
+    def add_task(self, description: str, completed: int, total: int) -> int: ...
+
+    def advance(self, task_id: int | None, advance: int = 1) -> None: ...
+
+    def update(self, task_id: int, refresh: bool, completed: int) -> None: ...
+
+
+class NullSimpleProgress(nullcontext):
+    def add_task(self, *args, **kwargs) -> int:
+        return 0
+
+    def advance(self, *args, **kwargs) -> None:
+        return
+
+    def update(self, *args, **kwargs) -> None:
+        return
+
+
 def create_simple_progress(
-    description: str,
-    total: int,
     progressbar: bool = True,
-    progressbar_theme: Theme | None = None,
-    progressbar_css: str | None = None,
-) -> CustomProgress | MarimoSimpleProgress:
+    progressbar_theme: Theme | str | None = None,
+) -> SimpleProgressBackend:
     """Create a simple progress bar appropriate for the current environment."""
-    if progressbar and in_marimo_notebook():
+    if not progressbar:
+        return NullSimpleProgress()
+
+    elif in_marimo_notebook():
         return MarimoSimpleProgress(
-            description=description,
-            total=total,
-            disable=not progressbar,
-            css_file=progressbar_css,
+            theme=progressbar_theme if isinstance(progressbar_theme, str) else None
         )
 
-    if progressbar_theme is None:
-        progressbar_theme = default_progress_theme
-
-    return CustomProgress(
-        "[progress.description]{task.description}",
-        BarColumn(),
-        "[progress.percentage]{task.percentage:>3.0f}%",
-        TimeRemainingColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
-    )
+    else:
+        return RichSimpleProgress(
+            theme=progressbar_theme if isinstance(progressbar_theme, Theme) else None
+        )
