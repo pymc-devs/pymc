@@ -160,6 +160,17 @@ def test_sum_to_1():
     )
 
 
+def test_zerosumtransform():
+    zst = tr.ZeroSumTransform([0])
+
+    # Check numpy input works, as it is not always converted to pytensor before
+    # Case where it failed was when setting initvals in model
+    val = np.array([1, 2, 3, 4])
+    zval = zst.backward(val)
+    assert np.allclose(zval.eval().sum(), 0.0)
+    assert np.allclose(zst.forward(zval).eval(), val)
+
+
 def test_log():
     check_transform(tr.log, Rplusbig)
 
