@@ -39,12 +39,13 @@ from pytensor import tensor as pt
 from pytensor.graph.basic import Apply
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.math import Sum
 from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.rewriting import early_measurable_ir_rewrites_db, measurable_ir_rewrites_db
 
 
 @node_rewriter([Sum])
@@ -76,6 +77,123 @@ def sum_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
 measurable_ir_rewrites_db.register(
     "sum_of_normals",
     sum_of_normals,
+    "basic",
+    "arithmetic",
+)
+
+
+@node_rewriter([Elemwise])
+def add_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    scalar_op = getattr(node.op, "scalar_op", None)
+    if scalar_op is None:
+        return None
+    scalar_name = scalar_op.__class__.__name__.lower()
+    if "add" not in scalar_name:
+        return None
+
+    base_vars = list(node.inputs)
+    if not base_vars:
+        return None
+
+    ok = True
+    for v in base_vars:
+        if not (v.owner and isinstance(v.owner.op, NormalRV)):
+            ok = False
+    if not ok:
+        return None
+
+    rngs_sizes = [(v.owner.inputs[0], v.owner.inputs[1]) for v in base_vars]
+    rng0, _any_size = rngs_sizes[0]
+
+    sizes = [sz for _, sz in rngs_sizes]
+    non_none_sizes = [s for s in sizes if not isinstance(s.type, NoneTypeT)]
+    if non_none_sizes:
+        size0 = non_none_sizes[0]
+        mus_b = [pt.broadcast_to(v.owner.inputs[2], size0) for v in base_vars]
+        sigmas_b = [pt.broadcast_to(v.owner.inputs[3], size0) for v in base_vars]
+    else:
+        all_params = [p for v in base_vars for p in (v.owner.inputs[2], v.owner.inputs[3])]
+        bcast = pt.broadcast_arrays(*all_params)
+        mus_b = list(bcast[0::2])
+        sigmas_b = list(bcast[1::2])
+        size0 = None
+
+    mu_sum = pt.add(*mus_b)
+    sigma_sum = pt.sqrt(pt.add(*[pt.square(s) for s in sigmas_b]))
+
+    latent_op = base_vars[0].owner.op
+    new_rv = latent_op(mu_sum, sigma_sum, rng=rng0, size=size0)
+    return [new_rv]
+
+
+@node_rewriter([Elemwise])
+def sub_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    scalar_op = getattr(node.op, "scalar_op", None)
+    if scalar_op is None:
+        return None
+    scalar_name = scalar_op.__class__.__name__.lower()
+    if "sub" not in scalar_name:
+        return None
+        return None
+
+    base_vars = list(node.inputs)
+    if len(base_vars) != 2:
+        return None
+
+    if not all(v.owner and isinstance(v.owner.op, NormalRV) for v in base_vars):
+        return None
+
+    rngs_sizes = [(v.owner.inputs[0], v.owner.inputs[1]) for v in base_vars]
+    rng0, _any_size = rngs_sizes[0]
+
+    sizes = [sz for _, sz in rngs_sizes]
+    non_none_sizes = [s for s in sizes if not isinstance(s.type, NoneTypeT)]
+    if non_none_sizes:
+        size0 = non_none_sizes[0]
+        mu0 = pt.broadcast_to(base_vars[0].owner.inputs[2], size0)
+        mu1 = pt.broadcast_to(base_vars[1].owner.inputs[2], size0)
+        s0 = pt.broadcast_to(base_vars[0].owner.inputs[3], size0)
+        s1 = pt.broadcast_to(base_vars[1].owner.inputs[3], size0)
+    else:
+        all_params = (
+            base_vars[0].owner.inputs[2],
+            base_vars[1].owner.inputs[2],
+            base_vars[0].owner.inputs[3],
+            base_vars[1].owner.inputs[3],
+        )
+        bcast = pt.broadcast_arrays(*all_params)
+        mu0, mu1, s0, s1 = bcast
+        size0 = None
+
+    mu_diff = mu0 - mu1
+    sigma_sum = pt.sqrt(pt.square(s0) + pt.square(s1))
+
+    latent_op = base_vars[0].owner.op
+    new_rv = latent_op(mu_diff, sigma_sum, rng=rng0, size=size0)
+    return [new_rv]
+
+
+measurable_ir_rewrites_db.register(
+    "add_of_normals",
+    add_of_normals,
+    "basic",
+    "arithmetic",
+)
+measurable_ir_rewrites_db.register(
+    "sub_of_normals",
+    sub_of_normals,
+    "basic",
+    "arithmetic",
+)
+early_measurable_ir_rewrites_db.register(
+    "add_of_normals_early",
+    add_of_normals,
+    "basic",
+    "arithmetic",
+)
+early_measurable_ir_rewrites_db.register(
+    "sub_of_normals_early",
+    sub_of_normals,
     "basic",
     "arithmetic",
 )
