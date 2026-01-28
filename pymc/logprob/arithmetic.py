@@ -46,7 +46,7 @@ from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.rewriting import early_measurable_ir_rewrites_db, measurable_ir_rewrites_db
+from pymc.logprob.rewriting import measurable_ir_rewrites_db
 
 
 @node_rewriter([Sum])
@@ -77,7 +77,7 @@ def sum_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
 
 @node_rewriter([Elemwise])
 def add_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
-    if not isinstance(getattr(node.op, "scalar_op", None), Add):
+    if not isinstance(node.op.scalar_op, Add):
         return None
 
     base_vars = node.inputs
@@ -92,9 +92,8 @@ def add_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
         if v.type.broadcastable != out_bcast:
             return None
 
-    rngs = [v.owner.inputs[0] for v in base_vars]
+    rng0 = base_vars[0].owner.inputs[0]
     sizes = [v.owner.inputs[1] for v in base_vars]
-    rng0 = rngs[0]
     size0 = None
     for s in sizes:
         if not isinstance(s.type, NoneTypeT):
@@ -114,12 +113,10 @@ def add_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
 
 @node_rewriter([Elemwise])
 def sub_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
-    if not isinstance(getattr(node.op, "scalar_op", None), Sub):
+    if not isinstance(node.op.scalar_op, Sub):
         return None
 
     base_vars = node.inputs
-    if len(base_vars) != 2:
-        return None
 
     if not all(v.owner and isinstance(v.owner.op, NormalRV) for v in base_vars):
         return None
@@ -129,9 +126,8 @@ def sub_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
         if v.type.broadcastable != out_bcast:
             return None
 
-    rngs = [v.owner.inputs[0] for v in base_vars]
+    rng0 = base_vars[0].owner.inputs[0]
     sizes = [v.owner.inputs[1] for v in base_vars]
-    rng0 = rngs[0]
     size0 = None
     for s in sizes:
         if not isinstance(s.type, NoneTypeT):
@@ -159,18 +155,6 @@ measurable_ir_rewrites_db.register(
 )
 measurable_ir_rewrites_db.register(
     "sub_of_normals",
-    sub_of_normals,
-    "basic",
-    "arithmetic",
-)
-early_measurable_ir_rewrites_db.register(
-    "add_of_normals_early",
-    add_of_normals,
-    "basic",
-    "arithmetic",
-)
-early_measurable_ir_rewrites_db.register(
-    "sub_of_normals_early",
     sub_of_normals,
     "basic",
     "arithmetic",

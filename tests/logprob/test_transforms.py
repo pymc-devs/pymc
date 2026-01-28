@@ -349,8 +349,8 @@ class TestLocScaleRVTransform:
         np.testing.assert_allclose(x_logp_fn(7.3), sp.stats.norm.logpdf(5.0 - 7.3, 1.0))
 
     def test_loc_transform_multiple_rvs_fails1(self):
-        x_rv1 = pt.random.exponential(name="x_rv1")
-        x_rv2 = pt.random.exponential(name="x_rv2")
+        x_rv1 = pt.random.exponential(scale=1.0, name="x_rv1")
+        x_rv2 = pt.random.exponential(scale=2.0, name="x_rv2")
         y_rv = x_rv1 + x_rv2
 
         y = y_rv.clone()
