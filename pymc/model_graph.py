@@ -77,6 +77,23 @@ def fast_eval(var):
     return function([], var, mode=_cheap_eval_mode)()
 
 
+def _safe_shape_eval(var) -> tuple[int, ...] | None:
+    """Try to evaluate the shape of a variable, returning None if it fails.
+
+    First tries to use static shape information, then falls back to dynamic evaluation.
+    """
+    static_shape = var.type.shape
+    if static_shape is not None and None not in static_shape:
+        return tuple(static_shape)
+
+    try:
+        return tuple(map(int, fast_eval(var.shape)))
+    except Exception:
+        if static_shape is not None:
+            return tuple(dim if dim is not None else 0 for dim in static_shape)
+        return ()
+
+
 class NodeType(str, Enum):
     """Enum for the types of nodes in the graph."""
 
@@ -342,11 +359,16 @@ class ModelGraph:
         # TODO: Evaluate all RV shapes at once
         #       This should help find discrepancies, and
         #       avoids unnecessary function compiles for determining labels.
-        dim_lengths: dict[str, int] = {
-            dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
-        }
+        dim_lengths: dict[str, int] = {}
+        for dim_name, value in self.model.dim_lengths.items():
+            try:
+                dim_lengths[dim_name] = fast_eval(value).item()
+            except Exception:
+                # If we can't evaluate the dim length, skip it
+                pass
+
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
+            var_name: _safe_shape_eval(self.model[var_name])
             for var_name in self.vars_to_plot(var_names)
         }
 
