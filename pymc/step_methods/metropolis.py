@@ -679,6 +679,7 @@ class BinaryGibbsMetropolis(ArrayStep):
 
 @dataclass_state
 class CategoricalGibbsMetropolisState(StepMethodState):
+    tune: bool
     shuffle_dims: bool
     dimcats: list[tuple]
 
@@ -719,6 +720,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         if initial_point is None:
             initial_point = model.initial_point()
+
+        # Track tuning phase (like BinaryGibbsMetropolis)
+        self.tune = True
 
         dimcats: list[tuple[int, int]] = []
         # The above variable is a list of pairs (aggregate dimension, number
@@ -768,7 +772,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
         super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
 
     def reset_tuning(self):
-        # There are no tuning parameters in this step method.
+        # Mark tuning as finished
+        self.tune = False
         return
 
     def astep_unif(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
@@ -792,8 +797,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        # Emit correct tuning stat
+        return q, [{"tune": self.tune}]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -810,8 +815,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        # Emit correct tuning stat
+        return q, [{"tune": self.tune}]
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()

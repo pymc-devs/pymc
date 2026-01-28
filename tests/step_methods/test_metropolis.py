@@ -425,3 +425,39 @@ def test_sampling_state(step_method, model_fn):
             assert equal_sampling_states(final_state1, final_state2)
             assert equal_dataclass_values(sample1, sample2)
             assert equal_dataclass_values(stat1, stat2)
+
+
+@pytest.mark.parametrize("step_class", [BinaryGibbsMetropolis, CategoricalGibbsMetropolis])
+def test_categorical_gibbs_tune_stat(step_class):
+    """Test that CategoricalGibbsMetropolis and BinaryGibbsMetropolis respect the tune parameter.
+    
+    Regression test for https://github.com/pymc-devs/pymc/issues/7997
+    
+    Before the fix, CategoricalGibbsMetropolis would always return tune=False in stats,
+    which caused all samples (both tuning and drawing) to be treated as posterior samples.
+    """
+    with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+        if step_class == CategoricalGibbsMetropolis:
+            with pm.Model() as model:
+                pm.Categorical("cat", [0.02, 0.08, 0.9])
+        else:
+            with pm.Model() as model:
+                pm.Bernoulli("binary", p=0.3)
+        
+        with model:
+            tune_samples = 20
+            draw_samples = 20
+            idata = pm.sample(
+                tune=tune_samples,
+                draws=draw_samples,
+                discard_tuned_samples=False,
+                random_seed=42,
+                chains=2,
+            )
+            
+            # Check that warmup and posterior have the correct number of samples
+            # This is the key test - before the fix, all 40 samples would be in posterior
+            assert len(idata.warmup_posterior.draw) == tune_samples, \
+                f"Expected {tune_samples} warmup samples, got {len(idata.warmup_posterior.draw)}"
+            assert len(idata.posterior.draw) == draw_samples, \
+                f"Expected {draw_samples} posterior samples, got {len(idata.posterior.draw)}"
