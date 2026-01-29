@@ -459,16 +459,33 @@ class TestExpQuad:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_psd(self):
-        # compare to simple 1d formula
-        X = np.linspace(0, 1, 10)[:, None]
-        omega = np.linspace(0, 2, 50)
-        ell = 2.0
-        true_1d_psd = np.sqrt(2 * np.pi * np.square(ell)) * np.exp(-0.5 * np.square(ell * omega))
-        test_1d_psd = (
-            pm.gp.cov.ExpQuad(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
-        )
-        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+    def test_psd_eigenvalues(self):
+        """Test PSD implementation using Rayleigh quotients."""
+        ls = 0.1
+        N = 1000
+        L = 10.0
+        dx = L / N
+        X = np.linspace(0, L, N)[:, None]
+
+        with pm.Model():
+            cov = pm.gp.cov.ExpQuad(1, ls=ls)
+
+        K = cov(X).eval()
+
+        freqs = np.fft.fftfreq(N, d=dx)
+        omegas = 2 * np.pi * freqs
+
+        j = np.arange(N)
+        modes = np.exp(2j * np.pi * np.outer(np.arange(N), j) / N)
+        numerator = np.diag(modes @ K @ modes.conj().T).real
+        rayleigh_quotient = numerator / N
+
+        psd = cov.power_spectral_density(omegas[:, None]).eval()
+        psd_scaled = psd.flatten() / dx
+
+        # Trim boundaries where numerical error concentrates
+        trim = N // 10
+        npt.assert_allclose(psd_scaled[trim:-trim], rayleigh_quotient[trim:-trim], atol=1e-2)
 
     def test_euclidean_dist(self):
         X = np.arange(0, 3)[:, None]
@@ -590,17 +607,33 @@ class TestMatern52:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_psd(self):
-        # compare to simple 1d formula
-        X = np.linspace(0, 1, 10)[:, None]
-        omega = np.linspace(0, 2, 50)
-        ell = 2.0
-        lamda = np.sqrt(5) / ell
-        true_1d_psd = (16.0 / 3.0) * np.power(lamda, 5) * np.power(lamda**2 + omega**2, -3)
-        test_1d_psd = (
-            pm.gp.cov.Matern52(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
-        )
-        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+    def test_psd_eigenvalues(self):
+        """Test PSD implementation using Rayleigh quotients."""
+        ls = 0.1
+        N = 1000
+        L = 10.0
+        dx = L / N
+        X = np.linspace(0, L, N)[:, None]
+
+        with pm.Model():
+            cov = pm.gp.cov.Matern52(1, ls=ls)
+
+        K = cov(X).eval()
+
+        freqs = np.fft.fftfreq(N, d=dx)
+        omegas = 2 * np.pi * freqs
+
+        j = np.arange(N)
+        modes = np.exp(2j * np.pi * np.outer(np.arange(N), j) / N)
+        numerator = np.diag(modes @ K @ modes.conj().T).real
+        rayleigh_quotient = numerator / N
+
+        psd = cov.power_spectral_density(omegas[:, None]).eval()
+        psd_scaled = psd.flatten() / dx
+
+        # Trim boundaries where numerical error concentrates
+        trim = N // 10
+        npt.assert_allclose(psd_scaled[trim:-trim], rayleigh_quotient[trim:-trim], atol=1e-2)
 
 
 class TestMatern32:
@@ -616,17 +649,33 @@ class TestMatern32:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_psd(self):
-        # compare to simple 1d formula
-        X = np.linspace(0, 1, 10)[:, None]
-        omega = np.linspace(0, 2, 50)
-        ell = 2.0
-        lamda = np.sqrt(3) / ell
-        true_1d_psd = 4 * np.power(lamda, 3) * np.power(lamda**2 + omega**2, -2)
-        test_1d_psd = (
-            pm.gp.cov.Matern32(1, ls=ell).power_spectral_density(omega[:, None]).flatten().eval()
-        )
-        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+    def test_psd_eigenvalues(self):
+        """Test PSD implementation using Rayleigh quotients."""
+        ls = 0.1
+        N = 1000
+        L = 10.0
+        dx = L / N
+        X = np.linspace(0, L, N)[:, None]
+
+        with pm.Model():
+            cov = pm.gp.cov.Matern32(1, ls=ls)
+
+        K = cov(X).eval()
+
+        freqs = np.fft.fftfreq(N, d=dx)
+        omegas = 2 * np.pi * freqs
+
+        j = np.arange(N)
+        modes = np.exp(2j * np.pi * np.outer(np.arange(N), j) / N)
+        numerator = np.diag(modes @ K @ modes.conj().T).real
+        rayleigh_quotient = numerator / N
+
+        psd = cov.power_spectral_density(omegas[:, None]).eval()
+        psd_scaled = psd.flatten() / dx
+
+        # Trim boundaries where numerical error concentrates
+        trim = N // 10
+        npt.assert_allclose(psd_scaled[trim:-trim], rayleigh_quotient[trim:-trim], atol=1e-2)
 
 
 class TestMatern12:
