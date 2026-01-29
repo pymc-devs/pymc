@@ -52,6 +52,8 @@ import collections
 import itertools
 import warnings
 
+from dataclasses import dataclass
+from functools import cached_property
 from typing import Any, overload
 
 import numpy as np
@@ -70,7 +72,7 @@ from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_fn
-from pymc.model import modelcontext
+from pymc.model import Model, modelcontext
 from pymc.pytensorf import (
     SeedSequenceSeed,
     compile,
@@ -78,13 +80,7 @@ from pymc.pytensorf import (
     find_rng_nodes,
     reseed_rngs,
 )
-from pymc.util import (
-    RandomState,
-    WithMemoization,
-    _get_seeds_per_chain,
-    locally_cachedmethod,
-    makeiter,
-)
+from pymc.util import RandomState, _get_seeds_per_chain, makeiter, point_wrapper
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
 from pymc.variational.updates import adagrad_window
 from pymc.vartypes import discrete_types
@@ -141,21 +137,6 @@ def append_name(name):
         return inner
 
     return wrap
-
-
-def node_property(f):
-    """Wrap method to accessible tensor."""
-    if isinstance(f, str):
-
-        def wrapper(fn):
-            ff = append_name(f)(fn)
-            f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
-            return property(locally_cachedmethod(f_))
-
-        return wrapper
-    else:
-        f_ = pytensor.config.change_flags(compute_test_value="off")(f)
-        return property(locally_cachedmethod(f_))
 
 
 @pytensor.config.change_flags(compute_test_value="ignore")
@@ -497,7 +478,7 @@ class Operator:
     varlogp_norm = property(lambda self: self.approx.varlogp_norm)
     datalogp_norm = property(lambda self: self.approx.datalogp_norm)
     logq_norm = property(lambda self: self.approx.logq_norm)
-    model = property(lambda self: self.approx.model)
+    model = property(lambda self: modelcontext(None))
 
     def apply(self, f):  # pragma: no cover
         R"""Operator itself.
@@ -587,7 +568,7 @@ class TestFunction:
         return obj
 
 
-class Group(WithMemoization):
+class Group:
     R"""**Base class for grouping variables in VI**.
 
     Grouped Approximation is used for modelling mutual dependencies
@@ -770,7 +751,6 @@ class Group(WithMemoization):
         self._vfam = vfam
         self.rng = np.random.RandomState(random_seed)
         model = modelcontext(model)
-        self.model = model
         self.group = group
         self.user_params = params
         self._user_params = None
@@ -783,17 +763,42 @@ class Group(WithMemoization):
             self.__init_group__(self.group)
 
     def _prepare_start(self, start=None):
+        model = modelcontext(None)
+        # If start is already an array, we need to ensure it's flattened and matches ddim
+        if isinstance(start, np.ndarray):
+            start_flat = start.flatten()
+            if start_flat.size != self.ddim:
+                raise ValueError(
+                    f"Mismatch in start array size: got {start_flat.size}, expected {self.ddim}. "
+                    f"Start array shape: {start.shape}, flattened size: {start_flat.size}"
+                )
+            return start_flat
+        # Otherwise, get initial point from model and filter by group variables
         ipfn = make_initial_point_fn(
-            model=self.model,
+            model=model,
             overrides=start,
             jitter_rvs={},
             return_transformed=True,
         )
         start = ipfn(self.rng.randint(2**30, dtype=np.int64))
-        group_vars = {self.model.rvs_to_values[v].name for v in self.group}
+        group_vars = {model.rvs_to_values[v].name for v in self.group}
         start = {k: v for k, v in start.items() if k in group_vars}
-        start = DictToArrayBijection.map(start).data
-        return start
+        if not start:
+            raise ValueError(
+                f"No matching variables found in initial point for group variables: {group_vars}. "
+                f"Initial point keys: {list(ipfn(self.rng.randint(2**30, dtype=np.int64)).keys())}"
+            )
+        start_raveled = DictToArrayBijection.map(start)
+        # Ensure we have a 1D array that matches self.ddim
+        start_data = start_raveled.data
+        expected_size = self.ddim
+        if start_data.size != expected_size:
+            raise ValueError(
+                f"Mismatch in start array size: got {start_data.size}, expected {expected_size}. "
+                f"Group variables: {group_vars}, Start dict keys: {list(start.keys())}, "
+                f"This might indicate an issue with the model context or group initialization."
+            )
+        return start_data
 
     @classmethod
     def get_param_spec_for(cls, **kwargs):
@@ -867,9 +872,11 @@ class Group(WithMemoization):
         """Initialize the group."""
         if not group:
             raise GroupError("Got empty group")
+        model = modelcontext(None)
+
         if self.group is None:
-            # delayed init
-            self.group = group
+            self.group = list(group)
+
         self.symbolic_initial = self._initial_type(
             self.__class__.__name__ + "_symbolic_initial_tensor"
         )
@@ -878,15 +885,18 @@ class Group(WithMemoization):
         # so I have to to it by myself
 
         # 1) we need initial point (transformed space)
-        model_initial_point = self.model.initial_point(0)
+        model_initial_point = model.initial_point(0)
         # 2) we'll work with a single group, a subset of the model
         # here we need to create a mapping to replace value_vars with slices from the approximation
+        # Clear old replacements/ordering before rebuilding
+        self.replacements = collections.OrderedDict()
+        self.ordering = collections.OrderedDict()
         start_idx = 0
         for var in self.group:
             if var.type.numpy_dtype.name in discrete_types:
                 raise ParametrizationError(f"Discrete variables are not supported by VI: {var}")
             # 3) This is the way to infer shape and dtype of the variable
-            value_var = self.model.rvs_to_values[var]
+            value_var = model.rvs_to_values[var]
             test_var = model_initial_point[value_var.name]
             shape = test_var.shape
             size = test_var.size
@@ -911,8 +921,9 @@ class Group(WithMemoization):
         # prefixed are correctly reshaped
         if self._user_params is not None:
             return self._user_params
-        else:
-            return self.shared_params
+        if self.shared_params is None:
+            raise ParametrizationError("Group parameters have not been initialized")
+        return self.shared_params
 
     @property
     def params(self):
@@ -939,14 +950,6 @@ class Group(WithMemoization):
         shape vector
         """
         return pt.stack([size, dim])
-
-    @node_property
-    def ndim(self):
-        return self.ddim
-
-    @property
-    def ddim(self):
-        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         """*Dev* - allocates new initial random generator.
@@ -993,7 +996,15 @@ class Group(WithMemoization):
             initial = pt.switch(deterministic, pt.ones(shape, dtype) * dist_map, sample)
             return initial
 
-    @node_property
+    @property
+    def ndim(self):
+        return self.ddim
+
+    @property
+    def ddim(self):
+        return sum(s.stop - s.start for _, s, _, _ in self.ordering.values())
+
+    @cached_property
     def symbolic_random(self):
         """*Dev* - abstract node that takes `self.symbolic_initial` and creates approximate posterior that is parametrized with `self.params_dict`.
 
@@ -1103,7 +1114,7 @@ class Group(WithMemoization):
             initial = graph_replace(initial, more_replacements, strict=False)
         return {self.symbolic_initial: initial}
 
-    @node_property
+    @cached_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`."""
         t = self.to_flat_input(
@@ -1122,45 +1133,37 @@ class Group(WithMemoization):
         t = self.symbolic_single_sample(t)
         return pm.floatX(t)
 
-    @node_property
+    @property
     def symbolic_logq_not_scaled(self):
         """*Dev* - symbolically computed logq for `self.symbolic_random` computations can be more efficient since all is known beforehand including `self.symbolic_random`."""
         raise NotImplementedError  # shape (s,)
 
-    @node_property
+    @cached_property
     def symbolic_logq(self):
         """*Dev* - correctly scaled `self.symbolic_logq_not_scaled`."""
         return self.symbolic_logq_not_scaled
 
-    @node_property
+    @cached_property
     def logq(self):
         """*Dev* - Monte Carlo estimate for group `logQ`."""
         return self.symbolic_logq.mean(0)
 
-    @node_property
+    @cached_property
     def logq_norm(self):
         """*Dev* - Monte Carlo estimate for group `logQ` normalized."""
         return self.logq / self.symbolic_normalizing_constant
 
-    def __str__(self):
-        """Return a string representation for the object."""
-        if self.group is None:
-            shp = "undefined"
-        else:
-            shp = str(self.ddim)
-        return f"{self.__class__.__name__}[{shp}]"
-
-    @node_property
+    @property
     def std(self) -> pt.TensorVariable:
         """Return the standard deviation of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
 
-    @node_property
+    @property
     def cov(self) -> pt.TensorVariable:
         """Return the covariance between the latent variables as an unstructured 2-dimensional tensor variable."""
         raise NotImplementedError()
 
-    @node_property
+    @property
     def mean(self) -> pt.TensorVariable:
         """Return the mean of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
@@ -1169,12 +1172,13 @@ class Group(WithMemoization):
         """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in `self.ordering`."""
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
+        model = modelcontext(None)
         shared_nda = shared.eval()
         result = {}
         for name, s, shape, dtype in self.ordering.values():
-            dims = self.model.named_vars_to_dims.get(name, None)
+            dims = model.named_vars_to_dims.get(name, None)
             if dims is not None:
-                coords = {d: np.array(self.model.coords[d]) for d in dims}
+                coords = {d: np.array(model.coords[d]) for d in dims}
             else:
                 coords = None
             values = shared_nda[s].reshape(shape).astype(dtype)
@@ -1196,7 +1200,13 @@ group_for_params = Group.group_for_params
 group_for_short_name = Group.group_for_short_name
 
 
-class Approximation(WithMemoization):
+@dataclass
+class TraceSpec:
+    sample_vars: list
+    test_point: collections.OrderedDict
+
+
+class Approximation:
     """**Wrapper for grouped approximations**.
 
     Wraps list of groups, creates an Approximation instance that collects
@@ -1222,6 +1232,10 @@ class Approximation(WithMemoization):
     :class:`Group`
     """
 
+    def __setstate__(self, state):
+        """Restore state after unpickling."""
+        self.__dict__.update(state)
+
     def __init__(self, groups, model=None):
         self._scale_cost_to_minibatch = pytensor.shared(np.int8(1))
         model = modelcontext(model)
@@ -1230,33 +1244,164 @@ class Approximation(WithMemoization):
         self.groups = []
         seen = set()
         rest = None
-        for g in groups:
-            if g.group is None:
-                if rest is not None:
-                    raise GroupError("More than one group is specified for the rest variables")
-                else:
+        with model:
+            for g in groups:
+                if g.group is None:
+                    if rest is not None:
+                        raise GroupError("More than one group is specified for the rest variables")
                     rest = g
-            else:
-                if set(g.group) & seen:
-                    raise GroupError("Found duplicates in groups")
-                seen.update(g.group)
-                self.groups.append(g)
-        # List iteration to preserve order for reproducibility between runs
-        unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
-        if unseen_free_RVs:
-            if rest is None:
-                raise GroupError("No approximation is specified for the rest variables")
-            else:
+                else:
+                    group_vars = list(g.group)
+                    missing = [var for var in group_vars if var not in model.free_RVs]
+                    if missing:
+                        names = ", ".join(var.name for var in missing)
+                        raise GroupError(f"Variables [{names}] are not part of the provided model")
+                    if set(group_vars) & seen:
+                        raise GroupError("Found duplicates in groups")
+                    seen.update(group_vars)
+                    self.groups.append(g)
+            # List iteration to preserve order for reproducibility between runs
+            unseen_free_RVs = [var for var in model.free_RVs if var not in seen]
+            if unseen_free_RVs:
+                if rest is None:
+                    raise GroupError("No approximation is specified for the rest variables")
                 rest.__init_group__(unseen_free_RVs)
                 self.groups.append(rest)
-        self.model = model
 
     @property
     def has_logq(self):
         return all(self.collect("has_logq"))
 
+    @property
+    def model(self):
+        warnings.warn(
+            "`model` field is deprecated and will be removed in future versions. Use "
+            "a model context instead.",
+            DeprecationWarning,
+        )
+        return modelcontext(None)
+
     def collect(self, item):
         return [getattr(g, item) for g in self.groups]
+
+    def _variational_orderings(self, model):
+        orderings = collections.OrderedDict()
+        for g in self.groups:
+            orderings.update(g.ordering)
+        return orderings
+
+    def _draw_variational_samples(self, model, names, draws, size_sym, random_seed):
+        with model:
+            if not names:
+                return {}
+            tensors = [self.rslice(name, model) for name in names]
+            tensors = self.set_size_and_deterministic(tensors, size_sym, 0)
+            sample_fn = compile([size_sym], tensors)
+            rng_nodes = find_rng_nodes(tensors)
+            if random_seed is not None:
+                reseed_rngs(rng_nodes, random_seed)
+            outputs = sample_fn(draws)
+            if not isinstance(outputs, list | tuple):
+                outputs = [outputs]
+            return dict(zip(names, outputs))
+
+    def _draw_forward_samples(self, model, approx_samples, approx_names, draws, random_seed):
+        from pymc.sampling.forward import compile_forward_sampling_function
+
+        with model:
+            model_names = {model.rvs_to_values[v].name: v for v in model.free_RVs}
+            forward_names = sorted(name for name in model_names if name not in approx_names)
+            if not forward_names:
+                return {}
+
+            forward_vars = [model_names[name] for name in forward_names]
+            approx_vars = [model_names[name] for name in approx_names if name in model_names]
+            sampler_fn, _ = compile_forward_sampling_function(
+                outputs=forward_vars,
+                vars_in_trace=approx_vars,
+                basic_rvs=model.basic_RVs,
+                givens_dict=None,
+                random_seed=random_seed,
+            )
+            approx_value_vars = [model.rvs_to_values[var] for var in approx_vars]
+            input_values = {var.name: approx_samples[var.name] for var in approx_value_vars}
+            wrapped_sampler = point_wrapper(sampler_fn)
+
+            stacked = {name: [] for name in forward_names}
+            for i in range(draws):
+                inputs = {name: values[i] for name, values in input_values.items()}
+                raw = wrapped_sampler(**inputs)
+                if not isinstance(raw, list | tuple):
+                    raw = [raw]
+                for name, value in zip(forward_names, raw):
+                    stacked[name].append(value)
+            return {name: np.stack(values) for name, values in stacked.items()}
+
+    def _collect_sample_vars(self, model, sample_names):
+        lookup = {}
+        for var in model.unobserved_value_vars:
+            lookup.setdefault(var.name, var)
+        for name, var in model.named_vars.items():
+            lookup.setdefault(name, var)
+        sample_vars = [lookup[name] for name in sample_names if name in lookup]
+        seen = {var.name for var in sample_vars}
+        for var in model.unobserved_value_vars:
+            if var.name not in seen:
+                sample_vars.append(var)
+        return sample_vars, lookup
+
+    def _compute_missing_trace_values(self, model, samples, missing_vars):
+        with model:
+            if not missing_vars:
+                return {}
+            input_vars = model.value_vars
+            base_point = model.initial_point()
+            point = {
+                var.name: np.asarray(samples[var.name][0])
+                if var.name in samples
+                else base_point[var.name]
+                for var in input_vars
+                if var.name in samples or var.name in base_point
+            }
+            compute_fn = model.compile_fn(
+                missing_vars,
+                inputs=input_vars,
+                on_unused_input="ignore",
+                point_fn=True,
+            )
+            raw_values = compute_fn(point)
+            if not isinstance(raw_values, list | tuple):
+                raw_values = [raw_values]
+            values = {var.name: np.asarray(value) for var, value in zip(missing_vars, raw_values)}
+            return values
+
+    def _build_trace_spec(self, model, samples):
+        sample_names = sorted(samples.keys())
+        sample_vars, _ = self._collect_sample_vars(model, sample_names)
+        initial_point = model.initial_point()
+        test_point = collections.OrderedDict()
+        missing_vars = []
+
+        for var in sample_vars:
+            trace_name = var.name
+            if trace_name in samples:
+                first_sample = np.asarray(samples[trace_name][0])
+                test_point[trace_name] = first_sample
+                continue
+            if trace_name in initial_point:
+                value = np.asarray(initial_point[trace_name])
+                test_point[trace_name] = value
+                continue
+            missing_vars.append(var)
+
+        values = self._compute_missing_trace_values(model, samples, missing_vars)
+        for name, value in values.items():
+            test_point[name] = value
+
+        return TraceSpec(
+            sample_vars=sample_vars,
+            test_point=test_point,
+        )
 
     inputs = property(lambda self: self.collect("input"))
     symbolic_randoms = property(lambda self: self.collect("symbolic_random"))
@@ -1270,12 +1415,13 @@ class Approximation(WithMemoization):
     def scale_cost_to_minibatch(self, value):
         self._scale_cost_to_minibatch.set_value(np.int8(bool(value)))
 
-    @node_property
+    @cached_property
     def symbolic_normalizing_constant(self):
         """*Dev* - normalizing constant for `self.logq`, scales it to `minibatch_size` instead of `total_size`.
 
         Here the effect is controlled by `self.scale_cost_to_minibatch`.
         """
+        model = modelcontext(None)
         t = pt.max(
             self.collect("symbolic_normalizing_constant")
             + [
@@ -1283,98 +1429,98 @@ class Approximation(WithMemoization):
                     obs.owner.inputs[1:],
                     constant_fold([obs.owner.inputs[0].shape], raise_not_constant=False),
                 )
-                for obs in self.model.observed_RVs
+                for obs in model.observed_RVs
                 if isinstance(obs.owner.op, MinibatchRandomVariable)
             ]
         )
         t = pt.switch(self._scale_cost_to_minibatch, t, pt.constant(1, dtype=t.dtype))
         return pm.floatX(t)
 
-    @node_property
+    @cached_property
     def symbolic_logq(self):
         """*Dev* - collects `symbolic_logq` for all groups."""
         return pt.add(*self.collect("symbolic_logq"))
 
-    @node_property
+    @cached_property
     def logq(self):
         """*Dev* - collects `logQ` for all groups."""
         return pt.add(*self.collect("logq"))
 
-    @node_property
+    @cached_property
     def logq_norm(self):
         """*Dev* - collects `logQ` for all groups and normalizes it."""
         return self.logq / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def _sized_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
-        varlogp_s, datalogp_s = self.symbolic_sample_over_posterior(
-            [self.model.varlogp, self.model.datalogp]
-        )
+        model = modelcontext(None)
+        varlogp_s, datalogp_s = self.symbolic_sample_over_posterior([model.varlogp, model.datalogp])
         return varlogp_s, datalogp_s  # both shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_varlogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
         return self._sized_symbolic_varlogp_and_datalogp[0]  # shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_datalogp(self):
         """*Dev* - computes sampled data term from model via `pytensor.scan`."""
         return self._sized_symbolic_varlogp_and_datalogp[1]  # shape (s,)
 
-    @node_property
+    @cached_property
     def sized_symbolic_logp(self):
         """*Dev* - computes sampled logP from model via `pytensor.scan`."""
         return self.sized_symbolic_varlogp + self.sized_symbolic_datalogp  # shape (s,)
 
-    @node_property
+    @cached_property
     def logp(self):
         """*Dev* - computes :math:`E_{q}(logP)` from model via `pytensor.scan` that can be optimized later."""
         return self.varlogp + self.datalogp
 
-    @node_property
+    @cached_property
     def varlogp(self):
         """*Dev* - computes :math:`E_{q}(prior term)` from model via `pytensor.scan` that can be optimized later."""
         return self.sized_symbolic_varlogp.mean(0)
 
-    @node_property
+    @cached_property
     def datalogp(self):
         """*Dev* - computes :math:`E_{q}(data term)` from model via `pytensor.scan` that can be optimized later."""
         return self.sized_symbolic_datalogp.mean(0)
 
-    @node_property
+    @cached_property
     def _single_symbolic_varlogp_and_datalogp(self):
         """*Dev* - computes sampled prior term from model via `pytensor.scan`."""
-        varlogp, datalogp = self.symbolic_single_sample([self.model.varlogp, self.model.datalogp])
+        model = modelcontext(None)
+        varlogp, datalogp = self.symbolic_single_sample([model.varlogp, model.datalogp])
         return varlogp, datalogp
 
-    @node_property
+    @cached_property
     def single_symbolic_varlogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(prior term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[0]
 
-    @node_property
+    @cached_property
     def single_symbolic_datalogp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(data term)` `pytensor.scan` is not needed and code can be optimized."""
         return self._single_symbolic_varlogp_and_datalogp[1]
 
-    @node_property
+    @cached_property
     def single_symbolic_logp(self):
         """*Dev* - for single MC sample estimate of :math:`E_{q}(logP)` `pytensor.scan` is not needed and code can be optimized."""
         return self.single_symbolic_datalogp + self.single_symbolic_varlogp
 
-    @node_property
+    @cached_property
     def logp_norm(self):
         """*Dev* - normalized :math:`E_{q}(logP)`."""
         return self.logp / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def varlogp_norm(self):
         """*Dev* - normalized :math:`E_{q}(prior term)`."""
         return self.varlogp / self.symbolic_normalizing_constant
 
-    @node_property
+    @cached_property
     def datalogp_norm(self):
         """*Dev* - normalized :math:`E_{q}(data term)`."""
         return self.datalogp / self.symbolic_normalizing_constant
@@ -1488,7 +1634,7 @@ class Approximation(WithMemoization):
         return repl
 
     @pytensor.config.change_flags(compute_test_value="off")
-    def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
+    def sample_node(self, node, size=None, deterministic=False, more_replacements=None, model=None):
         """Sample given node or nodes over shared posterior.
 
         Parameters
@@ -1507,62 +1653,69 @@ class Approximation(WithMemoization):
         sampled node(s) with replacements
         """
         node_in = node
-        if more_replacements:
-            node = graph_replace(node, more_replacements, strict=False)
-        if not isinstance(node, list | tuple):
-            node = [node]
-        node = self.model.replace_rvs_by_values(node)
-        if not isinstance(node_in, list | tuple):
-            node = node[0]
-        if size is None:
-            node_out = self.symbolic_single_sample(node)
-        else:
-            node_out = self.symbolic_sample_over_posterior(node)
-        node_out = self.set_size_and_deterministic(node_out, size, deterministic)
-        try_to_set_test_value(node_in, node_out, size)
-        return node_out
 
-    def rslice(self, name):
+        model = modelcontext(model)
+        with model:
+            if more_replacements:
+                node = graph_replace(node, more_replacements, strict=False)
+            if not isinstance(node, list | tuple):
+                node = [node]
+            node = model.replace_rvs_by_values(node)
+            if not isinstance(node_in, list | tuple):
+                node = node[0]
+            if size is None:
+                node_out = self.symbolic_single_sample(node)
+            else:
+                node_out = self.symbolic_sample_over_posterior(node)
+            node_out = self.set_size_and_deterministic(node_out, size, deterministic)
+            try_to_set_test_value(node_in, node_out, size)
+            return node_out
+
+    def rslice(self, name, model=None):
         """*Dev* - vectorized sampling for named random variable without call to `pytensor.scan`.
 
         This node still needs :func:`set_size_and_deterministic` to be evaluated.
         """
+        model = modelcontext(model)
 
-        def vars_names(vs):
-            return {self.model.rvs_to_values[v].name for v in vs}
-
-        for vars_, random, ordering in zip(
-            self.collect("group"), self.symbolic_randoms, self.collect("ordering")
-        ):
-            if name in vars_names(vars_):
-                name_, slc, shape, dtype = ordering[name]
-                found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
-                found.name = name + "_vi_random_slice"
-                break
-        else:
-            raise KeyError(f"{name!r} not found")
+        with model:
+            for random, ordering in zip(self.symbolic_randoms, self.collect("ordering")):
+                if name in ordering:
+                    _name, slc, shape, dtype = ordering[name]
+                    found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
+                    found.name = name + "_vi_random_slice"
+                    break
+            else:
+                raise KeyError(f"{name!r} not found")
         return found
 
-    @node_property
+    @property
     def sample_dict_fn(self):
         s = pt.iscalar()
-        names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
-        sampled = [self.rslice(name) for name in names]
-        sampled = self.set_size_and_deterministic(sampled, s, 0)
-        sample_fn = compile([s], sampled)
-        rng_nodes = find_rng_nodes(sampled)
 
-        def inner(draws=100, *, random_seed: SeedSequenceSeed = None):
-            if random_seed is not None:
-                reseed_rngs(rng_nodes, random_seed)
-            _samples = sample_fn(draws)
-
-            return dict(zip(names, _samples))
+        def inner(draws=100, *, model=None, random_seed: SeedSequenceSeed = None):
+            model = modelcontext(model)
+            with model:
+                orderings = self._variational_orderings(model)
+                approx_var_names = sorted(orderings.keys())
+                approx_samples = self._draw_variational_samples(
+                    model, approx_var_names, draws, s, random_seed
+                )
+                forward_samples = self._draw_forward_samples(
+                    model, approx_samples, approx_var_names, draws, random_seed
+                )
+                return {**approx_samples, **forward_samples}
 
         return inner
 
     def sample(
-        self, draws=500, *, random_seed: RandomState = None, return_inferencedata=True, **kwargs
+        self,
+        draws=500,
+        *,
+        model: Model | None = None,
+        random_seed: RandomState = None,
+        return_inferencedata=True,
+        **kwargs,
     ):
         """Draw samples from variational posterior.
 
@@ -1570,6 +1723,8 @@ class Approximation(WithMemoization):
         ----------
         draws : int
             Number of random samples.
+        model : Model (optional if in ``with`` context
+            Model to be used to generate samples.
         random_seed : int, RandomState or Generator, optional
             Seed for the random number generator.
         return_inferencedata : bool
@@ -1580,33 +1735,48 @@ class Approximation(WithMemoization):
         trace: :class:`pymc.backends.base.MultiTrace`
             Samples drawn from variational posterior.
         """
-        # TODO: add tests for include_transformed case
         kwargs["log_likelihood"] = False
 
-        if random_seed is not None:
-            (random_seed,) = _get_seeds_per_chain(random_seed, 1)
-        samples: dict = self.sample_dict_fn(draws, random_seed=random_seed)
-        points = (
-            {name: np.asarray(records[i]) for name, records in samples.items()}
-            for i in range(draws)
-        )
+        model = modelcontext(model)
 
-        trace = NDArray(
-            model=self.model,
-            test_point={name: records[0] for name, records in samples.items()},
-        )
-        try:
-            trace.setup(draws=draws, chain=0)
-            for point in points:
-                trace.record(point)
-        finally:
-            trace.close()
+        with model:
+            if random_seed is not None:
+                (random_seed,) = _get_seeds_per_chain(random_seed, 1)
+            samples: dict = self.sample_dict_fn(draws, model=model, random_seed=random_seed)
+            spec = self._build_trace_spec(model, samples)
+
+            from collections import OrderedDict
+
+            default_point = model.initial_point()
+            value_var_names = [var.name for var in model.value_vars]
+            points = (
+                OrderedDict(
+                    (
+                        name,
+                        np.asarray(samples[name][i])
+                        if name in samples and len(samples[name]) > i
+                        else np.asarray(spec.test_point.get(name, default_point[name])),
+                    )
+                    for name in value_var_names
+                )
+                for i in range(draws)
+            )
+
+            trace = NDArray(
+                model=model,
+            )
+            try:
+                trace.setup(draws=draws, chain=0)
+                for point in points:
+                    trace.record(point)
+            finally:
+                trace.close()
 
         multi_trace = MultiTrace([trace])
         if not return_inferencedata:
             return multi_trace
         else:
-            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
+            return pm.to_inference_data(multi_trace, model=model, **kwargs)
 
     @property
     def ndim(self):
@@ -1616,7 +1786,7 @@ class Approximation(WithMemoization):
     def ddim(self):
         return sum(self.collect("ddim"))
 
-    @node_property
+    @cached_property
     def symbolic_random(self):
         return pt.concatenate(self.collect("symbolic_random"), axis=-1)
 
@@ -1636,7 +1806,7 @@ class Approximation(WithMemoization):
     def any_histograms(self):
         return any(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
 
-    @node_property
+    @property
     def joint_histogram(self):
         if not self.all_histograms:
             raise VariationalInferenceError("%s does not consist of all Empirical approximations")

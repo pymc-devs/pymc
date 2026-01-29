@@ -41,7 +41,7 @@ def test_fit_with_nans(score):
         mean = inp * coef
         pm.Normal("y", mean, 0.1, observed=y)
         with pytest.raises(FloatingPointError) as e:
-            advi = pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
+            pm.fit(100, score=score, obj_optimizer=pm.adam(learning_rate=float("nan")))
 
 
 @pytest.fixture(scope="module", params=[True, False], ids=["mini", "full"])
@@ -174,8 +174,9 @@ def fit_kwargs(inference, use_minibatch):
     return _select[(type(inference), key)]
 
 
-def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    trace = inference.fit(**fit_kwargs).sample(10000)
+def test_fit_oo(simple_model, inference, fit_kwargs, simple_model_data):
+    with simple_model:
+        trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -202,7 +203,8 @@ def test_fit_start(inference_spec, simple_model):
         inference = inference_spec(**kw)
 
     try:
-        trace = inference.fit(n=0).sample(10000)
+        with simple_model:
+            trace = inference.fit(n=0).sample(10000)
     except NotImplementedInference as e:
         pytest.skip(str(e))
 
@@ -243,10 +245,11 @@ def test_fit_fn_text(method, kwargs, error):
                 pm.fit(10, method=method, **kwargs)
 
 
-def test_profile(inference):
+def test_profile(inference, simple_model):
     if type(inference) in {SVGD, ASVGD}:
         pytest.skip("Not Implemented Inference")
-    inference.run_profiling(n=100).summary()
+    with simple_model:
+        inference.run_profiling(n=100).summary()
 
 
 @pytest.fixture(scope="module")
@@ -266,64 +269,66 @@ def binomial_model_inference(binomial_model, inference_spec):
 
 
 @pytest.mark.xfail("pytensor.config.warn_float64 == 'raise'", reason="too strict float32")
-def test_replacements(binomial_model_inference):
+def test_replacements(binomial_model_inference, binomial_model):
     d = pytensor.shared(1)
     approx = binomial_model_inference.approx
-    p = approx.model.p
-    p_t = p**3
-    p_s = approx.sample_node(p_t)
-    assert not any(
-        isinstance(n.owner.op, pytensor.tensor.random.basic.BetaRV)
-        for n in pytensor.graph.ancestors([p_s])
-        if n.owner
-    ), "p should be replaced"
-    if pytensor.config.compute_test_value != "off":
-        assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
-    sampled = [pm.draw(p_s) for _ in range(100)]
-    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
-    p_z = approx.sample_node(p_t, deterministic=False, size=10)
-    assert p_z.shape.eval() == (10,)
-    try:
-        p_z = approx.sample_node(p_t, deterministic=True, size=10)
+    with binomial_model:
+        p = binomial_model.p
+        p_t = p**3
+        p_s = approx.sample_node(p_t)
+        assert not any(
+            isinstance(n.owner.op, pytensor.tensor.random.basic.BetaRV)
+            for n in pytensor.graph.ancestors([p_s])
+            if n.owner
+        ), "p should be replaced"
+        if pytensor.config.compute_test_value != "off":
+            assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
+        sampled = [pm.draw(p_s) for _ in range(100)]
+        assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+        p_z = approx.sample_node(p_t, deterministic=False, size=10)
         assert p_z.shape.eval() == (10,)
-    except opvi.NotImplementedInference:
-        pass
+        try:
+            p_z = approx.sample_node(p_t, deterministic=True, size=10)
+            assert p_z.shape.eval() == (10,)
+        except opvi.NotImplementedInference:
+            pass
 
-    try:
-        p_d = approx.sample_node(p_t, deterministic=True)
-        sampled = [pm.draw(p_d) for _ in range(100)]
+        try:
+            p_d = approx.sample_node(p_t, deterministic=True)
+            sampled = [pm.draw(p_d) for _ in range(100)]
+            assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
+        except opvi.NotImplementedInference:
+            pass
+
+        p_r = approx.sample_node(p_t, deterministic=d)
+        d.set_value(1)
+        sampled = [pm.draw(p_r) for _ in range(100)]
         assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
-    except opvi.NotImplementedInference:
-        pass
-
-    p_r = approx.sample_node(p_t, deterministic=d)
-    d.set_value(1)
-    sampled = [pm.draw(p_r) for _ in range(100)]
-    assert all(map(operator.eq, sampled[1:], sampled[:-1]))  # deterministic
-    d.set_value(0)
-    sampled = [pm.draw(p_r) for _ in range(100)]
-    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+        d.set_value(0)
+        sampled = [pm.draw(p_r) for _ in range(100)]
+        assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
 
 
-def test_sample_replacements(binomial_model_inference):
+def test_sample_replacements(binomial_model_inference, binomial_model):
     i = pt.iscalar()
     i.tag.test_value = 1
     approx = binomial_model_inference.approx
-    p = approx.model.p
-    p_t = p**3
-    p_s = approx.sample_node(p_t, size=100)
-    if pytensor.config.compute_test_value != "off":
-        assert p_s.tag.test_value.shape == (100, *p_t.tag.test_value.shape)
-    sampled = p_s.eval()
-    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
-    assert sampled.shape[0] == 100
+    with binomial_model:
+        p = binomial_model.p
+        p_t = p**3
+        p_s = approx.sample_node(p_t, size=100)
+        if pytensor.config.compute_test_value != "off":
+            assert p_s.tag.test_value.shape == (100, *p_t.tag.test_value.shape)
+        sampled = p_s.eval()
+        assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
+        assert sampled.shape[0] == 100
 
-    p_d = approx.sample_node(p_t, size=i)
-    sampled = p_d.eval({i: 100})
-    assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # deterministic
-    assert sampled.shape[0] == 100
-    sampled = p_d.eval({i: 101})
-    assert sampled.shape[0] == 101
+        p_d = approx.sample_node(p_t, size=i)
+        sampled = p_d.eval({i: 100})
+        assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # deterministic
+        assert sampled.shape[0] == 100
+        sampled = p_d.eval({i: 101})
+        assert sampled.shape[0] == 101
 
 
 def test_remove_scan_op():
@@ -353,30 +358,28 @@ def test_var_replacement():
         assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11,)
 
 
-def test_clear_cache():
-    with pm.Model():
+@pytest.mark.parametrize(
+    "inference_cls",
+    [ADVI, FullRankADVI],
+)
+def test_advi_pickle(inference_cls):
+    with pm.Model() as model:
         pm.Normal("n", 0, 1)
-        inference = ADVI()
+        inference = inference_cls()
         inference.fit(n=10)
-        assert any(len(c) != 0 for c in inference.approx._cache.values())
-        inference.approx._cache.clear()
-        # should not be cleared at this call
-        assert all(len(c) == 0 for c in inference.approx._cache.values())
-        new_a = cloudpickle.loads(cloudpickle.dumps(inference.approx))
-        assert not hasattr(new_a, "_cache")
-        inference_new = pm.KLqp(new_a)
+        serialized = cloudpickle.dumps(inference.approx)
+        new_approx = cloudpickle.loads(serialized)
+        inference_new = pm.KLqp(new_approx)
         inference_new.fit(n=10)
-        assert any(len(c) != 0 for c in inference_new.approx._cache.values())
-        inference_new.approx._cache.clear()
-        assert all(len(c) == 0 for c in inference_new.approx._cache.values())
 
 
-def test_fit_data(inference, fit_kwargs, simple_model_data):
-    fitted = inference.fit(**fit_kwargs)
-    mu_post = simple_model_data["mu_post"]
-    d = simple_model_data["d"]
-    np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
-    np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
+def test_fit_data(inference, fit_kwargs, simple_model_data, simple_model):
+    with simple_model:
+        fitted = inference.fit(**fit_kwargs)
+        mu_post = simple_model_data["mu_post"]
+        d = simple_model_data["d"]
+        np.testing.assert_allclose(fitted.mean_data["mu"].values, mu_post, rtol=0.05)
+        np.testing.assert_allclose(fitted.std_data["mu"], np.sqrt(1.0 / d), rtol=0.2)
 
 
 @pytest.fixture
@@ -440,13 +443,13 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
     with hierarchical_model:
         fitted = pm.fit(1)
 
-    for data in [fitted.mean_data, fitted.std_data]:
-        assert set(data.keys()) == {"sigma_group_mu_log__", "sigma_log__", "group_mu", "mu"}
-        assert data["group_mu"].shape == hierarchical_model_data["group_shape"]
-        assert list(data["group_mu"].coords.keys()) == list(
-            hierarchical_model_data["group_coords"].keys()
-        )
-        assert data["mu"].shape == ()
+        for data in [fitted.mean_data, fitted.std_data]:
+            assert set(data.keys()) == {"sigma_group_mu_log__", "sigma_log__", "group_mu", "mu"}
+            assert data["group_mu"].shape == hierarchical_model_data["group_shape"]
+            assert list(data["group_mu"].coords.keys()) == list(
+                hierarchical_model_data["group_coords"].keys()
+            )
+            assert data["mu"].shape == ()
 
 
 def test_multiple_minibatch_variables():

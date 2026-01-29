@@ -1710,7 +1710,7 @@ def init_nuts(
             compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            draws=chains, model=model, random_seed=random_seed_list[0], return_inferencedata=False
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         std_apoint = approx.std.eval()
@@ -1734,7 +1734,7 @@ def init_nuts(
             compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            draws=chains, model=model, random_seed=random_seed_list[0], return_inferencedata=False
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
@@ -1752,7 +1752,7 @@ def init_nuts(
             compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            draws=chains, model=model, random_seed=random_seed_list[0], return_inferencedata=False
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2

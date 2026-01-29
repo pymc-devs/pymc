@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from functools import cached_property
+
 import numpy as np
 import pytensor
 
@@ -32,7 +34,6 @@ from pymc.variational.opvi import (
     Group,
     NotImplementedInference,
     _known_scan_ignored_inputs,
-    node_property,
 )
 
 __all__ = ["Empirical", "FullRank", "MeanField", "sample_approx"]
@@ -52,20 +53,20 @@ class MeanFieldGroup(Group):
     short_name = "mean_field"
     alias_names = frozenset(["mf"])
 
-    @node_property
+    @cached_property
     def mean(self):
         return self.params_dict["mu"]
 
-    @node_property
+    @cached_property
     def rho(self):
         return self.params_dict["rho"]
 
-    @node_property
+    @cached_property
     def cov(self):
         var = rho2sigma(self.rho) ** 2
         return pt.diag(var)
 
-    @node_property
+    @cached_property
     def std(self):
         return rho2sigma(self.rho)
 
@@ -85,6 +86,13 @@ class MeanFieldGroup(Group):
         # by `self.ordering`. In the cases I looked into these turn out to be the same, but there may be edge cases or
         # future code changes that break this assumption.
         start = self._prepare_start(start)
+        # Ensure start is a 1D array and matches ddim
+        start = np.asarray(start).flatten()
+        if start.size != self.ddim:
+            raise ValueError(
+                f"Start array size mismatch: got {start.size}, expected {self.ddim}. "
+                f"Start shape: {start.shape if hasattr(start, 'shape') else 'unknown'}"
+            )
         rho1 = np.zeros((self.ddim,))
 
         if start_sigma is not None:
@@ -99,14 +107,14 @@ class MeanFieldGroup(Group):
             "rho": pytensor.shared(pm.floatX(rho), "rho"),
         }
 
-    @node_property
+    @cached_property
     def symbolic_random(self):
         initial = self.symbolic_initial
         sigma = self.std
         mu = self.mean
         return sigma * initial + mu
 
-    @node_property
+    @cached_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         std = rho2sigma(self.rho)
@@ -139,11 +147,18 @@ class FullRankGroup(Group):
 
     def create_shared_params(self, start=None):
         start = self._prepare_start(start)
+        # Ensure start is a 1D array and matches ddim
+        start = np.asarray(start).flatten()
+        if start.size != self.ddim:
+            raise ValueError(
+                f"Start array size mismatch: got {start.size}, expected {self.ddim}. "
+                f"Start shape: {start.shape if hasattr(start, 'shape') else 'unknown'}"
+            )
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(pytensor.config.floatX)
         return {"mu": pytensor.shared(start, "mu"), "L_tril": pytensor.shared(L_tril, "L_tril")}
 
-    @node_property
+    @cached_property
     def L(self):
         L = pt.zeros((self.ddim, self.ddim))
         L = pt.set_subtensor(L[self.tril_indices], self.params_dict["L_tril"])
@@ -151,16 +166,16 @@ class FullRankGroup(Group):
         L = pt.set_subtensor(Ld, rho2sigma(Ld))
         return L
 
-    @node_property
+    @cached_property
     def mean(self):
         return self.params_dict["mu"]
 
-    @node_property
+    @cached_property
     def cov(self):
         L = self.L
         return L.dot(L.T)
 
-    @node_property
+    @cached_property
     def std(self):
         return pt.sqrt(pt.diag(self.cov))
 
@@ -173,7 +188,7 @@ class FullRankGroup(Group):
     def tril_indices(self):
         return np.tril_indices(self.ddim)
 
-    @node_property
+    @cached_property
     def symbolic_logq_not_scaled(self):
         z0 = self.symbolic_initial
         diag = pt.diagonal(self.L, 0, self.L.ndim - 2, self.L.ndim - 1)
@@ -182,7 +197,7 @@ class FullRankGroup(Group):
         logq = quaddist - logdet
         return logq.sum(range(1, logq.ndim))
 
-    @node_property
+    @cached_property
     def symbolic_random(self):
         initial = self.symbolic_initial
         L = self.L
@@ -233,6 +248,8 @@ class EmpiricalGroup(Group):
         return {"histogram": pytensor.shared(pm.floatX(histogram), "histogram")}
 
     def _check_trace(self):
+        from pymc.model import modelcontext
+
         trace = self._kwargs.get("trace", None)
         if isinstance(trace, InferenceData):
             raise NotImplementedError(
@@ -240,10 +257,10 @@ class EmpiricalGroup(Group):
                 " Pass `pm.sample(return_inferencedata=False)` to get a `MultiTrace` to use with `Empirical`."
                 " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
             )
-        elif trace is not None and not all(
-            self.model.rvs_to_values[var].name in trace.varnames for var in self.group
-        ):
-            raise ValueError("trace has not all free RVs in the group")
+        elif trace is not None:
+            model = modelcontext(None)
+            if not all(model.rvs_to_values[var].name in trace.varnames for var in self.group):
+                raise ValueError("trace has not all free RVs in the group")
 
     def randidx(self, size=None):
         if size is None:
@@ -284,24 +301,24 @@ class EmpiricalGroup(Group):
             else:
                 return self.histogram[self.randidx(size)]
 
-    @property
+    @cached_property
     def symbolic_random(self):
         return self.symbolic_initial
 
-    @property
+    @cached_property
     def histogram(self):
         return self.params_dict["histogram"]
 
-    @node_property
+    @cached_property
     def mean(self):
         return self.histogram.mean(0)
 
-    @node_property
+    @cached_property
     def cov(self):
         x = self.histogram - self.mean
         return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
 
-    @node_property
+    @cached_property
     def std(self):
         return pt.sqrt(pt.diag(self.cov))
 
