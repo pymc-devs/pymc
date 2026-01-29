@@ -35,7 +35,7 @@
 #   SOFTWARE.
 import abc
 
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 import numpy as np
 import pytensor.tensor as pt
@@ -141,6 +141,10 @@ class Transform(abc.ABC):
 
         Multiple values may be returned when the transformation is not 1-to-1.
         """
+
+    @abc.abstractmethod
+    def transform_coords(self, coords: Sequence[str]) -> Sequence[str]:
+        """Mutate user-provided coordinates associated with the variable to label transformed values returned by this class."""
 
     def log_jac_det(self, value: TensorVariable, *inputs) -> TensorVariable:
         """Construct the log of the absolute value of the Jacobian determinant."""
@@ -628,6 +632,9 @@ class SinhTransform(Transform):
     def backward(self, value, *inputs):
         return pt.arcsinh(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class CoshTransform(Transform):
     name = "cosh"
@@ -647,6 +654,9 @@ class CoshTransform(Transform):
             -pt.log(pt.sqrt(value**2 - 1)),
         )
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class TanhTransform(Transform):
     name = "tanh"
@@ -657,6 +667,9 @@ class TanhTransform(Transform):
 
     def backward(self, value, *inputs):
         return pt.arctanh(value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ArcsinhTransform(Transform):
@@ -669,6 +682,9 @@ class ArcsinhTransform(Transform):
     def backward(self, value, *inputs):
         return pt.sinh(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class ArccoshTransform(Transform):
     name = "arccosh"
@@ -679,6 +695,9 @@ class ArccoshTransform(Transform):
 
     def backward(self, value, *inputs):
         return pt.cosh(value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ArctanhTransform(Transform):
@@ -691,6 +710,9 @@ class ArctanhTransform(Transform):
     def backward(self, value, *inputs):
         return pt.tanh(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class ErfTransform(Transform):
     name = "erf"
@@ -702,6 +724,9 @@ class ErfTransform(Transform):
     def backward(self, value, *inputs):
         return pt.erfinv(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class ErfcTransform(Transform):
     name = "erfc"
@@ -712,6 +737,9 @@ class ErfcTransform(Transform):
 
     def backward(self, value, *inputs):
         return pt.erfcinv(value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ErfcxTransform(Transform):
@@ -740,6 +768,9 @@ class ErfcxTransform(Transform):
         )
         return result[-1]
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class LocTransform(Transform):
     name = "loc"
@@ -757,6 +788,9 @@ class LocTransform(Transform):
 
     def log_jac_det(self, value, *inputs):
         return pt.zeros_like(value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ScaleTransform(Transform):
@@ -777,6 +811,9 @@ class ScaleTransform(Transform):
         scale = self.transform_args_fn(*inputs)
         return -pt.log(pt.abs(pt.broadcast_to(scale, value.shape)))
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class LogTransform(Transform):
     name = "log"
@@ -789,6 +826,9 @@ class LogTransform(Transform):
 
     def log_jac_det(self, value, *inputs):
         return value
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ExpTransform(Transform):
@@ -803,6 +843,9 @@ class ExpTransform(Transform):
     def log_jac_det(self, value, *inputs):
         return -pt.log(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class AbsTransform(Transform):
     name = "abs"
@@ -816,6 +859,9 @@ class AbsTransform(Transform):
 
     def log_jac_det(self, value, *inputs):
         return pt.switch(value >= 0, 0, np.nan)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class PowerTransform(Transform):
@@ -859,6 +905,9 @@ class PowerTransform(Transform):
             res = pt.switch(value >= 0, res, np.nan)
 
         return res
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class IntervalTransform(Transform):
@@ -968,6 +1017,9 @@ class IntervalTransform(Transform):
         else:
             return pt.zeros_like(value)
 
+    def transform_coords(self, coords):
+        return coords
+
 
 class LogOddsTransform(Transform):
     name = "logodds"
@@ -981,6 +1033,9 @@ class LogOddsTransform(Transform):
     def log_jac_det(self, value, *inputs):
         sigmoid_value = pt.sigmoid(value)
         return pt.log(sigmoid_value) + pt.log1p(-sigmoid_value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class SimplexTransform(Transform):
@@ -1009,6 +1064,11 @@ class SimplexTransform(Transform):
         res = pt.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return pt.sum(res, -1)
 
+    def transform_coords(self, coords):
+        if len(coords) == 0:
+            return coords
+        return coords[:-1]
+
 
 class CircularTransform(Transform):
     name = "circular"
@@ -1021,6 +1081,9 @@ class CircularTransform(Transform):
 
     def log_jac_det(self, value, *inputs):
         return pt.zeros_like(value)
+
+    def transform_coords(self, coords):
+        return coords
 
 
 class ChainedTransform(Transform):
@@ -1057,3 +1120,8 @@ class ChainedTransform(Transform):
             else:
                 det += det_
         return det
+
+    def transform_coords(self, coords):
+        for transform in self.transform_list:
+            coords = transform.transform_coords(coords)
+        return coords
