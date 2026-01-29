@@ -489,6 +489,12 @@ class TestMatchesScipy:
             laplace_asymmetric_logpdf,
             decimal=select_by_precision(float64=6, float32=2),
         )
+        check_icdf(
+            pm.AsymmetricLaplace,
+            {"b": Rplus, "kappa": Rplus, "mu": R},
+            # scipy uses an alternative scale parameterization, scale=1/b
+            lambda q, b, kappa, mu: st.laplace_asymmetric.ppf(q, kappa, mu, 1 / b),
+        )
 
     def test_lognormal(self):
         check_logp(
