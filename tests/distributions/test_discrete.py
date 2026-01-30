@@ -345,6 +345,56 @@ class TestMatchesScipy:
             Nat,
             {"q": Unit, "beta": NatSmall},
         )
+        # Manual ICDF check used to avoid naming collision between the distribution parameter 'q' and the testing helper's input variable 'q'.
+        # A. Define symbolic variables with unique names
+        q_param = pt.scalar("q_param")
+        beta_param = pt.scalar("beta_param")
+        p_val = pt.scalar("p_val")  # Using "p_val" instead of "q" avoids the collision!
+
+        # B. Instantiate the distribution and call icdf
+        dist = pm.DiscreteWeibull.dist(q=q_param, beta=beta_param)
+        icdf_expr = icdf(dist, p_val)
+
+        # C. Compile the PyTensor function
+        # This creates a function that takes (probability, q, beta) -> integer quantile
+        icdf_fn = pytensor.function([p_val, q_param, beta_param], icdf_expr)
+
+        # D. Define the Reference Implementation (NumPy)
+        def ref_icdf(v, q, b):
+            # The formula you used in your lambda
+            return np.ceil(
+                np.power(np.log1p(-v) / np.log(q), 1.0 / b) - 1
+            ).astype("int64")
+
+        # E. Define test values (similar to what check_icdf does internally)
+        test_probs = [0.001, 0.1, 0.5, 0.9, 0.99]
+        q_values = [0.2, 0.5, 0.8]
+        beta_values = [0.5, 1.0, 2.0, 5.0]
+
+        # F. Loop and Verify
+        for q_v in q_values:
+            for b_v in beta_values:
+                for p_v in test_probs:
+                    # Run PyMC implementation
+                    pymc_res = icdf_fn(p_v, q_v, b_v)
+                    # Run Reference implementation
+                    ref_res = ref_icdf(p_v, q_v, b_v)
+
+                    # Assert they match
+                    np.testing.assert_array_equal(
+                        pymc_res,
+                        ref_res,
+                        err_msg=f"Mismatch at prob={p_v}, q={q_v}, beta={b_v}"
+                    )
+
+                    # Sanity check: Result must be non-negative (Support is 0, 1, 2...)
+                    assert pymc_res >= 0, f"Found negative value {pymc_res} at prob={p_v}"
+
+        #  Boundary Check (p=0 and p=1)
+        # p=0 -> Should be 0 (smallest value in support)
+        assert icdf_fn(0.0, 0.5, 1.0) == 0
+        # p=1 -> Should be infinity (or huge number), but practically we check it doesn't crash
+        # (Note: depending on implementation, 1.0 might return inf or max int)
 
     def test_poisson(self):
         check_logp(

@@ -503,6 +503,38 @@ class DiscreteWeibull(Discrete):
             msg="0 < q < 1, beta > 0",
         )
 
+    def icdf(value, q, beta):
+        """
+        Inverse cumulative distribution function of the Discrete Weibull distribution.
+        """
+        log_q = pt.log(q)
+        # Use log1p(-value) instead of log1m(-value)
+        inner = pt.log1p(-value) / log_q
+        powered = pt.power(inner, 1.0 / beta)
+
+        # Initial integer estimate
+        res = pt.ceil(powered - 1).astype("int64")
+        res = pt.maximum(res, 0)
+
+        # Ensure floating point errors don't overshoot
+        res_1m = pt.maximum(res - 1, 0)
+
+        # Calculate logcdf at (res - 1) using the math from line 519
+        # logcdf = log(1 - q^((x+1)^beta)) -> log1p(-q^((x+1)^beta))
+        logcdf_1m = pt.log1p(-pt.power(q, pt.power(res_1m + 1, beta)))
+        value_1m = pt.exp(logcdf_1m)
+
+        # If the value below still satisfies the probability, use it
+        res = pt.switch(value_1m >= value, res_1m, res)
+
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            0 < q,
+            q < 1,
+            beta > 0,
+            msg="0 < q < 1, beta > 0",
+        )
 
 class Poisson(Discrete):
     R"""
