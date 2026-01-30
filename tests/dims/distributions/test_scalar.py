@@ -35,6 +35,7 @@ from pymc.dims import (
     StudentT,
     TruncatedNormal,
     Uniform,
+    Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
@@ -293,6 +294,18 @@ def test_inverse_gamma():
     with Model(coords=coords) as reference_model:
         regular_distributions.InverseGamma("w", alpha=1, beta=1, dims="a")
         regular_distributions.InverseGamma("x", mu=2, sigma=3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_weibull():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Weibull("x", alpha=1, beta=2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Weibull("x", alpha=1, beta=2, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)

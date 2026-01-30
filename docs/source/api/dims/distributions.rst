@@ -25,6 +25,7 @@ Scalar distributions
    Laplace
    Gamma
    InverseGamma
+   Weibull
 
 
 Vector distributions
