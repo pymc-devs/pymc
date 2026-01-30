@@ -29,7 +29,7 @@ from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims_with_ellipsis
-from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.tensor import MeasurableDimShuffle
 from pymc.logprob.utils import filter_measurable_variables
@@ -103,16 +103,38 @@ def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] |
     return [cast(XTensorVariable, new_out)]
 
 
-@_logprob.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor(op, values, rv, **kwargs):
-    rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
+def _to_xtensor(var, op: MeasurableXTensorFromTensor):
     if op.core_dims is None:
         # The core_dims of the inner rv are on the right
-        dims = op.dims[: rv_logp.ndim]
+        dims = op.dims[: var.ndim]
     else:
         # We inferred where the core_dims are!
-        dims = [d for d in op.dims if d not in op.core_dims]
-    return xtensor_from_tensor(rv_logp, dims=dims)
+        dims = tuple(d for d in op.dims if d not in op.core_dims)
+    return xtensor_from_tensor(var, dims=dims)
+
+
+@_logprob.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
+    rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
+    return _to_xtensor(rv_logp, op)
+
+
+@_logcdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logcdf(op, value, rv, **kwargs):
+    rv_logcdf = _logcdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(rv_logcdf, op)
+
+
+@_logccdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logccdf(op, value, rv, **kwargs):
+    rv_logcdf = _logccdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(rv_logcdf, op)
+
+
+@_icdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_icdf(op, value, rv, **kwargs):
+    icdf = _icdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(icdf, op)
 
 
 measurable_ir_rewrites_db.register(

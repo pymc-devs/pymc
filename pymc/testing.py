@@ -362,7 +362,7 @@ def check_logp(
     dist = create_dist_from_paramdomains(pymc_dist, paramdomains, extra_args)
     value = dist.type()
     value.name = "value"
-    pymc_dist_logp = logp(dist, value).sum()
+    pymc_dist_logp = logp(dist, value).sum()  # type: ignore[attr-defined]
     pymc_logp = pytensor.function(list(inputvars(pymc_dist_logp)), pymc_dist_logp)
 
     # Test supported value and parameters domain matches Scipy

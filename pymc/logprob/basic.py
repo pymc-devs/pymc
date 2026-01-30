@@ -48,7 +48,6 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.graph.traversal import ancestors, walk
-from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
     MeasurableOp,
@@ -82,7 +81,7 @@ def _find_unallowed_rvs_in_graph(graph):
     }
 
 
-def _warn_rvs_in_inferred_graph(graph: TensorVariable | Sequence[TensorVariable]):
+def _warn_rvs_in_inferred_graph(graph: Variable | Sequence[Variable]):
     """Issue warning if any RVs are found in graph.
 
     RVs are usually an (implicit) conditional input of the derived probability expression,
@@ -103,14 +102,14 @@ def _warn_rvs_in_inferred_graph(graph: TensorVariable | Sequence[TensorVariable]
         )
 
 
-def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
+def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
     """Create a graph for the log-probability of a random variable.
 
     Parameters
     ----------
-    rv : TensorVariable
-    value : tensor_like
-        Should be the same type (shape and dtype) as the rv.
+    rv : Variable
+    value : Variable or tensor_like
+        Should be the same type as the rv.
     warn_rvs : bool, default True
         Warn if RVs were found in the logp graph.
         This can happen when a variable has other other random variables as inputs.
@@ -119,7 +118,7 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
 
     Returns
     -------
-    logp : TensorVariable
+    logp : Variable
 
     Raises
     ------
@@ -189,7 +188,8 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
             pm.CustomDist("x", mu, sigma, logp=normal_logp)
 
     """
-    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    if not isinstance(value, Variable):
+        value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logprob_helper(rv, value, **kwargs)
     except NotImplementedError:
@@ -203,14 +203,14 @@ def logp(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         return expr
 
 
-def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
+def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
     """Create a graph for the log-CDF of a random variable.
 
     Parameters
     ----------
-    rv : TensorVariable
+    rv : Variable
     value : tensor_like
-        Should be the same type (shape and dtype) as the rv.
+        Should be the same type as the rv.
     warn_rvs : bool, default True
         Warn if RVs were found in the logcdf graph.
         This can happen when a variable has other random variables as inputs.
@@ -218,7 +218,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
 
     Returns
     -------
-    logp : TensorVariable
+    logp : Variable
 
     Raises
     ------
@@ -288,7 +288,8 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
             pm.CustomDist("x", mu, sigma, logcdf=normal_logcdf)
 
     """
-    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    if not isinstance(value, Variable):
+        value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logcdf_helper(rv, value, **kwargs)
     except NotImplementedError:
@@ -303,7 +304,7 @@ def logcdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Te
         return expr
 
 
-def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
+def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
     """Create a graph for the log complementary CDF (log survival function) of a random variable.
 
     The log complementary CDF is defined as log(1 - CDF(x)), also known as the
@@ -312,7 +313,7 @@ def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> T
 
     Parameters
     ----------
-    rv : TensorVariable
+    rv : Variable
     value : tensor_like
         Should be the same type (shape and dtype) as the rv.
     warn_rvs : bool, default True
@@ -322,7 +323,7 @@ def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> T
 
     Returns
     -------
-    logccdf : TensorVariable
+    logccdf : Variable
 
     Raises
     ------
@@ -352,7 +353,8 @@ def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> T
         print(rv_logccdf_fn(value=0.9, mu=0.0))  # -1.5272506
 
     """
-    value = pt.as_tensor_variable(value, dtype=rv.dtype)
+    if not isinstance(value, Variable):
+        value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         return _logccdf_helper(rv, value, **kwargs)
     except NotImplementedError:
@@ -367,14 +369,14 @@ def logccdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> T
         return expr
 
 
-def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> TensorVariable:
+def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
     """Create a graph for the inverse CDF of a random variable.
 
     Parameters
     ----------
-    rv : TensorVariable
+    rv : Variable
     value : tensor_like
-        Should be the same type (shape and dtype) as the rv.
+        Should be the same type as the rv, except dtype can differ.
     warn_rvs : bool, default True
         Warn if RVs were found in the icdf graph.
         This can happen when a variable has other random variables as inputs.
@@ -382,7 +384,7 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
 
     Returns
     -------
-    icdf : TensorVariable
+    icdf : Variable
 
     Raises
     ------
@@ -434,7 +436,8 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
         print(exp_rv_icdf_fn(value=0.9, mu=0.0))  # 3.60222448
 
     """
-    value = pt.as_tensor_variable(value, dtype="floatX")
+    if not isinstance(value, Variable):
+        value = pt.as_tensor_variable(value, dtype="floatX")
     try:
         return _icdf_helper(rv, value, **kwargs)
     except NotImplementedError:
@@ -450,12 +453,12 @@ def icdf(rv: TensorVariable, value: TensorLike, warn_rvs=True, **kwargs) -> Tens
 
 
 def conditional_logp(
-    rv_values: dict[TensorVariable, TensorVariable],
+    rv_values: dict[Variable, Variable],
     warn_rvs=True,
     ir_rewriter: GraphRewriter | None = None,
     extra_rewrites: GraphRewriter | NodeRewriter | None = None,
     **kwargs,
-) -> dict[TensorVariable, TensorVariable]:
+) -> dict[Variable, Variable]:
     r"""Create a map between variables and conditional logps such that the sum is their joint logp.
 
     The `rv_values` dictionary specifies a joint probability graph defined by
@@ -613,13 +616,13 @@ def conditional_logp(
 
 
 def transformed_conditional_logp(
-    rvs: Sequence[TensorVariable],
+    rvs: Sequence[Variable],
     *,
-    rvs_to_values: dict[TensorVariable, TensorVariable],
-    rvs_to_transforms: dict[TensorVariable, Transform],
+    rvs_to_values: dict[Variable, Variable],
+    rvs_to_transforms: dict[Variable, Transform],
     jacobian: bool = True,
     **kwargs,
-) -> list[TensorVariable]:
+) -> list[Variable]:
     """Thin wrapper around conditional_logprob, which creates a value transform rewrite.
 
     This helper will only return the subset of logprob terms corresponding to `rvs`.

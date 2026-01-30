@@ -15,10 +15,16 @@ import re
 
 import numpy as np
 import pytest
+import scipy
+
+from pytensor.xtensor import as_xtensor
+from xarray import DataArray
 
 import pymc as pm
 
 from pymc import dims as pmx
+from pymc import icdf, logccdf, logcdf, logp
+from pymc.dims import Normal
 
 pytestmark = pytest.mark.filterwarnings(
     "error",
@@ -192,3 +198,45 @@ def test_multivariate_distribution_dims():
             pmx.MvNormal(
                 "x_bad", mu, chol=chol_xr, core_dims=("core1", "core2"), dims=("core2", ...)
             )
+
+
+def test_density_helpers():
+    mean = np.array([1, 2, 3])
+    x = Normal.dist(
+        mu=as_xtensor(mean, dims=("city",)),
+        sigma=1,
+        dim_lengths={"time": 5},
+    )
+
+    x_value = x.type()
+    x_test_value = pm.draw(x, random_seed=211)
+
+    x_logp = logp(x, x_value)
+    assert x_logp.type == x.type
+    np.testing.assert_allclose(
+        x_logp.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
+        scipy.stats.norm.logpdf(x_test_value, mean, 1),
+    )
+
+    x_logcdf = logcdf(x, x_value)
+    assert x_logcdf.type == x.type
+    np.testing.assert_allclose(
+        x_logcdf.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
+        scipy.stats.norm.logcdf(x_test_value, mean, 1),
+        rtol=1e-6,
+    )
+
+    x_logccdf = logccdf(x, x_value)
+    assert x_logccdf.type == x.type
+    np.testing.assert_allclose(
+        x_logccdf.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
+        scipy.stats.norm.logsf(x_test_value, mean, 1),
+    )
+
+    icdf_test_value = scipy.special.expit(x_test_value)
+    x_icdf = icdf(x, x_value)
+    assert x_icdf.type == x.type
+    np.testing.assert_allclose(
+        x_icdf.eval({x_value: DataArray(icdf_test_value, dims=x.dims)}),
+        scipy.stats.norm.ppf(icdf_test_value, mean, 1),
+    )
