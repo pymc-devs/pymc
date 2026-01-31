@@ -362,9 +362,7 @@ class TestMatchesScipy:
         # D. Define the Reference Implementation (NumPy)
         def ref_icdf(v, q, b):
             # The formula you used in your lambda
-            return np.ceil(
-                np.power(np.log1p(-v) / np.log(q), 1.0 / b) - 1
-            ).astype("int64")
+            return np.ceil(np.power(np.log1p(-v) / np.log(q), 1.0 / b) - 1).astype("int64")
 
         # E. Define test values (similar to what check_icdf does internally)
         test_probs = [0.001, 0.1, 0.5, 0.9, 0.99]
@@ -382,9 +380,7 @@ class TestMatchesScipy:
 
                     # Assert they match
                     np.testing.assert_array_equal(
-                        pymc_res,
-                        ref_res,
-                        err_msg=f"Mismatch at prob={p_v}, q={q_v}, beta={b_v}"
+                        pymc_res, ref_res, err_msg=f"Mismatch at prob={p_v}, q={q_v}, beta={b_v}"
                     )
 
                     # Sanity check: Result must be non-negative (Support is 0, 1, 2...)

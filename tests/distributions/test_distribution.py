@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import sys
 import warnings
 
 import numpy as np
@@ -49,10 +48,11 @@ from pymc.testing import (
     BaseTestDistributionRandom,
     I,
     assert_support_point_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
 )
-from pymc.testing import check_icdf, I
+
 
 class TestBugfixes:
     @pytest.mark.parametrize("dist_cls,kwargs", [(MvNormal, {}), (MvStudentT, {"nu": 2})])

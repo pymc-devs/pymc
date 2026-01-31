@@ -504,9 +504,7 @@ class DiscreteWeibull(Discrete):
         )
 
     def icdf(value, q, beta):
-        """
-        Inverse cumulative distribution function of the Discrete Weibull distribution.
-        """
+        """Inverse cumulative distribution function of the Discrete Weibull distribution."""
         log_q = pt.log(q)
         # Use log1p(-value) instead of log1m(-value)
         inner = pt.log1p(-value) / log_q
@@ -535,6 +533,7 @@ class DiscreteWeibull(Discrete):
             beta > 0,
             msg="0 < q < 1, beta > 0",
         )
+
 
 class Poisson(Discrete):
     R"""
