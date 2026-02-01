@@ -22,8 +22,7 @@ import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph import node_rewriter
-from pytensor.graph.basic import Apply, Variable
-from pytensor.graph.op import Op
+from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.sparse.basic import DenseFromSparse
 from pytensor.sparse.math import sp_sum
@@ -897,50 +896,10 @@ class OrderedMultinomial:
         return _OrderedMultinomial.dist(*args, **kwargs)
 
 
-def posdef(AA):
-    try:
-        scipy.linalg.cholesky(AA)
-        return True
-    except scipy.linalg.LinAlgError:
-        return False
-
-
-class PosDefMatrix(Op):
-    """Check if input is positive definite. Input should be a square matrix."""
-
-    # Properties attribute
-    __props__ = ()
-
-    # Compulsory if itypes and otypes are not defined
-
-    def make_node(self, x):
-        x = pt.as_tensor_variable(x)
-        assert x.ndim == 2
-        o = TensorType(dtype="bool", shape=[])()
-        return Apply(self, [x], [o])
-
-    # Python implementation:
-    def perform(self, node, inputs, outputs):
-        (x,) = inputs
-        (z,) = outputs
-        try:
-            z[0] = np.array(posdef(x), dtype="bool")
-        except Exception:
-            pm._log.exception("Failed to check if %s positive definite", x)
-            raise
-
-    def infer_shape(self, fgraph, node, shapes):
-        return [[]]
-
-    def grad(self, inp, grads):
-        (x,) = inp
-        return [x.zeros_like(pytensor.config.floatX)]
-
-    def __str__(self):
-        return "MatrixIsPositiveDefinite"
-
-
-matrix_pos_def = PosDefMatrix()
+def matrix_pos_def(X, tol=1e-8):
+    L = pt.linalg.cholesky(X)
+    diag = pt.diagonal(L, axis1=-2, axis2=-1)
+    return pt.all(~pt.isnan(diag)) & pt.all(diag > tol)
 
 
 class WishartRV(RandomVariable):
