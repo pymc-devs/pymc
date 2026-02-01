@@ -14,11 +14,11 @@
 
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 import pytest
 
 from numpy.testing import assert_allclose, assert_array_equal
+from pytensor import config, function
 from pytensor.tensor.variable import TensorConstant
 
 import pymc as pm
@@ -42,7 +42,7 @@ from pymc.testing import (
 
 # some transforms (stick breaking) require addition of small slack in order to be numerically
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
-tol = 1e-7 if pytensor.config.floatX == "float64" else 1e-5
+tol = 1e-7 if config.floatX == "float64" else 1e-5
 
 
 def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=None):
@@ -52,11 +52,11 @@ def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=Non
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
     # test forward and forward_val
     # FIXME: What's being tested here?  That the transformed graph can compile?
-    forward_f = pytensor.function([x], transform.forward(x, *rv_inputs))
+    forward_f = function([x], transform.forward(x, *rv_inputs))
     # test transform identity
     z = transform.backward(transform.forward(x, *rv_inputs))
     assert z.type == x.type
-    identity_f = pytensor.function([x], z, *rv_inputs)
+    identity_f = function([x], z, *rv_inputs)
     for val in domain.vals:
         assert_allclose(val, identity_f(val), atol=tol)
 
@@ -72,7 +72,7 @@ def get_values(transform, domain=R, constructor=pt.scalar, test=0, rv_var=None):
     if rv_var is None:
         rv_var = x
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
-    f = pytensor.function([x], transform.backward(x, *rv_inputs))
+    f = function([x], transform.backward(x, *rv_inputs))
     return np.array([f(val) for val in domain.vals])
 
 
@@ -105,9 +105,9 @@ def check_jacobian_det(
         jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
     # ljd = log jacobian det
-    actual_ljd = pytensor.function([y], jac)
+    actual_ljd = function([y], jac)
 
-    computed_ljd = pytensor.function(
+    computed_ljd = function(
         [y], pt.as_tensor_variable(transform.log_jac_det(y, *rv_inputs)), on_unused_input="ignore"
     )
 
@@ -139,7 +139,7 @@ def test_simplex_bounds():
 def test_simplex_accuracy():
     val = floatX(np.array([-30]))
     x = pt.vector("x")
-    identity_f = pytensor.function([x], tr.simplex.forward(tr.simplex.backward(x)))
+    identity_f = function([x], tr.simplex.forward(tr.simplex.backward(x)))
     assert_allclose(val, identity_f(val), tol)
 
 
@@ -166,9 +166,7 @@ def test_log():
     assert_array_equal(vals > 0, True)
 
 
-@pytest.mark.skipif(
-    pytensor.config.floatX == "float32", reason="Test is designed for 64bit precision"
-)
+@pytest.mark.skipif(config.floatX == "float32", reason="Test is designed for 64bit precision")
 def test_log_exp_m1():
     check_transform(tr.log_exp_m1, Rplusbig)
 
@@ -226,9 +224,7 @@ def test_interval():
         assert_array_equal(vals < b, True)
 
 
-@pytest.mark.skipif(
-    pytensor.config.floatX == "float32", reason="Test is designed for 64bit precision"
-)
+@pytest.mark.skipif(config.floatX == "float32", reason="Test is designed for 64bit precision")
 def test_interval_near_boundary():
     lb = -1.0
     ub = 1e-7
@@ -237,7 +233,7 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
-    with pytensor.config.change_flags(numba__fastmath=False):
+    with config.change_flags(numba__fastmath=False):
         log_prob = model.point_logps()
     assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
 
@@ -662,3 +658,111 @@ def test_invalid_jacobian_broadcast_raises():
         logp_fn = m.compile_logp(jacobian=jacobian_val)
         with pytest.raises(AssertionError, match="SpecifyShape"):
             logp_fn({"x_buggy__": np.zeros((4, 3))})
+
+
+class TestLJKCholeskyCorrTransform:
+    def _get_test_values(self):
+        x_unconstrained = np.array([2.0, 2.0, 1.0], dtype=config.floatX)
+        x_constrained = np.array(
+            [[1.0, 0.0, 0.0], [0.70710678, 0.70710678, 0.0], [0.66666667, 0.66666667, 0.33333333]],
+            dtype=config.floatX,
+        )
+        return x_unconstrained, x_constrained
+
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_fill_triangular_spiral(self, upper):
+        x_unconstrained = np.array([1, 2, 3, 4, 5, 6])
+
+        if upper:
+            x_constrained = np.array(
+                [
+                    [1, 2, 3],
+                    [0, 5, 6],
+                    [0, 0, 4],
+                ]
+            )
+        else:
+            x_constrained = np.array(
+                [
+                    [4, 0, 0],
+                    [6, 5, 0],
+                    [3, 2, 1],
+                ]
+            )
+
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+
+        np.testing.assert_allclose(
+            transform._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval(),
+            x_constrained,
+        )
+
+        np.testing.assert_allclose(
+            transform._inverse_fill_triangular_spiral(x_constrained, unit_diag=False).eval(),
+            x_unconstrained,
+        )
+
+    def test_forward(self):
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        np.testing.assert_allclose(
+            transform.forward(x_constrained).eval(),
+            x_unconstrained,
+            atol=1e-6,
+        )
+
+    def test_backward(self):
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        np.testing.assert_allclose(
+            transform.backward(x_unconstrained).eval(),
+            x_constrained,
+            atol=1e-6,
+        )
+
+    def test_transform_round_trip(self):
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
+        unconstrained_reconstructed = transform.forward(transform.backward(x_unconstrained)).eval()
+
+        np.testing.assert_allclose(x_unconstrained, unconstrained_reconstructed, atol=1e-6)
+        np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
+
+    def test_log_jac_det(self):
+        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        x_unconstrained, _x_constrained = self._get_test_values()
+
+        computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
+
+        x = pt.tensor("x", shape=(3,))
+        lower_tri_vec = transform.backward(x)[pt.tril_indices(x.shape[0], k=-1)].ravel()
+        jac = pt.jacobian(lower_tri_vec, x, vectorize=True)
+        _, autodiff_log_jac_det = pt.linalg.slogdet(jac)
+
+        np.testing.assert_allclose(
+            autodiff_log_jac_det.eval({x: x_unconstrained}), computed_log_jac_det, atol=1e-6
+        )
+
+    @pytest.mark.parametrize("n", [3, 5, 10])
+    def test_backward_produces_valid_cholesky_corr(self, n):
+        rng = np.random.default_rng()
+        n_samples = 5
+        n_tril = n * (n - 1) // 2
+
+        transform = tr.CholeskyCorrTransform(n=n, upper=False)
+        x_unconstrained = rng.normal(size=(n_samples, n_tril))
+
+        chol_L = transform.backward(x_unconstrained).eval()
+        corr = chol_L @ np.swapaxes(chol_L, -1, -2)
+
+        diag = np.diagonal(corr, axis1=-2, axis2=-1)
+        np.testing.assert_allclose(diag, 1.0, atol=1e-6)
+        assert np.all(corr >= -1 - 1e-6) and np.all(corr <= 1 + 1e-6)
+
+        # Check for positive semi-definiteness
+        eigenvalues = np.linalg.eigvalsh(corr)
+        assert np.all(eigenvalues >= -1e-6)
