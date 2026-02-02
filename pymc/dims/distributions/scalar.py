@@ -247,6 +247,8 @@ class Gamma(PositiveDimDistribution):
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
+            mu = as_xtensor(mu)
+            sigma = as_xtensor(sigma)
             # Use sign of sigma to not let negative sigma fly by
             alpha = (mu**2 / sigma**2) * ptx.math.sign(sigma)
             beta = mu / sigma**2
@@ -269,6 +271,8 @@ class InverseGamma(PositiveDimDistribution):
                 beta = 1.0
         elif (mu is not None) and (sigma is not None):
             # Use sign of sigma to not let negative sigma fly by
+            mu = as_xtensor(mu)
+            sigma = as_xtensor(sigma)
             alpha = ((2 * sigma**2 + mu**2) / sigma**2) * ptx.math.sign(sigma)
             beta = mu * (mu**2 + sigma**2) / sigma**2
         else:
