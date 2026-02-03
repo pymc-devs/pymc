@@ -755,6 +755,10 @@ class CategoricalGibbsMetropolis(ArrayStep):
             self.shuffle_dims = False
             self.dimcats = [dimcats[j] for j in order]
 
+        # Doesn't actually tune, but it's required to emit a sampler stat
+        # that indicates whether a draw was done in a tuning phase.
+        self.tune = True
+
         if proposal == "uniform":
             self.astep = self.astep_unif  # type: ignore[assignment]
         elif proposal == "proportional":
@@ -792,8 +796,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if accepted:
                 logp_curr = logp_prop
 
-        # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{"tune": self.tune}]
 
     def astep_prop(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -810,8 +813,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
         for dim, k in dimcats:
             logp_curr = self.metropolis_proportional(q, logp, logp_curr, dim, k)
 
-        # This step doesn't have any tunable parameters
-        return q, [{"tune": False}]
+        return q, [{"tune": self.tune}]
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         raise NotImplementedError()
