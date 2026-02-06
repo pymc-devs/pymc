@@ -2208,6 +2208,23 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
+    def test_n_2(self):
+        # Regression test for n=2, returning the wrong result
+        n = pytensor.shared(2, name="n")
+        eta = 1
+        res = pm.draw(pm.LKJCorr.dist(n=n, eta=eta), random_seed=1)
+        res_n_const = pm.draw(pm.LKJCorr.dist(n=2, eta=eta), random_seed=1)
+        np.testing.assert_allclose(res, res_n_const)
+
+        # Compute expected value from implementation.
+        # If implementation changes this will be obsolete.
+        beta0 = eta - 1.0 + n / 2.0
+        y0 = pt.random.beta(alpha=beta0, beta=beta0)
+        r12 = 2.0 * y0 - 1.0
+        P0 = pt.eye(n)[0, 1].set(r12)[1, 1].set(pt.sqrt(1.0 - r12**2)).mT
+        res_internal = pm.draw(P0, random_seed=1)
+        np.testing.assert_allclose(res, res_internal)
+
 
 def test_LKJCorr_default_transform():
     # Make n large -- regression test for https://github.com/pymc-devs/pymc/issues/7101

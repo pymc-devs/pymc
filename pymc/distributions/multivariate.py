@@ -1523,6 +1523,9 @@ class LKJCorrRV(SymbolicRandomVariable):
         # This is the concatenation of P_seq and the initial P0 (scan slices it away by default to be "helpful")
         # Select the final element along the scan axis (this is the result)
         P = P_seq.owner.inputs[0][-1]
+        # This switch is needed to sidestep the PyTensor bug: https://github.com/pymc-devs/pytensor/issues/1878
+        # Otheriwes `P` is already what we need
+        P = pt.switch(n <= 2, P0, P)
         # C = pt.einsum("...ji,...jk->...ik", P, P.copy())
 
         return final_rng, P.mT
