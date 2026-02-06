@@ -960,6 +960,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
                 "as those are reserved for use in `InferenceData`."
             )
+        if self.named_vars.tree_contains(name):
+         raise ValueError(
+            f"Coord name '{name}' conflicts with an existing model variable name."
+        )
         if values is None and length is None:
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
@@ -1467,6 +1471,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         if var.name is None:
             raise ValueError("Variable is unnamed.")
+        if var.name in self.coords:
+          raise ValueError(
+            f"Variable name '{var.name}' conflicts with an existing coord name."
+        )
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
 
