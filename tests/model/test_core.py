@@ -1809,3 +1809,14 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+def test_coord_name_conflicts_with_variable_name():
+    with pytest.raises(ValueError, match="conflicts"):
+        with pm.Model(coords={"a": [0, 1]}):
+            pm.Data("a", [5, 10])
+
+def test_variable_name_conflicts_with_coord_name():
+    with pytest.raises(ValueError, match="conflicts"):
+        with pm.Model() as m:
+            pm.Data("a", [5, 10])
+            m.add_coord("a", [0, 1])
