@@ -32,7 +32,7 @@ import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
-from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
+from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
@@ -2263,7 +2263,7 @@ def Deterministic(name, var, model=None, dims=None):
     random variables.
     """
     model = modelcontext(model)
-    var = var.copy(model.name_for(name))
+    var = view_op(var, name=model.name_for(name))
     model.deterministics.append(var)
     model.add_named_variable(var, dims)
 

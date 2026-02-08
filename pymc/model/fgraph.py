@@ -18,11 +18,9 @@ from copy import copy, deepcopy
 import pytensor
 
 from pytensor import Variable
-from pytensor.compile import SharedVariable
+from pytensor.compile import SharedVariable, ViewOp, view_op
 from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
 from pytensor.graph.rewriting.basic import out2in
-from pytensor.scalar import Identity
-from pytensor.tensor.elemwise import Elemwise
 
 from pymc.logprob.transforms import Transform
 from pymc.model.core import Model
@@ -102,13 +100,12 @@ model_deterministic = ModelDeterministic()
 model_named = ModelNamed()
 
 
-@node_rewriter([Elemwise])
-def local_remove_identity(fgraph, node):
-    if isinstance(node.op.scalar_op, Identity):
-        return [node.inputs[0]]
+@node_rewriter([ViewOp])
+def local_remove_view(fgraph, node):
+    return [node.inputs[0]]
 
 
-remove_identity_rewrite = out2in(local_remove_identity)
+remove_view_rewrite = out2in(local_remove_view)
 
 
 def deepcopy_shared_variable(var: SharedVariable) -> SharedVariable:
@@ -171,16 +168,18 @@ def fgraph_from_model(
     free_rvs = model.free_RVs
     observed_rvs = model.observed_RVs
     potentials = model.potentials
-    # We copy Deterministics (Identity Op) so that they don't show in between "main" variables
-    # We later remove these Identity Ops when we have a Deterministic ModelVar Op as a separator
+    # We create views into Deterministics (using View Op) so that they don't show in between "main" variables
+    # We later remove these View Ops when we have a Deterministic ModelVar Op as a separator
     old_deterministics = model.deterministics
-    deterministics = [det if inlined_views else det.copy(det.name) for det in old_deterministics]
+    deterministics = [
+        det if inlined_views else view_op(det, name=det.name) for det in old_deterministics
+    ]
     # Value variables (we also have to decide whether to inline named ones)
     old_value_vars = list(rvs_to_values.values())
     data_vars = model.data_vars
     unnamed_value_vars = [val for val in old_value_vars if val not in data_vars]
     named_value_vars = [
-        val if inlined_views else val.copy(name=val.name)
+        val if inlined_views else view_op(val, name=val.name)
         for val in old_value_vars
         if val in data_vars
     ]
@@ -192,7 +191,7 @@ def fgraph_from_model(
             value_vars[idx] = named_val
     # Data vars that are not value vars
     other_named_vars = [
-        var if inlined_views else var.copy(var.name)
+        var if inlined_views else view_op(var, name=var.name)
         for var in data_vars
         if var not in old_value_vars
     ]
@@ -279,8 +278,8 @@ def fgraph_from_model(
     for _ in unnamed_value_vars:
         fgraph.remove_output(first_idx_to_remove)
 
-    # Now that we have Deterministic dummy Ops, we remove the noisy `Identity`s from the graph
-    remove_identity_rewrite.apply(fgraph)
+    # Now that we have Deterministic dummy Ops, we remove the noisy `View`s from the graph
+    remove_view_rewrite.apply(fgraph)
 
     return fgraph, memo
 
@@ -354,9 +353,9 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
             model.potentials.append(var)
         elif isinstance(model_var.owner.op, ModelDeterministic):
             var, *dims = model_var.owner.inputs
-            # If a Deterministic is a direct view on an RV, copy it
+            # If a Deterministic is a direct view on an RV, view it
             if var in model.basic_RVs:
-                var = var.copy()
+                var = view_op(var)
             model.deterministics.append(var)
         elif isinstance(model_var.owner.op, ModelNamed):
             var, *dims = model_var.owner.inputs
