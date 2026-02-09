@@ -636,7 +636,12 @@ def transformed_conditional_logp(
     for rv, val in rvs_to_values.items():
         transform = rvs_to_transforms.get(rv)
         if transform is not None:
-            logp_rv_values[rv] = transform.backward(val, *rv.owner.inputs)
+            val_constrained = transform.backward(val, *rv.owner.inputs)
+            base_name = val.name or rv.name
+            if base_name and getattr(val_constrained, "name", None) is None:
+                val_constrained.name = f"{base_name}_constrained"
+
+            logp_rv_values[rv] = val_constrained
         else:
             logp_rv_values[rv] = val
 
