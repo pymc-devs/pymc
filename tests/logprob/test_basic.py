@@ -452,11 +452,8 @@ def test_ir_ops_can_be_evaluated_with_warning():
         lam = pm.Exponential("lam")
         pm.CustomDist("y", lam, logp=my_logp, observed=[0, 1, 2])
 
-    with pytest.warns(
-        UserWarning, match="TransformedValue should not be present in the final graph"
-    ):
-        with pytest.warns(UserWarning, match="ValuedVar should not be present in the final graph"):
-            m.logp()
+    with pytest.warns(UserWarning, match="ValuedVar should not be present in the final graph"):
+        m.logp()
 
     assert _eval_values[0].sum() == 3
     assert _eval_values[1] == np.exp(-1.5)

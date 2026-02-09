@@ -58,9 +58,8 @@ from pymc.logprob.abstract import (
     _logprob_helper,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
-from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import Transform
-from pymc.logprob.utils import get_related_valued_nodes
+from pymc.logprob.utils import get_related_valued_nodes, replace_rvs_by_values
 from pymc.pytensorf import expand_inner_graph, replace_vars_in_graphs
 
 TensorLike: TypeAlias = Variable | float | np.ndarray
@@ -623,40 +622,101 @@ def transformed_conditional_logp(
     jacobian: bool = True,
     **kwargs,
 ) -> list[Variable]:
-    """Thin wrapper around conditional_logprob, which creates a value transform rewrite.
+    """Compute conditional log-probabilities for RVs, applying value transforms and Jacobian corrections.
 
     This helper will only return the subset of logprob terms corresponding to `rvs`.
     All rvs_to_values and rvs_to_transforms mappings are required.
+
+    For RVs with transforms, the unconstrained value variables are mapped back to
+    constrained space via ``transform.backward()`` before computing logprob. The
+    Jacobian correction is then added in unconstrained space.
     """
-    transform_rewrite = None
-    values_to_transforms = {
-        rvs_to_values[rv]: transform
-        for rv, transform in rvs_to_transforms.items()
-        if transform is not None
-    }
-    if values_to_transforms:
-        # There seems to be an incorrect type hint in TransformValuesRewrite
-        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore[arg-type]
+    # 1. Prepare value variables: apply backward transform to get constrained values
+    logp_rv_values = {}
+    for rv, val in rvs_to_values.items():
+        transform = rvs_to_transforms.get(rv)
+        if transform is not None:
+            logp_rv_values[rv] = transform.backward(val, *rv.owner.inputs)
+        else:
+            logp_rv_values[rv] = val
 
+    # 2. Derive logp terms using constrained values
     kwargs.setdefault("warn_rvs", False)
-    temp_logp_terms = conditional_logp(
-        rvs_to_values,
-        extra_rewrites=transform_rewrite,
-        use_jacobian=jacobian,
-        **kwargs,
-    )
+    logp_terms = conditional_logp(logp_rv_values, **kwargs)
 
-    # The function returns the logp for every single value term we provided to it.
-    # This includes the extra values we plugged in above, so we filter those we
-    # actually wanted in the same order they were given in.
-    logp_terms = {}
+    # 3. Check for unexpected RVs before replacing legitimate conditional dependencies.
+    #    After conditional_logp, RVs that appear as distribution parameters of other RVs
+    #    are expected (they come from the constrained value expressions and will be replaced
+    #    by replace_rvs_by_values below). However, a logp term that IS itself a MeasurableOp
+    #    output indicates a bug (e.g., a CustomDist logp function returning an RV directly).
+    logp_values_list = list(logp_terms.values())
+    measurable_logp_terms = {
+        v for v in logp_values_list if v.owner and isinstance(v.owner.op, MeasurableOp)
+    }
+    if measurable_logp_terms:
+        raise ValueError(
+            f"Random variables detected in the logp graph: {measurable_logp_terms}.\n"
+            "This can happen when mixing variables from different models, "
+            "or when CustomDist logp or Interval transform functions reference nonlocal variables."
+        )
+
+    # 4. Replace remaining RVs (conditional dependencies) by their value variables.
+    #    Only do this when there are actually RVs to replace, to avoid unnecessary
+    #    graph cloning which can break value variable identity.
+    remaining_rvs = _find_unallowed_rvs_in_graph(logp_values_list)
+    if remaining_rvs:
+        logp_values_list = replace_rvs_by_values(
+            logp_values_list,
+            rvs_to_values=rvs_to_values,
+            rvs_to_transforms=rvs_to_transforms,
+        )
+    logp_terms = dict(zip(logp_terms.keys(), logp_values_list))
+
+    # 5. Apply Jacobian correction and collect results for requested rvs
+    final_terms = []
     for rv in rvs:
-        value_var = rvs_to_values[rv]
-        logp_terms[value_var] = temp_logp_terms[value_var]
+        val_unconstrained = rvs_to_values[rv]
+        val_constrained = logp_rv_values[rv]
+        logp = logp_terms[val_constrained]
 
-    logp_terms_list = list(logp_terms.values())
+        transform = rvs_to_transforms.get(rv)
+        if transform is not None:
+            jac = transform.log_jac_det(val_unconstrained, *rv.owner.inputs)
+            # Replace RVs in Jacobian by their value variables
+            [jac] = replace_rvs_by_values(
+                [jac],
+                rvs_to_values=rvs_to_values,
+                rvs_to_transforms=rvs_to_transforms,
+            )
 
-    rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logp_terms_list)
+            # The jacobian determinant has fewer dims than the logp
+            # when a multivariate transform (like Simplex or Ordered) is applied
+            # to univariate distributions. In this case we must reduce the last
+            # logp dimensions, as they are no longer independent.
+            if jac.ndim < logp.ndim:
+                diff_ndims = logp.ndim - jac.ndim
+                logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+            elif jac.ndim > logp.ndim:
+                raise NotImplementedError(
+                    f"Univariate transform {transform} cannot be applied to "
+                    f"multivariate {rv.owner.op}"
+                )
+
+            # Check there is no broadcasting between logp and jacobian
+            if logp.type.broadcastable != jac.type.broadcastable:
+                raise ValueError(
+                    f"The logp of {rv.owner.op} and log_jac_det of {transform} are not "
+                    "allowed to broadcast together. "
+                    "There is a bug in the implementation of either one."
+                )
+
+            if jacobian:
+                logp = logp + jac
+
+        final_terms.append(logp)
+
+    # Final safety check: ensure no RVs remain after all replacements
+    rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(final_terms)
     if rvs_in_logp_expressions:
         raise ValueError(
             f"Random variables detected in the logp graph: {rvs_in_logp_expressions}.\n"
@@ -664,4 +724,4 @@ def transformed_conditional_logp(
             "or when CustomDist logp or Interval transform functions reference nonlocal variables."
         )
 
-    return logp_terms_list
+    return final_terms
