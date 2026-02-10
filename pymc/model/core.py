@@ -1958,7 +1958,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                                 print_(f" value = {values} -> {{fn}} = {rv_fn_eval}")
                         else:
                             for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
-                                print_(f" value = {value} -> {{fn}} = {fn_eval}") print_()
+                                print_(f" value = {value} -> {{fn}} = {fn_eval}")
                         print_()
 
         if not found_problem:
