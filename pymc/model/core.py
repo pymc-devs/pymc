@@ -1953,7 +1953,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
                             f"Some of the{observed}values of variable {rv} are associated with a non-finite {fn}:"
                         )
                         mask = ~np.isfinite(rv_fn_eval)
-                        if values.dim == 0:
+                        if values.ndim == 0:
                             if mask:
                                 print_(f" value = {values} -> {{fn}} = {rv_fn_eval}")
                         else:
