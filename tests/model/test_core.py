@@ -1804,3 +1804,14 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+
+def test_model_debug_scalar_resolution():
+    with pm.Model() as model:
+        pm.Normal("x", 0, 1)
+
+    try:
+        model.debug(fn="dlogp")
+    except Exception as err:
+        pytest.fail(f"model.debug crashed on scalar variable: {err}")
+
