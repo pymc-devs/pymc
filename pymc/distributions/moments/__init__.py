@@ -15,5 +15,6 @@
 """Moments dispatchers for pymc random variables."""
 
 from pymc.distributions.moments.means import mean
+from pymc.distributions.moments.variances import variance
 
-__all__ = ["mean"]
+__all__ = ["mean", "variance"]

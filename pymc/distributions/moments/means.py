@@ -78,9 +78,10 @@ from pymc.distributions.multivariate import (
     MatrixNormalRV,
     MvStudentTRV,
     StickBreakingWeightsRV,
+    WishartRV,
     _LKJCholeskyCovRV,
 )
-from pymc.distributions.shape_utils import rv_size_is_none
+from pymc.distributions.shape_utils import maybe_resize, rv_size_is_none
 from pymc.exceptions import UndefinedMomentException
 
 __all__ = ["mean"]
@@ -98,12 +99,6 @@ def mean(rv: TensorVariable) -> TensorVariable:
     for which the value is to be derived.
     """
     return _mean(rv.owner.op, rv, *rv.owner.inputs)
-
-
-def maybe_resize(a: TensorVariable, size) -> TensorVariable:
-    if not rv_size_is_none(size):
-        a = pt.full(size, a)
-    return a
 
 
 @_mean.register(AsymmetricLaplaceRV)
@@ -250,7 +245,7 @@ def invgamma_mean(op, rv, rng, size, alpha, beta):
 
 
 @_mean.register(KroneckerNormalRV)
-def kronecker_normal_mean(op, rv, rng, size, mu, covs, chols, evds):
+def kronecker_normal_mean(op, rv, rng, size, mu, sigma, *covs):
     mean = mu
     if not rv_size_is_none(size):
         mean_size = pt.concatenate([size, mu.shape])
@@ -376,7 +371,9 @@ def polya_gamma_mean(op, rv, rng, size, h, z):
 
 
 @_mean.register(RiceRV)
-def rice_mean(op, rv, rng, size, nu, sigma):
+def rice_mean(op, rv, rng, size, b, sigma):
+    # b is the shape parameter, nu = b * sigma is the noncentrality parameter
+    nu = b * sigma
     nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
     return maybe_resize(
         sigma
@@ -454,3 +451,12 @@ def wald_mean(op, rv, rng, size, mu, lam, alpha):
 @_mean.register(WeibullBetaRV)
 def weibull_mean(op, rv, rng, size, alpha, beta):
     return maybe_resize(beta * pt.gamma(1 + 1 / alpha), size)
+
+
+@_mean.register(WishartRV)
+def wishart_mean(op, rv, rng, size, nu, V):
+    mean = nu * V
+    if not rv_size_is_none(size):
+        mean_size = pt.concatenate([size, V.shape[-2:]])
+        mean = pt.full(mean_size, mean)
+    return mean

@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import numpy as np
 import pytest
 
@@ -53,6 +55,7 @@ from scipy.stats import (
     uniform,
     vonmises,
     weibull_min,
+    wishart,
 )
 
 from pymc import (
@@ -168,9 +171,7 @@ from pymc.exceptions import UndefinedMomentException
         [Normal, norm, {"mu": 2, "sigma": 2}, {"loc": 2, "scale": 2}],
         [Pareto, pareto, {"alpha": 5, "m": 2}, {"b": 5, "scale": 2}],
         [Poisson, poisson, {"mu": 20}, {"mu": 20}],
-        pytest.param(
-            Rice, rice, {"b": 2, "sigma": 2}, {"b": 2, "scale": 2}, marks=pytest.mark.xfail
-        ),  # Something is wrong with the Rice mean, maybe a Bessel function in pytensor?
+        [Rice, rice, {"b": 2, "sigma": 2}, {"b": 2, "scale": 2}],
         [SkewNormal, skewnorm, {"mu": 2, "sigma": 2, "alpha": 2}, {"loc": 2, "scale": 2, "a": 2}],
         [
             SkewStudentT,
@@ -260,6 +261,22 @@ def test_mean_equal_expected(dist, dist_params, expected):
     np.testing.assert_almost_equal(
         pymc_mean_tiled, np.tile(pymc_mean, (3,) + (1,) * pymc_mean.ndim)
     )
+
+
+def test_wishart_mean():
+    nu = 10
+    V = np.array([[2.0, 0.5], [0.5, 1.5]])
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        from pymc import Wishart
+
+        rv = Wishart.dist(nu=nu, V=V)
+
+    pymc_mean_val = mean(rv).eval()
+    scipy_mean = wishart(df=nu, scale=V).mean()
+
+    np.testing.assert_almost_equal(pymc_mean_val, scipy_mean)
 
 
 @pytest.mark.parametrize(

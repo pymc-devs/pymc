@@ -489,3 +489,9 @@ def implicit_size_from_params(
         ),
         dtype="int64",  # In case it's empty, as_tensor will default to floatX
     )
+
+
+def maybe_resize(a: TensorVariable, size) -> TensorVariable:
+    if not rv_size_is_none(size):
+        a = pt.full(size, a)
+    return a
