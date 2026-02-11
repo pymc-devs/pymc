@@ -124,6 +124,7 @@ from pymc.logprob.utils import (
     filter_measurable_variables,
     find_negated_var,
 )
+from pymc.math import logdiffexp
 
 
 class Transform(abc.ABC):
@@ -269,7 +270,7 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
             logcdf_zero = _logcdf_helper(measurable_input, 0)
             logcdf = pt.switch(
                 pt.lt(backward_value, 0),
-                pt.log(pt.exp(logcdf_zero) - pt.exp(logcdf)),
+                logdiffexp(logcdf_zero, logcdf),
                 pt.logaddexp(logccdf, logcdf_zero),
             )
     else:

@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
 
 import numpy as np
 import pytensor
@@ -142,11 +141,17 @@ def test_log1mexp_deprecation_warnings():
 
 
 def test_logdiffexp():
-    a = np.log([1, 2, 3, 4])
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-        b = np.log([0, 1, 2, 3])
-    assert np.allclose(logdiffexp(a, b).eval(), 0)
+    a = pt.vector("a")
+    b = pt.vector("b")
+    a_test = np.log([1, 2, 3, 4])
+    with np.errstate(divide="ignore"):
+        b_test = np.log([0, 1, 2, 3])
+    np.testing.assert_allclose(logdiffexp(a, b).eval({a: a_test, b: b_test}), 0, atol=1e-15)
+
+    np.testing.assert_array_equal(
+        logdiffexp(a, b).eval({a: [-np.inf, -np.inf, -1], b: [-1, -np.inf, -np.inf]}),
+        [np.nan, -np.inf, -1],
+    )
 
 
 class TestLogDet:
