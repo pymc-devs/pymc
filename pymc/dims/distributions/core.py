@@ -19,6 +19,8 @@ import numpy as np
 
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
+from pytensor.tensor import TensorVariable
+from pytensor.tensor import expand_dims as pt_expand_dims
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor
@@ -103,38 +105,67 @@ def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] |
     return [cast(XTensorVariable, new_out)]
 
 
-def _to_xtensor(var, op: MeasurableXTensorFromTensor):
+def _to_tensor(op: MeasurableXTensorFromTensor, value: XTensorVariable) -> TensorVariable:
+    # Align dims that are shared between value and op to the right
+    value_dims_set = set(value.dims)
+    shared_dims = [dim for dim in op.dims if dim in value_dims_set]
+    value = value.transpose(..., *shared_dims)
+    # Add dummy broadcastable dimensions for dimensions present in the op but missing in the value
+    n_value_unique_dims = len(value_dims_set) - len(shared_dims)
+    missing_axis = [
+        i for i, dim in enumerate(op.dims, start=n_value_unique_dims) if dim not in value_dims_set
+    ]
+    return pt_expand_dims(value.values, axis=missing_axis)
+
+
+def _to_xtensor(
+    op: MeasurableXTensorFromTensor, value: XTensorVariable, var: TensorVariable
+) -> XTensorVariable:
+    extra_value_dims = [dim for dim in value.dims if dim not in op.dims]
+    # Dims that are unique to the value and not present in the op, are placed on the left by _align_value_dims
+    all_dims = (*extra_value_dims, *op.dims)
+    # core_dims are not present in the generated variable, exclude them
     if op.core_dims is None:
         # The core_dims of the inner rv are on the right
-        dims = op.dims[: var.ndim]
+        var_dims = all_dims[: var.ndim]
     else:
         # We inferred where the core_dims are!
-        dims = tuple(d for d in op.dims if d not in op.core_dims)
-    return xtensor_from_tensor(var, dims=dims)
+        var_dims = tuple(d for d in all_dims if d not in op.core_dims)
+    return xtensor_from_tensor(var, dims=var_dims)
 
 
 @_logprob.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
-    rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
-    return _to_xtensor(rv_logp, op)
+    tensor_values = tuple(_to_tensor(op, v) for v in values)
+    rv_logps_tensor = _logprob(rv.owner.op, tensor_values, *rv.owner.inputs, **kwargs)
+    if not isinstance(rv_logps_tensor, tuple | list):
+        rv_logps_tensor = (rv_logps_tensor,)
+    rv_logps = tuple(
+        _to_xtensor(op, value, rv_logp)
+        for value, rv_logp in zip(values, rv_logps_tensor, strict=True)
+    )
+    return rv_logps[0] if len(rv_logps) == 1 else rv_logps
 
 
 @_logcdf.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor_logcdf(op, value, rv, **kwargs):
-    rv_logcdf = _logcdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
-    return _to_xtensor(rv_logcdf, op)
+    tensor_value = _to_tensor(op, value)
+    rv_logcdf = _logcdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, rv_logcdf)
 
 
 @_logccdf.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor_logccdf(op, value, rv, **kwargs):
-    rv_logcdf = _logccdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
-    return _to_xtensor(rv_logcdf, op)
+    tensor_value = _to_tensor(op, value)
+    rv_logcdf = _logccdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, rv_logcdf)
 
 
 @_icdf.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor_icdf(op, value, rv, **kwargs):
-    icdf = _icdf(rv.owner.op, value.values, *rv.owner.inputs, **kwargs)
-    return _to_xtensor(icdf, op)
+    tensor_value = _to_tensor(op, value)
+    icdf = _icdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, icdf)
 
 
 measurable_ir_rewrites_db.register(

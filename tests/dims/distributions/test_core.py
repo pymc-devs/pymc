@@ -200,43 +200,86 @@ def test_multivariate_distribution_dims():
             )
 
 
-def test_density_helpers():
+@pytest.mark.parametrize("rv_unique_dims", [False, True])
+@pytest.mark.parametrize("value_unique_dims", [False, True])
+@pytest.mark.parametrize("value_aligned", [True, False])
+def test_density_helpers(rv_unique_dims, value_unique_dims, value_aligned):
     mean = np.array([1, 2, 3])
+    sigma = 1
     x = Normal.dist(
         mu=as_xtensor(mean, dims=("city",)),
-        sigma=1,
-        dim_lengths={"time": 5},
+        sigma=sigma,
+        dim_lengths={"time": 2},
     )
 
-    x_value = x.type()
-    x_test_value = pm.draw(x, random_seed=211)
+    # Manipulate x to generate the desired type for x_value
+    x_value_ref = x
+    if rv_unique_dims:
+        x_value_ref = x_value_ref.isel(time=0)
+    if value_unique_dims:
+        x_value_ref = x_value_ref.expand_dims(value_batch=7, axis=0)
+    x_value = x_value_ref.type()
+
+    # Get a dense random test value with the shape of x_value
+    shape = pm.math.as_tensor(x_value_ref.shape).eval(mode="FAST_COMPILE")
+    x_test_value = np.random.default_rng(211).normal(size=shape)
+
+    # This is the test value we'll use with the reference scipy functions
+    x_aligned_test_value = x_test_value
+
+    if not value_aligned:
+        x_value = x_value.T.type()
+        x_test_value = x_test_value.T
+
+    def assert_allclose_broadcastable(res, exp, **kwargs):
+        if rv_unique_dims:
+            exp = exp[..., None, :]
+            assert res.shape[-2] == 2
+        exp_bcast = np.broadcast_to(exp, res.shape)
+        np.testing.assert_allclose(res, exp_bcast, **kwargs)
 
     x_logp = logp(x, x_value)
-    assert x_logp.type == x.type
-    np.testing.assert_allclose(
-        x_logp.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
-        scipy.stats.norm.logpdf(x_test_value, mean, 1),
+    if value_unique_dims:
+        assert x_logp.dims == ("value_batch", *x.dims)
+    else:
+        assert x.type.is_super(
+            x_logp.type
+        )  # x_logp type is compatible (but possible more precise) than x
+    assert_allclose_broadcastable(
+        x_logp.eval({x_value: DataArray(x_test_value, dims=x_value.dims)}),
+        scipy.stats.norm.logpdf(x_aligned_test_value, mean, sigma),
     )
 
     x_logcdf = logcdf(x, x_value)
-    assert x_logcdf.type == x.type
-    np.testing.assert_allclose(
-        x_logcdf.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
-        scipy.stats.norm.logcdf(x_test_value, mean, 1),
+    if value_unique_dims:
+        assert x_logcdf.dims == ("value_batch", *x.dims)
+    else:
+        assert x.type.is_super(x_logcdf.type)
+    assert_allclose_broadcastable(
+        x_logcdf.eval({x_value: DataArray(x_test_value, dims=x_value.dims)}),
+        scipy.stats.norm.logcdf(x_aligned_test_value, mean, sigma),
         rtol=1e-6,
     )
 
     x_logccdf = logccdf(x, x_value)
-    assert x_logccdf.type == x.type
-    np.testing.assert_allclose(
-        x_logccdf.eval({x_value: DataArray(x_test_value, dims=x.dims)}),
-        scipy.stats.norm.logsf(x_test_value, mean, 1),
+    if value_unique_dims:
+        assert x_logccdf.dims == ("value_batch", *x.dims)
+    else:
+        assert x.type.is_super(x_logccdf.type)
+    assert_allclose_broadcastable(
+        x_logccdf.eval({x_value: DataArray(x_test_value, dims=x_value.dims)}),
+        scipy.stats.norm.logsf(x_aligned_test_value, mean, sigma),
+        rtol=1e-6,
     )
 
     icdf_test_value = scipy.special.expit(x_test_value)
+    icdf_aligned_test_value = scipy.special.expit(x_aligned_test_value)
     x_icdf = icdf(x, x_value)
-    assert x_icdf.type == x.type
-    np.testing.assert_allclose(
-        x_icdf.eval({x_value: DataArray(icdf_test_value, dims=x.dims)}),
-        scipy.stats.norm.ppf(icdf_test_value, mean, 1),
+    if value_unique_dims:
+        assert x_icdf.dims == ("value_batch", *x.dims)
+    else:
+        assert x.type.is_super(x_icdf.type)
+    assert_allclose_broadcastable(
+        x_icdf.eval({x_value: DataArray(icdf_test_value, dims=x_value.dims)}),
+        scipy.stats.norm.ppf(icdf_aligned_test_value, mean, sigma),
     )
