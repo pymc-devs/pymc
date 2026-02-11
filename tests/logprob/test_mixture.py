@@ -1039,6 +1039,11 @@ def test_switch_mixture_constant_branch_broadcast_ok():
     assert np.isneginf(bad_dirac[0])
 
 
+@pytest.mark.xfail(
+    condition=isinstance(get_default_mode().linker, NumbaLinker),
+    raises=AssertionError,
+    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
+)
 def test_ifelse_mixture_one_component():
     if_rv = pt.random.bernoulli(0.5, name="if")
     scale_rv = pt.random.halfnormal(name="scale")
@@ -1107,6 +1112,11 @@ def test_ifelse_mixture_multiple_components():
     )
 
 
+@pytest.mark.xfail(
+    condition=isinstance(get_default_mode().linker, NumbaLinker),
+    raises=AssertionError,
+    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
+)
 def test_ifelse_mixture_shared_component():
     rng = np.random.default_rng(1009)
 

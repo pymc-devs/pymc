@@ -47,6 +47,7 @@ from pymc.distributions.shape_utils import (
     convert_shape,
     convert_size,
     find_size,
+    maybe_resize,
     rv_size_is_none,
     shape_from_dims,
 )
@@ -120,57 +121,55 @@ class DistributionMeta(ABCMeta):
                         SymbolicRandomVariable.get_input_output_type_idxs(extended_signature)
                     )
 
-            class_change_dist_size = clsdict.get("change_dist_size")
-            if class_change_dist_size:
+            def _extract_dist_params_and_size(
+                op, params
+            ) -> tuple[tuple[Variable, ...], Variable | None]:
+                size = None
+                if isinstance(op, RandomVariable):
+                    rng, size, *dist_params = params
+                else:
+                    if size_idx is not None:
+                        size = params[size_idx]
+                    if params_idxs is not None:
+                        dist_params = [params[i] for i in params_idxs]
+                    else:
+                        dist_params = params
+                return dist_params, size
+
+            if (class_change_dist_size := clsdict.get("change_dist_size")) is not None:
 
                 @_change_dist_size.register(rv_type)
                 def change_dist_size(op, rv, new_size, expand):
                     return class_change_dist_size(rv, new_size, expand)
 
-            class_logp = clsdict.get("logp")
-            if class_logp:
+            if (class_logp := clsdict.get("logp")) is not None:
 
                 @_logprob.register(rv_type)
-                def logp(op, values, *dist_params, **kwargs):
-                    if isinstance(op, RandomVariable):
-                        rng, size, *dist_params = dist_params
-                    elif params_idxs:
-                        dist_params = [dist_params[i] for i in params_idxs]
+                def logp(op, values, *params, **kwargs):
+                    dist_params, size = _extract_dist_params_and_size(op, params)
                     [value] = values
-                    return class_logp(value, *dist_params)
+                    return maybe_resize(class_logp(value, *dist_params), size)
 
-            class_logcdf = clsdict.get("logcdf")
-            if class_logcdf:
+            if (class_logcdf := clsdict.get("logcdf")) is not None:
 
                 @_logcdf.register(rv_type)
-                def logcdf(op, value, *dist_params, **kwargs):
-                    if isinstance(op, RandomVariable):
-                        rng, size, *dist_params = dist_params
-                    elif params_idxs:
-                        dist_params = [dist_params[i] for i in params_idxs]
-                    return class_logcdf(value, *dist_params)
+                def logcdf(op, value, *params, **kwargs):
+                    dist_params, size = _extract_dist_params_and_size(op, params)
+                    return maybe_resize(class_logcdf(value, *dist_params), size)
 
-            class_logccdf = clsdict.get("logccdf")
-            if class_logccdf:
+            if (class_logccdf := clsdict.get("logccdf")) is not None:
 
                 @_logccdf.register(rv_type)
-                def logccdf(op, value, *dist_params, **kwargs):
-                    if isinstance(op, RandomVariable):
-                        rng, size, *dist_params = dist_params
-                    elif params_idxs:
-                        dist_params = [dist_params[i] for i in params_idxs]
-                    return class_logccdf(value, *dist_params)
+                def logccdf(op, value, *params, **kwargs):
+                    dist_params, size = _extract_dist_params_and_size(op, params)
+                    return maybe_resize(class_logccdf(value, *dist_params), size)
 
-            class_icdf = clsdict.get("icdf")
-            if class_icdf:
+            if (class_icdf := clsdict.get("icdf")) is not None:
 
                 @_icdf.register(rv_type)
-                def icdf(op, value, *dist_params, **kwargs):
-                    if isinstance(op, RandomVariable):
-                        rng, size, *dist_params = dist_params
-                    elif params_idxs:
-                        dist_params = [dist_params[i] for i in params_idxs]
-                    return class_icdf(value, *dist_params)
+                def icdf(op, value, *params, **kwargs):
+                    dist_params, size = _extract_dist_params_and_size(op, params)
+                    return maybe_resize(class_icdf(value, *dist_params), size)
 
             class_moment = clsdict.get("moment")
             if class_moment:
@@ -181,21 +180,18 @@ class DistributionMeta(ABCMeta):
 
                 clsdict["support_point"] = class_moment
 
-            class_support_point = clsdict.get("support_point")
-
-            if class_support_point:
+            if (class_support_point := clsdict.get("support_point")) is not None:
 
                 @_support_point.register(rv_type)
-                def support_point(op, rv, *dist_params):
-                    if isinstance(op, RandomVariable):
-                        rng, size, *dist_params = dist_params
-                        return class_support_point(rv, size, *dist_params)
-                    elif params_idxs and size_idx is not None:
-                        size = dist_params[size_idx]
-                        dist_params = [dist_params[i] for i in params_idxs]
-                        return class_support_point(rv, size, *dist_params)
-                    else:
+                def support_point(op, rv, *params):
+                    dist_params, size = _extract_dist_params_and_size(op, params)
+                    # TODO: Move size out of support_point implementations
+                    # and get rid of this differential signature
+                    # Note that support_point is aligned with shape, not size
+                    if size is None:
                         return class_support_point(rv, *dist_params)
+                    else:
+                        return class_support_point(rv, size, *dist_params)
 
             # Register the PyTensor rv_type as a subclass of this PyMC Distribution type.
             new_cls.register(rv_type)
