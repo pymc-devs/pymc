@@ -29,6 +29,7 @@ from pymc.dims import Normal
 pytestmark = pytest.mark.filterwarnings(
     "error",
     "ignore::numba.core.errors.NumbaPerformanceWarning",
+    "ignore:create_index_for_new_dim:UserWarning",
 )
 
 
