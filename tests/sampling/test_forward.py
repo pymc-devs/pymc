@@ -459,7 +459,7 @@ class TestCompileForwardSampler:
             pp_diff_len = pm.sample_posterior_predictive(
                 trace_diff_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_diff_len["y"].values.item() != np.pi
+        assert pp_diff_len["y"].item() != np.pi
 
         # Changing the dim length on the model itself
         # -- `x` is volatile because trace has same len as original model
