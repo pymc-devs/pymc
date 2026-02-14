@@ -1815,3 +1815,15 @@ def test_model_debug_scalar_resolution():
     except Exception as err:
         pytest.fail(f"model.debug crashed on scalar variable: {err}")
 
+def test_model_debug_scalar_resolution_logp(capsys):
+    # Case 1 - no error
+    with pm.Model() as model:
+        pm.Normal("x", 0, 1)
+    model.debug(fn="logp")
+    capsys.readouterr()
+
+    # Case 2 - negative sigma triggers non-finite
+    with pm.Model() as model:
+        pm.Normal("x", 0, -1)
+    model.debug(fn="logp")
+    capsys.readouterr()
