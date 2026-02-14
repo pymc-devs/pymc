@@ -204,7 +204,7 @@ def compute_log_density(
     )
 
     if extend_inferencedata:
-        idata.update({f"log_{kind}": DataTree(logdens_dataset)})
+        idata[f"log_{kind}"] = logdens_dataset
         return idata
     else:
         return logdens_dataset
