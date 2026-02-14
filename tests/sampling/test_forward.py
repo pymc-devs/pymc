@@ -469,7 +469,7 @@ class TestCompileForwardSampler:
             pp_diff_len_model_set = pm.sample_posterior_predictive(
                 trace_same_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_diff_len_model_set["y"].values.item() != np.pi
+        assert pp_diff_len_model_set["y"].item() != np.pi
 
 
 class TestSamplePPC:
