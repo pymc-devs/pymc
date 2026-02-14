@@ -1811,7 +1811,7 @@ def test_model_debug_scalar_resolution():
         pm.Normal("x", 0, 1)
 
     try:
-        model.debug(fn="dlogp")
+        model.debug(fn="logp")
     except Exception as err:
         pytest.fail(f"model.debug crashed on scalar variable: {err}")
 
