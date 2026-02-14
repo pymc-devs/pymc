@@ -182,7 +182,7 @@ def test_drop_warning_stat():
     assert new.attrs.get("version") == "0.1.2"
 
     for gname in ["sample_stats", "warmup_sample_stats"]:
-        ss = new[gname].ds
+        ss = new[gname].dataset
         assert isinstance(ss, xarray.Dataset), gname
         assert "a" in ss
         assert "warning" not in ss
