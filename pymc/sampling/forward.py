@@ -834,7 +834,7 @@ def sample_posterior_predictive(
         idata = trace
         observed_data = trace.get("observed_data", None)
         if "posterior" in trace.children:
-            trace = trace["posterior"].to_dataset()
+            trace = trace["posterior"].dataset
         else:
             trace = trace.dataset
     if isinstance(trace, xarray.Dataset):
