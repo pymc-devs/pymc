@@ -416,8 +416,6 @@ def _sample_external_nuts(
             {"constant_data": constant_data, "observed_data": observed_data},
             coords=coords,
             dims=dims,
-        idata.update(
-            xr.DataTree.from_dict({"constant_data": constant_data, "observed_data": observed_data})
         )
         return idata
 
