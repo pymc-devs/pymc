@@ -31,8 +31,6 @@ from rich.style import Style
 from rich.table import Column, Table
 from rich.theme import Theme
 
-from pymc.progress_bar.utils import compute_draw_speed
-
 default_progress_theme = Theme(
     {
         "bar.complete": "#1764f4",
@@ -139,8 +137,9 @@ class RichProgressBackend:
 
     def __init__(
         self,
-        chains: int,
-        total_draws: int,
+        step_name: str,
+        n_bars: int,
+        total: int | float,
         combined: bool,
         full_stats: bool,
         progress_columns: list,
@@ -151,10 +150,12 @@ class RichProgressBackend:
 
         Parameters
         ----------
-        chains : int
-            Number of chains being sampled
-        total_draws : int
-            Total number of draws per chain (including tuning)
+        step_name : str
+            Name of the unit of iteration (e.g., "draws", "particles")
+        n_bars : int
+            Number of progress bars to display
+        total : int
+            Total number of iterations per bar
         combined : bool
             Whether to show a single combined progress bar
         full_stats : bool
@@ -162,12 +163,13 @@ class RichProgressBackend:
         progress_columns : list
             Rich column definitions from step method
         progress_stats : dict
-            Initial values for statistics by chain
+            Initial values for statistics by task
         theme : Theme, optional
             Rich theme for styling
         """
-        self.chains = chains
-        self.total_draws = total_draws
+        self.step_name = step_name
+        self.n_bars = n_bars
+        self.total = total
         self.combined = combined
         self.full_stats = full_stats
         self.progress_stats = progress_stats
@@ -183,9 +185,11 @@ class RichProgressBackend:
         progress_columns: list,
         theme: Theme,
     ) -> CustomProgress:
-        """Create the Rich progress bar with appropriate columns."""
         columns: list[ProgressColumn] = [
-            TextColumn("{task.fields[draws]}", table_column=Column("Draws", ratio=1))
+            TextColumn(
+                "{" + f"task.fields[{self.step_name.lower()}]" + "}",
+                table_column=Column(self.step_name.title(), ratio=1),
+            )
         ]
 
         if self.full_stats:
@@ -213,25 +217,21 @@ class RichProgressBackend:
         )
 
     def __enter__(self) -> Self:
-        """Enter the context manager and initialize tasks."""
         self._progress.__enter__()
         self._initialize_tasks()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Exit the context manager."""
         self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
-        """Initialize progress bar tasks for all chains."""
         if self.combined:
             self._tasks = [
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    draws=0,
-                    total=self.total_draws * self.chains - 1,
-                    chain_idx=0,
+                    total=self.total * self.n_bars - 1,
+                    task_idx=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
                     failing=False,
@@ -243,51 +243,59 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    draws=0,
-                    total=self.total_draws - 1,
-                    chain_idx=chain_idx,
+                    total=self.total - 1,
+                    task_idx=task_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
                     failing=False,
-                    **{stat: value[chain_idx] for stat, value in self.progress_stats.items()},
+                    **{stat: value[task_idx] for stat, value in self.progress_stats.items()},
                 )
-                for chain_idx in range(self.chains)
+                for task_idx in range(self.n_bars)
             ]
 
     def update(
         self,
-        chain_idx: int,
-        draw: int,
+        task_id: int,
+        advance: int | float,
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
     ) -> None:
-        """Update progress bar for a specific chain.
+        """Update a progress bar.
 
         Parameters
         ----------
-        chain_idx : int
-            Index of the chain being updated
-        draw : int
-            Current draw number
+        task_id : int
+            Index of the progress bar being updated
+        advance : int or float
+            Amount to advance the progress bar by
         failing : bool
-            Whether the chain has encountered failures
+            Whether the process has encountered failures
         stats : dict
             Statistics to display
         is_last : bool
             Whether this is the final update
         """
-        task_id = self._tasks[chain_idx]
-        if task_id is None:
+        rich_task_id = self._tasks[task_id]
+        if rich_task_id is None:
             return
 
-        elapsed = self._progress.tasks[chain_idx].elapsed
-        speed, unit = compute_draw_speed(elapsed if elapsed is not None else 0.0, draw)
+        self._progress.advance(rich_task_id, advance=advance)
+
+        task = self._progress.tasks[task_id]
+        completed = task.completed
+        elapsed = task.elapsed if task.elapsed is not None else 0.0
+
+        action = self.step_name.lower()
+        speed = completed / max(elapsed, 1e-6)
+        if speed > 1 or speed == 0:
+            unit = f"{action}s/s"
+        else:
+            unit = f"s/{action}"
+            speed = 1 / speed
 
         self._progress.update(
-            task_id,
-            completed=draw,
-            draws=draw,
+            rich_task_id,
             sampling_speed=speed,
             speed_unit=unit,
             failing=failing,
@@ -295,9 +303,12 @@ class RichProgressBackend:
         )
 
         if is_last:
+            # Ensure bar is fully filled on completion
+            remaining = task.total - task.completed if task.total else 0
+            if remaining > 0:
+                self._progress.advance(rich_task_id, advance=remaining)
             self._progress.update(
-                task_id,
-                draws=draw + 1 if not self.combined else draw,
+                rich_task_id,
                 failing=failing,
                 **stats,
                 refresh=True,

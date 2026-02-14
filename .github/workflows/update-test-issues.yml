@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   update-comment:
+    if: github.repository == 'pymc-devs/pymc'
     runs-on: ubuntu-latest
     steps:
       - name: Install ZSH

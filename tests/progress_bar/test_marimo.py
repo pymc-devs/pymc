@@ -18,7 +18,7 @@ import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import ProgressBarManager
+from pymc.progress_bar import MCMCProgressBarManager
 from pymc.progress_bar.marimo_progress import MarimoProgressBackend
 
 
@@ -36,7 +36,7 @@ class TestMarimoProgressBackend:
 
     def test_init_split_mode(self, step_method):
         with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
+            manager = MCMCProgressBarManager(
                 step_method=step_method,
                 chains=2,
                 draws=100,
@@ -47,7 +47,7 @@ class TestMarimoProgressBackend:
 
     def test_init_combined_mode(self, step_method):
         with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
+            manager = MCMCProgressBarManager(
                 step_method=step_method,
                 chains=2,
                 draws=100,
@@ -60,7 +60,7 @@ class TestMarimoProgressBackend:
 
     def test_render_html_structure(self, step_method):
         with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
+            manager = MCMCProgressBarManager(
                 step_method=step_method,
                 chains=2,
                 draws=100,
@@ -71,8 +71,8 @@ class TestMarimoProgressBackend:
             assert isinstance(manager._backend, MarimoProgressBackend)
 
             backend._chain_state = [
-                {"draws": 50, "total": 150, "failing": False, "stats": {}},
-                {"draws": 75, "total": 150, "failing": True, "stats": {"divergences": 1}},
+                {"completed": 50, "total": 150, "failing": False, "stats": {}},
+                {"completed": 75, "total": 150, "failing": True, "stats": {"divergences": 1}},
             ]
             backend._start_times = [0, 0]
 
@@ -84,7 +84,7 @@ class TestMarimoProgressBackend:
 
     def test_render_html_with_stats(self, step_method):
         with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
-            manager = ProgressBarManager(
+            manager = MCMCProgressBarManager(
                 step_method=step_method,
                 chains=1,
                 draws=100,
@@ -94,9 +94,9 @@ class TestMarimoProgressBackend:
             backend = manager._backend
             assert isinstance(manager._backend, MarimoProgressBackend)
 
-            backend._chain_state = [
+            backend._task_state = [
                 {
-                    "draws": 50,
+                    "completed": 50,
                     "total": 150,
                     "failing": False,
                     "stats": {"step_size": 0.25, "divergences": 0},

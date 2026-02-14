@@ -5,13 +5,15 @@ Docs build is not supported on Windows.
 To build docs on Windows we recommend running inside a Docker container.
 :::
 
-To build the docs, run these commands at PyMC repository root:
-
-## Installing dependencies
+To build the docs, first install dependencies by running these commands at the PyMC repo root:
 
 ```shell
-conda install -f conda-envs/environment-docs.yml  # or make sure all dependencies listed here are installed
-pip install -e .  # Install local pymc version as installable package
+# create the pymc-docs conda env, or equivalently make
+# sure all dependencies listed in this file are installed
+conda env create -f conda-envs/environment-docs.yml
+
+# Install local pymc version in editable mode
+pip install -e .
 ```
 
 ## Building the documentation
@@ -25,20 +27,20 @@ make html
 `make html` is the command that builds the documentation with `sphinx-build`.
 `make clean` deletes caches and intermediate files.
 
-The `make clean` step is not always necessary, if you are working on a specific page
-for example, you can rebuild the docs without the clean step and everything should
+The `make clean` step is not always necessary. If you are working on a specific page,
+for example, then you can rebuild the docs without the `clean` step, and everything should
 work fine. If you are restructuring the content or editing toctrees, then you'll need
 to execute `make clean`.
 
-A good approach is to generally skip the `make clean`, which makes
-the `make html` faster and see how everything looks.
-If something looks strange, run `make clean` and `make html` one after the other
+A good approach is generally to skip `make clean`, which makes
+the `make html` faster, and see how everything looks. If something
+looks strange, run `make clean` and `make html` one after the other
 to see if it fixes the issue before checking anything else.
 
 ### Emulate building on readthedocs
 The target `rtd` is also available to chain `make clean` with `sphinx-build`
-setting also some extra options and environment variables to indicate
-sphinx to simulate as much as possible a readthedocs build.
+setting also some extra options and environment variables to instruct
+sphinx to simulate a readthedocs build as much as possible.
 
 ```shell
 make rtd

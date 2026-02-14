@@ -14,6 +14,7 @@
 
 import contextlib
 import logging
+import multiprocessing
 import pickle
 import sys
 import time
@@ -54,11 +55,11 @@ from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import (
-    ProgressBarManager,
+    MCMCProgressBarManager,
     ProgressBarOptions,
     default_progress_theme,
 )
-from pymc.sampling.parallel import Draw, _cpu_count
+from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
     log_warning_stats,
@@ -775,27 +776,10 @@ def sample(
     if chains is None:
         chains = max(2, cores)
 
-    if blas_cores == "auto":
-        blas_cores = cores
-
-    cores = min(cores, chains)
-
-    num_blas_cores_per_chain: int | None
-    joined_blas_limiter: Callable[[], Any]
-
-    if blas_cores is None:
-        joined_blas_limiter = contextlib.nullcontext
-        num_blas_cores_per_chain = None
-    elif isinstance(blas_cores, int):
-
-        def joined_blas_limiter():
-            return threadpool_limits(limits=blas_cores)
-
-        num_blas_cores_per_chain = blas_cores // cores
-    else:
-        raise ValueError(
-            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
-        )
+    mp_ctx = _initialize_multiprocessing_context(mp_ctx, quiet=quiet)
+    joined_blas_limiter, cores, num_blas_cores_per_worker = setup_cores_blas_cores(
+        blas_cores, chains, cores, mp_ctx
+    )
 
     if random_seed == -1:
         raise ValueError(
@@ -945,7 +929,7 @@ def sample(
     }
     parallel_args = {
         "mp_ctx": mp_ctx,
-        "blas_cores": num_blas_cores_per_chain,
+        "blas_cores": num_blas_cores_per_worker,
     }
 
     sample_args.update(kwargs)
@@ -1024,6 +1008,45 @@ def sample(
         model=model,
         quiet=quiet,
     )
+
+
+def setup_cores_blas_cores(
+    blas_cores: int | None | str,
+    chains: int,
+    cores: int,
+    mp_ctx: multiprocessing.context.BaseContext,
+) -> tuple[Callable[[], Any], int, int | None]:
+    if isinstance(blas_cores, str) and blas_cores != "auto":
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    if blas_cores == "auto":
+        blas_cores = cores
+
+    cores = min(cores, chains)
+
+    num_blas_cores_per_worker: int | None
+    joined_blas_limiter: Callable[[], Any]
+
+    if blas_cores is None:
+        joined_blas_limiter = contextlib.nullcontext
+        num_blas_cores_per_worker = None
+
+    elif isinstance(blas_cores, int):
+        if mp_ctx.get_start_method() == "fork":
+            # https://github.com/pymc-devs/pymc/issues/7354
+            joined_blas_limiter = contextlib.nullcontext
+        else:
+
+            def joined_blas_limiter():
+                return threadpool_limits(limits=blas_cores)
+
+        num_blas_cores_per_worker = blas_cores // cores
+    else:
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    return joined_blas_limiter, cores, num_blas_cores_per_worker
 
 
 def _sample_return(
@@ -1205,7 +1228,7 @@ def _sample_many(
         Step function
     """
     initial_step_state = step.sampling_state
-    progress_manager = ProgressBarManager(
+    progress_manager = MCMCProgressBarManager(
         step_method=step,
         chains=chains,
         draws=draws - kwargs.get("tune", 0),
@@ -1242,7 +1265,7 @@ def _sample(
     tune: int,
     model: Model | None = None,
     callback=None,
-    progress_manager: ProgressBarManager,
+    progress_manager: MCMCProgressBarManager,
     **kwargs,
 ) -> None:
     """Sample one chain (singleprocess).

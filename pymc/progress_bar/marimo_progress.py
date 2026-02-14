@@ -16,7 +16,6 @@ from time import perf_counter
 from typing import Any, Self
 
 from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
-from pymc.progress_bar.utils import compute_draw_speed
 
 
 def format_time(seconds: float) -> str:
@@ -96,20 +95,22 @@ class MarimoProgressBackend:
 
     def __init__(
         self,
-        chains: int,
-        total_draws: int,
+        step_name: str,
+        n_bars: int,
+        total: int | float,
         combined: bool,
         full_stats: bool,
         css_theme: str | None = None,
     ):
-        self.chains = chains
-        self.total_draws = total_draws
+        self.step_name = step_name
+        self.n_bars = n_bars
+        self.total = total
         self.combined = combined
         self.full_stats = full_stats
         self._css_theme = DEFAULT_CSS if css_theme is None else css_theme
 
         self._mo_replace: Callable[[object], None] | None = None
-        self._chain_state: list[dict[str, Any]] = []
+        self._task_state: list[dict[str, Any]] = []
         self._start_times: list[float] = []
 
     @property
@@ -131,58 +132,63 @@ class MarimoProgressBackend:
         self._render()
 
     def _initialize_tasks(self) -> None:
-        """Initialize progress tracking state for all chains."""
+        """Initialize progress tracking state for all tasks."""
         if self.combined:
-            self._chain_state = [
+            self._task_state = [
                 {
-                    "draws": 0,
-                    "total": self.total_draws * self.chains,
+                    "completed": 0,
+                    "total": self.total * self.n_bars,
                     "failing": False,
                     "stats": {},
                 }
             ]
             self._start_times = [perf_counter()]
         else:
-            self._chain_state = [
+            self._task_state = [
                 {
-                    "draws": 0,
-                    "total": self.total_draws,
+                    "completed": 0,
+                    "total": self.total,
                     "failing": False,
                     "stats": {},
                 }
-                for _ in range(self.chains)
+                for _ in range(self.n_bars)
             ]
-            self._start_times = [perf_counter() for _ in range(self.chains)]
+            self._start_times = [perf_counter() for _ in range(self.n_bars)]
 
     def update(
         self,
-        chain_idx: int,
-        draw: int,
+        task_id: int,
+        advance: int | float,
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
     ) -> None:
-        """Update progress for a specific chain.
+        """Update progress for a specific task.
 
         Parameters
         ----------
-        chain_idx : int
-            Index of the chain being updated
-        draw : int
-            Current draw number
+        task_id : int
+            Index of the progress bar being updated
+        advance : int or float
+            Amount to advance the progress bar by
         failing : bool
-            Whether the chain has encountered failures
+            Whether the task has encountered failures
         stats : dict
             Statistics to display
         is_last : bool
             Whether this is the final update
         """
-        self._chain_state[chain_idx]["draws"] = draw
-        self._chain_state[chain_idx]["failing"] = failing
-        self._chain_state[chain_idx]["stats"] = stats
+        self._task_state[task_id]["completed"] += advance
+        self._task_state[task_id]["failing"] = failing
+        self._task_state[task_id]["stats"] = stats
 
         if is_last:
-            self._chain_state[chain_idx]["draws"] = draw + 1 if not self.combined else draw
+            # Ensure bar is fully filled on completion
+            total = self._task_state[task_id]["total"]
+            completed = self._task_state[task_id]["completed"]
+            remaining = total - completed
+            if remaining > 0:
+                self._task_state[task_id]["completed"] = total
 
         self._render()
 
@@ -199,10 +205,10 @@ class MarimoProgressBackend:
     def _render_html(self) -> str:
         """Generate HTML for all progress bars as a table with headers."""
         stat_keys = []
-        if self.full_stats and self._chain_state and self._chain_state[0]["stats"]:
-            stat_keys = list(self._chain_state[0]["stats"].keys())
+        if self.full_stats and self._task_state and self._task_state[0]["stats"]:
+            stat_keys = list(self._task_state[0]["stats"].keys())
 
-        header_cells = ["Progress", "Draws"]
+        header_cells = ["Progress", self.step_name]
 
         abbreviations = {
             "divergences": "Div",
@@ -224,8 +230,8 @@ class MarimoProgressBackend:
         header_row = "<tr>" + "".join(f"<th>{h}</th>" for h in header_cells) + "</tr>"
 
         data_rows = []
-        for i, state in enumerate(self._chain_state):
-            data_rows.append(self._render_chain_row(i, state, stat_keys))
+        for i, state in enumerate(self._task_state):
+            data_rows.append(self._render_task_row(i, state, stat_keys))
 
         rows_html = "\n".join(data_rows)
         return f"""
@@ -236,16 +242,23 @@ class MarimoProgressBackend:
             </table>
         """
 
-    def _render_chain_row(self, chain_idx: int, state: dict[str, Any], stat_keys: list[str]) -> str:
-        """Render a single chain's progress as a table row."""
-        draws = state["draws"]
+    def _render_task_row(self, task_id: int, state: dict[str, Any], stat_keys: list[str]) -> str:
+        """Render a single task's progress as a table row."""
+        completed = state["completed"]
         total = state["total"]
         failing = state["failing"]
         stats = state["stats"]
 
-        pct = (draws / total * 100) if total > 0 else 0
-        elapsed = perf_counter() - self._start_times[chain_idx]
-        speed, unit = compute_draw_speed(elapsed, draws)
+        pct = (completed / total * 100) if total > 0 else 0
+        elapsed = perf_counter() - self._start_times[task_id]
+
+        action = self.step_name.lower()
+        speed = completed / max(elapsed, 1e-6)
+        if speed > 1 or speed == 0:
+            unit = f"{action}s/s"
+        else:
+            unit = f"s/{action}"
+            speed = 1 / speed
 
         bar_class = "pymc-progress-bar"
         if failing:
@@ -255,7 +268,7 @@ class MarimoProgressBackend:
 
         cells = [
             f'<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>',
-            f"<td>{draws}/{total} ({pct:.0f}%)</td>",
+            f"<td>{completed}/{total} ({pct:.0f}%)</td>",
         ]
 
         for key in stat_keys:

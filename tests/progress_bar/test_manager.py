@@ -16,7 +16,7 @@ import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import ProgressBarManager
+from pymc.progress_bar import MCMCProgressBarManager
 
 
 def test_progressbar_nested_compound():
@@ -58,7 +58,7 @@ class TestProgressBarManagerConfiguration:
         return step
 
     def test_init_split_mode(self, step_method):
-        manager = ProgressBarManager(
+        manager = MCMCProgressBarManager(
             step_method=step_method,
             chains=2,
             draws=100,
@@ -72,7 +72,7 @@ class TestProgressBarManagerConfiguration:
         assert manager.total_draws == 150
 
     def test_init_combined_mode(self, step_method):
-        manager = ProgressBarManager(
+        manager = MCMCProgressBarManager(
             step_method=step_method,
             chains=2,
             draws=100,
@@ -83,7 +83,7 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is False
 
     def test_init_combined_stats_mode(self, step_method):
-        manager = ProgressBarManager(
+        manager = MCMCProgressBarManager(
             step_method=step_method,
             chains=2,
             draws=100,
@@ -94,7 +94,7 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is True
 
     def test_init_split_stats_mode(self, step_method):
-        manager = ProgressBarManager(
+        manager = MCMCProgressBarManager(
             step_method=step_method,
             chains=2,
             draws=100,
@@ -105,7 +105,7 @@ class TestProgressBarManagerConfiguration:
         assert manager.full_stats is True
 
     def test_init_disabled(self, step_method):
-        manager = ProgressBarManager(
+        manager = MCMCProgressBarManager(
             step_method=step_method,
             chains=2,
             draws=100,
@@ -116,7 +116,7 @@ class TestProgressBarManagerConfiguration:
 
     def test_invalid_progressbar_value(self, step_method):
         with pytest.raises(ValueError, match="Invalid value for `progressbar`"):
-            ProgressBarManager(
+            MCMCProgressBarManager(
                 step_method=step_method,
                 chains=2,
                 draws=100,
