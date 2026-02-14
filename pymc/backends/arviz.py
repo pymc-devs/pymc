@@ -193,7 +193,7 @@ class _DefaultTrace:
 
 
 class DataTreeConverter:
-    """Encapsulate DataTree specific logic."""
+    """Encapsulate conventions of InferenceData schema in DataTree conversion."""
 
     model: Model | None = None
     posterior_predictive: Mapping[str, np.ndarray] | None = None
