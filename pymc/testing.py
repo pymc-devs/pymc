@@ -1252,7 +1252,7 @@ def mock_sample(
             {name: (("chain", "draw"), creator(size)) for name, creator in sample_stats.items()},
             coords=posterior_ds.coords,
         )
-        idata.update({"sample_stats": xr.DataTree(sample_stats_ds)})
+        idata["sample_stats"] = sample_stats_ds
 
     return idata
 
