@@ -1232,14 +1232,13 @@ def mock_sample(
         var_names=var_names,
     )
 
-    posterior_ds = (
+    idata["posterior"] = (
         idata["prior"]
         .to_dataset()
         .isel(chain=0)
         .expand_dims({"chain": range(n_chains)})
         .transpose("chain", "draw", ...)
-    )
-    idata.update({"posterior": xr.DataTree(posterior_ds)})
+)
     del idata["prior"]
     if "prior_predictive" in idata:
         del idata["prior_predictive"]
