@@ -449,7 +449,7 @@ class TestCompileForwardSampler:
             pp_same_len = pm.sample_posterior_predictive(
                 trace_same_len, var_names=["y"]
             ).posterior_predictive
-        assert pp_same_len["y"].values.item() == np.pi
+        assert pp_same_len["y"].item() == np.pi
 
         # Coord length changed -- `x` is volatile
         trace_diff_len = az_from_dict(
