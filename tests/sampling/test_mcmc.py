@@ -645,9 +645,11 @@ def test_init_jitter(initval, jitter_max_retries, expectation):
 def test_step_args():
     with pm.Model() as model:
         a = pm.Normal("a")
-        idata0 = pm.sample(target_accept=0.5, random_seed=1410)
-        idata1 = pm.sample(nuts={"target_accept": 0.5}, random_seed=1410 * 2)
-        idata2 = pm.sample(target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410)
+        idata0 = pm.sample(draws=200, tune=200, target_accept=0.5, random_seed=1410)
+        idata1 = pm.sample(draws=200, tune=200, nuts={"target_accept": 0.5}, random_seed=1410 * 2)
+        idata2 = pm.sample(
+            draws=200, tune=200, target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410
+        )
 
         with pytest.raises(ValueError, match="`target_accept` was defined twice."):
             pm.sample(target_accept=0.5, nuts={"target_accept": 0.95}, random_seed=1410)
@@ -659,13 +661,17 @@ def test_step_args():
     with pm.Model() as model:
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
-        idata0 = pm.sample(target_accept=0.5, random_seed=1418)
+        idata0 = pm.sample(draws=200, tune=200, target_accept=0.5, random_seed=1418)
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", "invalid value encountered in double_scalars", RuntimeWarning
             )
             idata1 = pm.sample(
-                nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
+                draws=200,
+                tune=200,
+                nuts={"target_accept": 0.5},
+                metropolis={"scaling": 0},
+                random_seed=1418 * 2,
             )
 
     npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
