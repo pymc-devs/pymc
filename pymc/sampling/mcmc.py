@@ -37,7 +37,13 @@ from arviz.data.base import make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
-from typing_extensions import Protocol
+
+from pytensor.compile.mode import get_mode
+from pytensor.link.numba.dispatch import NumbaLinker
+try:
+    from pytensor.link.jax.dispatch import JAXLinker
+except ImportError:
+    JAXLinker = type("JAXLinker", (), {})
 
 import pymc as pm
 from pymc.backends import RunType, TraceOrBackend, init_traces
@@ -83,8 +89,6 @@ try:
 except ImportError:
     MemoryStore = type("MemoryStore", (), {})
 
-def _nutpie_is_installed() -> bool:
-    return importlib.util.find_spec("nutpie") is not None
 
 sys.setrecursionlimit(10000)
 
@@ -339,10 +343,27 @@ def _sample_external_nuts(
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
+    compile_kwargs: dict | None = None,
     **kwargs,
 ):
+    compile_kwargs = compile_kwargs or {}
+    nutpie_compile_kwargs = {}
+    
+    # Propagate backend based on compile_kwargs mode
+    if "mode" in compile_kwargs:
+        mode = get_mode(compile_kwargs["mode"])
+        if isinstance(mode.linker, JAXLinker):
+             nutpie_compile_kwargs["backend"] = "jax"
+        elif isinstance(mode.linker, NumbaLinker):
+             nutpie_compile_kwargs["backend"] = "numba"
+
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
+    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
+    
+    for kwarg in ("backend", "gradient_backend"):
+        if kwarg in nuts_sampler_kwargs:
+            nutpie_compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg) 
 
     if sampler == "nutpie":
         try:
@@ -360,20 +381,15 @@ def _sample_external_nuts(
             )
 
         if idata_kwargs is not None:
-            warnings.warn(
+             warnings.warn(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
 
-        compile_kwargs = {}
-        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
-        for kwarg in ("backend", "gradient_backend"):
-            if kwarg in nuts_sampler_kwargs:
-                compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
         compiled_model = nutpie.compile_pymc_model(
             model,
             var_names=var_names,
-            **compile_kwargs,
+            **nutpie_compile_kwargs,
         )
         t_start = time.time()
         idata = nutpie.sample(
@@ -847,8 +863,7 @@ def sample(
     if nuts_sampler is None:
         if (
             exclusive_nuts
-            and _nutpie_is_installed()
-            and (compile_kwargs is None or not compile_kwargs)
+            and (compile_kwargs is None or isinstance(get_mode(compile_kwargs.get("mode")).linker, (JAXLinker, NumbaLinker)))
         ):
             nuts_sampler = "nutpie"
         else:
@@ -866,7 +881,7 @@ def sample(
                 draws=draws,
                 tune=tune,
                 chains=chains,
-                target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
+                target_accept=nuts_sampler_kwargs.get("target_accept", 0.8),
                 random_seed=random_seed,
                 initvals=initvals,
                 model=model,
@@ -876,6 +891,7 @@ def sample(
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
+                compile_kwargs=compile_kwargs,
                 **kwargs,
             )
 
