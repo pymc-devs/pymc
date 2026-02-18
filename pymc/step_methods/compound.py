@@ -122,6 +122,18 @@ class BlockedStep(ABC, WithSamplingState):
     vars: list[Variable] = []
     """Variables that the step method is assigned to."""
 
+    default_tune_steps: int | None = None
+    """Number of tuning steps this step method needs.
+
+    ``None`` means use the global default (1000).
+    ``0`` means no tuning is needed.
+    A positive integer means exactly that many tune steps are needed.
+
+    When ``tune=None`` is passed to :func:`~pymc.sample`, the effective
+    number of tune steps is computed as the maximum ``default_tune_steps``
+    across all active step methods (falling back to 1000 for ``None``).
+    """
+
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get("blocked")
         if blocked is None:

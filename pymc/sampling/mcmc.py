@@ -66,6 +66,7 @@ from pymc.stats.convergence import (
 )
 from pymc.step_methods import NUTS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
+from pymc.step_methods.compound import flatten_steps
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
     RandomSeed,
@@ -91,6 +92,29 @@ __all__ = [
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep
+
+_DEFAULT_TUNE = 1000
+
+
+def _get_effective_tune(step: "Step", tune: int | None) -> int:
+    """Compute the effective number of tuning steps.
+
+    If ``tune`` is an explicit integer, return it directly.
+
+    If ``tune`` is ``None``, ask each step method how many tune steps it
+    needs via its ``default_tune_steps`` class attribute and return the
+    maximum. Step methods that leave ``default_tune_steps=None`` fall back
+    to the global default of 1000.
+    """
+    if tune is not None:
+        return tune
+
+    steps = flatten_steps(step)
+    requested = [
+        s.default_tune_steps if s.default_tune_steps is not None else _DEFAULT_TUNE
+        for s in steps
+    ]
+    return max(requested) if requested else _DEFAULT_TUNE
 
 
 class SamplingIteratorCallback(Protocol):
@@ -514,7 +538,7 @@ def sample(
 def sample(
     draws: int = 1000,
     *,
-    tune: int = 1000,
+    tune: int | None = None,
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
@@ -844,6 +868,9 @@ def sample(
                 "Model can not be sampled with NUTS alone. It either has discrete variables or a non-differentiable log-probability."
             )
 
+        if tune is None:
+            tune = _DEFAULT_TUNE
+
         with joined_blas_limiter():
             return _sample_external_nuts(
                 sampler=nuts_sampler,
@@ -904,6 +931,8 @@ def sample(
         )
         if isinstance(step, list):
             step = CompoundStep(step)
+
+    tune = _get_effective_tune(step, tune)
 
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]

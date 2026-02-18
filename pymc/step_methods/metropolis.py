@@ -574,6 +574,8 @@ class BinaryGibbsMetropolis(ArrayStep):
 
     name = "binary_gibbs_metropolis"
 
+    default_tune_steps = 0
+
     stats_dtypes_shapes = {
         "tune": (bool, []),
     }
@@ -694,6 +696,8 @@ class CategoricalGibbsMetropolis(ArrayStep):
     """
 
     name = "categorical_gibbs_metropolis"
+
+    default_tune_steps = 0
 
     stats_dtypes_shapes = {
         "tune": (bool, []),
