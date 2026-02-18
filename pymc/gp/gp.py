@@ -54,18 +54,6 @@ class Base:
         cov_total = self.cov_func + other.cov_func
         return self.__class__(mean_func=mean_total, cov_func=cov_total)
 
-    def prior(self, name, X, *args, **kwargs):
-        raise NotImplementedError
-
-    def marginal_likelihood(self, name, X, *args, **kwargs):
-        raise NotImplementedError
-
-    def conditional(self, name, Xnew, *args, **kwargs):
-        raise NotImplementedError
-
-    def predict(self, Xnew, point=None, given=None, diag=False, model=None):
-        raise NotImplementedError
-
 
 @conditioned_vars(["X", "f"])
 class Latent(Base):
