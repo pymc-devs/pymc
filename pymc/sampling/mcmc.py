@@ -39,9 +39,7 @@ from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
 
-
 import pymc as pm
-
 from pymc.backends import RunType, TraceOrBackend, init_traces
 from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
