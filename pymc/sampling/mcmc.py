@@ -34,16 +34,13 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
+from pytensor.compile.mode import get_mode
 from pytensor.graph.basic import Variable
+from pytensor.link.numba.dispatch import NumbaLinker
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
-from pytensor.compile.mode import get_mode
-from pytensor.link.numba.dispatch import NumbaLinker
-try:
-    from pytensor.link.jax.dispatch import JAXLinker
-except ImportError:
-    JAXLinker = type("JAXLinker", (), {})
+from typing_extensions import Protocol
 
 import pymc as pm
 from pymc.backends import RunType, TraceOrBackend, init_traces
@@ -88,6 +85,11 @@ try:
     from zarr.storage import MemoryStore
 except ImportError:
     MemoryStore = type("MemoryStore", (), {})
+
+try:
+    from pytensor.link.jax.dispatch import JAXLinker
+except ImportError:
+    JAXLinker = type("JAXLinker", (), {})
 
 
 sys.setrecursionlimit(10000)
