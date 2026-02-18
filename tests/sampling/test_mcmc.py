@@ -1062,7 +1062,6 @@ class TestNutpieSelection:
             assert mock_sample_external.call_args[1]["sampler"] == "nutpie"
 
     def test_backend_propagation_internal(self, continuous_model):
-
         with mock.patch.dict("sys.modules", {"nutpie": mock.Mock()}):
             import nutpie
 
