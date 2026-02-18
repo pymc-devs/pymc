@@ -15,7 +15,6 @@
 import contextlib
 import logging
 import pickle
-import importlib
 import sys
 import time
 import warnings
@@ -35,14 +34,13 @@ import pytensor.gradient as tg
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
 from pytensor.compile.mode import get_mode
-
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
-
 from typing_extensions import Protocol
 
 import pymc as pm
+
 from pymc.backends import RunType, TraceOrBackend, init_traces
 from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
@@ -355,22 +353,22 @@ def _sample_external_nuts(
 ):
     compile_kwargs = compile_kwargs or {}
     nutpie_compile_kwargs = {}
-    
+
     # Propagate backend based on compile_kwargs mode
     if "mode" in compile_kwargs:
         mode = get_mode(compile_kwargs["mode"])
         if isinstance(mode.linker, JAXLinker):
-             nutpie_compile_kwargs["backend"] = "jax"
+            nutpie_compile_kwargs["backend"] = "jax"
         elif isinstance(mode.linker, NumbaLinker):
-             nutpie_compile_kwargs["backend"] = "numba"
+            nutpie_compile_kwargs["backend"] = "numba"
 
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
     nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
-    
+
     for kwarg in ("backend", "gradient_backend"):
         if kwarg in nuts_sampler_kwargs:
-            nutpie_compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg) 
+            nutpie_compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
 
     if sampler == "nutpie":
         try:
@@ -388,7 +386,7 @@ def _sample_external_nuts(
             )
 
         if idata_kwargs is not None:
-             warnings.warn(
+            warnings.warn(
                 "`idata_kwargs` are currently ignored by the nutpie sampler",
                 UserWarning,
             )
@@ -868,9 +866,9 @@ def sample(
     )
 
     if nuts_sampler is None:
-        if (
-            exclusive_nuts
-            and (compile_kwargs is None or isinstance(get_mode(compile_kwargs.get("mode")).linker, (JAXLinker, NumbaLinker)))
+        if exclusive_nuts and (
+            compile_kwargs is None
+            or isinstance(get_mode(compile_kwargs.get("mode")).linker, (JAXLinker, NumbaLinker))
         ):
             nuts_sampler = "nutpie"
         else:
