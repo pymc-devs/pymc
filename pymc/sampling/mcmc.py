@@ -868,7 +868,7 @@ def sample(
     if nuts_sampler is None:
         if exclusive_nuts and (
             compile_kwargs is None
-            or isinstance(get_mode(compile_kwargs.get("mode")).linker, (JAXLinker, NumbaLinker))
+            or isinstance(get_mode(compile_kwargs.get("mode")).linker, JAXLinker | NumbaLinker)
         ):
             nuts_sampler = "nutpie"
         else:
