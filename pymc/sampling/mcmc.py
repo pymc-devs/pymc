@@ -15,6 +15,7 @@
 import contextlib
 import logging
 import pickle
+import importlib
 import sys
 import time
 import warnings
@@ -37,6 +38,9 @@ from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
+
+def _nutpie_is_installed() -> bool:
+    return importlib.util.find_spec("nutpie") is not None
 
 import pymc as pm
 
@@ -457,7 +461,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -490,7 +494,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -523,7 +527,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -592,10 +596,13 @@ def sample(
         method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
+    nuts_sampler : str, optional
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
+        If ``None`` (default), "nutpie" is used if installed and the model is suitable
+        (all continuous variables, no incompatible compile_kwargs).
+        Otherwise "pymc" is used.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -837,6 +844,16 @@ def sample(
             and issubclass(next(iter(selected_steps)), NUTS)
         )
     )
+
+    if nuts_sampler is None:
+        if (
+            exclusive_nuts
+            and _nutpie_is_installed()
+            and (compile_kwargs is None or not compile_kwargs)
+        ):
+            nuts_sampler = "nutpie"
+        else:
+            nuts_sampler = "pymc"
 
     if nuts_sampler != "pymc":
         if not exclusive_nuts:
