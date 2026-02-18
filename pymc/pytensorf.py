@@ -583,12 +583,16 @@ def join_nonshared_inputs(
     if pytensor.config.compute_test_value != "off":
         joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
-    shapes = [point[var.name].shape for var in inputs]
-    unpacked_inputs = pt.unpack(joined_inputs, shapes)
-
     replace: dict[Variable, Variable] = {}
-    for var, replacement_var in zip(inputs, unpacked_inputs):
-        replace[var] = var.type.filter_variable(replacement_var.astype(var.dtype))
+    last_idx = 0
+    for var in inputs:
+        shape = point[var.name].shape
+        arr_len = np.prod(shape, dtype=int)
+        replacement_var = (
+            joined_inputs[last_idx : last_idx + arr_len].reshape(shape).astype(var.dtype)
+        )
+        replace[var] = var.type.filter_variable(replacement_var)
+        last_idx += arr_len
 
     if shared_inputs is not None:
         replace.update(shared_inputs)
