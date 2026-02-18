@@ -111,8 +111,7 @@ def _get_effective_tune(step: "Step", tune: int | None) -> int:
 
     steps = flatten_steps(step)
     requested = [
-        s.default_tune_steps if s.default_tune_steps is not None else _DEFAULT_TUNE
-        for s in steps
+        s.default_tune_steps if s.default_tune_steps is not None else _DEFAULT_TUNE for s in steps
     ]
     return max(requested) if requested else _DEFAULT_TUNE
 
