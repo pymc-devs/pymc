@@ -60,21 +60,21 @@ class Latent(Base):
     R"""
     Latent Gaussian process.
 
-    The `gp.Latent` class is a direct implementation of a GP.  No additive
+    The :class:`~pymc.gp.Latent` class is a direct implementation of a GP.  No additive
     noise is assumed.  It is called "Latent" because the underlying function
-    values are treated as latent variables.  It has a `prior` method and a
-    `conditional` method.  Given a mean and covariance function the
-    function :math:`f(x)` is modeled as,
+    values are treated as latent variables.  It has a :meth:`prior` method and a
+    :meth:`conditional` method.  Given a mean and covariance function, the
+    function :math:`f(x)` is modeled as
 
     .. math::
 
-       f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right)
+       f(x) \sim \mathcal{GP}\left(\mu(x), k(x, x')\right).
 
-    Use the `prior` and `conditional` methods to actually construct random
+    Use the :meth:`prior` and :meth:`conditional` methods to actually construct random
     variables representing the unknown, or latent, function whose
     distribution is the GP prior or GP conditional.  This GP implementation
     can be used to implement regression on data that is not normally
-    distributed.  For more information on the `prior` and `conditional` methods,
+    distributed.  For more information on the :meth:`prior` and :meth:`conditional` methods,
     see their docstrings.
 
     Parameters
@@ -261,7 +261,7 @@ class TP(Latent):
     r"""
     Student's T process prior.
 
-    The usage is nearly identical to that of `gp.Latent`.  The differences
+    The usage is nearly identical to that of :class:`~pymc.gp.Latent`.  The differences
     are that it must be initialized with a degrees of freedom parameter, and
     TP is not additive. Given a mean and covariance function, and a degrees of
     freedom parameter, the function :math:`f(x)` is modeled as,
@@ -392,12 +392,10 @@ class Marginal(Base):
     R"""
     Marginal Gaussian process.
 
-    The `gp.Marginal` class is an implementation of the sum of a GP
-    prior and additive noise.  It has `marginal_likelihood`, `conditional`
-    and `predict` methods.  This GP implementation can be used to
-    implement regression on data that is normally distributed.  For more
-    information on the `marginal_likelihood`, `conditional`
-    and `predict` methods, see their docstrings.
+    The :class:`~pymc.gp.Marginal` class is an implementation of the sum of a GP
+    prior and additive noise.  It has :meth:`marginal_likelihood`, :meth:`conditional`
+    and :meth:`predict` methods.  This GP implementation can be used to
+    implement regression on data that is normally distributed.
 
     Parameters
     ----------
@@ -658,9 +656,9 @@ class MarginalApprox(Marginal):
     R"""
     Approximate marginal Gaussian process.
 
-    The `gp.MarginalApprox` class is an implementation of the sum of a GP
-    prior and additive noise.  It has `marginal_likelihood`, `conditional`
-    and `predict` methods.  This GP implementation can be used to
+    The :class:`~pymc.gp.MarginalApprox` class is an implementation of the sum of a GP
+    prior and additive noise.  It has :meth:`marginal_likelihood`, :meth:`conditional`
+    and :meth:`predict` methods.  This GP implementation can be used to
     implement regression on data that is normally distributed.  The
     available approximations are:
 
@@ -899,16 +897,13 @@ class LatentKron(Base):
     R"""
     Latent Gaussian process whose covariance is a tensor product kernel.
 
-    The `gp.LatentKron` class is a direct implementation of a GP with a
+    The :class:`~pymc.gp.LatentKron` class is a direct implementation of a GP with a
     Kronecker structured covariance, without reference to any noise or
-    specific likelihood.  The GP is constructed with the `prior` method,
+    specific likelihood.  The GP is constructed with the :meth:`prior` method,
     and the conditional GP over new input locations is constructed with
-    the `conditional` method. For more
-    information on these methods, see their docstrings.  This GP
-    implementation can be used to model a Gaussian process whose inputs
-    cover evenly spaced grids on more than one dimension.  `LatentKron`
-    relies on the `KroneckerNormal` distribution, see its docstring
-    for more information.
+    the :meth:`conditional` method. This GP implementation can be used to model a Gaussian process whose inputs
+    cover evenly spaced grids on more than one dimension. :class:`~pymc.gp.LatentKron`
+    relies on the :class:`~pymc.KroneckerNormal` distribution.
 
     Parameters
     ----------
@@ -1054,16 +1049,13 @@ class MarginalKron(Base):
     R"""
     Marginal Gaussian process whose covariance is a tensor product kernel.
 
-    The `gp.MarginalKron` class is an implementation of the sum of a
+    The :class:`~pymc.gp.MarginalKron` class is an implementation of the sum of a
     Kronecker GP prior and additive white noise. It has
-    `marginal_likelihood`, `conditional` and `predict` methods. This GP
+    :meth:`marginal_likelihood`, :meth:`conditional` and :meth:`predict` methods. This GP
     implementation can be used to efficiently implement regression on
     data that are normally distributed with a tensor product kernel and
     are measured on a full grid of inputs: `cartesian(*Xs)`.
-    `MarginalKron` is based on the `KroneckerNormal` distribution, see
-    its docstring for more information. For more information on the
-    `marginal_likelihood`, `conditional` and `predict` methods,
-    see their docstrings.
+    :class:`~pymc.gp.MarginalKron` is based on the :class:`~pymc.KroneckerNormal` distribution.
 
     Parameters
     ----------
