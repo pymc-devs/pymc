@@ -985,9 +985,7 @@ class TestNutpieSelection:
                 mock_mode.linker = MockNumbaLinker()
                 mock_get_mode.return_value = mock_mode
                 
-                # Mock exclusive_nuts logic (default True for continuous)
                 
-                # We need to ensure _sample_external_nuts is called
                 pm.sample(
                     model=continuous_model,
                     compile_kwargs={"mode": "NUMBA"},
@@ -1032,22 +1030,21 @@ class TestNutpieSelection:
              mock.patch("pymc.sampling.mcmc._mp_sample"):
             
             # Use real NumbaLinker/JAXLinker classes if possible, or mocks that won't match CVM
-            # If we don't return an instance of JAX/Numba linker, it should fallback
+            
             mock_mode = mock.Mock()
             mock_mode.linker = mock.Mock() # Generic mock, not JAX or Numba
             mock_get_mode.return_value = mock_mode
             
             pm.sample(
                 model=continuous_model,
-                compile_kwargs={"mode": "FAST_RUN"}, # CVM
+                compile_kwargs={"mode": "FAST_RUN"}, 
                 tune=10,
                 draws=10,
                 chains=1,
                 progressbar=False,
             )
             
-            # Should fallback to pymc, meaning _sample_external_nuts not called with nutpie
-            # pm.sample logic: if nuts_sampler="pymc", calls _mp_sample or _iter_sample
+            
             mock_sample_external.assert_not_called()
 
     def test_explicit_selection(self, continuous_model):
@@ -1064,13 +1061,13 @@ class TestNutpieSelection:
             assert mock_sample_external.call_args[1]["sampler"] == "nutpie"
 
     def test_backend_propagation_internal(self, continuous_model):
-        # Test that _sample_external_nuts correctly sets backend in nutpie based on compile_kwargs
+        
         with mock.patch.dict("sys.modules", {"nutpie": mock.Mock()}):
             import nutpie
             nutpie.compile_pymc_model = mock.Mock()
             nutpie.sample = mock.Mock(return_value=mock.Mock())
             
-            # We need to mock get_mode inside _sample_external_nuts as well
+            
             with mock.patch("pymc.sampling.mcmc.get_mode") as mock_get_mode:
                 MockNumbaLinker = type("MockNumbaLinker", (), {})
                 with mock.patch("pymc.sampling.mcmc.NumbaLinker", MockNumbaLinker):
