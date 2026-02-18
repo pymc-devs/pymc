@@ -39,8 +39,6 @@ from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
 
-def _nutpie_is_installed() -> bool:
-    return importlib.util.find_spec("nutpie") is not None
 
 import pymc as pm
 
@@ -86,6 +84,9 @@ try:
     from zarr.storage import MemoryStore
 except ImportError:
     MemoryStore = type("MemoryStore", (), {})
+
+def _nutpie_is_installed() -> bool:
+    return importlib.util.find_spec("nutpie") is not None
 
 sys.setrecursionlimit(10000)
 
