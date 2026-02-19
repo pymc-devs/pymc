@@ -13,12 +13,12 @@
 #   limitations under the License.
 import re
 
+from functools import wraps
+
 import arviz
 import numpy as np
 import pytest
 import xarray
-
-from cachetools import cached
 
 import pymc as pm
 
@@ -115,6 +115,26 @@ def test_hashing_of_rv_tuples():
                 (freerv, []),
             ]:
                 assert isinstance(hashable(structure), int)
+
+
+def cached(cache, key=hash_key):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            k = key(*args, **kwargs)
+
+            if k in cache:
+                return cache[k]
+
+            result = func(*args, **kwargs)
+            cache[k] = result
+            return result
+
+        wrapper.cache = cache
+        wrapper.cache_clear = cache.clear
+        return wrapper
+
+    return decorator
 
 
 def test_hash_key():

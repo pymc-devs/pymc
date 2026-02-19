@@ -18,6 +18,7 @@ import re
 from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
+from functools import lru_cache, wraps
 from typing import cast
 
 import arviz
@@ -25,7 +26,6 @@ import cloudpickle
 import numpy as np
 import xarray
 
-from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 
@@ -346,16 +346,45 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def locally_cachedmethod(f):
-    from collections import defaultdict
+class _LRUCacheWrapper:
+    def __init__(self, func, maxsize):
+        @lru_cache(maxsize=maxsize)
+        def cached(*args, **kwargs):
+            return func(*args, **kwargs)
 
-    def self_cache_fn(f_name):
-        def cf(self):
-            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+        self._cached = cached
 
-        return cf
+    def __call__(self, *args, **kwargs):
+        return self._cached(*args, **kwargs)
 
-    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+    def __len__(self):
+        # emulate cachetools.LRUCache length
+        return self._cached.cache_info().currsize
+
+    def clear(self):
+        self._cached.cache_clear()
+
+    cache_clear = clear
+
+
+def locally_cachedmethod(func, maxsize=128):
+    name = func.__name__
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        caches = self.__dict__.setdefault("_cache", {})
+        cached = caches.get(name)
+
+        if cached is None:
+            cached = _LRUCacheWrapper(
+                lambda *a, **k: func(self, *a, **k),
+                maxsize=maxsize,
+            )
+            caches[name] = cached
+
+        return cached(*args, **kwargs)
+
+    return wrapper
 
 
 def check_dist_not_registered(dist, model=None):
