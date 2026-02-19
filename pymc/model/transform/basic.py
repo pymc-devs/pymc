@@ -13,11 +13,9 @@
 #   limitations under the License.
 from collections.abc import Sequence
 
-from pytensor import Variable, clone_replace
+from pytensor import Variable
 from pytensor.graph import ancestors
-from pytensor.graph.fg import FunctionGraph
 
-from pymc.data import MinibatchOp
 from pymc.model.core import Model
 from pymc.model.fgraph import (
     ModelObservedRV,
@@ -60,25 +58,3 @@ def parse_vars(model: Model, vars: ModelVariable | Sequence[ModelVariable]) -> l
     else:
         vars_seq = (vars,)
     return [model[var] if isinstance(var, str) else var for var in vars_seq]
-
-
-def remove_minibatched_nodes(model: Model) -> Model:
-    """Remove all uses of pm.Minibatch in the Model."""
-    fgraph, _ = fgraph_from_model(model)
-
-    replacements = {}
-    for var in fgraph.apply_nodes:
-        if isinstance(var.op, MinibatchOp):
-            for inp, out in zip(var.inputs, var.outputs):
-                replacements[out] = inp
-
-    old_outs, old_coords, old_dim_lengths = fgraph.outputs, fgraph._coords, fgraph._dim_lengths  # type: ignore[attr-defined]
-    # Using `rebuild_strict=False` means all coords, names, and dim information is lost
-    # So we need to restore it from the old fgraph
-    new_outs = clone_replace(old_outs, replacements, rebuild_strict=False)  # type: ignore[arg-type]
-    for old_out, new_out in zip(old_outs, new_outs):
-        new_out.name = old_out.name
-    fgraph = FunctionGraph(outputs=new_outs, clone=False)
-    fgraph._coords = old_coords  # type: ignore[attr-defined]
-    fgraph._dim_lengths = old_dim_lengths  # type: ignore[attr-defined]
-    return model_from_fgraph(fgraph, mutate_fgraph=True)
