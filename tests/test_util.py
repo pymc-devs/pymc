@@ -118,6 +118,27 @@ def test_hashing_of_rv_tuples():
 
 
 def cached(cache, key=hash_key):
+    """
+    Decorator implementing explicit memoization using a user-provided cache
+    mapping.
+
+    Parameters
+    ----------
+    cache : MutableMapping
+        Mapping used to store cached results. The mapping must support
+        ``__contains__``, item access, and assignment.
+        The cache object is used directly and is not copied.
+    key : callable, optional
+        Function used to construct a cache key from ``(*args, **kwargs)``.
+        It must return a hashable object. Defaults to ``hash_key``.
+
+    Returns
+    -------
+    callable
+        A decorated function whose return values are memoized in ``cache``.
+
+    """
+
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):

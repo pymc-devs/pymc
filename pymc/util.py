@@ -347,6 +347,25 @@ class WithMemoization:
 
 
 class _LRUCacheWrapper:
+    """
+    Lightweight callable LRU cache wrapper built on ``functools.lru_cache``.
+
+    This class adapts the standard-library ``lru_cache`` decorator to behave
+    similarly to ``cachetools.LRUCache``.
+
+    * callable behavior (cached function execution)
+    * ``len(cache)`` returning the current cache size
+    * explicit cache clearing via ``clear()`` / ``cache_clear()``
+
+    Parameters
+    ----------
+    func : callable
+        Function whose results should be memoized.
+    maxsize : int
+        Maximum number of entries retained in the cache. When the limit is
+        exceeded, least-recently-used entries are evicted.
+    """
+
     def __init__(self, func, maxsize):
         @lru_cache(maxsize=maxsize)
         def cached(*args, **kwargs):
@@ -368,6 +387,24 @@ class _LRUCacheWrapper:
 
 
 def locally_cachedmethod(func, maxsize=128):
+    """
+    Decorator to cache the results of instance methods with a per-instance LRU cache.
+
+    Parameters
+    ----------
+    func : callable
+        The instance method to be cached.
+    maxsize : int, optional
+        Maximum number of results to keep in the cache for this method. When the
+        limit is reached, least-recently-used entries are evicted. Default is 128.
+
+    Returns
+    -------
+    callable
+        A wrapped method that caches results per instance. The cache is stored
+        in ``self._cache[method_name]`` as an ``_LRUCacheWrapper`` object.
+
+    """
     name = func.__name__
 
     @wraps(func)
