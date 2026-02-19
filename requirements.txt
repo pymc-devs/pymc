@@ -3,7 +3,7 @@ cachetools>=4.2.1,<7
 cloudpickle
 numpy>=1.25.0
 pandas>=0.24.0
-pytensor>=2.37.0,<2.38.0
+pytensor>=2.38.0,<2.39
 rich>=13.7.1
 scipy>=1.4.1
 threadpoolctl>=3.1.0,<4.0.0
