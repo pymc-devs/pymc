@@ -2121,6 +2121,7 @@ class KroneckerNormal(Continuous):
         return a
 
 
+# TODO: change this code
 class CARRV(RandomVariable):
     name = "car"
     signature = "(m),(m,m),(),(),()->(m)"
@@ -2334,21 +2335,56 @@ class CAR(Continuous):
         )
 
 
-class ICARRV(RandomVariable):
+class ICARRV(SymbolicMVNormalUsedInternally):
+    r"""A SymbolicRandomVariable representing an Intrinsic Conditional Autoregressive (ICAR) distribution.
+
+    This class contains the symbolic logic for the ICAR distribution, which is used by the
+    user-facing `pm.ICAR` class to generate random samples and compute log-probabilities.
+    """
+
     name = "icar"
-    signature = "(m,m),(),()->(m)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(n,n),(),()->[rng],(n)"
     _print_name = ("ICAR", "\\operatorname{ICAR}")
 
-    def __call__(self, W, sigma, zero_sum_stdev, size=None, **kwargs):
-        return super().__call__(W, sigma, zero_sum_stdev, size=size, **kwargs)
-
     @classmethod
-    def rng_fn(cls, rng, size, W, sigma, zero_sum_stdev):
-        raise NotImplementedError("Cannot sample from ICAR prior")
+    def rv_op(cls, W, sigma, zero_sum_stdev, method="eigh", rng=None, size=None):
+        W = pt.as_tensor(W)
+        sigma = pt.as_tensor(sigma)
+        zero_sum_stdev = pt.as_tensor(zero_sum_stdev)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(
+                W, sigma, zero_sum_stdev, ndims_params=cls.ndims_params
+            )
 
-icar = ICARRV()
+        N = W.shape[0]
+
+        # Construct the precision matrix (graph Laplacian)
+        D = pt.diag(W.sum(axis=1))
+        Q = (D - W) / (sigma * sigma)
+
+        # Add regularization for the zero eigenvalue based on zero_sum_stdev
+        zero_sum_precision = 1.0 / (zero_sum_stdev * zero_sum_stdev)
+        Q_reg = Q + zero_sum_precision * pt.ones((N, N)) / N
+
+        # Convert precision to covariance matrix
+        cov = pt.linalg.inv(Q_reg)  # TODO: Should this be matrix_inverse(Q_reg)
+
+        next_rng, mv_draws = multivariate_normal(
+            mean=pt.zeros(N),
+            cov=cov,
+            size=size,
+            rng=rng,
+            method=method,
+        ).owner.outputs
+
+        return cls(
+            inputs=[rng, size, W, sigma, zero_sum_stdev],
+            outputs=[next_rng, mv_draws],
+            method=method,
+        )(rng, size, W, sigma, zero_sum_stdev)
 
 
 class ICAR(Continuous):
@@ -2439,7 +2475,8 @@ class ICAR(Continuous):
 
     """
 
-    rv_op = icar
+    rv_type = ICARRV
+    rv_op = ICARRV.rv_op
 
     @classmethod
     def dist(cls, W, sigma=1, zero_sum_stdev=0.001, **kwargs):

@@ -2279,12 +2279,43 @@ class TestICAR(BaseTestDistributionRandom):
         ).eval(), "logp inaccuracy"
 
     def test_icar_rng_fn(self):
-        W = np.array([[0, 1, 0, 1], [1, 0, 1, 0], [0, 1, 0, 1], [1, 0, 1, 0]])
+        delta = 0.05  # limit for KS p-value
+        n_fails = 20  # Allows the KS fails a certain number of times
+        size = (100,)
 
-        RV = pm.ICAR.dist(W=W)
+        W_val = np.array(
+            [[0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0], [0.0, 1.0, 0.0, 1.0], [1.0, 0.0, 1.0, 0.0]]
+        )
+        sigma = 2.0
+        zero_sum_stdev = 0.1
+        N = W_val.shape[0]
 
-        with pytest.raises(NotImplementedError, match="Cannot sample from ICAR prior"):
-            pm.draw(RV)
+        D = np.diag(W_val.sum(axis=1))
+        Q = (D - W_val) / (sigma * sigma)
+        zero_sum_precision = 1.0 / (zero_sum_stdev**2)
+        Q_reg = Q + zero_sum_precision * np.ones((N, N)) / N
+        cov = np.linalg.inv(Q_reg)
+
+        # TODO: Should W be a pt.tensor ?
+        with pm.Model():
+            icar = pm.ICAR("icar", W=W_val, sigma=sigma, zero_sum_stdev=zero_sum_stdev, size=size)
+            mn = pm.MvNormal("mn", mu=0.0, cov=cov, size=size)
+            # Draw n_fails samples
+            check = pm.sample_prior_predictive(n_fails, return_inferencedata=False, random_seed=42)
+
+        p, f = delta, n_fails
+        while p <= delta and f > 0:
+            icar_smp, mn_smp = check["icar"][f - 1, :, :], check["mn"][f - 1, :, :]
+            p = min(
+                st.ks_2samp(
+                    np.atleast_1d(icar_smp[..., idx]).flatten(),
+                    np.atleast_1d(mn_smp[..., idx]).flatten(),
+                )[1]
+                for idx in range(icar_smp.shape[-1])
+            )
+            f -= 1
+
+        assert p > delta
 
     @pytest.mark.parametrize(
         "W,msg",
@@ -2307,6 +2338,7 @@ class TestICAR(BaseTestDistributionRandom):
                 pm.ICAR("phi", W=W)
 
 
+# TODO: Fix this after updating the rng approach
 @pytest.mark.parametrize("sparse", [True, False])
 def test_car_rng_fn(sparse):
     delta = 0.05  # limit for KS p-value
