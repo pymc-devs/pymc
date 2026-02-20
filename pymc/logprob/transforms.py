@@ -111,6 +111,7 @@ from pymc.logprob.abstract import (
     MeasurableOp,
     _icdf,
     _icdf_helper,
+    _logccdf_helper,
     _logcdf,
     _logcdf_helper,
     _logprob,
@@ -123,6 +124,7 @@ from pymc.logprob.utils import (
     filter_measurable_variables,
     find_negated_var,
 )
+from pymc.math import logdiffexp
 
 
 class Transform(abc.ABC):
@@ -152,7 +154,7 @@ class Transform(abc.ABC):
             return pt.log(pt.abs(jac))
         else:
             phi_inv = self.backward(value, *inputs)
-            return pt.log(pt.abs(pt.nlinalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
+            return pt.log(pt.abs(pt.linalg.det(pt.atleast_2d(jacobian(phi_inv, [value])[0]))))
 
     def __str__(self):
         """Return a string representation of the object."""
@@ -248,9 +250,10 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
     logcdf = _logcdf_helper(measurable_input, backward_value)
     if is_discrete:
-        logccdf = pt.log1mexp(_logcdf_helper(measurable_input, backward_value - 1))
+        # For discrete distributions, P(X >= t) = P(X > t-1)
+        logccdf = _logccdf_helper(measurable_input, backward_value - 1)
     else:
-        logccdf = pt.log1mexp(logcdf)
+        logccdf = _logccdf_helper(measurable_input, backward_value)
 
     if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
         pass
@@ -267,7 +270,7 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
             logcdf_zero = _logcdf_helper(measurable_input, 0)
             logcdf = pt.switch(
                 pt.lt(backward_value, 0),
-                pt.log(pt.exp(logcdf_zero) - pt.exp(logcdf)),
+                logdiffexp(logcdf_zero, logcdf),
                 pt.logaddexp(logccdf, logcdf_zero),
             )
     else:

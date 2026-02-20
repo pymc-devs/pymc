@@ -19,6 +19,8 @@ import numpy as np
 
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
+from pytensor.tensor import TensorVariable
+from pytensor.tensor import expand_dims as pt_expand_dims
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor
@@ -29,7 +31,7 @@ from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims_with_ellipsis
-from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.tensor import MeasurableDimShuffle
 from pymc.logprob.utils import filter_measurable_variables
@@ -103,21 +105,82 @@ def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] |
     return [cast(XTensorVariable, new_out)]
 
 
-@_logprob.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor(op, values, rv, **kwargs):
-    rv_logp = _logprob(rv.owner.op, tuple(v.values for v in values), *rv.owner.inputs, **kwargs)
+def _to_tensor(op: MeasurableXTensorFromTensor, value: XTensorVariable) -> TensorVariable:
+    # Align dims that are shared between value and op to the right
+    value_dims_set = set(value.dims)
+    shared_dims = [dim for dim in op.dims if dim in value_dims_set]
+    value = value.transpose(..., *shared_dims)
+    # Add dummy broadcastable dimensions for dimensions present in the op but missing in the value
+    n_value_unique_dims = len(value_dims_set) - len(shared_dims)
+    missing_axis = [
+        i for i, dim in enumerate(op.dims, start=n_value_unique_dims) if dim not in value_dims_set
+    ]
+    return pt_expand_dims(value.values, axis=missing_axis)
+
+
+def _to_xtensor(
+    op: MeasurableXTensorFromTensor, value: XTensorVariable, var: TensorVariable
+) -> XTensorVariable:
+    extra_value_dims = [dim for dim in value.dims if dim not in op.dims]
+    # Dims that are unique to the value and not present in the op, are placed on the left by _align_value_dims
+    all_dims = (*extra_value_dims, *op.dims)
+    # core_dims are not present in the generated variable, exclude them
     if op.core_dims is None:
         # The core_dims of the inner rv are on the right
-        dims = op.dims[: rv_logp.ndim]
+        var_dims = all_dims[: var.ndim]
     else:
         # We inferred where the core_dims are!
-        dims = [d for d in op.dims if d not in op.core_dims]
-    return xtensor_from_tensor(rv_logp, dims=dims)
+        var_dims = tuple(d for d in all_dims if d not in op.core_dims)
+    return xtensor_from_tensor(var, dims=var_dims)
+
+
+@_logprob.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
+    tensor_values = tuple(_to_tensor(op, v) for v in values)
+    rv_logps_tensor = _logprob(rv.owner.op, tensor_values, *rv.owner.inputs, **kwargs)
+    if not isinstance(rv_logps_tensor, tuple | list):
+        rv_logps_tensor = (rv_logps_tensor,)
+    rv_logps = tuple(
+        _to_xtensor(op, value, rv_logp)
+        for value, rv_logp in zip(values, rv_logps_tensor, strict=True)
+    )
+    return rv_logps[0] if len(rv_logps) == 1 else rv_logps
+
+
+@_logcdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logcdf(op, value, rv, **kwargs):
+    tensor_value = _to_tensor(op, value)
+    rv_logcdf = _logcdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, rv_logcdf)
+
+
+@_logccdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_logccdf(op, value, rv, **kwargs):
+    tensor_value = _to_tensor(op, value)
+    rv_logcdf = _logccdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, rv_logcdf)
+
+
+@_icdf.register(MeasurableXTensorFromTensor)
+def measurable_xtensor_from_tensor_icdf(op, value, rv, **kwargs):
+    tensor_value = _to_tensor(op, value)
+    icdf = _icdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    return _to_xtensor(op, value, icdf)
 
 
 measurable_ir_rewrites_db.register(
     "measurable_xtensor_from_tensor", find_measurable_xtensor_from_tensor, "basic", "xtensor"
 )
+
+
+def copy_docstring(regular_cls):
+    # Copy docstring from regular distribution class to dims class
+    def get_regular_docstring(dims_cls):
+        if regular_cls and regular_cls.__doc__ and dims_cls.__doc__ is None:
+            dims_cls.__doc__ = regular_cls.__doc__.replace("tensor_like", "xtensor_like")
+        return dims_cls
+
+    return get_regular_docstring
 
 
 class DimDistribution:
@@ -134,7 +197,7 @@ class DimDistribution:
             raise ValueError(
                 f"Variable {x} must have dims associated with it.\n"
                 "To avoid subtle bugs, PyMC does not make any assumptions about the dims of parameters.\n"
-                "Use `as_xtensor` with the `dims` keyword argument to specify the dims explicitly."
+                "Use `pymc.dims.as_xtensor(..., dims=...)` to specify the dims explicitly."
             )
 
     def __new__(

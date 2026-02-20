@@ -850,10 +850,17 @@ def marginal_hurdle_logprob(op, values, rng, weights, zero_dist, dist, **kwargs)
 
     psi = weights[..., 1]
 
+    # Use a safe value for computing logp to avoid NaN gradients.
+    # pt.where evaluates both branches, so logp(dist, 0) would produce
+    # -inf for continuous distributions like Gamma, causing NaN gradients.
+    # By replacing zeros with a valid value (1.0), we ensure the gradient
+    # computation is well-defined even though the result is not selected.
+    safe_value = pt.switch(pt.eq(value, 0), 1.0, value)
+
     hurdle_logp = pt.where(
         pt.eq(value, 0),
         pt.log(1 - psi),
-        pt.log(psi) + logp(dist, value),
+        pt.log(psi) + logp(dist, safe_value),
     )
 
     return check_parameters(

@@ -52,6 +52,7 @@ import pymc as pm
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
+    logccdf,
     logcdf,
     logp,
     transformed_conditional_logp,
@@ -336,14 +337,28 @@ def test_probability_direct_dispatch(func, scipy_func):
     [
         (logp, "logpdf", 5.0),
         (logcdf, "logcdf", 5.0),
+        (logccdf, "logccdf", 5.0),
         (icdf, "ppf", 0.7),
     ],
 )
 def test_probability_inference(func, scipy_func, test_value):
-    assert np.isclose(
-        func(pt.exp(pm.Normal.dist()), test_value).eval(),
-        getattr(sp.lognorm(s=1), scipy_func)(test_value),
-    )
+    if scipy_func == "logccdf":
+        # Scipy lognorm doesn't have logccdf
+        expected = np.log1p(-sp.lognorm(s=1).cdf(test_value))
+    else:
+        expected = getattr(sp.lognorm(s=1), scipy_func)(test_value)
+
+    res = func(pt.exp(pm.Normal.dist()), test_value).eval()
+    assert res.shape == ()
+    np.testing.assert_allclose(res, expected)
+
+    res = func(pt.exp(pm.Normal.dist(size=(2,))), test_value).eval()
+    assert res.shape == (2,)
+    np.testing.assert_allclose(res, expected)
+
+    res = func(pt.exp(pm.Normal.dist(size=(2,))), np.broadcast_to(test_value, (3, 2))).eval()
+    assert res.shape == (3, 2)
+    np.testing.assert_allclose(res, expected)
 
 
 @pytest.mark.parametrize(

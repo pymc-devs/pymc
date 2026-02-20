@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import warnings
 
 import numpy as np
 import pytensor
@@ -42,7 +41,7 @@ def test_kronecker():
     [a, b, c] = [np.random.rand(3, 3 + i) for i in range(3)]
 
     custom = kronecker(a, b, c)  # Custom version
-    nested = pt.slinalg.kron(a, pt.slinalg.kron(b, c))
+    nested = pt.linalg.kron(a, pt.linalg.kron(b, c))
     np.testing.assert_array_almost_equal(custom.eval(), nested.eval())  # Standard nested version
 
 
@@ -112,7 +111,7 @@ def test_kron_solve_lower():
     x = np.random.rand(tot_size).reshape((tot_size, 1))
     # Construct entire kronecker product then solve
     big = kronecker(*Ls)
-    slow_ans = pt.slinalg.solve_triangular(big, x, lower=True)
+    slow_ans = pt.linalg.solve_triangular(big, x, lower=True)
     # Use tricks to avoid construction of entire kronecker product
     fast_ans = kron_solve_lower(Ls, x)
     np.testing.assert_array_almost_equal(slow_ans.eval(), fast_ans.eval())
@@ -142,11 +141,17 @@ def test_log1mexp_deprecation_warnings():
 
 
 def test_logdiffexp():
-    a = np.log([1, 2, 3, 4])
-    with warnings.catch_warnings():
-        warnings.filterwarnings("ignore", "divide by zero encountered in log", RuntimeWarning)
-        b = np.log([0, 1, 2, 3])
-    assert np.allclose(logdiffexp(a, b).eval(), 0)
+    a = pt.vector("a")
+    b = pt.vector("b")
+    a_test = np.log([1, 2, 3, 4])
+    with np.errstate(divide="ignore"):
+        b_test = np.log([0, 1, 2, 3])
+    np.testing.assert_allclose(logdiffexp(a, b).eval({a: a_test, b: b_test}), 0, atol=1e-15)
+
+    np.testing.assert_array_equal(
+        logdiffexp(a, b).eval({a: [-np.inf, -np.inf, -1], b: [-1, -np.inf, -np.inf]}),
+        [np.nan, -np.inf, -1],
+    )
 
 
 class TestLogDet:

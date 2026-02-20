@@ -135,11 +135,15 @@ def test_original_values_output_dict():
             lambda mu, sigma: sp.stats.lognorm(s=sigma, scale=np.exp(mu)),
             (),
         ),
-        (
+        pytest.param(
             pt.random.halfcauchy,
             (1.5, 10.5),
             lambda alpha, beta: sp.stats.halfcauchy(loc=alpha, scale=beta),
             (),
+            marks=pytest.mark.xfail(
+                reason="We don't use PyTensor's HalfCauchy operator",
+                raises=NotImplementedError,
+            ),
         ),
         (
             pt.random.gamma,

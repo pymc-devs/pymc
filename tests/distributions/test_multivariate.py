@@ -737,10 +737,10 @@ class TestMatchesScipy:
         ns = np.arange(n + 1)
         ns_dm = np.vstack((ns, n - ns)).T  # convert ns=1 to ns_dm=[1, 4], for all ns...
 
-        bb = pm.BetaBinomial.dist(n=n, alpha=a, beta=b, size=2)
+        bb = pm.BetaBinomial.dist(n=n, alpha=a, beta=b, size=6)
         bb_logp = logp(bb, ns).eval()
 
-        dm = pm.DirichletMultinomial.dist(n=n, a=[a, b], size=2)
+        dm = pm.DirichletMultinomial.dist(n=n, a=[a, b], size=6)
         dm_logp = logp(dm, ns_dm).eval().ravel()
 
         npt.assert_almost_equal(
@@ -1413,7 +1413,7 @@ class TestMvNormalChol(BaseTestDistributionRandom):
     }
     expected_rv_op_params = {
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "cov": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1426,7 +1426,7 @@ class TestMvNormalTau(BaseTestDistributionRandom):
     }
     expected_rv_op_params = {
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1839,7 +1839,7 @@ class TestMvStudentTChol(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(),
+        "scale": quaddist_matrix(chol=pymc_dist_params["chol"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
@@ -1854,7 +1854,7 @@ class TestMvStudentTTau(BaseTestDistributionRandom):
     expected_rv_op_params = {
         "nu": 5,
         "mu": np.array([1.0, 2.0]),
-        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(),
+        "cov": quaddist_matrix(tau=pymc_dist_params["tau"]).eval(mode="FAST_COMPILE"),
     }
     checks_to_run = ["check_pymc_params_match_rv_op"]
 

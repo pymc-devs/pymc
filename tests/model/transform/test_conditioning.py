@@ -108,6 +108,25 @@ def test_observe_deterministic():
         pm.Censored("y_censored", pm.Normal.dist(x), lower=-1, upper=1, observed=y_censored_obs)
 
 
+def test_observe_sum_normal():
+    with pm.Model() as m_old:
+        x = pm.Normal("x")
+        y = pm.Normal.dist(mu=x, sigma=1.0, shape=(5,))
+        y_sum = pm.Deterministic("y_sum", pm.math.sum(y))
+
+    m_new = observe(m_old, {y_sum: 2.0})
+
+    with pm.Model() as m_ref:
+        x = pm.Normal("x")
+        pm.Normal("y_sum", mu=5.0 * x, sigma=np.sqrt(5.0), observed=2.0)
+
+    test_point = {"x": 0.3}
+    np.testing.assert_allclose(
+        m_new.compile_logp()(test_point),
+        m_ref.compile_logp()(test_point),
+    )
+
+
 def test_observe_dims():
     with pm.Model(coords={"test_dim": range(5)}) as m_old:
         x = pm.Normal("x", dims="test_dim")

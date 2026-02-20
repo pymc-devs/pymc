@@ -1722,9 +1722,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             transform = self.rvs_to_transforms[rv]
             if transform is not None:
                 names.append(get_transformed_name(rv.name, transform))
-                outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
+                outputs.append(pt.as_tensor(transform.forward(rv, *rv.owner.inputs).shape))
             names.append(rv.name)
-            outputs.append(rv.shape)
+            outputs.append(pt.as_tensor(rv.shape))
         f = pytensor.function(
             inputs=[],
             outputs=outputs,

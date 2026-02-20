@@ -103,7 +103,7 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = pt.log(pt.abs(pt.nlinalg.det(jacobian(x, [y]))))
+        jac = pt.log(pt.abs(pt.linalg.det(jacobian(x, [y]))))
     else:
         jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
@@ -241,7 +241,8 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
-    log_prob = model.point_logps()
+    with pytensor.config.change_flags(numba__fastmath=False):
+        log_prob = model.point_logps()
     assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
 
 
