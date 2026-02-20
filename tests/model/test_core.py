@@ -1806,24 +1806,18 @@ class TestModelCopy:
             copy_method(gaussian_process_model)
 
 
-def test_model_debug_scalar_resolution():
-    with pm.Model() as model:
-        pm.Normal("x", 0, 1)
-
-    try:
-        model.debug(fn="logp")
-    except Exception as err:
-        pytest.fail(f"model.debug crashed on scalar variable: {err}")
-
 def test_model_debug_scalar_resolution_logp(capsys):
-    # Case 1 - no error
     with pm.Model() as model:
         pm.Normal("x", 0, 1)
-    model.debug(fn="logp")
-    capsys.readouterr()
+        model.debug(fn="logp")
 
-    # Case 2 - negative sigma triggers non-finite
+    catch = capsys.readouterr()
+    assert "x" in catch.out
+
     with pm.Model() as model:
         pm.Normal("x", 0, -1)
-    model.debug(fn="logp")
-    capsys.readouterr()
+        model.debug(fn="logp")
+
+    catch = capsys.readouterr()
+    assert "sigma" in catch.out.lower()
+

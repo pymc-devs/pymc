@@ -1955,10 +1955,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                         mask = ~np.isfinite(rv_fn_eval)
                         if values.ndim == 0:
                             if mask:
-                                print_(f" value = {values} -> {{fn}} = {rv_fn_eval}")
+                                print_(f" value = {values} -> {fn} = {rv_fn_eval}")
                         else:
                             for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
-                                print_(f" value = {value} -> {{fn}} = {fn_eval}")
+                                print_(f" value = {value} -> {fn} = {fn_eval}")
                         print_()
 
         if not found_problem:
