@@ -408,6 +408,13 @@ class MeasurableSwitchMixture(MeasurableElemwise):
 measurable_switch_mixture = MeasurableSwitchMixture(scalar_switch)
 
 
+class MeasurableNonOverlappingSwitchMixture(MeasurableElemwise):
+    valid_scalar_types = (Switch,)
+
+
+measurable_non_overlapping_switch_mixture = MeasurableNonOverlappingSwitchMixture(scalar_switch)
+
+
 @node_rewriter([switch])
 def find_measurable_switch_mixture(fgraph, node):
     if isinstance(node.op, MeasurableOp):
@@ -451,6 +458,52 @@ def find_measurable_switch_mixture(fgraph, node):
     return [measurable_switch_mixture(switch_cond, *new_components)]
 
 
+@node_rewriter([switch])
+def find_measurable_non_overlapping_switch(fgraph, node):
+    if isinstance(node.op, MeasurableOp):
+        return None
+
+    switch_cond, comp_true, comp_false = node.inputs
+
+    if switch_cond.owner is None:
+        return None
+
+    cond_owner = switch_cond.owner
+    scalar_op = getattr(cond_owner.op, "scalar_op", None)
+    if not isinstance(
+        scalar_op, pytensor.scalar.LT, pytensor.scalar.LE, pytensor.scalar.GT, pytensor.scalar.GE
+    ):
+        return None
+
+    lhs, rhs = cond_owner.inputs
+
+    lhs_measurable = bool(filter_measurable_variables([lhs]))
+    rhs_measurable = bool(filter_measurable_variables([rhs]))
+
+    if lhs_measurable == rhs_measurable:
+        return None
+
+    threshold = rhs if lhs_measurable else lhs
+    if check_potential_measurability([threshold]):
+        return None
+
+    measurable_branches = filter_measurable_variables([comp_true, comp_false])
+    if not measurable_branches:
+        return None
+
+    measurable_set = set(measurable_branches)
+    new_components = []
+    for comp in [comp_true, comp_false]:
+        if comp in measurable_set:
+            new_components.append(comp)
+        else:
+            if check_potential_measurability([comp]):
+                return None
+            new_components.append(dirac_delta(comp))
+
+    return [measurable_non_overlapping_switch_mixture(switch_cond, *new_components)]
+
+
 @_logprob.register(MeasurableSwitchMixture)
 def logprob_switch_mixture(op, values, switch_cond, component_true, component_false, **kwargs):
     [value] = values
@@ -459,6 +512,43 @@ def logprob_switch_mixture(op, values, switch_cond, component_true, component_fa
         switch_cond,
         _logprob_helper(component_true, value),
         _logprob_helper(component_false, value),
+    )
+
+
+@_logprob.register(MeasurableNonOverlappingSwitchMixture)
+def logprob_non_overlapping_switch(op, values, switch_cond, comp_true, comp_false, **kwargs):
+    [value] = values
+
+    cond_owner = switch_cond.owner
+    lhs, rhs = cond_owner.inputs
+    scalar_op = cond_owner.op.scalar_op
+
+    lhs_measurable = bool(filter_measurable_variables([lhs]))
+    threshold = rhs if lhs_measurable else lhs
+
+    if lhs_measurable:
+        if isinstance(scalar_op, pytensor.scalar.GT):
+            value_cond = pt.gt(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.GE):
+            value_cond = pt.ge(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.LT):
+            value_cond = pt.lt(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.LE):
+            value_cond = pt.le(value, threshold)
+    else:
+        if isinstance(scalar_op, pytensor.scalar.GT):
+            value_cond = pt.lt(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.GE):
+            value_cond = pt.le(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.LT):
+            value_cond = pt.gt(value, threshold)
+        elif isinstance(scalar_op, pytensor.scalar.LE):
+            value_cond = pt.ge(value, threshold)
+
+    return switch(
+        value_cond,
+        _logprob_helper(comp_true, value, **kwargs),
+        _logprob_helper(comp_false, value, **kwargs),
     )
 
 
@@ -585,6 +675,13 @@ early_measurable_ir_rewrites_db.register(
 measurable_ir_rewrites_db.register(
     "find_measurable_ifelse_mixture",
     find_measurable_ifelse_mixture,
+    "basic",
+    "mixture",
+)
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_non_overlapping_switch",
+    find_measurable_non_overlapping_switch,
     "basic",
     "mixture",
 )
