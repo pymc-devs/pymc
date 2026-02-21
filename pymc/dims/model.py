@@ -15,9 +15,8 @@ from collections.abc import Callable
 
 from pytensor.tensor import TensorVariable
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.type import XTensorVariable
+from pytensor.xtensor.type import XTensorSharedVariable, XTensorVariable, xtensor_shared
 
-from pymc.data import Data as RegularData
 from pymc.distributions.shape_utils import (
     Dims,
     DimsWithEllipsis,
@@ -31,7 +30,7 @@ from pymc.model.core import Potential as RegularPotential
 
 def Data(
     name: str, value, dims: Dims = None, model: Model | None = None, **kwargs
-) -> XTensorVariable:
+) -> XTensorSharedVariable:
     """Wrapper around pymc.Data that returns an XtensorVariable.
 
     Dimensions are required if the input is not a scalar.
@@ -39,15 +38,9 @@ def Data(
     """
     model = modelcontext(model)
     dims = convert_dims(dims)  # type: ignore[assignment]
-
-    with model:
-        value = RegularData(name, value, dims=dims, **kwargs)  # type: ignore[arg-type]
-
-    dims = model.named_vars_to_dims[value.name]
-    if dims is None and value.ndim > 0:
-        raise ValueError("pymc.dims.Data requires dims to be specified for non-scalar data.")
-
-    return as_xtensor(value, dims=dims, name=name)  # type: ignore[arg-type]
+    value = xtensor_shared(value, dims=dims, **kwargs, name=name)
+    model.register_data_var(value, dims=value.dims)
+    return value
 
 
 def _register_and_return_xtensor_variable(

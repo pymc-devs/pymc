@@ -16,7 +16,7 @@ pandas>=0.24.0
 polyagamma
 pre-commit>=2.8.0
 pymc-sphinx-theme>=0.16.0
-pytensor>=2.37.0,<2.38
+pytensor>=2.38.0,<2.39
 pytest-cov>=2.5
 pytest>=3.0
 rich>=13.7.1

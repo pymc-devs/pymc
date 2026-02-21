@@ -14,7 +14,7 @@ dependencies:
 - pandas>=0.24.0
 - pip
 - polyagamma
-- pytensor>=2.37.0,<2.38
+- pytensor>=2.38.0,<2.39
 - python-graphviz
 - networkx
 - rich>=13.7.1
