@@ -1825,4 +1825,3 @@ def test_model_debug_scalar_resolution_logp(capsys):
 
     catch = capsys.readouterr()
     assert "sigma" in catch.out.lower()
-
