@@ -471,7 +471,7 @@ def find_measurable_non_overlapping_switch(fgraph, node):
     cond_owner = switch_cond.owner
     scalar_op = getattr(cond_owner.op, "scalar_op", None)
     if not isinstance(
-        scalar_op, pytensor.scalar.LT, pytensor.scalar.LE, pytensor.scalar.GT, pytensor.scalar.GE
+        scalar_op, pytensor.scalar.LT | pytensor.scalar.LE | pytensor.scalar.GT | pytensor.scalar.GE
     ):
         return None
 
