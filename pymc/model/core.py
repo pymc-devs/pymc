@@ -1652,12 +1652,23 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 )
 
         with self:
+            # Determine the appropriate check_parameter rewrite based on model settings
+            if self.check_bounds and self.rvs_to_transforms:
+                from pymc.logprob.utils import create_transform_aware_check_rewrite
+
+                check_parameter_opt = create_transform_aware_check_rewrite(self.rvs_to_transforms)
+            elif self.check_bounds:
+                check_parameter_opt = "local_check_parameter_to_ninf_switch"
+            else:
+                check_parameter_opt = "local_remove_check_parameter"
+
             fn = compile(
                 inputs,
                 outs,
                 allow_input_downcast=True,
                 accept_inplace=True,
                 mode=mode,
+                check_parameter_opt=check_parameter_opt,
                 **kwargs,
             )
 
