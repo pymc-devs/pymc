@@ -333,7 +333,7 @@ class TestDiracDelta:
             check_icdf(
                 pm.DiracDelta,
                 {"c": I},
-                lambda q, c: np.full_like(q, c),
+                lambda q_value, c: np.full_like(q_value, c),
             )
 
 
