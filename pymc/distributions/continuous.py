@@ -213,8 +213,10 @@ def get_tau_sigma(
 
     Parameters
     ----------
-    tau: array-like, optional
-    sigma: array-like, optional
+    tau : array-like, optional
+        Precision (tau > 0) (required if sigma is not specified)
+    sigma : array-like, optional
+        Standard deviation (sigma > 0) (required if tau is not specified)
 
     Results
     -------
