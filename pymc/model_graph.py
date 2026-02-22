@@ -335,25 +335,26 @@ class ModelGraph:
         Returns
         -------
         dict
-            Maps plate labels to the set of strings inside the plate.
+        Maps plate labels to the set of strings inside the plate.
         """
         plates = defaultdict(set)
 
-        # TODO: Evaluate all RV shapes at once
-        #       This should help find discrepancies, and
-        #       avoids unnecessary function compiles for determining labels.
+        all_vars = self.vars_to_plot(var_names)
+        all_nodes = [self.model[v] for v in all_vars]
+
+        shapes_fn = function([], [v.shape for v in all_nodes], mode=_cheap_eval_mode)
+        all_shapes = shapes_fn()
+
+        var_shapes: dict[str, tuple[int, ...]] = {
+            vname: tuple(map(int, shape)) for vname, shape in zip(all_vars, all_shapes)
+        }
+
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
-        var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
-            for var_name in self.vars_to_plot(var_names)
-        }
 
-        for var_name in self.vars_to_plot(var_names):
-            shape: tuple[int, ...] = var_shapes[var_name]
+        for var_name, shape in var_shapes.items():
             if var_name in self.model.named_vars_to_dims:
-                # The RV is associated with `dims` information.
                 names = []
                 lengths = []
                 for d, dname in enumerate(self.model.named_vars_to_dims[var_name]):
@@ -365,7 +366,6 @@ class ModelGraph:
                     lengths=tuple(lengths),
                 )
             else:
-                # The RV has no `dims` information.
                 dim_size = len(shape)
                 dim_info = DimInfo(
                     names=tuple([None] * dim_size),
