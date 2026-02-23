@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from collections.abc import Iterable
+from sys import stderr
 from typing import Any, Self
 
 from rich.box import SIMPLE_HEAD
@@ -212,7 +213,7 @@ class RichProgressBackend:
                 finished_style=Style.parse("rgb(31,119,180)"),
             ),
             *columns,
-            console=Console(theme=theme),
+            console=Console(file=stderr, theme=theme),
             include_headers=True,
         )
 
@@ -323,5 +324,5 @@ def RichSimpleProgress(theme: Theme | None):
         TimeRemainingColumn(),
         TextColumn("/"),
         TimeElapsedColumn(),
-        console=Console(theme=default_progress_theme if theme is None else theme),
+        console=Console(file=stderr, theme=default_progress_theme if theme is None else theme),
     )
