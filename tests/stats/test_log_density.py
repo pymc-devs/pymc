@@ -16,6 +16,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 import scipy.stats as st
+import inspect
 
 from arviz import InferenceData, dict_to_dataset, from_dict
 
@@ -119,6 +120,17 @@ class TestComputeLogLikelihood:
             idata = InferenceData(posterior=dict_to_dataset({"x": np.arange(100).reshape(4, 25)}))
             with pytest.raises(ValueError, match="var_names must refer to observed_RVs"):
                 compute_log_likelihood(idata, var_names=["x"])
+    
+    def test_compute_log_prior_is_keyword_only(self):
+        sig = inspect.signature(compute_log_prior)
+        params = list(sig.parameters.values())
+
+        # idata is positional-or-keyword
+        assert params[0].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
+
+        # everything else must be keyword-only
+        for p in params[1:]:
+            assert p.kind is inspect.Parameter.KEYWORD_ONLY
 
     def test_dims_without_coords(self):
         # Issues #6820
