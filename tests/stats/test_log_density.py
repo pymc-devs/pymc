@@ -125,10 +125,8 @@ class TestComputeLogLikelihood:
         sig = inspect.signature(compute_log_prior)
         params = list(sig.parameters.values())
 
-        # idata is positional-or-keyword
         assert params[0].kind is inspect.Parameter.POSITIONAL_OR_KEYWORD
 
-        # everything else must be keyword-only
         for p in params[1:]:
             assert p.kind is inspect.Parameter.KEYWORD_ONLY
 
