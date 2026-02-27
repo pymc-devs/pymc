@@ -25,7 +25,7 @@ dataclass_state = dataclass(kw_only=True)
 @dataclass_state
 class DataClassState:
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]] = {}
-    
+
     def __eq__(self, other):
         return equal_dataclass_values(self, other)
 
