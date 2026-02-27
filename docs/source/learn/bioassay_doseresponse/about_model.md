@@ -19,3 +19,20 @@ Where:
 - **θ(d)** — probability of death  
 
 It uses Bayesian inference to estimate the parameters of this function based on observed data.
+
+### Notes
+
+There have been certain additions to the code to make it runnable without much chages in a Windows system. These are:
+
+```python
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+```
+This allows multiple copies of the OpenMP runtime to load without crashing (if you have dowanded packages from various sources). So instead of stopping the program with an error message, it continues.(Might not be necessary if you have a clean environment)
+
+```python
+if __name__ == "__main__":
+    tr = build_and_sample()
+    print(az.summary(tr))
+```
+If your script is not protected with: if __name__ == "__main__": Windows tries to re-import the file and execute everything again wich leads to crash. This allowes only the file that is called explicitly(main) to run and not the ones that are imported by itself(script) preventing the crash. Without this a RuntimeError will be shown with the message "An attempt has been made to start a new process before the current process has finished its bootstrapping phase".

@@ -31,3 +31,4 @@ def build_and_sample():
 if __name__ == "__main__":
     tr = build_and_sample()
     print(az.summary(tr))
+
