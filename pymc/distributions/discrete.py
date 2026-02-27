@@ -516,8 +516,7 @@ class DiscreteWeibull(Discrete):
         # Ensure floating point errors don't overshoot
         res_1m = pt.maximum(res - 1, 0)
 
-        # Calculate logcdf at (res - 1) using the math from line 519
-        # logcdf = log(1 - q^((x+1)^beta)) -> log1p(-q^((x+1)^beta))
+        # Calculate logcdf at (res - 1) to check for numerical overshoot
         logcdf_1m = pt.log1p(-pt.power(q, pt.power(res_1m + 1, beta)))
         value_1m = pt.exp(logcdf_1m)
 
