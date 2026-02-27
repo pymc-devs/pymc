@@ -36,3 +36,15 @@ if __name__ == "__main__":
     print(az.summary(tr))
 ```
 If your script is not protected with: if __name__ == "__main__": Windows tries to re-import the file and execute everything again wich leads to crash. This allowes only the file that is called explicitly(main) to run and not the ones that are imported by itself(script) preventing the crash. Without this a RuntimeError will be shown with the message "An attempt has been made to start a new process before the current process has finished its bootstrapping phase".
+
+#### How to know if the model is running correctly?
+
+As explained in the video if
+
+* r_hat < 1.01  --> Chins have converged 
+* ESS > 400  --> Enough effective samples have been compoyed
+* No/few divergences  --> No numerical issues
+* Good Mixing  --> "Fuzzy caterpillars" in az-chains
+
+Such an output may look like
+[Output](images/output.svg)

@@ -1,5 +1,5 @@
 
-import os
+import os   #Explanation in notes section of about_model.md
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import numpy as np
@@ -24,11 +24,11 @@ def build_and_sample():
         deaths = pm.Binomial('deaths', n=n_animals, p=theta, observed=deaths_data)
 
         # parallel sampling: cores>1 uses multiprocessing
-        trace = pm.sample(cores=1)
+        trace = pm.sample()
     return trace
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  #Explanation in notes section of about_model.md
     tr = build_and_sample()
     print(az.summary(tr))
 
