@@ -238,8 +238,8 @@ class ZeroSumNormal(VectorDimDistribution):
         )
 
     @classmethod
-    def xrv_op(self, sigma, support_dims, core_dims, extra_dims=None, rng=None):
-        sigma = as_xtensor(sigma)
+    def xrv_op(cls, sigma, support_dims, core_dims, extra_dims=None, rng=None):
+        sigma = cls._as_xtensor(sigma)
         support_dims = as_xtensor(support_dims, dims=("_",))
         support_shape = support_dims.values
         core_rv = ZeroSumNormalRV.rv_op(sigma=sigma.values, support_shape=support_shape).owner.op
