@@ -16,6 +16,7 @@ from functools import singledispatch
 
 import numpy as np
 import pytensor.tensor as pt
+import warnings
 
 from numpy.lib.array_utils import normalize_axis_tuple
 from pytensor.graph import Op
@@ -119,6 +120,9 @@ class SumTo1(Transform):
     Transforms K - 1 dimensional simplex space (K values in [0, 1] that sum to 1) to a K - 1 vector of values in [0, 1].
 
     This transformation operates on the last dimension of the input tensor.
+
+    .. deprecated::
+        SumTo1 is deprecated. Use `simplex` transform instead.
     """
 
     name = "sumto1"
