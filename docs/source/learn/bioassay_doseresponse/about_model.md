@@ -10,6 +10,7 @@ The model is based on the example presented in the Data Umbrella webinar: **"Get
 As explained in the video, the Bioassay Problem deals with the estimation of the parameters of a drug dose response curve. The program tries to model the relationship between drug dose and probability of death of mice. It assumes that the probability of death is related to the dose by a logistic function.
 
 ![Logistic Dose Response Equation](images/eq1.svg)
+
 Where:
 
 - **α** — intercept parameter  
