@@ -13,7 +13,7 @@
 #   limitations under the License.
 from collections.abc import Callable, Sequence
 from itertools import chain
-from typing import cast
+from typing import Any, cast
 
 import numpy as np
 
@@ -25,7 +25,9 @@ from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
+from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
+from pytensor.xtensor.vectorization import XRV
 
 from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
@@ -345,3 +347,25 @@ class UnitDimDistribution(DimDistribution):
     """Base class for unit-valued distributions."""
 
     default_transform = log_odds_transform
+
+
+def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTensorVariable:
+    if overlap := (set(extra_dims) & set(dist.dims)):
+        raise ValueError(f"extra_dims already present in distribution: {sorted(overlap)}")
+
+    op = None if dist.owner is None else dist.owner.op
+    match op:
+        case XRV():
+            # Recreate dist with new extra dims
+            dist_props = dist.owner.op._props_dict()
+            dist_props["extra_dims"] = (*(extra_dims.keys()), *dist_props["extra_dims"])
+            new_dist_op = type(dist.owner.op)(**dist_props)
+            _old_rng, *params_and_dim_lengths = dist.owner.inputs
+            new_rng = None  # We don't propagate the old RNG, because we don't want the new and old dists to be correlated
+            return new_dist_op(new_rng, *extra_dims.values(), *params_and_dim_lengths)
+        case Transpose():
+            return expand_dist_dims(dist.owner.inputs[0], extra_dims=extra_dims).transpose(
+                ..., *dist.dims
+            )
+        case _:
+            raise NotImplementedError(f"expand_dist_dims not implemented for {dist} with op {op}")
