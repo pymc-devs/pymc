@@ -766,6 +766,8 @@ def sample(
         raise SamplingError(
             "Cannot sample from the model, since the model does not contain any free variables."
         )
+    if return_inferencedata or compute_convergence_checks:
+        _validate_inferencedata_coords_and_dims(model, idata_kwargs)
 
     if cores is None:
         cores = min(4, _cpu_count())
@@ -1196,6 +1198,66 @@ def _check_start_shape(model, start: PointType):
             e += f"\nExpected shape {ashape} for var '{name}', got: {sshape}"
     if e != "":
         raise ValueError(f"Bad shape in start point:{e}")
+
+
+def _validate_inferencedata_coords_and_dims(
+    model: Model,
+    idata_kwargs: dict[str, Any] | None,
+) -> None:
+    """Validate that variable dims and coord lengths are consistent for InferenceData conversion."""
+    model_coords, model_dims = coords_and_dims_for_inferencedata(model)
+    user_coords = {} if idata_kwargs is None else idata_kwargs.get("coords", {}) or {}
+    user_dims = {} if idata_kwargs is None else idata_kwargs.get("dims", {}) or {}
+
+    coords = {**model_coords, **user_coords}
+    dims = {**model_dims, **user_dims}
+    if not dims:
+        return
+
+    coord_lengths = {name: len(values) for name, values in coords.items() if values is not None}
+
+    dim_lengths: dict[str, int] = {}
+    for dim_name, dim_length in model.dim_lengths.items():
+        value = None
+        if hasattr(dim_length, "get_value"):
+            value = dim_length.get_value()
+        elif hasattr(dim_length, "data"):
+            value = dim_length.data
+        if value is not None:
+            dim_lengths[dim_name] = int(np.asarray(value).item())
+
+    for dim_name, coord_length in coord_lengths.items():
+        dim_length = dim_lengths.get(dim_name, None)
+        if dim_length is not None and dim_length != coord_length:
+            raise ValueError(
+                "Incompatible `idata_kwargs` for InferenceData conversion. "
+                f"Dimension `{dim_name}` has length {dim_length} in the model, "
+                f"but coords[`{dim_name}`] has length {coord_length}."
+            )
+
+    for var_name, var_dims in dims.items():
+        var = model.named_vars.get(var_name, None)
+        if var is None:
+            continue
+
+        if len(var_dims) > var.ndim:
+            raise ValueError(
+                "Incompatible `idata_kwargs` for InferenceData conversion. "
+                f"Variable `{var_name}` defines {len(var_dims)} dims {tuple(var_dims)} "
+                f"but has ndim {var.ndim}."
+            )
+
+        shape = var.type.shape
+        for dim, axis_length in zip(reversed(var_dims), reversed(shape)):
+            coord_length = coord_lengths.get(dim, None)
+            if coord_length is None:
+                continue
+            if isinstance(axis_length, int | np.integer) and coord_length != int(axis_length):
+                raise ValueError(
+                    "Incompatible `idata_kwargs` for InferenceData conversion. "
+                    f"Variable `{var_name}` has dimension `{dim}` of length {int(axis_length)}, "
+                    f"but coords[`{dim}`] has length {coord_length}."
+                )
 
 
 def _sample_many(
