@@ -148,16 +148,19 @@ def test_simplex_accuracy():
 
 
 def test_sum_to_1():
-    check_vector_transform(tr.sum_to_1, Simplex(2))
-    check_vector_transform(tr.sum_to_1, Simplex(4))
+    with pytest.warns(
+        FutureWarning, match="SumTo1 transform is deprecated and will be removed in a future release"
+    ):
+        check_vector_transform(tr.sum_to_1, Simplex(2))
+        check_vector_transform(tr.sum_to_1, Simplex(4))
 
-    check_jacobian_det(
-        tr.sum_to_1,
-        Vector(Unit, 2),
-        pt.vector,
-        floatX(np.array([0, 0])),
-        lambda x: x[:-1],
-    )
+        check_jacobian_det(
+            tr.sum_to_1,
+            Vector(Unit, 2),
+            pt.vector,
+            floatX(np.array([0, 0])),
+            lambda x: x[:-1],
+        )
 
 
 def test_log():

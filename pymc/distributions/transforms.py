@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from functools import singledispatch
+import warnings
 
 import numpy as np
 import pytensor.tensor as pt
@@ -123,14 +124,30 @@ class SumTo1(Transform):
 
     name = "sumto1"
 
+    def __init__(self):
+        self._warned = False
+
+    def _warn_deprecated(self):
+        if not self._warned:
+            warnings.warn(
+                "SumTo1 transform is deprecated and will be removed in a future release. "
+                "Use simplex-based transforms instead.",
+                FutureWarning,
+                stacklevel=3,
+            )
+            self._warned = True
+
     def backward(self, value, *inputs):
+        self._warn_deprecated()
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
         return pt.concatenate([value[..., :], remaining], axis=-1)
 
     def forward(self, value, *inputs):
+        self._warn_deprecated()
         return value[..., :-1]
 
     def log_jac_det(self, value, *inputs):
+        self._warn_deprecated()
         y = pt.zeros(value.shape)
         return pt.sum(y, axis=-1)
 
