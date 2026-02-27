@@ -149,7 +149,8 @@ def test_simplex_accuracy():
 
 def test_sum_to_1():
     with pytest.warns(
-        FutureWarning, match="SumTo1 transform is deprecated and will be removed in a future release"
+        FutureWarning,
+        match="SumTo1 transform is deprecated and will be removed in a future release",
     ):
         check_vector_transform(tr.sum_to_1, Simplex(2))
         check_vector_transform(tr.sum_to_1, Simplex(4))
