@@ -11,15 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-# standard library imports
 import warnings
 
-# third-party imports
-import numpy as np
 import pytensor
 import pytest
-
-from numba.core.errors import NumbaPerformanceWarning, NumbaWarning
 
 
 @pytest.fixture(scope="function", autouse=True)
@@ -46,15 +41,8 @@ def strict_float32():
         yield
 
 
-@pytest.fixture(scope="function", autouse=False)
-def seeded_test():
-    np.random.seed(20160911)
-
-
 @pytest.fixture
 def fail_on_warning():
     with warnings.catch_warnings():
         warnings.simplefilter("error")
-        warnings.filterwarnings("ignore", category=NumbaPerformanceWarning)
-        warnings.filterwarnings("ignore", ".*Cannot cache.*", NumbaWarning)
         yield

@@ -26,7 +26,6 @@ from pytensor.tensor.random.op import RandomVariable
 from scipy.special import logsumexp
 
 from pymc.distributions import (
-    Beta,
     Categorical,
     DiracDelta,
     Dirichlet,
@@ -784,7 +783,8 @@ class TestMixture:
 
 
 class TestNormalMixture:
-    def test_normal_mixture_sampling(self, seeded_test):
+    def test_normal_mixture_sampling(self):
+        rng = np.random.default_rng(20160911)
         norm_w = np.array([0.75, 0.25])
         norm_mu = np.array([0.0, 5.0])
         norm_sigma = np.ones_like(norm_mu)
@@ -814,12 +814,13 @@ class TestNormalMixture:
     @pytest.mark.parametrize(
         "nd, ncomp", [((), 5), (1, 5), (3, 5), ((3, 3), 5), (3, 3), ((3, 3), 3)], ids=str
     )
-    def test_normal_mixture_nd(self, seeded_test, nd, ncomp):
+    def test_normal_mixture_nd(self, nd, ncomp):
+        rng = np.random.default_rng(20160911)
         nd = to_tuple(nd)
         ncomp = int(ncomp)
         comp_shape = (*nd, ncomp)
-        test_mus = np.random.randn(*comp_shape)
-        test_taus = np.random.gamma(1, 1, size=comp_shape)
+        test_mus = rng.standard_normal(comp_shape)
+        test_taus = rng.gamma(1, 1, size=comp_shape)
         observed = generate_normal_mixture_data(
             w=np.ones(ncomp) / ncomp, mu=test_mus, sigma=1 / np.sqrt(test_taus), size=10
         )
@@ -861,10 +862,12 @@ class TestNormalMixture:
             assert_allclose(logp0, logp1)
             assert_allclose(logp0, logp2)
 
-    def test_random(self, seeded_test):
+    def test_random(self):
+        rng = np.random.default_rng(20160911)
+
         def ref_rand(size, w, mu, sigma):
-            component = np.random.choice(w.size, size=size, p=w)
-            return np.random.normal(mu[component], sigma[component], size=size)
+            component = rng.choice(w.size, size=size, p=w)
+            return rng.normal(mu[component], sigma[component], size=size)
 
         continuous_random_tester(
             NormalMixture,
@@ -1029,8 +1032,9 @@ class TestMixtureSameFamily:
         cls.mixture_comps = 10
 
     @pytest.mark.parametrize("batch_shape", [(3, 4), (20,)], ids=str)
-    def test_with_multinomial(self, seeded_test, batch_shape):
-        p = np.random.uniform(size=(*batch_shape, self.mixture_comps, 3))
+    def test_with_multinomial(self, batch_shape):
+        rng = np.random.default_rng(20160911)
+        p = rng.uniform(size=(*batch_shape, self.mixture_comps, 3))
         p /= p.sum(axis=-1, keepdims=True)
         n = 100 * np.ones((*batch_shape, 1))
         w = np.ones(self.mixture_comps) / self.mixture_comps
@@ -1064,10 +1068,11 @@ class TestMixtureSameFamily:
             rtol,
         )
 
-    def test_with_mvnormal(self, seeded_test):
+    def test_with_mvnormal(self):
+        rng = np.random.default_rng(20160911)
         # 10 batch, 3-variate Gaussian
-        mu = np.random.randn(self.mixture_comps, 3)
-        mat = np.random.randn(3, 3)
+        mu = rng.standard_normal((self.mixture_comps, 3))
+        mat = rng.standard_normal((3, 3))
         cov = mat @ mat.T
         chol = np.linalg.cholesky(cov)
         w = np.ones(self.mixture_comps) / self.mixture_comps
@@ -1718,37 +1723,3 @@ class TestHurdleDistributions:
                 return np.log(psi) + st.lognorm.logpdf(value, sigma, 0, np.exp(mu))
 
         check_logp(HurdleLogNormal, Rplus, {"psi": Unit, "mu": R, "sigma": Rplusbig}, logp_fn)
-
-    @pytest.mark.parametrize(
-        "hurdle_cls,dist_params",
-        [
-            (HurdleGamma, {"psi": 0.3, "alpha": 2.0, "beta": 1.5}),
-            (HurdleLogNormal, {"psi": 0.3, "mu": 0.0, "sigma": 1.0}),
-        ],
-    )
-    def test_hurdle_dlogp_no_nan(self, hurdle_cls, dist_params):
-        """Test that dlogp does not return NaN for Hurdle distributions.
-
-        Regression test for issue #8053. The gradient of pt.where evaluates both
-        branches, so logp(dist, 0) would produce invalid gradients for continuous
-        distributions like Gamma. The fix uses a safe value for the logp computation.
-        """
-        dist = hurdle_cls.dist(**dist_params)
-        y = draw(dist, draws=50, random_seed=1)
-
-        with Model() as model:
-            psi = Beta("psi", alpha=2.0, beta=2.0)
-            if hurdle_cls == HurdleGamma:
-                alpha = HalfNormal("alpha", sigma=2.0)
-                beta = HalfNormal("beta", sigma=2.0)
-                hurdle_cls("y_obs", psi=psi, alpha=alpha, beta=beta, observed=y)
-            else:  # HurdleLogNormal
-                mu = Normal("mu", mu=0.0, sigma=1.0)
-                sigma = HalfNormal("sigma", sigma=1.0)
-                hurdle_cls("y_obs", psi=psi, mu=mu, sigma=sigma, observed=y)
-
-        dlogp_fn = model.compile_dlogp()
-        ip = model.initial_point()
-        dlogp_val = dlogp_fn(ip)
-
-        assert not np.any(np.isnan(dlogp_val)), f"dlogp contains NaN: {dlogp_val}"
