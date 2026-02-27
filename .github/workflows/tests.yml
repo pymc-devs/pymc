@@ -93,6 +93,7 @@ jobs:
             tests/distributions/test_dist_math.py
             tests/distributions/test_transform.py
             tests/sampling/test_mcmc.py
+            tests/sampling/test_mcmc_inferencedata.py
             tests/sampling/test_parallel.py
             tests/test_printing.py
 
