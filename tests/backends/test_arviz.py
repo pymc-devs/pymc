@@ -214,15 +214,16 @@ class TestDataPyMC:
 
     def test_posterior_predictive_keep_size(self, data, chains, draws, eight_schools_params):
         with data.model:
-            posterior_predictive = pm.sample_posterior_predictive(
-                data.obj, return_inferencedata=False
-            )
-            inference_data = to_inference_data(
-                trace=data.obj,
-                posterior_predictive=posterior_predictive,
-                coords={"school": np.arange(eight_schools_params["J"])},
-                dims={"theta": ["school"], "eta": ["school"]},
-            )
+            with pytest.warns(UserWarning, match="Incompatible coordinate length"):
+                posterior_predictive = pm.sample_posterior_predictive(
+                    data.obj, return_inferencedata=False
+                )
+                inference_data = to_inference_data(
+                    trace=data.obj,
+                    posterior_predictive=posterior_predictive,
+                    coords={"school": np.arange(eight_schools_params["J"])},
+                    dims={"theta": ["school"], "eta": ["school"]},
+                )
 
         shape = inference_data.posterior_predictive.obs.shape
         assert np.all(
@@ -237,7 +238,8 @@ class TestDataPyMC:
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 idata = pm.sample(tune=5, draws=draws, chains=2, return_inferencedata=True)
             thinned_idata = idata.sel(draw=slice(None, None, thin_by))
-            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+            with pytest.warns(UserWarning, match="Incompatible coordinate length"):
+                idata.extend(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
             "sample_stats": ["diverging", "lp", "~log_likelihood"],
@@ -852,7 +854,16 @@ class TestDatasetToPointList:
         assert pl[0]["x"].dtype == np.float64
 
 
-def test_incompatible_coordinate_lengths():
+@pytest.mark.parametrize(
+    "sampling_method",
+    (
+        lambda: pm.sample_prior_predictive(draws=1).prior,
+        lambda: pm.sample(
+            chains=1, draws=1, tune=0, compute_convergence_checks=False, progressbar=False
+        ).posterior,
+    ),
+)
+def test_incompatible_coordinate_lengths(sampling_method):
     with pm.Model(coords={"a": [-1, -2, -3]}) as m:
         x = pm.Normal("x", dims="a")
         y = pm.Deterministic("y", x[1:], dims=("a",))
@@ -863,7 +874,7 @@ def test_incompatible_coordinate_lengths():
                 "Incompatible coordinate length of 3 for dimension 'a' of variable 'y'"
             ),
         ):
-            prior = pm.sample_prior_predictive(draws=1).prior.squeeze(("chain", "draw"))
+            prior = sampling_method().squeeze(("chain", "draw"))
         assert prior.x.dims == prior.y.dims == ("a",)
         assert prior.x.shape == prior.y.shape == (3,)
         assert np.isnan(prior.y.values[-1])
@@ -871,6 +882,6 @@ def test_incompatible_coordinate_lengths():
 
         pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = True
         with pytest.raises(ValueError):
-            pm.sample_prior_predictive(draws=1)
+            sampling_method()
 
         pm.backends.arviz.RAISE_ON_INCOMPATIBLE_COORD_LENGTHS = False
