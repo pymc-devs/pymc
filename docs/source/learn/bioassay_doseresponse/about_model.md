@@ -1,8 +1,8 @@
 # Bioassay Problem: Dose_Response Model
 
-This is a small, beginner-friendly and ready to run(in windows) example model of a dose-response bioassay model that can be built using the PyMC library. 
+This is a small, beginner-friendly and ready to run(in windows) example model of a dose-response bioassay model that can be built using the PyMC library.
 
-## Background 
+## Background
 
 The model is based on the example presented in the Data Umbrella webinar: **"Getting Started with PyMC"** by Chris Fonnesbeck. It is one of the top recommended videos on introduction to PyMC in youtube. The link for he video is [Youtube](https://www.youtube.com/watch?v=jrU0UBr2z3k&t=1770s)
 
@@ -13,10 +13,10 @@ As explained in the video, the Bioassay Problem deals with the estimation of the
 
 Where:
 
-- **α** — intercept parameter  
-- **β** — slope parameter  
-- **d** — administered dose  
-- **θ(d)** — probability of death  
+- **α** — intercept parameter
+- **β** — slope parameter
+- **d** — administered dose
+- **θ(d)** — probability of death
 
 It uses Bayesian inference to estimate the parameters of this function based on observed data.
 
@@ -41,7 +41,7 @@ If your script is not protected with: if __name__ == "__main__": Windows tries t
 
 As explained in the video if
 
-* r_hat < 1.01  --> Chins have converged 
+* r_hat < 1.01  --> Chins have converged
 * ESS > 400  --> Enough effective samples have been compoyed
 * No/few divergences  --> No numerical issues
 * Good Mixing  --> "Fuzzy caterpillars" in az-chains
