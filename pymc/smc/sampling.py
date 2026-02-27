@@ -19,7 +19,6 @@ from typing import Any
 
 import numpy as np
 
-from arviz import from_dict
 from rich.theme import Theme
 from xarray import DataTree
 
@@ -356,14 +355,14 @@ def _save_sample_stats(
             sample_stats_dict,
             attrs=sample_settings_dict,
             inference_library=pymc,
-            sample_dims=[],
+            sample_dims=["chain"],
         )
 
         ikwargs: dict[str, Any] = {"model": model}
         if idata_kwargs is not None:
             ikwargs.update(idata_kwargs)
-        idata = to_inference_data(trace, **ikwargs)
-        idata = from_dict(idata)
+        idata = DataTree.from_dict(to_inference_data(trace, **ikwargs))
+        idata["sample_stats"] = sample_stats
 
     return sample_stats, idata
 
