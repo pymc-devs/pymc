@@ -47,4 +47,4 @@ As explained in the video if
 * Good Mixing  --> "Fuzzy caterpillars" in az-chains
 
 Such an output may look like
-[Output](images/output.svg)
+![Output](images/output.svg)
