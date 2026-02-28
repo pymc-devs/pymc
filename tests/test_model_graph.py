@@ -392,6 +392,7 @@ class BaseModelGraphTest:
         assert self.plates == sort_plates(self.model_graph.get_plates())
 
     def test_graphviz(self):
+        pytest.importorskip("graphviz")
         # just make sure everything runs without error
 
         g = model_to_graphviz(self.model)
@@ -403,6 +404,7 @@ class TestRadonModel(BaseModelGraphTest):
     model_func = radon_model
 
     def test_checks_formatting(self):
+        pytest.importorskip("graphviz")
         with warnings.catch_warnings():
             warnings.simplefilter("error")
             model_to_graphviz(self.model, formatting="plain")
@@ -562,7 +564,8 @@ def simple_model() -> pm.Model:
 
 
 def test_unknown_node_type(simple_model):
-    with pytest.raises(ValueError, match="Node formatters must be of type NodeType."):
+    pytest.importorskip("graphviz")
+    with pytest.raises(ValueError, match=r"Node formatters must be of type NodeType\."):
         model_to_graphviz(simple_model, node_formatters={"Unknown Node Type": "dummy"})
 
 
@@ -582,6 +585,7 @@ def test_custom_node_formatting_networkx(simple_model):
 
 
 def test_custom_node_formatting_graphviz(simple_model):
+    pytest.importorskip("graphviz")
     node_formatters = {
         "Free Random Variable": lambda var: {
             "label": var.name,
