@@ -164,7 +164,5 @@ def test_dataclass_state_eq():
     s2 = State1(a=1, b=2.0, c="c", d=np.array([1.0, 2.0]), e=[1, 2], f={"a": 1})
     s3 = State1(a=1, b=2.0, c="c", d=np.array([9.0, 9.0]), e=[1, 2], f={"a": 1})
 
-    # Before the fix this raised:
-    # ValueError: The truth value of an array with more than one element is ambiguous
     assert s1 == s2
     assert s1 != s3
