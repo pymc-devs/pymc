@@ -2677,8 +2677,10 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
         for axis in range(n_zerosum_axes):
             zerosum_rv -= zerosum_rv.mean(axis=-axis - 1, keepdims=True)
 
+        # sigma has core_shape = (1, 1, ...) (as many as there are zerosum axes)
+        ones = ",".join("1" for _ in range(n_zerosum_axes))
         support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
-        extended_signature = f"[rng],[size],(),(s)->[rng],({support_str})"
+        extended_signature = f"[rng],[size],({ones}),(s)->[rng],({support_str})"
         return cls(
             inputs=[rng, size, sigma, support_shape],
             outputs=[next_rng, zerosum_rv],
@@ -2774,7 +2776,7 @@ class ZeroSumNormal(Distribution):
     def dist(cls, sigma=1.0, n_zerosum_axes=None, support_shape=None, **kwargs):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
-        sigma = pt.as_tensor(sigma)
+        sigma = pt.atleast_Nd(pt.as_tensor(sigma), n=n_zerosum_axes)
         if not all(sigma.type.broadcastable[-n_zerosum_axes:]):
             raise ValueError("sigma must have length one across the zero-sum axes")
 
