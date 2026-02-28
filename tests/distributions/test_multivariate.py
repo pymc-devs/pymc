@@ -1763,6 +1763,13 @@ class TestZeroSumNormal:
                 sigma=batch_test_sigma[None, :, None], n_zerosum_axes=2, support_shape=(3, 2)
             )
 
+    def test_batched_transformed_logp_shape(self):
+        with pm.Model() as m:
+            x = pm.ZeroSumNormal("x", sigma=np.ones(3)[:, None], support_shape=(2,))
+            assert x.type.shape == (3, 2)
+        assert m.logp(sum=False)[0].type.shape == (3,)
+        assert m.logp(sum=False, jacobian=False)[0].type.shape == (3,)
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):

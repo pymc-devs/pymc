@@ -2659,9 +2659,9 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, sigma, support_shape, *, size=None, rng=None):
+        support_shape = _squeeze_to_ndim(pt.as_tensor(support_shape), ndim=1)
         n_zerosum_axes = pt.get_vector_length(support_shape)
         sigma = pt.as_tensor(sigma)
-        support_shape = pt.as_tensor(support_shape, ndim=1)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
