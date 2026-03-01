@@ -28,7 +28,7 @@ from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
-from pytensor.xtensor.vectorization import XElemwise, XRV
+from pytensor.xtensor.vectorization import XRV, XElemwise
 
 from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
