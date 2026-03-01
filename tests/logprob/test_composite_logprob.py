@@ -120,7 +120,6 @@ def test_nested_scalar_mixtures():
     assert np.isclose(logp_fn(0, 0, 1, 50), st.norm.logpdf(150) + np.log(0.5) * 3)
 
 
-@pytest.mark.xfail(reason="This is not currently enforced")
 @pytest.mark.parametrize("nested", (False, True))
 def test_unvalued_ir_reversion(nested):
     """Make sure that un-valued IR rewrites are reverted."""

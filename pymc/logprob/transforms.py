@@ -123,6 +123,7 @@ from pymc.logprob.utils import (
     check_potential_measurability,
     filter_measurable_variables,
     find_negated_var,
+    has_valued_path_not_through_rv,
 )
 from pymc.math import logdiffexp
 
@@ -478,6 +479,8 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
     measurable_inputs = filter_measurable_variables(node.inputs)
 
     if len(measurable_inputs) != 1:
+        return None
+    if not has_valued_path_not_through_rv(fgraph, node.outputs[0]):
         return None
 
     [measurable_input] = measurable_inputs

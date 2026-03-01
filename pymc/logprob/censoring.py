@@ -49,7 +49,11 @@ from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import MeasurableElemwise, _logccdf_helper, _logcdf, _logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue, filter_measurable_variables
+from pymc.logprob.utils import (
+    CheckParameterValue,
+    filter_measurable_variables,
+    has_valued_path_not_through_rv,
+)
 
 
 class MeasurableClip(MeasurableElemwise):
@@ -66,6 +70,8 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVari
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
     if not filter_measurable_variables(node.inputs):
+        return None
+    if not has_valued_path_not_through_rv(fgraph, node.outputs[0]):
         return None
 
     base_var, lower_bound, upper_bound = node.inputs

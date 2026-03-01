@@ -314,6 +314,33 @@ def get_related_valued_nodes(fgraph: FunctionGraph, node: Apply) -> list[Apply]:
     ]
 
 
+def has_valued_path_not_through_rv(fgraph: FunctionGraph, var: TensorVariable) -> bool:
+    """Return True if ``var`` reaches a ValuedRV without crossing another RV node."""
+    from pytensor.tensor.random.op import RandomVariable
+
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
+    clients = fgraph.clients
+    queue = [var]
+    seen = set()
+
+    while queue:
+        current_var = queue.pop()
+        if current_var in seen:
+            continue
+        seen.add(current_var)
+
+        for client, _ in clients[current_var]:
+            op = client.op
+            if isinstance(op, ValuedRV):
+                return True
+            if isinstance(op, RandomVariable | SymbolicRandomVariable):
+                continue
+            queue.extend(client.outputs)
+
+    return False
+
+
 def __getattr__(name):
     if name == "rvs_in_graphs":
         warnings.warn(
