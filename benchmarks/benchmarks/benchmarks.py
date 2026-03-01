@@ -22,6 +22,9 @@ import pytensor.tensor as pt
 
 import pymc as pm
 
+from pymc.logprob.abstract import MeasurableOp
+from pymc.logprob.rewriting import construct_ir_fgraph
+
 
 def glm_hierarchical_model(random_seed=123):
     """Sample glm hierarchical model to use in benchmarks."""
@@ -311,3 +314,37 @@ class DifferentialEquationSuite:
 
 
 DifferentialEquationSuite.track_1var_2par_ode_ess.unit = "Effective samples per second"
+
+
+class LogprobIRRewriteSuite:
+    """Benchmarks for measurable IR graph construction."""
+
+    timer = timeit.default_timer
+
+    def setup(self):
+        x_rv = pt.random.normal(name="x")
+        y_rv = pt.clip(x_rv, 0, 1)
+        z_rv = pt.random.normal(y_rv, 1, name="z")
+        z_vv = z_rv.clone()
+        self.rv_values_simple = {z_rv: z_vv}
+
+        a_rv = pt.random.normal(name="a")
+        b_rv = pt.clip(a_rv, 0, 1)
+        c_rv = pt.exp(b_rv + 5)
+        d_rv = pt.random.normal(c_rv, 1, name="d")
+        d_vv = d_rv.clone()
+        self.rv_values_nested = {d_rv: d_vv}
+
+    def time_construct_ir_fgraph_simple(self):
+        construct_ir_fgraph(self.rv_values_simple)
+
+    def time_construct_ir_fgraph_nested(self):
+        construct_ir_fgraph(self.rv_values_nested)
+
+    def track_measurable_ops_simple(self):
+        fgraph = construct_ir_fgraph(self.rv_values_simple)
+        return sum(isinstance(node.op, MeasurableOp) for node in fgraph.apply_nodes)
+
+    def track_measurable_ops_nested(self):
+        fgraph = construct_ir_fgraph(self.rv_values_nested)
+        return sum(isinstance(node.op, MeasurableOp) for node in fgraph.apply_nodes)
