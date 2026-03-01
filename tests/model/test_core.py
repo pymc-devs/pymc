@@ -1338,10 +1338,29 @@ class TestImputationMissingData:
 
             prior_trace = pm.sample_prior_predictive(return_inferencedata=False)
             assert {"beta1", "beta2", "theta", "o1", "o2"} <= set(prior_trace.keys())
-            # TODO: Assert something
+            assert {"o1_unobserved", "o2_unobserved"} <= set(model.named_vars)
+            assert prior_trace["o1"].shape[-1] == obs1.shape[0]
+            assert prior_trace["o2"].shape[-1] == obs2.shape[0]
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(chains=1, tune=5, draws=50)
+
+            assert {"o1", "o1_unobserved", "o2", "o2_unobserved"} <= set(trace.posterior.keys())
+
+            np.testing.assert_allclose(
+                trace.posterior["o1"].values[..., obs1.mask],
+                trace.posterior["o1_unobserved"].values,
+            )
+            np.testing.assert_allclose(
+                trace.posterior["o2"].values[..., obs2.mask],
+                trace.posterior["o2_unobserved"].values,
+            )
+            np.testing.assert_array_equal(
+                trace.posterior["o1"].values[..., ~obs1.mask], obs1[~obs1.mask]
+            )
+            np.testing.assert_array_equal(
+                trace.posterior["o2"].values[..., ~obs2.mask], obs2[~obs2.mask]
+            )
 
     def test_interval_missing_observations(self):
         rng = np.random.default_rng(1198)
