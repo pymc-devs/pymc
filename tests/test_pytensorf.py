@@ -107,8 +107,19 @@ class TestBroadcasting:
             test2 = pm.Normal("test2", mu=test1, sigma=1.0, size=(10, 10))
 
             step = pm.Metropolis()
-            # TODO FIXME: Assert whatever it is we're testing
-            pm.sample(tune=5, draws=7, cores=1, step=step, compute_convergence_checks=False)
+            idata = pm.sample(
+                tune=5,
+                draws=7,
+                chains=1,
+                cores=1,
+                random_seed=1123,
+                step=step,
+                compute_convergence_checks=False,
+                progressbar=False,
+            )
+
+        assert idata.posterior["test1"].shape == (1, 7, 1, 10)
+        assert idata.posterior["test2"].shape == (1, 7, 10, 10)
 
 
 def _make_along_axis_idx(arr_shape, indices, axis):
