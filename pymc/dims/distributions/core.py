@@ -19,6 +19,7 @@ import numpy as np
 
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
+from pytensor.scalar.basic import Clip
 from pytensor.tensor import TensorVariable
 from pytensor.tensor import expand_dims as pt_expand_dims
 from pytensor.tensor.elemwise import DimShuffle
@@ -27,7 +28,7 @@ from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
-from pytensor.xtensor.vectorization import XRV
+from pytensor.xtensor.vectorization import XElemwise, XRV
 
 from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
@@ -367,5 +368,8 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             return expand_dist_dims(dist.owner.inputs[0], extra_dims=extra_dims).transpose(
                 ..., *dist.dims
             )
+        case XElemwise(scalar_op=Clip()):
+            base, lower, upper = dist.owner.inputs
+            return expand_dist_dims(base, extra_dims=extra_dims).clip(lower, upper)
         case _:
             raise NotImplementedError(f"expand_dist_dims not implemented for {dist} with op {op}")

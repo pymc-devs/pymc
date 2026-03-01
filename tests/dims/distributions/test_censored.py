@@ -86,3 +86,12 @@ def test_censored_dims():
         c3_dist = c3.owner.inputs[0]
         assert isinstance(c3_dist.owner.op, XRV)
         assert c3_dist.dims == ("d", "c", "a", "b")
+
+
+def test_nested_censored_with_new_dims():
+    coords = {"a": range(3), "d": range(2)}
+    with Model(coords=coords):
+        dist = Normal.dist(mu=as_xtensor([0, 1, 2], dims=("a",)), sigma=1)
+        c1 = Censored.dist(dist, lower=0, dim_lengths={})
+        lower = as_xtensor(np.zeros((2,)), dims=("d",))
+        Censored.dist(c1, lower=lower, dim_lengths={})
