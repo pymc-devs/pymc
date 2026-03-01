@@ -97,6 +97,7 @@ running_the_test_suite
 review_pr_pymc_examples
 using_gitpod
 implementing_distribution
+debugging_logprob_rewrites
 :::
 
 :::{toctree}
