@@ -22,9 +22,6 @@ import pytensor.tensor as pt
 
 import pymc as pm
 
-from pymc.logprob.abstract import MeasurableOp
-from pymc.logprob.rewriting import construct_ir_fgraph
-
 
 def glm_hierarchical_model(random_seed=123):
     """Sample glm hierarchical model to use in benchmarks."""
@@ -316,35 +313,62 @@ class DifferentialEquationSuite:
 DifferentialEquationSuite.track_1var_2par_ode_ess.unit = "Effective samples per second"
 
 
-class LogprobIRRewriteSuite:
-    """Benchmarks for measurable IR graph construction."""
+class RealisticSamplingWallTimeSuite:
+    """Benchmarks realistic PyMC sampling wall time on a hierarchical model."""
 
+    timeout = 360.0
+    number = 1
+    repeat = 1
     timer = timeit.default_timer
 
     def setup(self):
-        x_rv = pt.random.normal(name="x")
-        y_rv = pt.clip(x_rv, 0, 1)
-        z_rv = pt.random.normal(y_rv, 1, name="z")
-        z_vv = z_rv.clone()
-        self.rv_values_simple = {z_rv: z_vv}
+        # Adapted from the nutpie README PyMC example, sampled with PyMC only.
+        data = pd.read_csv(pm.get_data("radon.csv"))
+        data["log_radon"] = data["log_radon"].astype(np.float64)
+        county_idx, counties = pd.factorize(data.county)
+        coords = {"county": counties, "obs_id": np.arange(len(county_idx))}
 
-        a_rv = pt.random.normal(name="a")
-        b_rv = pt.clip(a_rv, 0, 1)
-        c_rv = pt.exp(b_rv + 5)
-        d_rv = pt.random.normal(c_rv, 1, name="d")
-        d_vv = d_rv.clone()
-        self.rv_values_nested = {d_rv: d_vv}
+        with pm.Model(coords=coords, check_bounds=False) as self.model:
+            intercept = pm.Normal("intercept", sigma=10)
 
-    def time_construct_ir_fgraph_simple(self):
-        construct_ir_fgraph(self.rv_values_simple)
+            county_raw = pm.ZeroSumNormal("county_raw", dims="county")
+            county_sd = pm.HalfNormal("county_sd")
+            county_effect = pm.Deterministic("county_effect", county_raw * county_sd, dims="county")
 
-    def time_construct_ir_fgraph_nested(self):
-        construct_ir_fgraph(self.rv_values_nested)
+            floor_effect = pm.Normal("floor_effect", sigma=2)
 
-    def track_measurable_ops_simple(self):
-        fgraph = construct_ir_fgraph(self.rv_values_simple)
-        return sum(isinstance(node.op, MeasurableOp) for node in fgraph.apply_nodes)
+            county_floor_raw = pm.ZeroSumNormal("county_floor_raw", dims="county")
+            county_floor_sd = pm.HalfNormal("county_floor_sd")
+            county_floor_effect = pm.Deterministic(
+                "county_floor_effect",
+                county_floor_raw * county_floor_sd,
+                dims="county",
+            )
 
-    def track_measurable_ops_nested(self):
-        fgraph = construct_ir_fgraph(self.rv_values_nested)
-        return sum(isinstance(node.op, MeasurableOp) for node in fgraph.apply_nodes)
+            mu = (
+                intercept
+                + county_effect[county_idx]
+                + floor_effect * data.floor.values
+                + county_floor_effect[county_idx] * data.floor.values
+            )
+
+            sigma = pm.HalfNormal("sigma", sigma=1.5)
+            pm.Normal(
+                "log_radon",
+                mu=mu,
+                sigma=sigma,
+                observed=data.log_radon.values,
+                dims="obs_id",
+            )
+
+    def time_pymc_sample_radon_hierarchical(self):
+        with self.model:
+            pm.sample(
+                draws=300,
+                tune=300,
+                chains=2,
+                cores=1,
+                random_seed=2026,
+                progressbar=False,
+                compute_convergence_checks=False,
+            )
