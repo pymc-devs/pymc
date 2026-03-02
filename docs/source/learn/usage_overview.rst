@@ -76,14 +76,11 @@ This will generate the same output as the previous code snippet, with a table of
 
 The sample is returned as arrays inside a ``MultiTrace`` object, which is then passed to the plotting function. The resulting graph shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
-.. image:: ./images/forestplot.png
-   :width: 1000px
 
 See also
 ========
 
-* `Tutorials <nb_tutorials/index.html>`__
-* `Examples <nb_examples/index.html>`__
+* `Examples <https://github.com/pymc-devs/pymc-examples>`__
 
 
 .. |NumFOCUS| image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
