@@ -18,13 +18,13 @@ import re
 from functools import partial
 
 from pytensor.compile import SharedVariable
-from pytensor.graph.basic import Constant
+from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import walk
-from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.random.basic import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.type_other import NoneTypeT
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.model import Model
 
@@ -35,9 +35,7 @@ __all__ = [
 ]
 
 
-def str_for_dist(
-    dist: TensorVariable, formatting: str = "plain", include_params: bool = True
-) -> str:
+def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a Distribution in a model.
 
     This can be either LaTeX or plain, optionally with distribution parameter
@@ -146,7 +144,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
 
 
 def str_for_potential_or_deterministic(
-    var: TensorVariable,
+    var: Variable,
     formatting: str = "plain",
     include_params: bool = True,
     dist_name: str = "Deterministic",
@@ -190,7 +188,6 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     ) or _is_potential_or_deterministic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
-        assert isinstance(var, TensorVariable)
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
@@ -198,7 +195,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         return _str_for_expression(var, formatting)
 
 
-def _str_for_input_rv(var: TensorVariable, formatting: str) -> str:
+def _str_for_input_rv(var: Variable, formatting: str) -> str:
     _str = (
         var.name
         if var.name is not None
@@ -278,7 +275,7 @@ def _latex_escape(text: str) -> str:
     return text.replace("$", r"\$")
 
 
-def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
+def _default_repr_pretty(obj: Variable | Model, p, cycle):
     """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
     # we know that our str_repr does not recurse, so we can ignore cycle
     try:

@@ -203,6 +203,4 @@ class ZeroSumTransform(DimTransform):
         return value
 
     def log_jac_det(self, value, *rv_inputs):
-        # Use following once broadcast_like is implemented
-        # as_xtensor(0).broadcast_like(value, exclude=self.dims)`
-        return value.sum(self.dims) * 0
+        return as_xtensor(0.0).broadcast_like(value, exclude=self.dims)

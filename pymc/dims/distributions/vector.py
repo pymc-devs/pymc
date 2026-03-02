@@ -229,7 +229,8 @@ class ZeroSumNormal(VectorDimDistribution):
             raise ValueError("ZeroSumNormal requires atleast 1 core_dims")
 
         support_dims = as_xtensor(
-            as_tensor([dim_lengths[core_dim] for core_dim in core_dims]), dims=("_",)
+            as_tensor([dim_lengths[core_dim] for core_dim in core_dims]),
+            dims=("__support_shape__",),
         )
         sigma = cls._as_xtensor(sigma)
 
@@ -238,16 +239,25 @@ class ZeroSumNormal(VectorDimDistribution):
         )
 
     @classmethod
-    def xrv_op(self, sigma, support_dims, core_dims, extra_dims=None, rng=None):
-        sigma = as_xtensor(sigma)
-        support_dims = as_xtensor(support_dims, dims=("_",))
-        support_shape = support_dims.values
-        core_rv = ZeroSumNormalRV.rv_op(sigma=sigma.values, support_shape=support_shape).owner.op
+    def xrv_op(cls, sigma, support_shape, core_dims, extra_dims=None, rng=None):
+        # ZeroSumNormal expects dummy dimensions on sigma for the support_shape
+        sigma = cls._as_xtensor(sigma).expand_dims(core_dims)
+        support_shape = as_xtensor(support_shape, dims=("__support_shape__",))
+        core_rv = ZeroSumNormalRV.rv_op(
+            sigma=sigma.values, support_shape=support_shape.values
+        ).owner.op
+        core_dims_map = tuple(range(1, len(core_dims) + 1))
         xop = pxr.as_xrv(
             core_rv,
-            core_inps_dims_map=[(), (0,)],
-            core_out_dims_map=tuple(range(1, len(core_dims) + 1)),
+            core_inps_dims_map=[core_dims_map, (0,)],
+            core_out_dims_map=core_dims_map,
         )
         # Dummy "_" core dim to absorb the support_shape vector
         # If ZeroSumNormal expected a scalar per support dim, this wouldn't be needed
-        return xop(sigma, support_dims, core_dims=("_", *core_dims), extra_dims=extra_dims, rng=rng)
+        return xop(
+            sigma,
+            support_shape,
+            core_dims=("__support_shape__", *core_dims),
+            extra_dims=extra_dims,
+            rng=rng,
+        )

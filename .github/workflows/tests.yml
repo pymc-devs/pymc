@@ -139,6 +139,7 @@ jobs:
 
           - |
             tests/dims/distributions/test_core.py
+            tests/dims/distributions/test_censored.py
             tests/dims/distributions/test_scalar.py
             tests/dims/distributions/test_vector.py
             tests/dims/test_model.py

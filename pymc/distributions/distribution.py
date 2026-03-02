@@ -392,7 +392,7 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
             )
             if size_arg_idx is not None and len(rng_arg_idxs) == 1:
                 new_size_type = normalize_size_param(inputs[size_arg_idx]).type
-                if not self.input_types[size_arg_idx].in_same_class(new_size_type):
+                if not self.input_types[size_arg_idx].is_super(new_size_type):
                     params = [inputs[idx] for idx in param_idxs]
                     size = inputs[size_arg_idx]
                     rng = inputs[rng_arg_idxs[0]]
