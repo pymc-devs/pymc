@@ -225,7 +225,7 @@ class MarimoProgressBackend:
         }
         header_cells += [abbreviations.get(k, k[:6].capitalize()) for k in stat_keys]
 
-        header_cells += ["Speed", "Elapsed"]
+        header_cells += ["Speed", "Elapsed", "Remaining"]
 
         header_row = "<tr>" + "".join(f"<th>{h}</th>" for h in header_cells) + "</tr>"
 
@@ -251,6 +251,13 @@ class MarimoProgressBackend:
 
         pct = (completed / total * 100) if total > 0 else 0
         elapsed = perf_counter() - self._start_times[task_id]
+
+        if completed > 0 and completed < total:
+            rate = completed / max(elapsed, 1e-6)
+            remaining = (total - completed) / rate
+            remaining_str = format_time(remaining)
+        else:
+            remaining_str = "--:--"
 
         action = self.step_name.lower()
         speed = completed / max(elapsed, 1e-6)
@@ -280,6 +287,7 @@ class MarimoProgressBackend:
 
         cells.append(f"<td>{speed:.1f} {unit}</td>")
         cells.append(f"<td>{format_time(elapsed)}</td>")
+        cells.append(f"<td>{remaining_str}</td>")
 
         return "<tr>" + "".join(cells) + "</tr>"
 
