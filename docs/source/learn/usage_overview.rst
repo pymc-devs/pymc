@@ -54,13 +54,13 @@ This example will generate 1000 posterior samples on each of two cores using the
 PLease note: For windows users will apply main guard in order to avoid runtime errors when using multiprocessing. The code will look like this:
 ::
     def build_and_sample():
-    with bioassay_model:
+        with bioassay_model:
 
-        # Draw samples
-        idata = pm.sample(1000, tune=2000, cores=2)
-        # Plot two parameters
-        az.plot_forest(idata, var_names=['alpha', 'beta'], r_hat=True)
-        return idata
+            # Draw samples
+            idata = pm.sample(1000, tune=2000, cores=2)
+            # Plot two parameters
+            az.plot_forest(idata, var_names=['alpha', 'beta'], r_hat=True)
+            return idata
 
     if __name__ == "__main__":
         tr = build_and_sample()
