@@ -51,6 +51,22 @@ Save this file, then from a python shell (or another file in the same directory)
 
 This example will generate 1000 posterior samples on each of two cores using the NUTS algorithm, preceded by 2000 tuning samples (these are good default numbers for most models).
 
+PLease note: For windows users will apply main guard in order to avoid runtime errors when using multiprocessing. The code will look like this:
+::
+    def build_and_sample():
+    with bioassay_model:
+
+        # Draw samples
+        idata = pm.sample(1000, tune=2000, cores=2)
+        # Plot two parameters
+        az.plot_forest(idata, var_names=['alpha', 'beta'], r_hat=True)
+        return idata
+
+    if __name__ == "__main__":
+        tr = build_and_sample()
+
+This will generate the same output as the previous code snippet, with a table of summary statistics for the posterior samples.
+::
 ::
 
     Auto-assigning NUTS sampler...
