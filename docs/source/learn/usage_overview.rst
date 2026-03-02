@@ -57,7 +57,8 @@ PLease note: For windows users will apply main guard in order to avoid runtime e
         with bioassay_model:
 
             # Draw samples
-            idata = pm.sample(1000, tune=2000, cores=2)  # You need not provide arguments as MCMC sampling is mostly automatic            # Plot two parameters
+            idata = pm.sample(1000, tune=2000, cores=2)  # You need not provide arguments as MCMC sampling is mostly automatic
+            # Plot two parameters
             az.plot_forest(idata, var_names=['alpha', 'beta'], r_hat=True)
             return idata
 
