@@ -39,3 +39,14 @@ Vector distributions
    Categorical
    MvNormal
    ZeroSumNormal
+
+
+Higher-Order distributions
+==========================
+
+.. currentmodule:: pymc.dims
+.. autosummary::
+   :toctree: generated/
+   :template: distribution.rst
+
+   Censored

@@ -14,24 +14,35 @@
 import numpy as np
 import pytest
 
-from pytensor.xtensor.type import XTensorType
+from pytensor.xtensor.type import XTensorConstant, XTensorSharedVariable, XTensorType
 from xarray import DataArray
 
 import pymc as pm
 
 from pymc import dims as pmd
 from pymc import observe
+from pymc.model.transform.optimization import freeze_dims_and_data
 
 pytestmark = pytest.mark.filterwarnings("error")
 
 
 def test_data():
     x_np = np.random.randn(10, 2, 3)
+    coords = {"a": range(10), "b": range(2), "c": range(3)}
+    with pm.Model(coords=coords) as m:
+        x_data = pmd.Data("x", x_np, dims=("a", "b", "c"))
+        assert isinstance(x_data, XTensorSharedVariable)
+        assert isinstance(x_data.type, XTensorType)
+        assert x_data.type.dims == ("a", "b", "c")
 
-    with pm.Model() as m:
-        x1 = pmd.Data("x", x_np, dims=("a", "b", "c"))
-        assert isinstance(x1.type, XTensorType)
-        assert x1.type.dims == ("a", "b", "c")
+    assert m["x"] is x_data
+
+    np.testing.assert_allclose(pm.draw(x_data), x_np)
+
+    with m:
+        pm.set_data({"x": x_np * 2})
+
+    np.testing.assert_allclose(pm.draw(x_data), x_np * 2)
 
 
 def test_simple_model():
@@ -106,7 +117,7 @@ def test_complex_model():
 
     coords = {
         "group": range(3),
-        "knots": range(N_knots),
+        "knot": range(N_knots),
         "obs": range(N),
     }
 
@@ -233,3 +244,19 @@ def test_zerosumnormal_model():
     for key in new_ip:
         new_ip[key] += rng.uniform(size=new_ip[key].shape)
     np.testing.assert_allclose(logp_fn(new_ip), ref_logp_fn(new_ip))
+
+
+def test_freeze_dims_and_data():
+    coords = {"time": range(5), "item": range(3)}
+    with pm.Model(coords=coords) as m:
+        x = pmd.Data("x", np.zeros((5, 3)), dims=("time", "item"))
+        y = pmd.Normal("y", x)
+
+    assert isinstance(m["x"], XTensorSharedVariable)
+    assert m["x"].type.shape == (None, None)
+    assert m["y"].type.shape == (None, None)
+
+    frozen_m = freeze_dims_and_data(m)
+    assert isinstance(frozen_m["x"], XTensorConstant)
+    assert frozen_m["x"].type.shape == (5, 3)
+    assert frozen_m["y"].type.shape == (5, 3)

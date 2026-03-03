@@ -114,14 +114,14 @@ class TestCensored:
         assert tuple(x.owner.inputs[0].shape.eval()) == (3, 4, 2)
 
     def test_censored_categorical(self):
-        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=(5,))
+        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=())
 
         np.testing.assert_allclose(
             logp(cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
             [0, 0.1, 0.2, 0.2, 0.3, 0.2, 0],
         )
 
-        censored_cat = pm.Censored.dist(cat, lower=1, upper=3, shape=(5,))
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=3, shape=())
 
         np.testing.assert_allclose(
             logp(censored_cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),

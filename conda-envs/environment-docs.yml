@@ -5,13 +5,13 @@ channels:
 - nodefaults
 dependencies:
 # Base dependencies
-- arviz>=1.0.0rc0
+- arviz>=1.0.0
 - cachetools>=4.2.1
 - cloudpickle
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.37.0,<2.38
+- pytensor>=2.38.0,<2.39
 - python-graphviz
 - rich>=13.7.1
 - scipy>=1.4.1

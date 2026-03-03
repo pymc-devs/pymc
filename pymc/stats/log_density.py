@@ -73,6 +73,7 @@ def compute_log_likelihood(
 
 def compute_log_prior(
     idata: DataTree,
+    *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
     model: Model | None = None,

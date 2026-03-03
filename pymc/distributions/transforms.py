@@ -309,7 +309,7 @@ class ZeroSumTransform(Transform):
         return value
 
     def log_jac_det(self, value, *rv_inputs):
-        return pt.constant(0.0)
+        return value.sum(self.zerosum_axes).zeros_like()
 
 
 log_exp_m1 = LogExpM1()

@@ -281,7 +281,12 @@ def kron_diag(*diags):
 
 def logdiffexp(a, b):
     """Return log(exp(a) - exp(b))."""
-    return a + pt.log1mexp(b - a)
+    # Handle cases of -inf, -inf safely
+    return pt.switch(
+        pt.isneginf(b),
+        a,
+        a + pt.log1mexp(b - a),
+    )
 
 
 invlogit = sigmoid

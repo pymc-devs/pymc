@@ -99,3 +99,23 @@ def test_zerosumnormal():
     # Logp is correct, but we have join(..., -1) and join(..., 1), that don't get canonicalized to the same
     # Should work once https://github.com/pymc-devs/pytensor/issues/1505 is fixed
     # assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_zerosumnormal_batch_sigma():
+    coords = {"a": range(3), "b": range(5)}
+    sigma = np.array([1, 2, 3.0])
+    with Model(coords=coords) as model:
+        ZeroSumNormal(
+            "x",
+            sigma=as_xtensor(sigma, dims=("a",)),
+            core_dims=("b",),
+        )
+
+    with Model(coords=coords) as ref_model:
+        regular_distributions.ZeroSumNormal("x", sigma=sigma[:, None], dims=("a", "b"))
+
+    ip = model.initial_point()
+    np.testing.assert_allclose(
+        model.compile_logp(sum=False)(ip),
+        ref_model.compile_logp(sum=False)(ip),
+    )
