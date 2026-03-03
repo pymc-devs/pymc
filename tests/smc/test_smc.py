@@ -19,8 +19,8 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
-from xarray import DataTree
 from pytensor.compile.ops import wrap_py
+from xarray import DataTree
 
 import pymc as pm
 
