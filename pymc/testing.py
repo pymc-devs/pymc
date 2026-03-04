@@ -43,7 +43,7 @@ import pymc as pm
 from pymc.distributions.distribution import Distribution
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.initial_point import make_initial_point_fn
-from pymc.logprob.basic import icdf, logcdf, logp, transformed_conditional_logp
+from pymc.logprob.basic import icdf, logccdf, logcdf, logp, transformed_conditional_logp
 from pymc.logprob.utils import (
     ParameterValueError,
     local_check_parameter_to_ninf_switch,
@@ -529,6 +529,124 @@ def check_logcdf(
         npt.assert_equal(
             pymc_logcdf(**point),
             0,
+            err_msg=str(point),
+        )
+
+
+def check_logccdf(
+    pymc_dist: Distribution,
+    domain: Domain,
+    paramdomains: dict[str, Domain],
+    scipy_logccdf: Callable,
+    decimal: int | None = None,
+    n_samples: int = 100,
+    skip_paramdomain_inside_edge_test: bool = False,
+    skip_paramdomain_outside_edge_test: bool = False,
+) -> None:
+    """
+    Test PyMC logccdf and equivalent scipy logsf methods give similar results.
+
+    The following tests are performed by default:
+        1. Test PyMC logccdf and equivalent scipy logsf methods give similar
+        results for valid values and parameters inside the supported edges.
+        Edges are excluded by default, but can be artificially included by
+        creating a domain with repeated values (e.g., `Domain([0, 0, .5, 1, 1]`)
+        Can be skipped via skip_paramdomain_inside_edge_test
+        2. Test PyMC logccdf method returns -inf for invalid parameter values
+        outside the supported edges. Can be skipped via skip_paramdomain_outside_edge_test
+        3. Test PyMC logccdf method returns 0 for values below the supported
+        lower edge (S(t) = 1 when t is below support) and -inf for values above
+        the upper edge (S(t) = 0 when t exceeds support).
+
+    Parameters
+    ----------
+    pymc_dist: PyMC distribution
+    domain : Domain
+        Supported domain of distribution values
+    paramdomains : Dictionary of Parameter : Domain pairs
+        Supported domains of distribution parameters
+    scipy_logccdf : Callable
+        Scipy logsf method of equivalent pymc_dist distribution
+    decimal : Int
+        Level of precision with which pymc_dist and scipy_logccdf are compared.
+        Defaults to 6 for float64 and 3 for float32
+    n_samples : Int
+        Upper limit on the number of valid domain and value combinations that
+        are compared between pymc and scipy methods. If n_samples is below the
+        total number of combinations, a random subset is evaluated. Setting
+        n_samples = -1, will return all possible combinations. Defaults to 100
+    skip_paramdomain_inside_edge_test : Bool
+        Whether to run test 1., which checks that pymc and scipy distributions
+        match for valid values and parameters inside the respective domain edges
+    skip_paramdomain_outside_edge_test : Bool
+        Whether to run test 2., which checks that pymc distribution logccdf
+        returns -inf for invalid parameter values outside the supported domain edge
+
+    """
+    import pytest
+
+    if decimal is None:
+        decimal = select_by_precision(float64=6, float32=3)
+
+    dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
+    value = dist.type()
+    value.name = "value"
+    dist_logccdf = logccdf(dist, value)
+    pymc_logccdf = pytensor.function(list(inputvars(dist_logccdf)), dist_logccdf)
+
+    # Test pymc and scipy distributions match for values and parameters
+    # within the supported domain edges (excluding edges)
+    if not skip_paramdomain_inside_edge_test:
+        domains = paramdomains.copy()
+        domains["value"] = domain
+        for point in product(domains, n_samples=n_samples):
+            point = dict(point)
+            npt.assert_almost_equal(
+                pymc_logccdf(**point),
+                scipy_logccdf(**point),
+                decimal=decimal,
+                err_msg=str(point),
+            )
+
+    valid_value = domain.vals[0]
+    valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
+    valid_params["value"] = valid_value
+
+    # Test pymc distribution raises ParameterValueError for parameters outside the
+    # supported domain edges (excluding edges)
+    if not skip_paramdomain_outside_edge_test:
+        invalid_params = find_invalid_scalar_params(paramdomains)
+
+        for invalid_param, invalid_edges in invalid_params.items():
+            for invalid_edge in invalid_edges:
+                if invalid_edge is None:
+                    continue
+
+                point = valid_params.copy()
+                point[invalid_param] = invalid_edge
+
+                with pytest.raises(ParameterValueError):
+                    pymc_logccdf(**point)
+                    pytest.fail(f"test_params={point}")
+
+    # For logccdf: values below domain lower edge give 0 (S=1, entire distribution
+    # is above t), and values above domain upper edge give -inf (S=0, no mass above t).
+    # This is the inverse of check_logcdf boundary semantics.
+    invalid_lower, invalid_upper = find_invalid_scalar_params({"value": domain})["value"]
+    if invalid_lower is not None:
+        point = valid_params.copy()
+        point["value"] = invalid_lower
+        npt.assert_equal(
+            pymc_logccdf(**point),
+            0,
+            err_msg=str(point),
+        )
+    if invalid_upper is not None:
+        point = valid_params.copy()
+        point["value"] = invalid_upper
+        npt.assert_equal(
+            pymc_logccdf(**point),
+            -np.inf,
             err_msg=str(point),
         )
 
