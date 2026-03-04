@@ -609,7 +609,7 @@ class PointFunc:
         self.f = f
 
     def __call__(self, state):
-        return self.f(**state
+        return self.f(**state)
 
     def dprint(self, **kwrags):
         return self.f.dprint(**kwrags)
