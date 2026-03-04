@@ -11,16 +11,16 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import importlib
 import warnings
 
 from collections.abc import Iterable, Sequence
 from typing import cast
 
+import narwhals as nw
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
-import scipy.sparse as sps
 
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
@@ -48,6 +48,7 @@ from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
+from pytensor.xtensor.type import XTensorVariable
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
@@ -75,64 +76,56 @@ __all__ = [
 
 def convert_observed_data(data) -> np.ndarray | Variable:
     """Convert user provided dataset to accepted formats."""
+    from pymc.data import prepare_user_data
+
     if isgenerator(data):
         raise TypeError("Data passed to `observed` cannot be a generator.")
-    return convert_data(data)
+    if isinstance(data, TensorVariable | XTensorVariable):
+        # prepare_user_data only handles case where data is known at compile time (constants, shared), because it is
+        # intended for use by the Data container. Symbolic values can be acceptable when building logp graphs, though,
+        # so we pass them through here.
+        return data
+
+    values = prepare_user_data(data)
+    return convert_data(values)
 
 
 def convert_data(data) -> np.ndarray | Variable:
-    ret: np.ndarray | Variable
-    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
-        # typically, but not limited to pandas objects
-        vals = data.to_numpy()
-        null_data = data.isnull()
-        if hasattr(null_data, "to_numpy"):
-            # pandas Series
-            mask = null_data.to_numpy()
-        else:
-            # pandas Index
-            mask = null_data
-        if mask.any():
-            # there are missing values
-            ret = np.ma.MaskedArray(vals, mask)
-        else:
-            ret = vals
-    elif isinstance(data, np.ndarray):
-        if isinstance(data, np.ma.MaskedArray):
-            if not data.mask.any():
-                # empty mask
-                ret = data.filled()
-            else:
-                # already masked and rightly so
-                ret = data
-        else:
-            # already a ndarray, but not masked
-            mask = np.isnan(data)
-            if np.any(mask):
-                ret = np.ma.MaskedArray(data, mask)
-            else:
-                # no masking required
-                ret = data
-    elif isinstance(data, Variable):
-        ret = data
-    elif sps.issparse(data):
-        ret = data
-    else:
-        ret = np.asarray(data)
-
     # Data without dtype info is converted to float arrays by default.
     # This is the most common case for simple examples.
     if not hasattr(data, "dtype"):
-        return floatX(ret)
+        return floatX(data)
     # Otherwise we only convert the precision.
-    return smarttypeX(ret)
+    return smarttypeX(data)
 
 
-@_as_tensor_variable.register(pd.Series)
-@_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+# Optional registrations for DataFrame packages
+def _register_dataframe_backend(library_name: str):
+    try:
+        library = importlib.import_module(library_name)
 
+        @_as_tensor_variable.register(library.Series)
+        def series_to_tensor_variable(s: library.Series, *args, **kwargs) -> TensorVariable:
+            s = nw.from_native(s, allow_series=True)
+            if isinstance(s, nw.LazyFrame):
+                s = s.collect()
+            return pt.as_tensor_variable(s.to_numpy(), *args, **kwargs)
+
+        @_as_tensor_variable.register(library.DataFrame)
+        def dataframe_to_tensor_variable(df: library.DataFrame, *args, **kwargs) -> TensorVariable:
+            df = nw.from_native(df, allow_series=False)
+            if isinstance(df, nw.LazyFrame):
+                df = df.collect()
+            return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+
+    except ImportError:
+        # Data backends are optional. Take no action if not installed.
+        pass
+
+
+_register_dataframe_backend("pandas")
+_register_dataframe_backend("polars")
+_register_dataframe_backend("dask.dataframe")
 
 _cheap_eval_mode = Mode(linker="py", optimizer="minimum_compile")
 
