@@ -16,6 +16,7 @@ from time import perf_counter
 from typing import Any, Self
 
 from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
+from pymc.progress_bar.utils import compute_remaining_time
 
 
 def format_time(seconds: float) -> str:
@@ -252,12 +253,12 @@ class MarimoProgressBackend:
         pct = (completed / total * 100) if total > 0 else 0
         elapsed = perf_counter() - self._start_times[task_id]
 
-        if completed > 0 and completed < total:
-            rate = completed / max(elapsed, 1e-6)
-            remaining = (total - completed) / rate
-            remaining_str = format_time(remaining)
-        else:
+        remaining = compute_remaining_time(completed, total, elapsed)
+
+        if remaining is None:
             remaining_str = "--:--"
+        else:
+            remaining_str = format_time(remaining)
 
         action = self.step_name.lower()
         speed = completed / max(elapsed, 1e-6)
