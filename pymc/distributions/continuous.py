@@ -1758,6 +1758,30 @@ class LogNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def logccdf(value, mu, sigma):
+        r"""
+        Compute the log complementary CDF (log survival function) of the LogNormal distribution.
+
+        .. math::
+
+            \log S(t) = \log\left(1 - \Phi\!\left(\frac{\log t - \mu}{\sigma}\right)\right)
+                      = \text{normal\_lccdf}(\mu, \sigma, \log t)
+
+        Reuses :func:`~pymc.distributions.dist_math.normal_lccdf`, consistent
+        with :meth:`Normal.logccdf`.
+        """
+        res = pt.switch(
+            pt.le(value, 0),
+            0.0,
+            normal_lccdf(mu, sigma, pt.log(value)),
+        )
+
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
     def icdf(value, mu, sigma):
         res = pt.exp(icdf(Normal.dist(mu, sigma), value))
         return res
