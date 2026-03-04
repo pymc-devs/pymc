@@ -319,6 +319,57 @@ def test_custom_dist_repr():
     assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])
 
 
+class TestDimsDist:
+    def setup_class(self):
+        from pymc.dims.distributions import Normal as DimsNormal
+        from pymc.dims.distributions import ZeroSumNormal as DimsZeroSumNormal
+
+        with Model(coords={"group": range(3), "obs": range(5)}) as self.model:
+            mu = DimsNormal("mu", 0, 10, dims=("group",))
+            sigma = DimsNormal("sigma", 0, 1)
+            zsn = DimsZeroSumNormal("zsn", sigma=1, core_dims="group")
+            DimsNormal("y", mu + zsn, sigma, dims=("obs", "group"))
+
+        self.expected = {
+            ("plain", True): [
+                r"mu ~ Normal(0, 10)",
+                r"sigma ~ Normal(0, 1)",
+                r"zsn ~ ZeroSumNormal(f(), f())",
+                r"y ~ Normal(f(mu, zsn), sigma)",
+            ],
+            ("plain", False): [
+                r"mu ~ Normal",
+                r"sigma ~ Normal",
+                r"zsn ~ ZeroSumNormal",
+                r"y ~ Normal",
+            ],
+            ("latex", True): [
+                r"\text{mu} &\sim & \operatorname{Normal}(0,~10)",
+                r"\text{sigma} &\sim & \operatorname{Normal}(0,~1)",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(f(),~f())",
+                r"\text{y} &\sim & \operatorname{Normal}(f(\text{mu},~\text{zsn}),~\text{sigma})",
+            ],
+            ("latex", False): [
+                r"\text{mu} &\sim & \operatorname{Normal}",
+                r"\text{sigma} &\sim & \operatorname{Normal}",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}",
+                r"\text{y} &\sim & \operatorname{Normal}",
+            ],
+        }
+
+    def test_str_repr(self):
+        for formatting, include_params in [("plain", True), ("plain", False)]:
+            model_text = self.model.str_repr(formatting=formatting, include_params=include_params)
+            for text in self.expected[(formatting, include_params)]:
+                assert text in model_text
+
+    def test_latex_repr(self):
+        for formatting, include_params in [("latex", True), ("latex", False)]:
+            model_text = self.model.str_repr(formatting=formatting, include_params=include_params)
+            for text in self.expected[(formatting, include_params)]:
+                assert text in model_text
+
+
 class TestLatexRepr:
     @staticmethod
     def simple_model() -> Model:
