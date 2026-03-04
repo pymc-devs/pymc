@@ -34,6 +34,7 @@ import pytensor.gradient as tg
 
 from arviz import InferenceData, dict_to_dataset
 from arviz.data.base import make_attrs
+from pytensor.compile.mode import get_mode
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
@@ -83,6 +84,17 @@ try:
     from zarr.storage import MemoryStore
 except ImportError:
     MemoryStore = type("MemoryStore", (), {})
+
+try:
+    from pytensor.link.jax.dispatch import JAXLinker
+except ImportError:
+    JAXLinker = type("JAXLinker", (), {})
+
+try:
+    from pytensor.link.numba.dispatch import NumbaLinker
+except ImportError:
+    NumbaLinker = type("NumbaLinker", (), {})
+
 
 sys.setrecursionlimit(10000)
 
@@ -337,10 +349,27 @@ def _sample_external_nuts(
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
+    compile_kwargs: dict | None = None,
     **kwargs,
 ):
+    compile_kwargs = compile_kwargs or {}
+    nutpie_compile_kwargs = {}
+
+    # Propagate backend based on compile_kwargs mode
+    if "mode" in compile_kwargs:
+        mode = get_mode(compile_kwargs["mode"])
+        if isinstance(mode.linker, JAXLinker):
+            nutpie_compile_kwargs["backend"] = "jax"
+        elif isinstance(mode.linker, NumbaLinker):
+            nutpie_compile_kwargs["backend"] = "numba"
+
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
+    nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
+
+    for kwarg in ("backend", "gradient_backend"):
+        if kwarg in nuts_sampler_kwargs:
+            nutpie_compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
 
     if sampler == "nutpie":
         try:
@@ -363,15 +392,10 @@ def _sample_external_nuts(
                 UserWarning,
             )
 
-        compile_kwargs = {}
-        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
-        for kwarg in ("backend", "gradient_backend"):
-            if kwarg in nuts_sampler_kwargs:
-                compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
         compiled_model = nutpie.compile_pymc_model(
             model,
             var_names=var_names,
-            **compile_kwargs,
+            **nutpie_compile_kwargs,
         )
         t_start = time.time()
         idata = nutpie.sample(
@@ -458,7 +482,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -491,7 +515,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -524,7 +548,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -593,10 +617,13 @@ def sample(
         method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
+    nuts_sampler : str, optional
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
+        If ``None`` (default), "nutpie" is used if installed and the model is suitable
+        (all continuous variables, no incompatible compile_kwargs).
+        Otherwise "pymc" is used.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -822,6 +849,15 @@ def sample(
         )
     )
 
+    if nuts_sampler is None:
+        if exclusive_nuts and (
+            compile_kwargs is None
+            or isinstance(get_mode(compile_kwargs.get("mode")).linker, JAXLinker | NumbaLinker)
+        ):
+            nuts_sampler = "nutpie"
+        else:
+            nuts_sampler = "pymc"
+
     if nuts_sampler != "pymc":
         if not exclusive_nuts:
             raise ValueError(
@@ -834,7 +870,7 @@ def sample(
                 draws=draws,
                 tune=tune,
                 chains=chains,
-                target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
+                target_accept=nuts_sampler_kwargs.get("target_accept", 0.8),
                 random_seed=random_seed,
                 initvals=initvals,
                 model=model,
@@ -844,6 +880,7 @@ def sample(
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
+                compile_kwargs=compile_kwargs,
                 **kwargs,
             )
 

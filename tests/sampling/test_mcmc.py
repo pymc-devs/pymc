@@ -965,3 +965,127 @@ class TestQuietMode:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert len(pymc_logs) > 0
+
+
+class TestNutpieSelection:
+    @pytest.fixture
+    def continuous_model(self):
+        with pm.Model() as model:
+            pm.Normal("x")
+        return model
+
+    def test_auto_selection_numba(self, continuous_model):
+        with (
+            mock.patch("pymc.sampling.mcmc.get_mode") as mock_get_mode,
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_sample_external,
+        ):
+            # Create a mock linker and mode
+            MockNumbaLinker = type("MockNumbaLinker", (), {})
+            with mock.patch("pymc.sampling.mcmc.NumbaLinker", MockNumbaLinker):
+                mock_mode = mock.Mock()
+                mock_mode.linker = MockNumbaLinker()
+                mock_get_mode.return_value = mock_mode
+
+                pm.sample(
+                    model=continuous_model,
+                    compile_kwargs={"mode": "NUMBA"},
+                    tune=10,
+                    draws=10,
+                    chains=1,
+                    progressbar=False,
+                )
+
+                mock_sample_external.assert_called_once()
+                assert mock_sample_external.call_args[1]["sampler"] == "nutpie"
+                assert mock_sample_external.call_args[1].get("compile_kwargs") == {"mode": "NUMBA"}
+
+    def test_auto_selection_jax(self, continuous_model):
+        with (
+            mock.patch("pymc.sampling.mcmc.get_mode") as mock_get_mode,
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_sample_external,
+        ):
+            MockJAXLinker = type("MockJAXLinker", (), {})
+            with mock.patch("pymc.sampling.mcmc.JAXLinker", MockJAXLinker):
+                mock_mode = mock.Mock()
+                mock_mode.linker = MockJAXLinker()
+                mock_get_mode.return_value = mock_mode
+
+                pm.sample(
+                    model=continuous_model,
+                    compile_kwargs={"mode": "JAX"},
+                    tune=10,
+                    draws=10,
+                    chains=1,
+                    progressbar=False,
+                )
+
+                mock_sample_external.assert_called_once()
+                assert mock_sample_external.call_args[1]["sampler"] == "nutpie"
+                # Backend should be propagated correctly in _sample_external_nuts, but here we check kwargs passed TO it
+                assert mock_sample_external.call_args[1].get("compile_kwargs") == {"mode": "JAX"}
+
+    def test_fallback_cvm(self, continuous_model):
+        with (
+            mock.patch("pymc.sampling.mcmc.get_mode") as mock_get_mode,
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_sample_external,
+            mock.patch("pymc.sampling.mcmc._iter_sample"),
+            mock.patch("pymc.sampling.mcmc._mp_sample"),
+        ):
+            # Use real NumbaLinker/JAXLinker classes if possible, or mocks that won't match CVM
+
+            mock_mode = mock.Mock()
+            mock_mode.linker = mock.Mock()  # Generic mock, not JAX or Numba
+            mock_get_mode.return_value = mock_mode
+
+            pm.sample(
+                model=continuous_model,
+                compile_kwargs={"mode": "FAST_RUN"},
+                tune=10,
+                draws=10,
+                chains=1,
+                progressbar=False,
+            )
+
+            mock_sample_external.assert_not_called()
+
+    def test_explicit_selection(self, continuous_model):
+        with mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_sample_external:
+            pm.sample(
+                model=continuous_model,
+                nuts_sampler="nutpie",
+                tune=10,
+                draws=10,
+                chains=1,
+                progressbar=False,
+            )
+            mock_sample_external.assert_called_once()
+            assert mock_sample_external.call_args[1]["sampler"] == "nutpie"
+
+    def test_backend_propagation_internal(self, continuous_model):
+        with mock.patch.dict("sys.modules", {"nutpie": mock.Mock()}):
+            import nutpie
+
+            nutpie.compile_pymc_model = mock.Mock()
+            nutpie.sample = mock.Mock(return_value=mock.Mock())
+
+            with mock.patch("pymc.sampling.mcmc.get_mode") as mock_get_mode:
+                MockNumbaLinker = type("MockNumbaLinker", (), {})
+                with mock.patch("pymc.sampling.mcmc.NumbaLinker", MockNumbaLinker):
+                    mock_mode = mock.Mock()
+                    mock_mode.linker = MockNumbaLinker()
+                    mock_get_mode.return_value = mock_mode
+
+                    # We can call pm.sample with nuts_sampler="nutpie" and compile_kwargs
+                    pm.sample(
+                        model=continuous_model,
+                        nuts_sampler="nutpie",
+                        compile_kwargs={"mode": "NUMBA"},
+                        tune=10,
+                        draws=10,
+                        chains=1,
+                        progressbar=False,
+                    )
+
+                    nutpie.compile_pymc_model.assert_called()
+                    _, kwargs = nutpie.compile_pymc_model.call_args
+                    assert kwargs.get("backend") == "numba"
