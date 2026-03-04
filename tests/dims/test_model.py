@@ -14,7 +14,13 @@
 import numpy as np
 import pytest
 
-from pytensor.xtensor.type import XTensorConstant, XTensorSharedVariable, XTensorType
+try:
+    from pytensor.xtensor.type import XTensorConstant, XTensorSharedVariable, XTensorType
+except ImportError:
+    pytest.skip(
+        "Requires pytensor >= 2.38 with XTensorSharedVariable",
+        allow_module_level=True,
+    )
 from xarray import DataArray
 
 import pymc as pm

@@ -36,15 +36,18 @@ def __init__():
 
     # Make PyMC aware of xtensor functionality
     MeasurableOp.register(XRV)
-    logprob_rewrites_db.register(
-        "pre_lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
-    )
-    logprob_rewrites_db.register(
-        "post_lower_xtensor", optdb.query("+lower_xtensor"), "cleanup", position=5.1
-    )
-    initial_point_rewrites_db.register(
-        "lower_xtensor", optdb.query("+lower_xtensor"), "basic", position=0.1
-    )
+    # Query a fresh rewriter per registration so each has its own identity (same
+    # rewriter object cannot be registered twice in the same db).
+    for name, db, tag, pos in [
+        ("pre_lower_xtensor", logprob_rewrites_db, "basic", 0.1),
+        ("post_lower_xtensor", logprob_rewrites_db, "cleanup", 5.1),
+        ("lower_xtensor", initial_point_rewrites_db, "basic", 0.1),
+    ]:
+        try:
+            db.register(name, optdb.query("+lower_xtensor"), tag, position=pos)
+        except ValueError as e:
+            if "already present" not in str(e):
+                raise
 
     # TODO: Better model of probability of bugs
     day_of_conception = datetime.date(2025, 6, 17)

@@ -11,11 +11,22 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from __future__ import annotations
+
 from collections.abc import Callable
 
 from pytensor.tensor import TensorVariable
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.type import XTensorSharedVariable, XTensorVariable, xtensor_shared
+from pytensor.xtensor.type import XTensorVariable
+
+try:
+    from pytensor.xtensor.type import (  # type: ignore[attr-defined]
+        XTensorSharedVariable,
+        xtensor_shared,
+    )
+except ImportError:
+    XTensorSharedVariable = None  # type: ignore[misc, assignment]
+    xtensor_shared = None  # type: ignore[assignment]
 
 from pymc.distributions.shape_utils import (
     Dims,
@@ -36,6 +47,11 @@ def Data(
     Dimensions are required if the input is not a scalar.
     These are always forwarded to the model object.
     """
+    if xtensor_shared is None:
+        raise ImportError(
+            "pymc.dims.Data requires pytensor >= 2.38 with XTensorSharedVariable support. "
+            "Please upgrade: conda install 'pytensor>=2.38.0,<2.39'"
+        )
     model = modelcontext(model)
     dims = convert_dims(dims)  # type: ignore[assignment]
     value = xtensor_shared(value, dims=dims, **kwargs, name=name)
