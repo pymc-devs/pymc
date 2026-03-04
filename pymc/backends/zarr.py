@@ -683,7 +683,8 @@ class ZarrTrace:
                 for i, shape_i in enumerate(shape):
                     dim = f"{name}_dim_{i}"
                     dims.append(dim)
-                    group_coords[dim] = np.arange(shape_i, dtype="int")
+                    size = shape_i if shape_i is not None else 0
+                    group_coords[dim] = np.arange(size, dtype="int")
             dims = ("chain", "draw", *dims)
             attrs = extra_var_attrs[name] if extra_var_attrs is not None else {}
             attrs.update({"_ARRAY_DIMENSIONS": dims})
