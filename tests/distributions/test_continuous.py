@@ -43,6 +43,7 @@ from pymc.testing import (
     Unit,
     assert_support_point_is_expected,
     check_icdf,
+    check_logccdf,
     check_logcdf,
     check_logp,
     check_selfconsistency_icdf,
@@ -529,6 +530,14 @@ class TestMatchesScipy:
             {"mu": R, "sigma": custom_rplusbig},
             lambda q, mu, sigma: floatX(st.lognorm.ppf(q, sigma, 0, np.exp(mu))),
             decimal=select_by_precision(float64=4, float32=3),
+        )
+
+    def test_lognormal_logccdf(self):
+        check_logccdf(
+            pm.LogNormal,
+            Rplus,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: st.lognorm.logsf(value, sigma, 0, np.exp(mu)),
         )
 
     def test_studentt_logp(self):
