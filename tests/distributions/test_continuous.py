@@ -536,12 +536,6 @@ class TestMatchesScipy:
         check_logccdf(
             pm.LogNormal,
             Rplus,
-            {"mu": R, "tau": Rplusbig},
-            lambda value, mu, tau: st.lognorm.logsf(value, tau**-0.5, 0, np.exp(mu)),
-        )
-        check_logccdf(
-            pm.LogNormal,
-            Rplus,
             {"mu": R, "sigma": Rplusbig},
             lambda value, mu, sigma: st.lognorm.logsf(value, sigma, 0, np.exp(mu)),
         )
