@@ -1721,6 +1721,45 @@ class TestModelDebug:
         )
         assert "value = 0.53 -> logp = -inf" in out
 
+    @pytest.mark.parametrize("fn", ("logp", "dlogp"))
+    def test_potential_no_crash(self, fn, capfd):
+        """debug() must not crash when the model contains a Potential (issue #6966).
+
+        Potentials are not random variables and have no associated value variable, so
+        the original code failed with ValueError when it tried to call self.logp() or
+        self.dlogp() with the replaced-potential expression.
+        """
+        with pm.Model() as m:
+            x = pm.Normal("x", mu=0, sigma=1)
+            pm.Potential("pot", -0.5 * x**2)
+        # Must not raise
+        m.debug(fn=fn)
+        out, _ = capfd.readouterr()
+        assert "No problems found" in out
+
+    @pytest.mark.parametrize("fn", ("logp", "dlogp"))
+    def test_potential_dynamic_shape_no_crash(self, fn, capfd):
+        """debug() must not crash for Potentials whose shape depends on observed data (issue #6966)."""
+        data = np.array([1.0, 2.0, 3.0])
+        with pm.Model() as m:
+            mu = pm.Normal("mu", mu=0, sigma=1)
+            # Potential whose shape is determined by the length of 'data' at runtime
+            pm.Potential("pot_yhat", pm.logp(pm.Normal.dist(mu=mu, sigma=1), data))
+        # Must not raise regardless of dynamic shape
+        m.debug(fn=fn)
+        out, _ = capfd.readouterr()
+        assert "No problems found" in out
+
+    def test_potential_non_finite_reported(self, capfd):
+        """debug() should report non-finite Potential values instead of crashing."""
+        with pm.Model() as m:
+            x = pm.Normal("x", mu=0, sigma=1)
+            pm.Potential("bad_pot", pt.log(x))  # -inf when x <= 0
+        # Evaluate at the default initial point (x=0), where log(0) = -inf
+        m.debug(point={"x": 0.0})
+        out, _ = capfd.readouterr()
+        assert "This combination seems able to generate non-finite values" in out
+
 
 def test_model_logp_fast_compile():
     # Issue #5618
