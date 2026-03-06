@@ -657,12 +657,12 @@ def test_invalid_jacobian_broadcast_raises():
 
     buggy_transform = BuggyTransform()
 
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+    import numpy as np
 
     for jacobian_val in (True, False):
-        with pytest.raises(
-            ValueError,
-            match="are not allowed to broadcast together. There is a bug in the implementation of either one",
-        ):
-            m.logp(jacobian=jacobian_val)
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+
+        logp_fn = m.compile_logp(jacobian=jacobian_val)
+        with pytest.raises(AssertionError, match="SpecifyShape"):
+            logp_fn({"x_buggy__": np.zeros((4, 3))})
