@@ -5,7 +5,7 @@ channels:
 - nodefaults
 dependencies:
 # Base dependencies
-- arviz>=0.13.0
+- arviz>=0.13.0,<1.0
 - cachetools>=4.2.1,<7
 - cloudpickle
 - numpy>=1.25.0
