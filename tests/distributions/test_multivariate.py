@@ -35,14 +35,13 @@ import pymc as pm
 
 from pymc import Model
 from pymc.distributions.multivariate import (
-    MultivariateIntervalTransform,
+    LKJCorr,
     _LKJCholeskyCov,
-    _LKJCorr,
     _OrderedMultinomial,
-    posdef,
     quaddist_matrix,
 )
 from pymc.distributions.shape_utils import change_dist_size, to_tuple
+from pymc.distributions.transforms import CholeskyCorrTransform
 from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.math import kronecker
@@ -60,7 +59,7 @@ from pymc.testing import (
     Vector,
     assert_support_point_is_expected,
     check_logp,
-    continuous_random_tester,
+    partially_deterministic_continuous_random_tester,
     seeded_numpy_distribution_builder,
     select_by_precision,
 )
@@ -559,12 +558,21 @@ class TestMatchesScipy:
                 lambda value, nu, V: st.wishart.logpdf(value, int(nu), V),
             )
 
-    @pytest.mark.parametrize("x,eta,n,lp", LKJ_CASES)
-    def test_lkjcorr(self, x, eta, n, lp):
+    @pytest.mark.parametrize("x_tri,eta,n,lp", LKJ_CASES)
+    def test_lkjcorr(self, x_tri, eta, n, lp):
         with pm.Model() as model:
-            pm.LKJCorr("lkj", eta=eta, n=n, default_transform=None, return_matrix=False)
+            pm.LKJCorr("lkj", eta=eta, n=n, transform=None)
 
-        point = {"lkj": x}
+        x = np.eye(n)
+        x[np.tril_indices(n, -1)] = x_tri
+        x[np.triu_indices(n, 1)] = x_tri
+
+        try:
+            x_chol = np.linalg.cholesky(x)
+        except np.linalg.LinAlgError:
+            x_chol = x  # Will lead to -inf logp
+
+        point = {"lkj": x_chol}
         decimals = select_by_precision(float64=6, float32=4)
         npt.assert_almost_equal(
             model.compile_logp()(point), lp, decimal=decimals, err_msg=str(point)
@@ -1308,17 +1316,17 @@ class TestMoments:
     @pytest.mark.parametrize(
         "n, eta, size, expected",
         [
-            (3, 1, None, np.zeros(3)),
-            (5, 1, None, np.zeros(10)),
-            pytest.param(3, 1, 1, np.zeros((1, 3))),
-            pytest.param(5, 1, (2, 3), np.zeros((2, 3, 10))),
+            (3, 1, None, np.eye(3)),
+            (5, 1, None, np.eye(5)),
+            (3, 1, (1,), np.broadcast_to(np.eye(3), (1, 3, 3))),
+            (5, 1, (2, 3), np.broadcast_to(np.eye(5), (2, 3, 5, 5))),
         ],
+        ids=["n=3", "n=5", "batch_1", "batch_2"],
     )
     def test_lkjcorr_support_point(self, n, eta, size, expected):
         with pm.Model() as model:
-            pm.LKJCorr("x", n=n, eta=eta, size=size, return_matrix=False)
-        # LKJCorr logp is only implemented for vector values (size=None)
-        assert_support_point_is_expected(model, expected, check_finite_logp=size is None)
+            pm.LKJCorr("x", n=n, eta=eta, size=size)
+        assert_support_point_is_expected(model, expected, check_finite_logp=True)
 
     @pytest.mark.parametrize(
         "n, eta, size, expected",
@@ -1462,17 +1470,21 @@ class TestMvNormalMisc:
         self,
     ):
         with pm.Model() as model:
-            corr = pm.LKJCorr("corr", n=3, eta=2, return_matrix=True)
-            pm.Deterministic("corr_mat", corr)
-            mv = pm.MvNormal("mv", 0.0, cov=corr, size=4)
+            chol_corr_mat = pm.LKJCorr("chol_corr_mat", n=3, eta=2)
+            corr_mat = pm.Deterministic("corr_mat", chol_corr_mat @ chol_corr_mat.mT)
+            mv = pm.MvNormal("mv", 0.0, chol=corr_mat, size=4)
             prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
-        assert (prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]] == 1.0).all()  # 1.0 on diagonal
         assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
-        assert (
-            prior["corr_mat"].max() <= 1.0 and prior["corr_mat"].min() >= -1.0
-        )  # constrained between -1 and 1
+
+        np.testing.assert_allclose(
+            prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]], 1.0
+        )  # 1.0 on diagonal
+
+        # constrained between -1 and 1
+        assert prior["corr_mat"].max() <= (1.0 + 1e-12)
+        assert prior["corr_mat"].min() >= (-1.0 - 1e-12)
 
     def test_issue_3758(self):
         np.random.seed(42)
@@ -2154,19 +2166,19 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 
 class TestLKJCorr(BaseTestDistributionRandom):
-    pymc_dist = _LKJCorr
+    pymc_dist = LKJCorr
     pymc_dist_params = {"n": 3, "eta": 1.0}
     expected_rv_op_params = {"n": 3, "eta": 1.0}
 
     sizes_to_check = [None, (), 1, (1,), 5, (4, 5), (2, 4, 2)]
     sizes_expected = [
-        (3,),
-        (3,),
-        (1, 3),
-        (1, 3),
-        (5, 3),
-        (4, 5, 3),
-        (2, 4, 2, 3),
+        (3, 3),
+        (3, 3),
+        (1, 3, 3),
+        (1, 3, 3),
+        (5, 3, 3),
+        (4, 5, 3, 3),
+        (2, 4, 2, 3, 3),
     ]
 
     checks_to_run = [
@@ -2177,42 +2189,66 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
     def check_draws_match_expected(self):
         def ref_rand(size, n, eta):
+            n = int(n.item())
+            size = np.atleast_1d(size)
+
             shape = int(n * (n - 1) // 2)
             beta = eta - 1 + n / 2
-            return (st.beta.rvs(size=(size, shape), a=beta, b=beta) - 0.5) * 2
+            tril_values = (st.beta.rvs(size=(*size, shape), a=beta, b=beta) - 0.5) * 2
 
-        # If passed as a domain, continuous_random_tester would make `n` a shared variable
-        # But this RV needs it to be constant in order to define the inner graph
-        for n in (2, 10, 50):
-            continuous_random_tester(
-                _LKJCorr,
-                {
-                    "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
-                },
-                extra_args={"n": n},
-                ref_rand=ft.partial(ref_rand, n=n),
-                size=1000,
-            )
+            L = np.zeros((*size, n, n))
+            idx = np.tril_indices(n, -1)
+            L[..., idx[0], idx[1]] = tril_values
+            corr = L + np.swapaxes(L, -1, -2) + np.eye(n)
+
+            return np.linalg.cholesky(corr)
+
+        # n can be symbolic, but only n=2 is tested because if n > 2, the ref_rand function is wrong.
+        # We don't have a good reference for sampling LKJ
+        partially_deterministic_continuous_random_tester(
+            LKJCorr,
+            {
+                "eta": Domain([1.0, 10.0, 100.0], edges=(None, None)),
+                "n": Domain([2], dtype="int64", edges=(None, None)),
+            },
+            ref_rand=ref_rand,
+            size=1000,
+        )
+
+    def test_n_2(self):
+        # Regression test for n=2, returning the wrong result
+        n = pytensor.shared(2, name="n")
+        eta = 1
+        res = pm.draw(pm.LKJCorr.dist(n=n, eta=eta), random_seed=1)
+        res_n_const = pm.draw(pm.LKJCorr.dist(n=2, eta=eta), random_seed=1)
+        np.testing.assert_allclose(res, res_n_const)
+
+        # Compute expected value from implementation.
+        # If implementation changes this will be obsolete.
+        beta0 = eta - 1.0 + n / 2.0
+        y0 = pt.random.beta(alpha=beta0, beta=beta0)
+        r12 = 2.0 * y0 - 1.0
+        P0 = pt.eye(n)[0, 1].set(r12)[1, 1].set(pt.sqrt(1.0 - r12**2)).mT
+        res_internal = pm.draw(P0, random_seed=1)
+        np.testing.assert_allclose(res, res_internal)
 
 
-@pytest.mark.parametrize(
-    argnames="shape",
-    argvalues=[
-        (2,),
-        pytest.param(
-            (3, 2),
-            marks=pytest.mark.xfail(
-                raises=NotImplementedError,
-                reason="LKJCorr logp is only implemented for vector values (ndim=1)",
-            ),
-        ),
-    ],
-)
-def test_LKJCorr_default_transform(shape):
+def test_LKJCorr_default_transform():
+    # Make n large -- regression test for https://github.com/pymc-devs/pymc/issues/7101
+    # The transformation was previously wrong and resulted in non-valid correlation matrices when n >> 1
+    n = 50
+
     with pm.Model() as m:
-        x = pm.LKJCorr("x", n=2, eta=1, shape=shape, return_matrix=False)
-    assert isinstance(m.rvs_to_transforms[x], MultivariateIntervalTransform)
-    assert m.logp(sum=False)[0].type.shape == shape[:-1]
+        x = pm.LKJCorr("x", n=n, eta=1, shape=(3, n, n))
+    assert isinstance(m.rvs_to_transforms[x], CholeskyCorrTransform)
+
+    x_logp = m.logp(sum=False)[0]
+    assert x_logp.type.shape == (3,)
+
+    rng = np.random.default_rng()
+    fn = pytensor.function([m.rvs_to_values[x]], x_logp)
+    x_val = rng.uniform(size=(3, n * (n - 1) // 2))
+    assert np.isfinite(fn(x_val)).all()
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
@@ -2236,11 +2272,6 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         "check_rv_size",
         "check_draws_match_expected",
     ]
-
-    def _instantiate_pymc_rv(self, dist_params=None):
-        # RNG cannot be passed through the PyMC class
-        params = dist_params if dist_params else self.pymc_dist_params
-        self.pymc_rv = self.pymc_dist.dist(**params, size=self.size)
 
     def check_rv_size(self):
         for size, expected in zip(self.sizes_to_check, self.sizes_expected):
@@ -2352,24 +2383,6 @@ def test_car_rng_fn(sparse):
         )
         f -= 1
     assert p > delta
-
-
-@pytest.mark.parametrize(
-    "matrix, result",
-    [
-        ([[1.0, 0], [0, 1]], True),
-        ([[1.0, 2], [2, 1]], False),
-        ([[1.0, 1], [1, 1]], False),
-        ([[1, 0.99, 1], [0.99, 1, 0.999], [1, 0.999, 1]], False),
-    ],
-)
-def test_posdef_symmetric(matrix, result):
-    """The test returns 0 if the matrix has 0 eigenvalue.
-
-    Is this correct?
-    """
-    data = np.array(matrix, dtype=pytensor.config.floatX)
-    assert posdef(data) == result
 
 
 def test_mvnormal_no_cholesky_in_model_logp():
