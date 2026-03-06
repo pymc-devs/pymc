@@ -578,6 +578,20 @@ def test_scan_transform():
     np.testing.assert_allclose(logp_fn(**test_point), ref_logp_fn(**test_point))
 
 
+def test_halfstudent_t_with_frozen_dims():
+    """Regression test: log_jac_det had mismatched broadcastable dims vs logp when
+    dims were frozen to a single-element coordinate, causing a ValueError.
+    """
+    from pymc.model.transform.optimization import freeze_dims_and_data
+
+    with pm.Model(coords={"x_dim": ["only_one"]}) as model:
+        pm.HalfStudentT("x", nu=7, sigma=1, dims="x_dim")
+
+    fmodel = freeze_dims_and_data(model)
+    [x_logp] = fmodel.logp(sum=False)
+    assert x_logp.type.shape == (1,)
+
+
 def test_weakref_leak():
     """Check that the rewrite does not have a growing memory footprint.
 
