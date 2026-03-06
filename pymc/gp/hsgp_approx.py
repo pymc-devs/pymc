@@ -692,7 +692,7 @@ class HSGPPeriodic(Base):
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
         J = pt.arange(0, self._m, 1)
         # rescale basis coefficients by the sqrt variance term
-        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
+        psd = pt.sqrt(self.scale * self.cov_func.power_spectral_density_approx(J))
         return (phi_cos, phi_sin), psd
 
     def prior(  # type: ignore[override]
@@ -746,7 +746,7 @@ class HSGPPeriodic(Base):
         m = self._m
         J = pt.arange(0, m, 1)
         # rescale basis coefficients by the sqrt variance term
-        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
+        psd = pt.sqrt(self.scale * self.cov_func.power_spectral_density_approx(J))
 
         phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi
