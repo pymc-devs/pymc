@@ -16,6 +16,7 @@ import warnings
 from collections.abc import Sequence
 
 import numpy as np
+import pytensor.tensor as pt
 
 from pytensor.graph import Apply, Op
 from pytensor.graph.features import AlreadyThere, Feature
@@ -113,10 +114,18 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
             )
         # Check there is no broadcasting between logp and jacobian
         if logp.type.broadcastable != log_jac_det.type.broadcastable:
-            raise ValueError(
-                f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
-                "There is a bug in the implementation of either one."
-            )
+            lb, jb = logp.type.broadcastable, log_jac_det.type.broadcastable
+            broadcastable_axes = [
+                i for i, (ai, bi) in enumerate(zip(lb, jb, strict=True)) if ai or bi
+            ]
+            try:
+                logp = pt.specify_broadcastable(logp, *broadcastable_axes)
+                log_jac_det = pt.specify_broadcastable(log_jac_det, *broadcastable_axes)
+            except ValueError as err:
+                raise ValueError(
+                    f"The logp of {rv_op} and log_jac_det of {transform} are not allowed to broadcast together. "
+                    "There is a bug in the implementation of either one."
+                ) from err
 
         if use_jacobian:
             if value.name:
