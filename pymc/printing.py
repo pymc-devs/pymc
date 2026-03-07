@@ -13,9 +13,12 @@
 #   limitations under the License.
 
 
+from __future__ import annotations
+
 import re
 
 from functools import partial
+from typing import TYPE_CHECKING
 
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Constant, Variable
@@ -26,7 +29,8 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.model import Model
+if TYPE_CHECKING:
+    from pymc.model import Model
 
 __all__ = [
     "str_for_dist",
@@ -298,6 +302,8 @@ def _default_repr_pretty(obj: Variable | Model, p, cycle):
 try:
     # register our custom pretty printer in ipython shells
     import IPython
+
+    from pymc.model.core import Model
 
     IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
     IPython.lib.pretty.for_type(Model, _default_repr_pretty)

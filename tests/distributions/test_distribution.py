@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import sys
 import warnings
 
 import numpy as np
@@ -322,9 +321,6 @@ class TestDiracDelta:
         ]
 
         @pytest.mark.parametrize("floatX", ["float32", "float64"])
-        @pytest.mark.xfail(
-            sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
-        )
         def test_dtype(self, floatX):
             with pytensor.config.change_flags(floatX=floatX):
                 assert pm.DiracDelta.dist(2**4).dtype == "int8"

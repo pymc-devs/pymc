@@ -203,12 +203,12 @@ class TestSizeShapeDimsObserved:
     def test_define_dims_on_the_fly_raises(self):
         # Check that trying to use dims that are not pre-specified fails, even if their
         # length could be inferred from the shape of the variables
-        msg = "Dimensions {'patient'} are unknown to the model"
+        msg = "Unknown dimension name 'patient'"
         with pm.Model() as pmodel:
-            with pytest.raises(KeyError, match=msg):
+            with pytest.raises(ValueError, match=msg):
                 pm.Normal("x", [0, 1, 2], dims=("patient",))
 
-            with pytest.raises(KeyError, match=msg):
+            with pytest.raises(ValueError, match=msg):
                 pm.Normal("x", observed=[0, 1, 2], dims=("patient",))
 
     def test_can_resize_data_defined_size(self):
