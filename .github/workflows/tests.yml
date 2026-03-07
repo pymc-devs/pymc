@@ -185,8 +185,9 @@ jobs:
     if: ${{ needs.changes.outputs.changes == 'true' }}
     strategy:
       matrix:
-        linker: [cvm, numba]
-        python-version: ["3.11"]
+        os: [windows-latest]
+        floatx: [float64]
+        python-version: ["3.12"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py
