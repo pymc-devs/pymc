@@ -965,3 +965,89 @@ class TestQuietMode:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert len(pymc_logs) > 0
+
+
+class TestEffectiveTune:
+    def test_get_effective_tune_explicit(self):
+        from pymc.sampling.mcmc import _get_effective_tune
+
+        with pm.Model():
+            x = pm.Normal("x")
+            step = pm.NUTS([x])
+            assert _get_effective_tune(step, 42) == 42
+            assert _get_effective_tune(step, 0) == 0
+
+    def test_get_effective_tune_nuts_default(self):
+        from pymc.sampling.mcmc import _get_effective_tune
+
+        with pm.Model():
+            x = pm.Normal("x")
+            step = pm.NUTS([x])
+            assert _get_effective_tune(step, None) == 1000
+
+    def test_get_effective_tune_gibbs_zero(self):
+        from pymc.sampling.mcmc import _get_effective_tune
+
+        with pm.Model():
+            y = pm.Categorical("y", p=[0.25, 0.25, 0.5])
+            step = pm.CategoricalGibbsMetropolis([y])
+            assert _get_effective_tune(step, None) == 0
+
+    def test_get_effective_tune_compound_takes_max(self):
+        from pymc.sampling.mcmc import _get_effective_tune
+
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Categorical("y", p=[0.25, 0.25, 0.5])
+            step = pm.CompoundStep([pm.NUTS([x]), pm.CategoricalGibbsMetropolis([y])])
+            assert _get_effective_tune(step, None) == 1000
+
+    def test_sample_tune_none_nuts_uses_1000(self):
+        with pm.Model():
+            pm.Normal("x")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                idata = pm.sample(
+                    draws=10,
+                    tune=None,
+                    chains=1,
+                    cores=1,
+                    discard_tuned_samples=False,
+                    progressbar=False,
+                    random_seed=42,
+                )
+        assert idata.warmup_posterior.sizes["draw"] == 1000
+
+    def test_sample_tune_none_categorical_gibbs_uses_zero(self):
+        with pm.Model():
+            y = pm.Categorical("y", p=[0.25, 0.25, 0.5])
+            step = pm.CategoricalGibbsMetropolis([y])
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                idata = pm.sample(
+                    draws=10,
+                    tune=None,
+                    step=step,
+                    chains=1,
+                    cores=1,
+                    discard_tuned_samples=False,
+                    progressbar=False,
+                    random_seed=42,
+                )
+        assert not hasattr(idata, "warmup_posterior")
+
+    def test_sample_explicit_tune_overrides(self):
+        with pm.Model():
+            pm.Normal("x")
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                idata = pm.sample(
+                    draws=10,
+                    tune=50,
+                    chains=1,
+                    cores=1,
+                    discard_tuned_samples=False,
+                    progressbar=False,
+                    random_seed=42,
+                )
+        assert idata.warmup_posterior.sizes["draw"] == 50
