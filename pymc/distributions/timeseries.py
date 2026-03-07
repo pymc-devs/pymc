@@ -122,9 +122,47 @@ class RandomWalkRV(SymbolicRandomVariable):
 
 
 class RandomWalk(Distribution):
-    r"""RandomWalk Distribution.
+    r"""
+    Generative Random Walk distribution.
 
-    TODO: Expand docstrings
+    .. math::
+
+       x_t = x_{t-1} + \epsilon_t
+
+    Parameters
+    ----------
+    init_dist : unnamed_distribution
+        Unnamed univariate or multivariate distribution for the initial value (x_0).
+        Unnamed refers to distributions created with the ``.dist()`` API.
+
+        .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
+
+    innovation_dist : unnamed_distribution
+        Unnamed univariate or multivariate distribution for the innovations (\epsilon_t).
+        Must be created using the ``.dist()`` API.
+
+        .. warning:: innovation_dist will be cloned, rendering it independent of the one passed as input.
+
+    steps : int, optional
+        Number of steps in the random walk (steps > 0). Only needed if shape is not provided.
+
+    Notes
+    -----
+    The init and innovation distributions will be cloned, rendering them distinct from the ones passed as
+    input. Both distributions must have the same support dimensionality and be completely
+    independent.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+
+        # Create a Random Walk with Normal innovations
+        with pm.Model() as model:
+            init = pm.Normal.dist(mu=0, sigma=1)
+            innov = pm.Normal.dist(mu=0, sigma=1.0)
+            rw = pm.RandomWalk("rw", init_dist=init, innovation_dist=innov, steps=100)
     """
 
     rv_type = RandomWalkRV
