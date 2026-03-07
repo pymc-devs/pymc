@@ -230,7 +230,7 @@ class TestNested:
             b = pm.Normal("var")
             trace = pm.sample(100, tune=0)
         trace.to_netcdf(tmp_path / "trace.nc")
-        trace1 = az.convert_to_datatree(str(tmp_path / "trace.nc"))
+        trace1 = az.from_netcdf(str(tmp_path / "trace.nc"))
         assert "scope::var" in trace1.posterior
 
     def test_bad_name(self):

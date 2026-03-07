@@ -14,7 +14,6 @@
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any
 
-import arviz as az
 import numpy as np
 import xarray as xr
 
@@ -864,7 +863,5 @@ class ZarrTrace:
             data = xr.open_zarr(store, group=name, mask_and_scale=False)
             attrs = {**data.attrs, **global_attrs}
             data.attrs = make_attrs(attrs=attrs, inference_library=pymc)
-            groups[name] = data.load() if eager else data
-        return az.from_dict(
-            groups, save_warmup=save_warmup, coords=self.coords, dims=self.vars_to_dims
-        )
+            groups[f"/{name}"] = data.load() if eager else data
+        return DataTree.from_dict(groups)

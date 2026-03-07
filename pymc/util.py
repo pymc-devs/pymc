@@ -249,7 +249,7 @@ def drop_warning_stat(dt: xarray.DataTree) -> xarray.DataTree:
     tree_dict = {}
 
     for gname, group in dt.items():
-        ds = group.ds if hasattr(group, "ds") else group
+        ds = group.dataset if isinstance(group, xarray.DataTree) else group
 
         if "sample_stat" in gname and ds is not None:
             warning_vars = [

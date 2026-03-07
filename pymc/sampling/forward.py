@@ -568,8 +568,10 @@ def sample_posterior_predictive(
     return_inferencedata : bool, default True
         Whether to return an :class:`xarray:xarray.DataTree` (True) object or a dictionary (False).
     extend_inferencedata : bool, default False
-        Whether to automatically use :meth:`xarray.DataTree.extend` to add the posterior predictive samples to
-        `trace` or not. If True, `trace` is modified inplace but still returned.
+        Whether to automatically use :meth:`xarray.DataTree.update` to add the posterior predictive samples to
+        `trace` or not. If True, `trace` is modified inplace but still returned. If the DataTree
+        already contains a group that would be added (e.g. ``posterior_predictive``), a warning
+        is issued and the existing group is overwritten.
     predictions : bool, default False
         Flag used to set the location of posterior predictive samples within the returned ``xarray.DataTree`` object.
         If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks,
@@ -793,7 +795,7 @@ def sample_posterior_predictive(
 
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
-            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+            idata.update(pm.sample_posterior_predictive(thinned_idata))
 
 
     Generate 5 posterior predictive samples for every posterior sample.
@@ -978,6 +980,15 @@ def sample_posterior_predictive(
     idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
     if extend_inferencedata and idata is not None:
+        existing_groups = set(idata.children) & set(idata_pp.children)
+        conflicting = existing_groups - {"observed_data", "constant_data"}
+        if conflicting:
+            warnings.warn(
+                f"groups {conflicting} already exist in the DataTree and will be overwritten. "
+                "To avoid this, set extend_inferencedata=False.",
+                UserWarning,
+                stacklevel=2,
+            )
         idata.update(idata_pp)
         return idata
     return idata_pp

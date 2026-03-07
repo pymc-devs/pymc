@@ -303,21 +303,18 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
     # Assert to inference data returns the expected groups
     idata = trace.to_inferencedata(save_warmup=True)
     expected_groups = {
-        "/",
-        "/posterior",
-        "/constant_data",
-        "/observed_data",
-        "/sample_stats",
-        "/warmup_posterior",
-        "/warmup_sample_stats",
+        "posterior",
+        "constant_data",
+        "observed_data",
+        "sample_stats",
+        "warmup_posterior",
+        "warmup_sample_stats",
     }
     if include_transformed:
-        expected_groups.add("/unconstrained_posterior")
-        expected_groups.add("/warmup_unconstrained_posterior")
-    assert set(idata.groups) == expected_groups
-    for group in idata.groups:
-        if group == "/":
-            continue
+        expected_groups.add("unconstrained_posterior")
+        expected_groups.add("warmup_unconstrained_posterior")
+    assert set(idata.children) == expected_groups
+    for group in idata.children:
         for name, value in itertools.chain(
             idata[group].data_vars.items(), idata[group].coords.items()
         ):
