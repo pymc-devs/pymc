@@ -28,7 +28,7 @@ from typing import (
 import numpy as np
 import xarray
 
-from arviz import dict_to_dataset, from_dict, rcParams
+from arviz import dict_to_dataset, rcParams
 from arviz_base.base import requires
 from arviz_base.types import CoordSpec, DimSpec
 from pytensor.graph import ancestors
@@ -63,6 +63,7 @@ def dict_to_dataset_drop_incompatible_coords(
     vars_dict, *args, dims, coords, sample_dims=None, **kwargs
 ):
     safe_coords = coords
+    dropped_coords = {}
 
     if not RAISE_ON_INCOMPATIBLE_COORD_LENGTHS:
         coords_lengths = {k: len(v) for k, v in coords.items()}
@@ -81,13 +82,22 @@ def dict_to_dataset_drop_incompatible_coords(
                     )
                     if safe_coords is coords:
                         safe_coords = coords.copy()
-                    safe_coords.pop(dim)
+                    dropped_coords[dim] = safe_coords.pop(dim)
                     coords_lengths.pop(dim)
 
-    # FIXME: Would be better to drop coordinates altogether, but arviz defaults to `np.arange(var_length)`
-    return dict_to_dataset(
+    ds = dict_to_dataset(
         vars_dict, *args, dims=dims, coords=safe_coords, sample_dims=sample_dims, **kwargs
     )
+    # After alignment, shorter variables are padded with NaN so the final dim
+    # length may match the original coord length. Re-assign those coords.
+    reassign = {
+        dim: coord_vals
+        for dim, coord_vals in dropped_coords.items()
+        if dim in ds.dims and ds.sizes[dim] == len(coord_vals)
+    }
+    if reassign:
+        ds = ds.assign_coords(reassign)
+    return ds
 
 
 def find_observations(model: "Model") -> dict[str, Var]:
@@ -490,13 +500,9 @@ class DataTreeConverter:
         else:
             id_dict["constant_data"] = self.constant_data_to_xarray()
         id_dict = {k: v for k, v in id_dict.items() if v is not None}
-        idata = from_dict(
-            id_dict,
-            save_warmup=self.save_warmup,
-            coords=self.coords,
-            dims=self.dims,
-            sample_dims=self.sample_dims,
-        )
+        if not self.save_warmup:
+            id_dict = {k: v for k, v in id_dict.items() if not k.startswith("warmup_")}
+        idata = DataTree.from_dict({f"/{k}": v for k, v in id_dict.items()})
         if self.log_likelihood:
             from pymc.stats.log_density import compute_log_likelihood
 
@@ -664,6 +670,14 @@ def predictions_to_inference_data(
     if idata_orig is None:
         return new_idata
     elif inplace:
+        existing_groups = set(idata_orig.children) & set(new_idata.children)
+        conflicting = existing_groups - {"observed_data", "constant_data"}
+        if conflicting:
+            warnings.warn(
+                f"groups {conflicting} already exist in the DataTree and will be overwritten.",
+                UserWarning,
+                stacklevel=2,
+            )
         idata_orig.update(new_idata)
         return idata_orig
     else:

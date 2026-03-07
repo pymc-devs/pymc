@@ -812,6 +812,16 @@ class TestSamplePPC:
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
 
+        # extending again should warn about overwriting posterior_predictive
+        with model:
+            with pytest.warns(
+                UserWarning, match="already exist in the DataTree and will be overwritten"
+            ):
+                pm.sample_posterior_predictive(idata, extend_inferencedata=True)
+        test_dict = {"posterior_predictive": ["a"], "~predictions": [], **base_test_dict}
+        fails = check_multiple_attrs(test_dict, idata)
+        assert not fails
+
         # extending idata with out-of-sample ppc
         with model:
             pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
@@ -819,6 +829,13 @@ class TestSamplePPC:
         test_dict = {"posterior_predictive": ["a"], "predictions": ["a"], **base_test_dict}
         fails = check_multiple_attrs(test_dict, idata)
         assert not fails
+
+        # extending again with predictions should warn about overwriting predictions
+        with model:
+            with pytest.warns(
+                UserWarning, match="already exist in the DataTree and will be overwritten"
+            ):
+                pm.sample_posterior_predictive(idata, extend_inferencedata=True, predictions=True)
 
     @pytest.mark.parametrize("multitrace", [False, True])
     def test_deterministics_out_of_idata(self, multitrace):
