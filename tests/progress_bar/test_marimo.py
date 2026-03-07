@@ -107,3 +107,24 @@ class TestMarimoProgressBackend:
             html = backend._render_html()
 
             assert "0.25" in html or "Step" in html
+
+    def test_render_html_remaining(self, step_method):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
+            manager = MCMCProgressBarManager(
+                step_method=step_method,
+                chains=1,
+                draws=100,
+                tune=50,
+                progressbar=True,
+            )
+            backend = manager._backend
+
+            backend._initialize_tasks()
+
+            backend._task_state = [{"completed": 50, "total": 100, "failing": False, "stats": {}}]
+            backend._start_times = [backend._start_times[0] - 10]
+
+            html = backend._render_html()
+
+            assert "Remaining" in html
+            assert "--:--" not in html
