@@ -689,6 +689,7 @@ class ZarrTrace:
                 for i, shape_i in enumerate(shape):
                     dim = f"{name}_dim_{i}"
                     dims.append(dim)
+                    assert shape_i is not None, f"{dim} shape is None"
                     group_coords[dim] = np.arange(shape_i, dtype="int")
             dims = ("chain", "draw", *dims)
             attrs = extra_var_attrs[name] if extra_var_attrs is not None else {}
