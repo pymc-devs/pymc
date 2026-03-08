@@ -749,9 +749,9 @@ class TestPyMCWarmupHandling:
         post_prefix = "" if draws > 0 else "~"
         test_dict = {
             f"{post_prefix}posterior": ["u1", "n1"],
-            f"{post_prefix}sample_stats": ["~tune", "accept"],
+            f"{post_prefix}sample_stats": ["~in_warmup", "accept"],
             f"{warmup_prefix}warmup_posterior": ["u1", "n1"],
-            f"{warmup_prefix}warmup_sample_stats": ["~tune"],
+            f"{warmup_prefix}warmup_sample_stats": ["~in_warmup"],
             "~warmup_log_likelihood": [],
             "~log_likelihood": [],
         }
@@ -786,9 +786,9 @@ class TestPyMCWarmupHandling:
             idata = to_inference_data(trace, save_warmup=True)
             test_dict = {
                 "posterior": ["u1", "n1"],
-                "sample_stats": ["~tune", "accept"],
+                "sample_stats": ["~in_warmup", "accept"],
                 "warmup_posterior": ["u1", "n1"],
-                "warmup_sample_stats": ["~tune", "accept"],
+                "warmup_sample_stats": ["~in_warmup", "accept"],
             }
             fails = check_multiple_attrs(test_dict, idata)
             assert not fails
@@ -800,7 +800,7 @@ class TestPyMCWarmupHandling:
                 idata = to_inference_data(trace[-30:], save_warmup=True)
             test_dict = {
                 "posterior": ["u1", "n1"],
-                "sample_stats": ["~tune", "accept"],
+                "sample_stats": ["~in_warmup", "accept"],
                 "~warmup_posterior": [],
                 "~warmup_sample_stats": [],
             }
