@@ -43,7 +43,7 @@ class TestInitTrace:
             B = pm.Uniform("B")
             strace = pm.backends.ndarray.NDArray(vars=[A, B])
             strace.setup(10, 0)
-            strace.record({"A": 2, "B_interval__": 0.1})
+            strace.record({"A": 2, "B_interval__": 0.1}, in_warmup=False)
             assert len(strace) == 1
             with pytest.raises(ValueError, match="Continuation of traces"):
                 _init_trace(
