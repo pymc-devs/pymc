@@ -993,7 +993,7 @@ class DEMetropolis(PopulationArrayStepShared):
         self.steps_until_tune -= 1
 
         stats = {
-            "scaling": self.scaling,
+            "scaling": np.mean(self.scaling),
             "lambda": self.lamb,
             "accept": np.exp(accept),
             "accepted": accepted,
