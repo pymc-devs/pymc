@@ -60,6 +60,7 @@ jobs:
             tests/test_util.py
             tests/test_pytensorf.py
             tests/test_math.py
+            tests/test_blocking.py
             tests/backends/test_base.py
             tests/backends/test_ndarray.py
             tests/step_methods/hmc/test_hmc.py
