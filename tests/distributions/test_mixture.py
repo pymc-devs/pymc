@@ -1441,9 +1441,11 @@ class TestZeroInflatedMixture:
             ZeroInflatedNegativeBinomial,
             Nat,
             {"psi": Unit, "p": Unit, "n": NatSmall},
-            lambda value, psi, p, n: np.log((1 - psi) * st.nbinom.pmf(0, n, p))
-            if value == 0
-            else np.log(psi * st.nbinom.pmf(value, n, p)),
+            lambda value, psi, p, n: (
+                np.log((1 - psi) * st.nbinom.pmf(0, n, p))
+                if value == 0
+                else np.log(psi * st.nbinom.pmf(value, n, p))
+            ),
         )
 
         check_logcdf(
