@@ -2,7 +2,7 @@
 Distribution Transforms
 ***********************
 
-.. currentmodule:: pymc.dims.transforms
+.. currentmodule:: pymc.dims.distributions.transforms
 .. autosummary::
    :toctree: generated/
 

@@ -296,6 +296,8 @@ pygments_style = "friendly"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
+suppress_warnings = ["toc.not_included"]
+
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
     "arviz": ("https://python.arviz.org/en/latest/", None),

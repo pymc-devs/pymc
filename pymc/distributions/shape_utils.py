@@ -251,7 +251,7 @@ def change_dist_size(
         The new size of the distribution.
     expand: bool, optional
         If True, `new_size` is prepended to the existing distribution `size`, so that
-        the final size is equal to (*new_size, *dist.size). Defaults to false.
+        the final size is equal to ``(*new_size, *dist.size)``. Defaults to false.
 
     Returns
     -------

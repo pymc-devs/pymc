@@ -505,7 +505,7 @@ class AR(Distribution):
         Whether the first element of rho should be used as a constant term in the AR
         process.
     init_dist : unnamed_distribution, optional
-        Scalar or vector distribution for initial values. Distributions should have shape (*shape[:-1], ar_order).
+        Scalar or vector distribution for initial values. Distributions should have shape ``(*shape[:-1], ar_order)``.
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -912,7 +912,7 @@ class EulerMaruyama(Distribution):
     sde_pars : tuple
         parameters of the SDE, passed as ``*args`` to ``sde_fn``
     init_dist : unnamed_distribution, optional
-        Scalar distribution for initial values. Distributions should have shape (*shape[:-1]).
+        Scalar distribution for initial values. Distributions should have shape ``(*shape[:-1])``.
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.

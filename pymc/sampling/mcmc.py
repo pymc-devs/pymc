@@ -571,18 +571,19 @@ def sample(
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
-    progressbar: bool or ProgressType, optional
-            How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
-            for one of the following:
-            - "combined": A single progress bar that displays the total progress across all chains. Only timing
-                information is shown.
-            - "split": A separate progress bar for each chain. Only timing information is shown.
-            - "combined+stats" or "stats+combined": A single progress bar displaying the total progress across all
-                chains. Aggregate sample statistics are also displayed.
-            - "split+stats" or "stats+split": A separate progress bar for each chain. Sample statistics for each chain
-                are also displayed.
+    progressbar : bool or ProgressType, optional
+        How and whether to display the progress bar. If False, no progress bar is displayed. Otherwise, you can ask
+        for one of the following:
 
-            If True, the default is "split+stats" is used.
+        - ``"combined"``: A single progress bar that displays the total progress across all chains. Only timing
+          information is shown.
+        - ``"split"``: A separate progress bar for each chain. Only timing information is shown.
+        - ``"combined+stats"`` or ``"stats+combined"``: A single progress bar displaying the total progress across all
+          chains. Aggregate sample statistics are also displayed.
+        - ``"split+stats"`` or ``"stats+split"``: A separate progress bar for each chain. Sample statistics for each chain
+          are also displayed.
+
+        If True, the default ``"split+stats"`` is used.
     quiet : bool, default False
         If True, suppress all logging output and progress bars during sampling.
         This is useful when sampling in loops or when no output is desired.

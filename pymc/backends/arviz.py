@@ -509,7 +509,7 @@ def to_inference_data(
     All three of them are optional arguments, but at least one of ``trace``,
     ``prior`` and ``posterior_predictive`` must be present.
     For a usage example read the
-    :ref:`Creating InferenceData section on from_pymc <creating_InferenceData>`
+    `InferenceData schema specification <https://python.arviz.org/en/latest/schema/schema.html>`_
 
     Parameters
     ----------
