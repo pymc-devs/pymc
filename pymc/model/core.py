@@ -608,11 +608,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.logp` :
+        :py:meth:`logp` :
             log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.compile_dlogp` :
+        :py:meth:`compile_dlogp` :
             gradient of log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.compile_d2logp` :
+        :py:meth:`compile_d2logp` :
             Hessian of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
@@ -650,11 +650,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.dlogp` :
+        :py:meth:`dlogp` :
             gradient of log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.compile_logp` :
+        :py:meth:`compile_logp` :
             log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.compile_d2logp` :
+        :py:meth:`compile_d2logp` :
             Hessian of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
@@ -695,11 +695,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.d2logp` :
+        :py:meth:`d2logp` :
             Hessian of log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.compile_logp` :
+        :py:meth:`compile_logp` :
             log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.compile_dlogp` :
+        :py:meth:`compile_dlogp` :
             gradient of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
@@ -736,24 +736,24 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.compile_logp` :
+        :py:meth:`compile_logp` :
             log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.dlogp` :
+        :py:meth:`dlogp` :
             gradient of log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.d2logp` :
+        :py:meth:`d2logp` :
             Hessian of log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.logp_dlogp_function` :
+        :py:meth:`logp_dlogp_function` :
             compile logp and its gradient as a single function.
-        :py:attr:`~pymc.model.core.Model.varlogp` :
+        :py:attr:`varlogp` :
             convenience property for logp of all free (unobserved) RVs.
-        :py:attr:`~pymc.model.core.Model.varlogp_nojac` :
+        :py:attr:`varlogp_nojac` :
             convenience property for logp of all free (unobserved) RVs without transformation
             corrections.
-        :py:attr:`~pymc.model.core.Model.observedlogp` :
+        :py:attr:`observedlogp` :
             convenience property for logp of all observed RVs.
-        :py:attr:`~pymc.model.core.Model.potentiallogp`.
+        :py:attr:`potentiallogp`.
             convenience property for all additional logp terms (potentials).
-        :py:attr:`~pymc.model.core.Model.point_logps` :
+        :py:attr:`point_logps` :
             convenience property for numerical evaluation of local logps at a point.
         """
         varlist: list[TensorVariable]
@@ -837,11 +837,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.compile_dlogp` :
+        :py:meth:`compile_dlogp` :
             gradient of log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.logp` :
+        :py:meth:`logp` :
             log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.d2logp` :
+        :py:meth:`d2logp` :
             Hessian of log-probability density as a Variable (in a symbolic form).
         """
         if vars is None:
@@ -890,11 +890,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         See Also
         --------
-        :py:meth:`~pymc.model.core.Model.compile_d2logp` :
+        :py:meth:`compile_d2logp` :
             Hessian of log-probability density as a compiled function.
-        :py:meth:`~pymc.model.core.Model.logp` :
+        :py:meth:`logp` :
             log-probability density as a Variable (in a symbolic form).
-        :py:meth:`~pymc.model.core.Model.dlogp` :
+        :py:meth:`dlogp` :
             gradient of log-probability density as a Variable (in a symbolic form).
         """
         if vars is None:
