@@ -70,10 +70,10 @@ This guide does not teach nor cover MyST extensively, only gives some opinionate
   ```
   Example source:
   ```
-  {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+  {ref}`how to use InferenceData <arviz:schema>`
   ```
 
-  Rendered example: {ref}`how to use InferenceData <arviz:working_with_InferenceData>`
+  Rendered example: {ref}`how to use InferenceData <arviz:schema>`
 
   where `key` in the pattern (`arviz` in the example) is one of the keys defined in
   the `intersphinx_mapping` variable of `conf.py` such as `arviz`, `numpy`, `mpl`...

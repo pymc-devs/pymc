@@ -622,6 +622,7 @@ class RatQuad(Stationary):
            S(\boldsymbol\omega) = \frac{2 (2\pi\alpha)^{D/2} \prod_{i=1}^D \ell_i}{\Gamma(\alpha)}
                                   \left(\frac{z}{2}\right)^{\nu}
                                   K_{\nu}(z)
+
         where :math:`z = \sqrt{2\alpha} \sqrt{\sum \ell_i^2 \omega_i^2}` and :math:`\nu = \alpha - D/2`.
 
         Derivation

@@ -2723,7 +2723,7 @@ class ZeroSumNormal(Distribution):
 
     Warnings
     --------
-    Currently, ``sigma``cannot have length > 1 across the zero-sum axes to ensure the zero-sum constraint.
+    Currently, ``sigma`` cannot have length > 1 across the zero-sum axes to ensure the zero-sum constraint.
 
     ``n_zerosum_axes`` has to be > 0. If you want the behavior of ``n_zerosum_axes = 0``,
     just use ``pm.Normal``.

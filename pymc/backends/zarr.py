@@ -277,18 +277,18 @@ class ZarrTrace:
     """Object that stores and enables access to MCMC draws stored in a :class:`zarr.hierarchy.Group` objects.
 
     This class creats a zarr hierarchy to represent the sampling information which is
-    intended to mimic :class:`arviz.InferenceData`. The hierarchy looks like this:
+    intended to mimic :class:`arviz.InferenceData`. The hierarchy looks like this::
 
-    | root
-    | |--> constant_data
-    | |--> observed_data
-    | |--> posterior
-    | |--> unconstrained_posterior
-    | |--> sample_stats
-    | |--> warmup_posterior
-    | |--> warmup_unconstrained_posterior
-    | |--> warmup_sample_stats
-    | |--> _sampling_state
+        root
+        |--> constant_data
+        |--> observed_data
+        |--> posterior
+        |--> unconstrained_posterior
+        |--> sample_stats
+        |--> warmup_posterior
+        |--> warmup_unconstrained_posterior
+        |--> warmup_sample_stats
+        |--> _sampling_state
 
     The root group is created when the ``ZarrTrace`` object is initialized. The rest of
     the groups are created once :meth:`~ZarrChain.init_trace` is called with a few exceptions:
@@ -561,7 +561,7 @@ class ZarrTrace:
 
         This method takes the entries in the arrays in the posterior, sample_stats
         and unconstrained_posterior that happened in the tuning phase and moves them
-        into the warmup_ groups. If the ``warmup_posterior`` group already exists, then
+        into the ``warmup_`` groups. If the ``warmup_posterior`` group already exists, then
         nothing is done.
 
         See Also

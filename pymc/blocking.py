@@ -58,7 +58,7 @@ class Compose(Generic[T]):
 
 
 class DictToArrayBijection:
-    """Map between a `dict`s of variables to an array space.
+    """Map between `dict` s of variables to an array space.
 
     Said array space consists of all the vars raveled and then concatenated.
 

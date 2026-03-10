@@ -14,7 +14,7 @@ A more accessible, user facing deep introduction can be found in [Peadar Coyle's
 Probability distributions in PyMC are implemented as classes that inherit from {class}`~pymc.Continuous` or {class}`~pymc.Discrete`.
 Either of these inherit {class}`~pymc.Distribution` which defines the high level API.
 
-For a detailed introduction on how a new distribution should be implemented check out the {ref}`guide on implementing distributions <implementing_distribution>`.
+For a detailed introduction on how a new distribution should be implemented check out the {ref}`guide on implementing distributions <implementing-a-distribution>`.
 
 
 ## Reflection
@@ -548,7 +548,7 @@ For example, see the [MH sampler](https://github.com/pymc-devs/pymc/blob/89f6fcf
 This is of course very different compared to the transition kernel in e.g. TFP, which is a tenor in tensor out function.
 Moreover, transition kernels in TFP do not flatten the tensors, see eg docstring of [tensorflow\_probability/python/mcmc/random\_walk\_metropolis.py](https://github.com/tensorflow/probability/blob/main/tensorflow_probability/python/mcmc/random_walk_metropolis.py):
 
-```python
+```text
         new_state_fn: Python callable which takes a list of state parts and a
         seed; returns a same-type `list` of `Tensor`s, each being a perturbation
         of the input state parts. The perturbation distribution is assumed to be

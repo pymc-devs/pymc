@@ -1,3 +1,5 @@
+:orphan:
+
 TODO: incorporate the useful bits of this page into the learning section
 
 **************
@@ -61,8 +63,7 @@ This example will generate 1000 posterior samples on each of two cores using the
 
 The sample is returned as arrays inside a ``MultiTrace`` object, which is then passed to the plotting function. The resulting graph shows a forest plot of the random variables in the model, along with a convergence diagnostic (R-hat) that indicates our model has converged.
 
-.. image:: ./images/forestplot.png
-   :width: 1000px
+*(forestplot image removed — original file no longer available)*
 
 See also
 ========
