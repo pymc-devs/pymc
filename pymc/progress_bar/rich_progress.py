@@ -290,9 +290,9 @@ class RichProgressBackend:
         action = self.step_name.lower()
         speed = completed / max(elapsed, 1e-6)
         if speed > 1 or speed == 0:
-            unit = f"{action}/s"
+            unit = f"{action}s/s"
         else:
-            unit = f"s/{action.rstrip('s')}"
+            unit = f"s/{action}"
             speed = 1 / speed
 
         self._progress.update(
