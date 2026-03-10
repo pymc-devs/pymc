@@ -206,6 +206,22 @@ class TestRVsAssignmentNUTS(RVsAssignmentStepsTester):
         self.continuous_steps(step, step_kwargs)
 
 
+def test_nuts_target_accept_out_of_range():
+    with pm.Model():
+        pm.Normal("x")
+        for bad_value in [0, 1, 1.5, -0.1]:
+            with pytest.raises(ValueError, match="target_accept must be a float in"):
+                pm.NUTS(target_accept=bad_value)
+
+
+def test_nuts_target_accept_out_of_range_via_sample():
+    with pm.Model():
+        pm.Normal("x")
+        for bad_value in [0, 1, 1.5, -0.1]:
+            with pytest.raises(ValueError, match="target_accept must be a float in"):
+                pm.sample(draws=1, tune=1, target_accept=bad_value, progressbar=False)
+
+
 def test_nuts_step_legacy_value_grad_function():
     # This test can be removed once ravel_inputs=False is deprecated
     with pm.Model() as m:

@@ -342,6 +342,9 @@ def _sample_external_nuts(
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
 
+    if not 0 < target_accept < 1:
+        raise ValueError(f"target_accept must be a float in (0, 1), got {target_accept!r}.")
+
     if sampler == "nutpie":
         try:
             import nutpie
