@@ -87,10 +87,10 @@ class Censored(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower : float or None
-        Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper : float or None
-        Upper (right) censoring point. If `None`, the distribution will not be right censored.
+    lower : float, int, array_like, TensorVariable or None
+        Lower (left) censoring point. It can be a scalar or a broadcastable array/tensor. If 'lower' is 'None' the distribution will not be left censored. To disable left censoring in an array, set the element to '-np.inf'.
+    upper : float, int, array_like, TensorVariable or None
+        Upper (right) censoring point. It can be a scalar or a broadcastable array/tensor. If 'upper' is 'None', the distribution will not be right censored. To disable right censoring in an array, set the element to 'np.inf'.
 
     Warnings
     --------
@@ -109,6 +109,12 @@ class Censored(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
+
+    .. code-block:: python
+
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=[0.0, 0.0], sigma=[1.0, 1.0])
+            censored_normal = pm.Censored("censored_normal", normal_dist, lower=[-1.0, 0.0], upper=[1.0, np.inf])
     """
 
     rv_type = CensoredRV
