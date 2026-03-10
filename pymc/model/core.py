@@ -582,8 +582,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         sum: bool = True,
         **compile_kwargs,
     ) -> PointFunc:
-        """Compiled joint log-probability density of the model or compiled joint log-probability
-        contributions.
+        """Compiled joint log-probability density of the model or joint log-probability contributions.
 
         Parameters
         ----------
