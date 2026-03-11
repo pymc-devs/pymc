@@ -1809,3 +1809,19 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+
+def test_model_debug_scalar_resolution_logp(capsys):
+    with pm.Model() as model:
+        pm.Normal("x", 0, 1)
+        model.debug(fn="logp")
+
+    catch = capsys.readouterr()
+    assert "x" in catch.out
+
+    with pm.Model() as model:
+        pm.Normal("x", 0, -1)
+        model.debug(fn="logp")
+
+    catch = capsys.readouterr()
+    assert "sigma" in catch.out.lower()
