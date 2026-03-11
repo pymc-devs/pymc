@@ -186,12 +186,14 @@ class RichProgressBackend:
         progress_columns: list,
         theme: Theme,
     ) -> CustomProgress:
-        columns: list[ProgressColumn] = [
-            TextColumn(
-                "{" + f"task.fields[{self.step_name.lower()}]" + "}",
-                table_column=Column(self.step_name.title(), ratio=1),
+        columns: list[ProgressColumn] = []
+        if self.step_name.lower() in self.progress_stats:
+            columns.append(
+                TextColumn(
+                    "{" + f"task.fields[{self.step_name.lower()}]" + "}",
+                    table_column=Column(self.step_name.title(), ratio=1),
+                )
             )
-        ]
 
         if self.full_stats:
             columns += progress_columns
