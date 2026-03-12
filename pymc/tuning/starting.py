@@ -69,8 +69,8 @@ def find_MAP(
     Parameters
     ----------
     start: `dict` of parameter values (Defaults to `model.initial_point`)
-        These values will be fixed and used for any free RandomVariables that are
-        not being optimized.
+        Starting point for the maximization.
+        Any free RandomVariables that are not being optimized, will be fixed to the start values.
     vars: list of TensorVariable
         List of free RandomVariables to optimize the posterior with respect to.
         Defaults to all continuous RVs in a model. The respective value variables
