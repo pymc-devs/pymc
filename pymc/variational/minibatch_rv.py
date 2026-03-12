@@ -19,6 +19,7 @@ import pytensor.tensor as pt
 from pytensor import Variable, config
 from pytensor.graph import Apply, Op
 from pytensor.tensor import NoneConst, TensorVariable, as_tensor_variable
+from pytensor.tensor.type_other import NoneTypeT
 
 from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.basic import logp
@@ -33,7 +34,9 @@ class MinibatchRandomVariable(MeasurableOp, Op):
     def make_node(self, rv, *total_size):
         rv = as_tensor_variable(rv)
         total_size = [
-            as_tensor_variable(t, dtype="int64", ndim=0) if t is not None else NoneConst
+            t
+            if isinstance(t, Variable)
+            else (NoneConst if t is None else as_tensor_variable(t, dtype="int64", ndim=0))
             for t in total_size
         ]
         assert len(total_size) == rv.ndim
@@ -55,45 +58,67 @@ EllipsisType = Any  # EllipsisType is not present in Python 3.8 yet
 
 def create_minibatch_rv(
     rv: TensorVariable,
-    total_size: int | None | Sequence[int | EllipsisType | None],
+    total_size: int | TensorVariable | Sequence[int | TensorVariable | EllipsisType | None],
 ) -> TensorVariable:
     """Create variable whose logp is rescaled by total_size."""
+    rv_ndim_supp = rv.owner.op.ndim_supp
+
     if isinstance(total_size, int):
-        if rv.ndim <= 1:
-            total_size = [total_size]
+        total_size = (total_size, *([None] * rv_ndim_supp))
+    elif isinstance(total_size, TensorVariable):
+        if total_size.type.ndim == 0:
+            total_size = (total_size, *([None] * rv_ndim_supp))
+        elif total_size.type.ndim == 1:
+            total_size = tuple(total_size)
         else:
-            missing_ndims = rv.ndim - 1
-            total_size = [total_size] + [None] * missing_ndims
-    elif isinstance(total_size, list | tuple):
-        total_size = list(total_size)
-        if Ellipsis in total_size:
-            # Replace Ellipsis by None
-            if total_size.count(Ellipsis) > 1:
-                raise ValueError("Only one Ellipsis can be present in total_size")
-            sep = total_size.index(Ellipsis)
-            begin = total_size[:sep]
-            end = total_size[sep + 1 :]
-            missing_ndims = max((rv.ndim - len(begin) - len(end), 0))
-            total_size = begin + [None] * missing_ndims + end
-        if len(total_size) > rv.ndim:
-            raise ValueError(f"Length of total_size {total_size} is langer than RV ndim {rv.ndim}")
-    else:
-        raise TypeError(f"Invalid type for total_size: {total_size}")
+            raise ValueError(
+                f"Total size must be a 0d or 1d vector got {total_size} with {total_size.type.ndim} dimensions"
+            )
 
-    return cast(TensorVariable, minibatch_rv(rv, *total_size))
+    if not isinstance(total_size, list | tuple):
+        raise ValueError(f"Invalid type for total_size {total_size}: {type(total_size)}")
+
+    if Ellipsis in total_size:
+        # Replace Ellipsis by None
+        if total_size.count(Ellipsis) > 1:
+            raise ValueError("Only one Ellipsis can be present in total_size")
+        sep = total_size.index(Ellipsis)
+        begin = total_size[:sep]
+        end = total_size[sep + 1 :]
+        missing_ndims = max((rv_ndim_supp - len(begin) - len(end), 0))
+        total_size = (*begin, *([None] * missing_ndims), *end)
+
+    if (len(total_size) - rv_ndim_supp) not in (0, 1):
+        raise ValueError(
+            f"Length of total_size {total_size} not compatble with ndim_supp of RV {rv}, "
+            f"got {len(total_size)} but must be {rv_ndim_supp} or {rv_ndim_supp - 1}"
+        )
+
+    out = minibatch_rv(rv, *total_size)
+    assert isinstance(out.owner.op, MinibatchRandomVariable)
+    return cast(TensorVariable, out)
 
 
-def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> TensorVariable:
+def get_scaling(
+    total_size: Sequence[TensorVariable], shape: TensorVariable | Sequence[TensorVariable]
+) -> TensorVariable:
     """Get scaling constant for logp."""
     # mypy doesn't understand we can convert a shape TensorVariable into a tuple
-    shape = tuple(shape)  # type: ignore[assignment]
+    shape = tuple(shape)
 
-    # Scalar RV
-    if len(shape) == 0:  # type: ignore[arg-type]
-        coef = total_size[0] if not NoneConst.equals(total_size[0]) else 1.0
-    else:
-        coefs = [t / shape[i] for i, t in enumerate(total_size) if not NoneConst.equals(t)]
-        coef = pt.prod(coefs)
+    if len(total_size) == (len(shape) - 1):
+        # This happens when RV has no batch dimensions
+        # In that case the total_size corresponds to a dummy shape of 1
+        total_size = (1, *total_size)
+
+    assert len(shape) == len(total_size)
+
+    coefs = [
+        size / dim_length
+        for size, dim_length in zip(total_size, shape)
+        if not isinstance(size.type, NoneTypeT)
+    ]
+    coef = pt.prod(coefs) if len(coefs) > 1 else coefs[0]
 
     return pt.cast(coef, dtype=config.floatX)
 
@@ -102,4 +127,6 @@ def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> Tensor
 def minibatch_rv_logprob(op, values, *inputs, **kwargs):
     [value] = values
     rv, *total_size = inputs
-    return logp(rv, value, **kwargs) * get_scaling(total_size, value.shape)
+    raw_logp = logp(rv, value, **kwargs)
+    scaled_logp = raw_logp * get_scaling(total_size, raw_logp.shape)
+    return scaled_logp

@@ -1353,7 +1353,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             elif not isinstance(data, Variable):
                 data = pt.as_tensor_variable(data, name=name)
 
-            if total_size:
+            if total_size is not None:
                 from pymc.variational.minibatch_rv import create_minibatch_rv
 
                 rv_var = create_minibatch_rv(rv_var, total_size)
