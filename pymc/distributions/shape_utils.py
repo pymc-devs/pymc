@@ -33,7 +33,6 @@ from pytensor.tensor.shape import SpecifyShape
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.model import modelcontext
 from pymc.pytensorf import convert_observed_data
 
 __all__ = [
@@ -399,6 +398,8 @@ def get_support_shape(
         inferred_support_shape = [shape[i] - support_shape_offset[i] for i in range(-ndim_supp, 0)]
 
     if inferred_support_shape is None and dims is not None:
+        from pymc.model import modelcontext
+
         dims = convert_dims(dims)
         assert isinstance(dims, tuple)
         if len(dims) < ndim_supp:
