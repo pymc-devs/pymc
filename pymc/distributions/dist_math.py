@@ -50,6 +50,9 @@ def check_parameters(
     *conditions: Iterable[Variable],
     msg: str = "",
     can_be_replaced_by_ninf: bool = True,
+    rv: Variable | None = None,
+    param_idx: int | None = None,
+    constraint_type: str | None = None,
 ):
     """Wrap an expression in a CheckParameterValue that asserts several conditions are met.
 
@@ -62,6 +65,23 @@ def check_parameters(
     Note that check_parameter should not be used to enforce the logic of the
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
+
+    Parameters
+    ----------
+    expr : Variable
+        The expression to wrap
+    *conditions : Variable
+        Conditions that must be met
+    msg : str
+        Error message
+    can_be_replaced_by_ninf : bool
+        Whether this check can be replaced by -inf switch
+    rv : Variable, optional
+        The random variable whose parameter is being checked
+    param_idx : int, optional
+        Index of the parameter being checked in rv.owner.inputs
+    constraint_type : str, optional
+        Type of constraint: "positive", "unit_interval", "interval", etc.
     """
     # pt.all does not accept True/False, but accepts np.array(True)/np.array(False)
     conditions_ = [
@@ -69,7 +89,13 @@ def check_parameters(
     ]
     all_true_scalar = pt.all([pt.all(cond) for cond in conditions_])
 
-    return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
+    op = CheckParameterValue(
+        msg, can_be_replaced_by_ninf, param_idx=param_idx, constraint_type=constraint_type
+    )
+
+    if rv is not None:
+        return op(expr, all_true_scalar, rv)
+    return op(expr, all_true_scalar)
 
 
 check_icdf_parameters = partial(check_parameters, can_be_replaced_by_ninf=False)
