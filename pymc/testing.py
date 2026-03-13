@@ -580,15 +580,15 @@ def check_icdf(
         decimal = select_by_precision(float64=6, float32=3)
 
     dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
-    q = pt.scalar(dtype="float64", name="q")
-    dist_icdf = icdf(dist, q)
+    q_value = pt.scalar(dtype="float64", name="q_value")
+    dist_icdf = icdf(dist, q_value)
     pymc_icdf = pytensor.function(list(inputvars(dist_icdf)), dist_icdf)
 
     # Test pymc and scipy distributions match for values and parameters
     # within the supported domain edges (excluding edges)
     domains = paramdomains.copy()
     domain = Domain([0, 0.1, 0.5, 0.75, 0.95, 0.99, 1])  # Values we test the icdf at
-    domains["q"] = domain
+    domains["q_value"] = domain
 
     for point in product(domains, n_samples=n_samples):
         point = dict(point)
@@ -601,7 +601,7 @@ def check_icdf(
 
     valid_value = domain.vals[0]
     valid_params = {param: paramdomain.vals[0] for param, paramdomain in paramdomains.items()}
-    valid_params["q"] = valid_value
+    valid_params["q_value"] = valid_value
 
     if not skip_paramdomain_outside_edge_test:
         # Test pymc distribution raises ParameterValueError for parameters outside the
@@ -620,11 +620,11 @@ def check_icdf(
                     pytest.fail(f"test_params={point}")
 
     # Test that values below 0 or above 1 evaluate to nan
-    invalid_values = find_invalid_scalar_params({"q": domain})["q"]
+    invalid_values = find_invalid_scalar_params({"q_value": domain})["q_value"]
     for invalid_value in invalid_values:
         if invalid_value is not None:
             point = valid_params.copy()
-            point["q"] = invalid_value
+            point["q_value"] = invalid_value
             npt.assert_equal(
                 pymc_icdf(**point),
                 np.nan,

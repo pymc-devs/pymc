@@ -11,7 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import sys
 import warnings
 
 import numpy as np
@@ -49,6 +48,7 @@ from pymc.testing import (
     BaseTestDistributionRandom,
     I,
     assert_support_point_is_expected,
+    check_icdf,
     check_logcdf,
     check_logp,
 )
@@ -322,15 +322,19 @@ class TestDiracDelta:
         ]
 
         @pytest.mark.parametrize("floatX", ["float32", "float64"])
-        @pytest.mark.xfail(
-            sys.platform == "win32", reason="https://github.com/aesara-devs/aesara/issues/871"
-        )
         def test_dtype(self, floatX):
             with pytensor.config.change_flags(floatX=floatX):
                 assert pm.DiracDelta.dist(2**4).dtype == "int8"
                 assert pm.DiracDelta.dist(2**16).dtype == "int32"
                 assert pm.DiracDelta.dist(2**32).dtype == "int64"
                 assert pm.DiracDelta.dist(2.0).dtype == floatX
+
+        def test_icdf(self):
+            check_icdf(
+                pm.DiracDelta,
+                {"c": I},
+                lambda q_value, c: np.full_like(q_value, c),
+            )
 
 
 class TestPartialObservedRV:
