@@ -996,8 +996,11 @@ class Wishart(Continuous):
 
     Notes
     -----
-    This distribution is unusable in a PyMC model. You should instead
-    use LKJCholeskyCov or LKJCorr.
+    This distribution is not recommended as a prior distribution for MCMC
+    sampling. Most samplers operate in unconstrained space and proposals
+    rarely satisfy the symmetric positive definite constraint, causing
+    sampling to fail or perform poorly. Consider using LKJCholeskyCov or
+    LKJCorr instead.
     """
 
     rv_op = wishart
