@@ -206,7 +206,9 @@ class MarimoProgressBackend:
         """Generate HTML for all progress bars as a table with headers."""
         stat_keys = []
         if self.full_stats and self._task_state and self._task_state[0]["stats"]:
-            stat_keys = list(self._task_state[0]["stats"].keys())
+            stat_keys = [
+                k for k in self._task_state[0]["stats"].keys() if k != self.step_name.lower()
+            ]
 
         header_cells = ["Progress", self.step_name]
 
