@@ -249,6 +249,7 @@ class MCMCProgressBarManager(ProgressBarManager):
         )
 
         progress_columns, progress_stats = step_method._progressbar_config(chains)
+        progress_stats["draw"] = [0] * chains
 
         self.progress_stats = progress_stats
         self.update_stats_functions = step_method._make_progressbar_update_functions()
