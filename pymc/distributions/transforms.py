@@ -15,6 +15,7 @@
 from functools import singledispatch
 
 import numpy as np
+import warnings
 import pytensor.tensor as pt
 
 from numpy.lib.array_utils import normalize_axis_tuple
@@ -122,6 +123,13 @@ class SumTo1(Transform):
     """
 
     name = "sumto1"
+    def __init__(self):
+        warnings.warn(
+            "SumTo1 is deprecated and will be removed in a future version. "
+            "Use the Simplex transform instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)

@@ -159,6 +159,9 @@ def test_sum_to_1():
         lambda x: x[:-1],
     )
 
+def test_sum_to_1_deprecation_warning():
+    with pytest.warns(FutureWarning, match="SumTo1 is deprecated"):
+        tr.SumTo1()
 
 def test_log():
     check_transform(tr.log, Rplusbig)
