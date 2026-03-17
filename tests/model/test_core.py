@@ -1775,13 +1775,11 @@ class TestModelCopy:
         copy_simple_model = copy_method(simple_model)
 
         with simple_model:
-            simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
+            simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         with copy_simple_model:
             z = pm.Deterministic("z", copy_simple_model["y"] + 1)
-            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
-                samples=1, random_seed=42
-            )
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         assert (
             simple_model_prior_predictive["prior"]["y"].values
