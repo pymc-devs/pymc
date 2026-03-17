@@ -368,7 +368,6 @@ def sample_prior_predictive(
     return_inferencedata: Literal[True] = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-    samples: int | None = None,
 ) -> InferenceData: ...
 @overload
 def sample_prior_predictive(
@@ -379,7 +378,6 @@ def sample_prior_predictive(
     return_inferencedata: Literal[False] = False,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-    samples: int | None = None,
 ) -> dict[str, np.ndarray]: ...
 def sample_prior_predictive(
     draws: int = 500,
@@ -389,7 +387,6 @@ def sample_prior_predictive(
     return_inferencedata: bool = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-    samples: int | None = None,
 ) -> InferenceData | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
@@ -411,8 +408,6 @@ def sample_prior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile`.
-    samples : int
-        Number of samples from the prior predictive to generate. Deprecated in favor of `draws`.
 
     Returns
     -------
@@ -420,15 +415,6 @@ def sample_prior_predictive(
         An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
-    if samples is not None:
-        warnings.warn(
-            f"The samples argument has been deprecated in favor of draws. Use draws={samples} going forward.",
-            DeprecationWarning,
-            stacklevel=1,
-        )
-
-        draws = samples
-
     model = modelcontext(model)
 
     if model.potentials:
