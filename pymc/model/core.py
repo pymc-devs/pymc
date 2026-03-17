@@ -21,7 +21,9 @@ import warnings
 
 from collections.abc import Iterable, Sequence
 from typing import (
+    Generic,
     Literal,
+    TypeVar,
     cast,
     overload,
 )
@@ -80,12 +82,22 @@ from pymc.vartypes import continuous_types, discrete_types, typefilter
 __all__ = [
     "Deterministic",
     "Model",
+    "ModelVarsT",
     "Point",
     "Potential",
     "compile_fn",
     "modelcontext",
     "set_data",
 ]
+
+
+ModelVarsT = TypeVar("ModelVarsT", bound=dict[str, Variable])
+"""TypeVar for optional typed model variables.
+
+Users can parameterize Model with a TypedDict for documentation purposes.
+
+See Model class docstring for examples.
+"""
 
 
 class ModelManager(threading.local):
@@ -307,7 +319,7 @@ class ContextMeta(type):
         return instance
 
 
-class Model(WithMemoization, metaclass=ContextMeta):
+class Model(Generic[ModelVarsT], WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
     Model class can be used for creating class based models. To create
@@ -424,6 +436,32 @@ class Model(WithMemoization, metaclass=ContextMeta):
         with pm.Model(check_bounds=False) as model:
             sigma = pm.HalfNormal("sigma")
             x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
+
+
+    Optional TypedDict annotation for documentation
+
+    .. code-block:: python
+
+        from typing import TypedDict
+        import pymc as pm
+        from pytensor.tensor.variable import TensorVariable
+
+
+        # Define model structure for documentation (completely optional)
+        class MyModelVars(TypedDict):
+            x: TensorVariable
+            y: TensorVariable
+            mu: TensorVariable
+
+
+        model: pm.Model[MyModelVars]
+        with pm.Model() as model:
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", 0, 1)
+            mu = pm.Deterministic("mu", x + y)
+
+        # TypedDict documents model structure; some IDEs may provide autocomplete hints
+        # Note: This is for documentation only, not runtime validation
 
 
     """
@@ -1518,7 +1556,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         else:
             return name
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: str) -> Variable:
         """Get the variable named `key`."""
         try:
             return self.named_vars[key]
@@ -1528,7 +1566,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             except KeyError:
                 raise e
 
-    def __contains__(self, key):
+    def __contains__(self, key: str) -> bool:
         """Check if the model contains a variable named `key`."""
         return key in self.named_vars or self.name_for(key) in self.named_vars
 

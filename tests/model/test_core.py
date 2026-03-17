@@ -17,6 +17,7 @@ import threading
 import traceback
 import warnings
 
+from typing import TypedDict, get_type_hints
 from unittest.mock import patch
 
 import arviz as az
@@ -34,6 +35,7 @@ import scipy.stats as st
 
 from pytensor.compile.mode import get_default_mode
 from pytensor.graph import graph_inputs
+from pytensor.graph.basic import TensorVariable, Variable
 from pytensor.graph.traversal import get_var_by_name
 from pytensor.link.numba import NumbaLinker
 from pytensor.raise_op import Assert
@@ -1809,3 +1811,42 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+
+class TestModelTyping:
+    """Test Model Generic typing with TypedDict.
+
+    Note: TypedDict provides IDE hints and documentation but doesn't enforce
+    key restrictions at runtime. All variables are accessible regardless of
+    the TypedDict definition.
+    """
+
+    def test_model_with_typeddict_basic(self):
+        """Test basic TypedDict annotation with Model."""
+
+        class MyVars(TypedDict):
+            x: TensorVariable
+            y: TensorVariable
+
+        model: pm.Model[MyVars]
+        with pm.Model() as model:
+            x = pm.Normal("x", 0, 1)
+            y = pm.Normal("y", 0, 1)
+
+        # All variables accessible at runtime
+        assert isinstance(model["x"], TensorVariable)
+        assert isinstance(model["y"], TensorVariable)
+
+    def test_model_getitem_returns_variable(self):
+        """Test that __getitem__ returns Variable type."""
+
+        # __getitem__ returns Variable (base class for TensorVariable and XTensorVariable)
+        hints = get_type_hints(pm.Model.__getitem__)
+        assert hints.get("return") is Variable
+        assert hints.get("key") is str
+
+        # Runtime check
+        with pm.Model() as model:
+            pm.Normal("x")
+
+        assert isinstance(model["x"], Variable)
