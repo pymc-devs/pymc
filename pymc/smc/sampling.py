@@ -473,19 +473,18 @@ def _sample_smc_sequentially(
                 old_beta = kernel.beta
                 kernel.update_beta_and_weights()
 
-                is_last = kernel.beta >= 1
                 progress_manager.update(
-                    chain_idx=i,
-                    stage=stage,
-                    beta=kernel.beta,
-                    old_beta=old_beta,
-                    is_last=is_last,
+                    chain_idx=i, stage=stage, beta=kernel.beta, old_beta=old_beta, is_last=False
                 )
 
                 for stat, value in kernel.step().items():
                     chain_sample_stats[stat].append(value)
 
                 stage += 1
+
+            progress_manager.update(
+                chain_idx=i, stage=stage, beta=kernel.beta, old_beta=kernel.beta, is_last=True
+            )
 
             trace = _build_trace_from_kernel_state(
                 tempered_posterior=kernel.tempered_posterior,

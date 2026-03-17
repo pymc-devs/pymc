@@ -310,7 +310,9 @@ class MCMCProgressBarManager(ProgressBarManager):
         if not self._show_progress:
             return
 
-        self.completed_draws += 1
+        if not is_last:
+            self.completed_draws += 1
+
         if self.combined_progress:
             draw = self.completed_draws
             chain_idx = 0

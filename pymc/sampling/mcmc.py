@@ -1295,11 +1295,13 @@ def _sample(
     )
     try:
         for it, stats in enumerate(sampling_gen):
-            is_last = it + 1 == draws and (
-                not progress_manager.combined_progress or chain == progress_manager.chains - 1
-            )
             progress_manager.update(
-                chain_idx=chain, is_last=is_last, draw=it, stats=stats, tuning=it < tune
+                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune
+            )
+
+        if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
+            progress_manager.update(
+                chain_idx=chain, is_last=True, draw=it, stats=stats, tuning=False
             )
 
     except KeyboardInterrupt:
