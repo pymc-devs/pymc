@@ -183,12 +183,7 @@ class MarimoProgressBackend:
         self._task_state[task_id]["stats"] = stats
 
         if is_last:
-            # Ensure bar is fully filled on completion
-            total = self._task_state[task_id]["total"]
-            completed = self._task_state[task_id]["completed"]
-            remaining = total - completed
-            if remaining > 0:
-                self._task_state[task_id]["completed"] = total
+            self._task_state[task_id]["completed"] = self._task_state[task_id]["total"]
 
         self._render()
 
