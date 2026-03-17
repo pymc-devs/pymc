@@ -231,7 +231,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total * self.n_bars - 1,
+                    total=self.total * self.n_bars,
                     task_idx=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
@@ -244,7 +244,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total - 1,
+                    total=self.total,
                     task_idx=task_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
