@@ -231,7 +231,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total * self.n_bars - 1,
+                    total=self.total * self.n_bars,
                     task_idx=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
@@ -244,7 +244,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total - 1,
+                    total=self.total,
                     task_idx=task_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
@@ -281,6 +281,18 @@ class RichProgressBackend:
         if rich_task_id is None:
             return
 
+        if is_last:
+            self._progress.update(
+                rich_task_id,
+                completed=self.total if not self.combined else self.total * self.n_bars,
+                sampling_speed=0,
+                speed_unit="",
+                failing=failing,
+                refresh=True,
+                **stats,
+            )
+            return
+
         self._progress.advance(rich_task_id, advance=advance)
 
         task = self._progress.tasks[task_id]
@@ -302,18 +314,6 @@ class RichProgressBackend:
             failing=failing,
             **stats,
         )
-
-        if is_last:
-            # Ensure bar is fully filled on completion
-            remaining = task.total - task.completed if task.total else 0
-            if remaining > 0:
-                self._progress.advance(rich_task_id, advance=remaining)
-            self._progress.update(
-                rich_task_id,
-                failing=failing,
-                **stats,
-                refresh=True,
-            )
 
 
 def RichSimpleProgress(theme: Theme | None):

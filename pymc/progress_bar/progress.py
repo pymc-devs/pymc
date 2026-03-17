@@ -310,13 +310,15 @@ class MCMCProgressBarManager(ProgressBarManager):
         if not self._show_progress:
             return
 
-        self.completed_draws += 1
+        if not is_last:
+            self.completed_draws += 1
+
         if self.combined_progress:
             draw = self.completed_draws
             chain_idx = 0
 
         failing, all_step_stats = self._extract_stats(stats)
-        all_step_stats["draws"] = draw
+        all_step_stats["draws"] = draw + 1 if not self.combined_progress else draw
 
         self._backend.update(
             task_id=chain_idx,
