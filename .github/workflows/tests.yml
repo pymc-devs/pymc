@@ -166,7 +166,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -215,7 +216,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -272,7 +274,8 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -323,7 +326,8 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -369,7 +373,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
