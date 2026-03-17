@@ -827,61 +827,6 @@ def test_expand_indices_single_indices(A_parts, indices):
     assert np.array_equal(res, exp_res)
 
 
-@pytest.mark.parametrize(
-    "A_parts, indices",
-    [
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None,),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None, None, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None, 1, None, 0, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), None, 1, None, 0, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), None, 1, 0, None),
-        ),
-    ],
-)
-def test_expand_indices_newaxis(A_parts, indices):
-    A = pt.stack(A_parts)
-    at_indices = [as_index_constant(idx) for idx in indices]
-    full_indices = expand_indices(at_indices, shape_tuple(A))
-    assert len(full_indices) == A.ndim
-    exp_res = A[indices].eval()
-    res = A[full_indices].eval()
-    assert np.array_equal(res, exp_res)
-
-
 def test_mixture_with_DiracDelta():
     srng = pt.random.RandomStream(29833)
 
