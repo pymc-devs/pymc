@@ -12,10 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
-import warnings
 import pytensor.tensor as pt
 
 from numpy.lib.array_utils import normalize_axis_tuple
@@ -123,6 +124,7 @@ class SumTo1(Transform):
     """
 
     name = "sumto1"
+
     def __init__(self):
         warnings.warn(
             "SumTo1 is deprecated and will be removed in a future version. "
