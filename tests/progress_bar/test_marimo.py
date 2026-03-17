@@ -107,3 +107,35 @@ class TestMarimoProgressBackend:
             html = backend._render_html()
 
             assert "0.25" in html or "Step" in html
+
+    def test_is_last_sets_completed_to_total(self):
+        backend = MarimoProgressBackend(
+            step_name="Draws", n_bars=2, total=150, combined=False, full_stats=False
+        )
+        backend._initialize_tasks()
+
+        for _ in range(150):
+            backend.update(task_id=0, advance=1, failing=False, stats={}, is_last=False)
+        backend.update(task_id=0, advance=1, failing=False, stats={}, is_last=True)
+
+        assert backend._task_state[0]["completed"] == 150
+        assert backend._task_state[1]["completed"] == 0
+
+    def test_marimo_smc_progress(self):
+        backend = MarimoProgressBackend(
+            step_name="Stage", n_bars=1, total=1.0, combined=False, full_stats=False
+        )
+        backend._initialize_tasks()
+
+        assert backend._task_state[0]["total"] == 1.0
+        assert backend._task_state[0]["completed"] == 0
+
+        betas = [0.3, 0.7, 1.0]
+        old = 0.0
+        for beta in betas:
+            backend.update(
+                task_id=0, advance=beta - old, failing=False, stats={}, is_last=beta >= 1.0
+            )
+            old = beta
+
+        assert backend._task_state[0]["completed"] == 1.0
