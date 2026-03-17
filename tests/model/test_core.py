@@ -35,12 +35,12 @@ import scipy.stats as st
 
 from pytensor.compile.mode import get_default_mode
 from pytensor.graph import graph_inputs
-from pytensor.graph.basic import TensorVariable, Variable
+from pytensor.graph.basic import Variable
 from pytensor.graph.traversal import get_var_by_name
 from pytensor.link.numba import NumbaLinker
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.variable import TensorConstant
+from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 import pymc as pm
 
