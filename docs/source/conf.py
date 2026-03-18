@@ -296,14 +296,12 @@ pygments_style = "friendly"
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = False
 
-suppress_warnings = ["toc.not_included"]
-
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
-    "arviz": ("https://python.arviz.org/en/latest/", None),
+    "arviz": ("https://python.arviz.org/", "https://python.arviz.org/en/stable/objects.inv"),
     "pytensor": ("https://pytensor.readthedocs.io/en/latest/", None),
     "home": ("https://www.pymc.io", None),
-    "pmx": ("https://www.pymc.io/projects/experimental/en/latest", None),
+    "pmx": ("https://www.pymc.io/projects/extras/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://www.pymc.io/projects/examples/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),

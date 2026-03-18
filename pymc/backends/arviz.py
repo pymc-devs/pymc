@@ -504,12 +504,11 @@ def to_inference_data(
     save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> InferenceData:
-    """Convert pymc data into an InferenceData object.
+    """Convert pymc data into an ArviZ InferenceData object.
 
-    All three of them are optional arguments, but at least one of ``trace``,
-    ``prior`` and ``posterior_predictive`` must be present.
-    For a usage example read the
-    `InferenceData schema specification <https://python.arviz.org/en/latest/schema/schema.html>`_
+    All three of ``trace``, ``prior`` and ``posterior_predictive``
+    are optional arguments, but at least one of them must be present.
+    For a usage example, read the :ref:`InferenceData schema specification <arviz:schema>`.
 
     Parameters
     ----------

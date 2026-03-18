@@ -28,6 +28,6 @@ glossary
   - Book: [Bayesian Modeling and Computation in Python](https://bayesiancomputationbook.com/welcome.html)
 
 ### Advanced
-  - {octicon}`plug;1em;sd-text-info` Experimental and cutting edge functionality: [pymc-experimental](https://github.com/pymc-devs/pymc-experimental) library
+  - {octicon}`plug;1em;sd-text-info` Experimental and cutting edge functionality: {doc}`pmx:index` library
   - {octicon}`gear;1em;sd-text-info` PyMC internals guides (To be outlined and referenced here once [pymc#5538](https://github.com/pymc-devs/pymc/issues/5538)
 is addressed)
