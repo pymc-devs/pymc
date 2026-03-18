@@ -63,7 +63,7 @@ def test_mcmc_split_bar_starts_at_zero_ends_at_total():
     for chain in range(chains):
         task = _get_task(manager, chain)
         assert task.completed == task.total == total
-        assert task.fields["draws"] == total
+        assert task.fields["draw"] == total
 
 
 def test_mcmc_combined_bar_ends_at_total():
@@ -92,7 +92,7 @@ def test_mcmc_combined_bar_ends_at_total():
     total = (draws + tune) * chains
     task = _get_task(manager, 0)
     assert task.completed == task.total == total
-    assert task.fields["draws"] == total
+    assert task.fields["draw"] == total
 
 
 def test_mcmc_draws_stat_shows_completed_count():
@@ -104,13 +104,13 @@ def test_mcmc_draws_stat_shows_completed_count():
 
     with manager:
         manager.update(chain_idx=0, is_last=False, draw=0, tuning=True, stats=NUTS_DUMMY_STATS)
-        assert _get_task(manager).fields["draws"] == 1
+        assert _get_task(manager).fields["draw"] == 1
 
         for i in range(1, 15):
             manager.update(
                 chain_idx=0, is_last=i == 14, draw=i, tuning=i < 5, stats=NUTS_DUMMY_STATS
             )
-        assert _get_task(manager).fields["draws"] == 15
+        assert _get_task(manager).fields["draw"] == 15
 
 
 def test_smc_bar_starts_at_zero_ends_at_one(imh_kernel):
