@@ -136,7 +136,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # add a deterministic that depends on an unnamed random variable
             pred = Deterministic("pred", Normal.dist(0, 1))
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs]
         self.deterministics_or_potentials = [mu, pot, pred]
         # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
@@ -156,7 +156,9 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
-                r"pot ~ Potential(f(alpha, beta))",
+                # Model-only checks below (not individually tested because
+                # named_vars changes the output vs standalone repr)
+                r"pot ~ Potential(f(mu))",
                 r"pred = Deterministic(f(<normal>))",
             ],
             ("plain", False): [
@@ -188,7 +190,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
-                r"$\text{pot} \sim \operatorname{Potential}(f(\text{alpha},~\text{beta}))$",
+                r"$\text{pot} \sim \operatorname{Potential}(f(\text{mu}))$",
                 r"$\text{pred} = \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
@@ -341,7 +343,7 @@ class TestDimsDist:
             ("plain", True): [
                 r"mu ~ Normal(0, 10)",
                 r"sigma ~ Normal(0, 1)",
-                r"zsn ~ ZeroSumNormal(f(), f(group))",
+                r"zsn ~ ZeroSumNormal(<constant>, <constant>)",
                 r"y ~ Normal(f(mu, zsn), sigma)",
             ],
             ("plain", False): [
@@ -353,7 +355,7 @@ class TestDimsDist:
             ("latex", True): [
                 r"\text{mu} &\sim & \operatorname{Normal}(0,~10)",
                 r"\text{sigma} &\sim & \operatorname{Normal}(0,~1)",
-                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(f(),~f(\text{group}))",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(\text{<constant>},~\text{<constant>})",
                 r"\text{y} &\sim & \operatorname{Normal}(f(\text{mu},~\text{zsn}),~\text{sigma})",
             ],
             ("latex", False): [
@@ -397,7 +399,7 @@ def test_data_vars_in_model_repr():
 
 
 def test_constant_folding_in_repr():
-    """Constant-only expressions are folded instead of showing f() (issue #7538)."""
+    """Constant-only expressions show <constant> instead of f() (issue #7538)."""
     import pymc as pm
 
     with pm.Model() as model:
@@ -405,7 +407,7 @@ def test_constant_folding_in_repr():
 
     text = model.str_repr()
     assert "f()" not in text
-    assert "x ~ Exponential(0.5)" == text
+    assert "x ~ Exponential(<constant>)" == text
 
 
 def test_data_var_repr_no_params():

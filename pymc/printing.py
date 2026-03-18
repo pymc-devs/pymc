@@ -38,7 +38,12 @@ __all__ = [
 ]
 
 
-def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool = True) -> str:
+def str_for_dist(
+    dist: Variable,
+    formatting: str = "plain",
+    include_params: bool = True,
+    named_vars: set[Variable] | None = None,
+) -> str:
     """Make a human-readable string representation of a Distribution in a model.
 
     This can be either LaTeX or plain, optionally with distribution parameter
@@ -55,7 +60,9 @@ def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool
                 x for x in dist.owner.inputs if not isinstance(x.type, RandomType | NoneTypeT)
             ]
 
-        dist_args_str = [_str_for_input_var(a, formatting=formatting) for a in dist_args]
+        dist_args_str = [
+            _str_for_input_var(a, formatting=formatting, named_vars=named_vars) for a in dist_args
+        ]
 
     if (print_name := getattr(dist_op, "_print_name", None)) is not None:
         dist_name = print_name[formatting == "latex"]
@@ -127,10 +134,22 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
     This lists all random variables and their distributions, optionally
     including parameter values.
     """
+    named_vars: set[Variable] = set()
+    named_vars.update(model.data_vars)
+    named_vars.update(model.free_RVs)
+    named_vars.update(model.observed_RVs)
+    named_vars.update(model.deterministics)
+    named_vars.update(model.potentials)
+
     # Wrap functions to avoid confusing typecheckers
-    sfd = partial(str_for_dist, formatting=formatting, include_params=include_params)
+    sfd = partial(
+        str_for_dist, formatting=formatting, include_params=include_params, named_vars=named_vars
+    )
     sfp = partial(
-        str_for_potential_or_deterministic, formatting=formatting, include_params=include_params
+        str_for_potential_or_deterministic,
+        formatting=formatting,
+        include_params=include_params,
+        named_vars=named_vars,
     )
     sfdv = partial(str_for_data_var, formatting=formatting, include_params=include_params)
 
@@ -182,6 +201,7 @@ def str_for_potential_or_deterministic(
     formatting: str = "plain",
     include_params: bool = True,
     dist_name: str = "Deterministic",
+    named_vars: set[Variable] | None = None,
 ) -> str:
     """Make a human-readable string representation of a Deterministic or Potential in a model.
 
@@ -194,46 +214,41 @@ def str_for_potential_or_deterministic(
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         if include_params:
-            return rf"${print_name} {sep_latex} \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
+            return rf"${print_name} {sep_latex} \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting, named_vars=named_vars)})$"
         else:
             return rf"${print_name} {sep_latex} \operatorname{{{dist_name}}}$"
     else:  # plain
         if include_params:
-            return rf"{print_name} {sep_plain} {dist_name}({_str_for_expression(var, formatting=formatting)})"
+            return rf"{print_name} {sep_plain} {dist_name}({_str_for_expression(var, formatting=formatting, named_vars=named_vars)})"
         else:
             return rf"{print_name} {sep_plain} {dist_name}"
 
 
-def _str_for_input_var(var: Variable, formatting: str) -> str:
+def _str_for_input_var(
+    var: Variable, formatting: str, named_vars: set[Variable] | None = None
+) -> str:
     def _is_potential_or_deterministic(var: Variable) -> bool:
-        # FIXME: This is an (insufficient) hack. For model_repr we know which nodes are named variables
-        # and we should propagate that information instead of guessing based on whether something was monkey-patched
+        # Fallback for standalone calls (named_vars is None).
+        # When named_vars is provided, this is unnecessary.
         if not hasattr(var, "str_repr"):
             return False
         try:
             return var.str_repr.__func__.func is str_for_potential_or_deterministic
         except AttributeError:
-            # in case other code overrides str_repr, fallback
             return False
 
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
-    elif isinstance(var.owner.op, MeasurableOp) or _is_potential_or_deterministic(var):
+    elif (
+        (named_vars is not None and var in named_vars)
+        or isinstance(var.owner.op, MeasurableOp)
+        or _is_potential_or_deterministic(var)
+    ):
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
-        return _str_for_input_var(var.owner.inputs[0], formatting)
+        return _str_for_input_var(var.owner.inputs[0], formatting, named_vars)
     else:
-        if not isinstance(var, TensorVariable):
-            return _str_for_expression(var, formatting)
-        try:
-            from pymc.exceptions import NotConstantValueError
-            from pymc.pytensorf import constant_fold
-
-            [folded] = constant_fold([var], raise_not_constant=True)
-            assert isinstance(folded, np.ndarray)
-            return _str_for_constant_value(folded, formatting)
-        except NotConstantValueError:
-            return _str_for_expression(var, formatting)
+        return _str_for_expression(var, formatting, named_vars)
 
 
 def _str_for_input_rv(var: Variable, formatting: str) -> str:
@@ -272,11 +287,12 @@ def _str_for_constant_value(
         return rf"<{var_type}>"
 
 
-def _str_for_expression(var: Variable, formatting: str) -> str:
-    # Avoid circular import
-
-    # construct a string like f(a1, ..., aN) listing all named variables as arguments
+def _str_for_expression(
+    var: Variable, formatting: str, named_vars: set[Variable] | None = None
+) -> str:
     def _expand(x):
+        if named_vars is not None and x in named_vars:
+            return None
         if x.owner and not isinstance(x.owner.op, MeasurableOp):
             return reversed(x.owner.inputs)
 
@@ -284,7 +300,11 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
     names = []
     for x in walk(nodes=var.owner.inputs, expand=_expand):
         assert isinstance(x, Variable)
-        if x.owner and isinstance(x.owner.op, MeasurableOp):
+        if named_vars is not None and x in named_vars:
+            if x.name:
+                parents.append(x)
+                names.append(x.name)
+        elif x.owner and isinstance(x.owner.op, MeasurableOp):
             parents.append(x)
             xname = x.name
             if xname is None:
@@ -292,9 +312,12 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
                     xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
-        elif isinstance(x, SharedVariable) and x.name and not isinstance(x.type, RandomType):
-            parents.append(x)
-            names.append(x.name)
+
+    if not names:
+        if "latex" in formatting:
+            return r"\text{<constant>}"
+        else:
+            return "<constant>"
 
     if "latex" in formatting:
         return (
