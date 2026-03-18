@@ -96,7 +96,9 @@ def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool
                 return dist_name
 
 
-def str_for_data_var(var: Variable, formatting: str = "plain", include_params: bool = True) -> str:
+def str_for_data_var(
+    var: Constant | SharedVariable, formatting: str = "plain", include_params: bool = True
+) -> str:
     """Make a human-readable string representation of a Data variable in a model."""
     print_name = var.name if var.name is not None else "<unnamed>"
 
@@ -210,11 +212,14 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
     else:
+        if not isinstance(var, TensorVariable):
+            return _str_for_expression(var, formatting)
         try:
             from pymc.exceptions import NotConstantValueError
             from pymc.pytensorf import constant_fold
 
             [folded] = constant_fold([var], raise_not_constant=True)
+            assert isinstance(folded, np.ndarray)
             return _str_for_constant_value(folded, formatting)
         except NotConstantValueError:
             return _str_for_expression(var, formatting)
