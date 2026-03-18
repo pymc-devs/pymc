@@ -111,14 +111,14 @@ def str_for_data_var(
         latex_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         latex_name = _format_underscore(latex_name)
         if value_str is not None:
-            return rf"${latex_name} \sim \operatorname{{Data}}({value_str.strip('$')})$"
+            return rf"${latex_name} = \operatorname{{Data}}({value_str.strip('$')})$"
         else:
-            return rf"${latex_name} \sim \operatorname{{Data}}$"
+            return rf"${latex_name} = \operatorname{{Data}}$"
     else:
         if value_str is not None:
-            return rf"{print_name} ~ Data({value_str})"
+            return rf"{print_name} = Data({value_str})"
         else:
-            return rf"{print_name} ~ Data"
+            return rf"{print_name} = Data"
 
 
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
@@ -146,25 +146,34 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
         return ""
     if "latex" in formatting:
         var_reprs = [_format_underscore(x) for x in var_reprs]
-        var_reprs = [
-            var_repr.replace(r"\sim", r"&\sim &").strip("$")
-            for var_repr in var_reprs
-            if var_repr is not None
-        ]
+        formatted = []
+        for var_repr in var_reprs:
+            if var_repr is None:
+                continue
+            s = var_repr.strip("$")
+            if r"\sim" in s:
+                s = s.replace(r"\sim", r"&\sim &", 1)
+            else:
+                s = s.replace(" = ", " &= &", 1)
+            formatted.append(s)
         return r"""$$
             \begin{{array}}{{rcl}}
             {}
             \end{{array}}
-            $$""".format("\\\\".join(var_reprs))
+            $$""".format("\\\\".join(formatted))
     else:
-        # align vars on their ~
-        names = [s[: s.index("~") - 1] for s in var_reprs]
-        distrs = [s[s.index("~") + 2 :] for s in var_reprs]
-        maxlen = str(max(len(x) for x in names))
-        var_reprs = [
-            ("{name:>" + maxlen + "} ~ {distr}").format(name=n, distr=d)
-            for n, d in zip(names, distrs)
-        ]
+        sep_pattern = re.compile(r" ([~=]) ")
+        names = []
+        seps = []
+        distrs = []
+        for s in var_reprs:
+            m = sep_pattern.search(s)
+            assert m is not None
+            names.append(s[: m.start()])
+            seps.append(m.group(1))
+            distrs.append(s[m.end() :])
+        maxlen = max(len(n) for n in names)
+        var_reprs = [f"{n:>{maxlen}} {sep} {d}" for n, sep, d in zip(names, seps, distrs)]
         return "\n".join(var_reprs)
 
 
@@ -180,17 +189,19 @@ def str_for_potential_or_deterministic(
     values included.
     """
     print_name = var.name if var.name is not None else "<unnamed>"
+    sep_plain = "~" if dist_name == "Potential" else "="
+    sep_latex = r"\sim" if dist_name == "Potential" else "="
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         if include_params:
-            return rf"${print_name} \sim \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
+            return rf"${print_name} {sep_latex} \operatorname{{{dist_name}}}({_str_for_expression(var, formatting=formatting)})$"
         else:
-            return rf"${print_name} \sim \operatorname{{{dist_name}}}$"
+            return rf"${print_name} {sep_latex} \operatorname{{{dist_name}}}$"
     else:  # plain
         if include_params:
-            return rf"{print_name} ~ {dist_name}({_str_for_expression(var, formatting=formatting)})"
+            return rf"{print_name} {sep_plain} {dist_name}({_str_for_expression(var, formatting=formatting)})"
         else:
-            return rf"{print_name} ~ {dist_name}"
+            return rf"{print_name} {sep_plain} {dist_name}"
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:

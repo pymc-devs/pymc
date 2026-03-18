@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import re
+
 import numpy as np
 
 from pytensor.tensor.random import normal
@@ -34,6 +36,11 @@ from pymc.pytensorf import floatX
 
 
 class BaseTestStrAndLatexRepr:
+    @staticmethod
+    def _latex_segments(tex: str) -> list[str]:
+        """Split a LaTeX repr on its separator (\\sim or =) into segments for substring checks."""
+        return [s for s in re.split(r"\\sim| = ", tex.strip("$")) if s.strip()]
+
     def test__repr_latex_(self):
         for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
             assert distribution._repr_latex_() == tex
@@ -42,7 +49,7 @@ class BaseTestStrAndLatexRepr:
 
         # make sure each variable is in the model
         for tex in self.expected[("latex", True)]:
-            for segment in tex.strip("$").split(r"\sim"):
+            for segment in self._latex_segments(tex):
                 assert segment in model_tex
 
     def test_str_repr(self):
@@ -53,7 +60,7 @@ class BaseTestStrAndLatexRepr:
             model_text = self.model.str_repr(*str_format)
             for text in self.expected[str_format]:
                 if str_format[0] == "latex":
-                    for segment in text.strip("$").split(r"\sim"):
+                    for segment in self._latex_segments(text):
                         assert segment in model_text
                 else:
                     assert text in model_text
@@ -137,7 +144,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("plain", True): [
                 r"alpha ~ Normal(0, 10)",
                 r"sigma ~ HalfNormal(0, 1)",
-                r"mu ~ Deterministic(f(alpha, beta))",
+                r"mu = Deterministic(f(alpha, beta))",
                 r"beta ~ Normal(0, 10)",
                 r"Z ~ MultivariateNormal(<constant>, <constant>)",
                 r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
@@ -150,12 +157,12 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(alpha, beta))",
-                r"pred ~ Deterministic(f(<normal>))",
+                r"pred = Deterministic(f(<normal>))",
             ],
             ("plain", False): [
                 r"alpha ~ Normal",
                 r"sigma ~ HalfNormal",
-                r"mu ~ Deterministic",
+                r"mu = Deterministic",
                 r"beta ~ Normal",
                 r"Z ~ MultivariateNormal",
                 r"nb_with_p_n ~ NegativeBinomial",
@@ -164,12 +171,12 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"nested_mix ~ Mixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
-                r"pred ~ Deterministic",
+                r"pred = Deterministic",
             ],
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
-                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
+                r"$\text{mu} = \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}(\text{<constant>},~\text{<constant>})$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
@@ -182,12 +189,12 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{alpha},~\text{beta}))$",
-                r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
+                r"$\text{pred} = \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
                 r"$\text{alpha} \sim \operatorname{Normal}$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}$",
-                r"$\text{mu} \sim \operatorname{Deterministic}$",
+                r"$\text{mu} = \operatorname{Deterministic}$",
                 r"$\text{beta} \sim \operatorname{Normal}$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}$",
@@ -196,7 +203,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{nested\_mix} \sim \operatorname{Mixture}$",
                 r"$\text{Y\_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
-                r"$\text{pred} \sim \operatorname{Deterministic}",
+                r"$\text{pred} = \operatorname{Deterministic}",
             ],
         }
 
@@ -380,12 +387,12 @@ def test_data_vars_in_model_repr():
         f = pm.Deterministic("f", x + y)
 
     text = model.str_repr()
-    assert "x ~ Data(0)" in text
+    assert "x = Data(0)" in text
     assert "y ~ Normal(0, 1)" in text
-    assert "f ~ Deterministic(f(y, x))" in text
+    assert "f = Deterministic(f(y, x))" in text
 
     latex = model.str_repr(formatting="latex")
-    assert r"\operatorname{Data}(0)" in latex
+    assert r"&= &\operatorname{Data}(0)" in latex
     assert r"\text{x}" in latex
 
 
@@ -410,7 +417,7 @@ def test_data_var_repr_no_params():
         pm.Normal("y", x)
 
     text_no_params = model.str_repr(include_params=False)
-    assert "x ~ Data" in text_no_params
+    assert "x = Data" in text_no_params
     assert "y ~ Normal" in text_no_params
 
 
