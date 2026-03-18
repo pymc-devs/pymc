@@ -139,13 +139,13 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"sigma ~ HalfNormal(0, 1)",
                 r"mu ~ Deterministic(f(alpha, beta))",
                 r"beta ~ Normal(0, 10)",
-                r"Z ~ MultivariateNormal(f(), f())",
+                r"Z ~ MultivariateNormal(<constant>, <constant>)",
                 r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
-                r"zip ~ Mixture(f(), DiracDelta(0), Poisson(5))",
+                r"zip ~ Mixture(<constant>, DiracDelta(0), Poisson(5))",
                 r"w ~ Dirichlet(<constant>)",
                 (
                     r"nested_mix ~ Mixture(w, "
-                    r"Mixture(f(), DiracDelta(0), Poisson(5)), "
+                    r"Mixture(<constant>, DiracDelta(0), Poisson(5)), "
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
@@ -171,13 +171,13 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
                 r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
+                r"$\text{Z} \sim \operatorname{MultivariateNormal}(\text{<constant>},~\text{<constant>})$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
+                r"$\text{zip} \sim \operatorname{Mixture}(\text{<constant>},~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
                 r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
                     r"$\text{nested\_mix} \sim \operatorname{Mixture}(\text{w},"
-                    r"~\operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
+                    r"~\operatorname{Mixture}(\text{<constant>},~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
@@ -334,7 +334,7 @@ class TestDimsDist:
             ("plain", True): [
                 r"mu ~ Normal(0, 10)",
                 r"sigma ~ Normal(0, 1)",
-                r"zsn ~ ZeroSumNormal(f(), f())",
+                r"zsn ~ ZeroSumNormal(f(), f(group))",
                 r"y ~ Normal(f(mu, zsn), sigma)",
             ],
             ("plain", False): [
@@ -346,7 +346,7 @@ class TestDimsDist:
             ("latex", True): [
                 r"\text{mu} &\sim & \operatorname{Normal}(0,~10)",
                 r"\text{sigma} &\sim & \operatorname{Normal}(0,~1)",
-                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(f(),~f())",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(f(),~f(\text{group}))",
                 r"\text{y} &\sim & \operatorname{Normal}(f(\text{mu},~\text{zsn}),~\text{sigma})",
             ],
             ("latex", False): [
@@ -368,6 +368,86 @@ class TestDimsDist:
             model_text = self.model.str_repr(formatting=formatting, include_params=include_params)
             for text in self.expected[(formatting, include_params)]:
                 assert text in model_text
+
+
+def test_data_vars_in_model_repr():
+    """Data variables appear in model repr and in Deterministic dependency lists (issue #7536)."""
+    import pymc as pm
+
+    with pm.Model() as model:
+        x = pm.Data("x", 0)
+        y = pm.Normal("y")
+        f = pm.Deterministic("f", x + y)
+
+    text = model.str_repr()
+    assert "x ~ Data(0)" in text
+    assert "y ~ Normal(0, 1)" in text
+    assert "f ~ Deterministic(f(y, x))" in text
+
+    latex = model.str_repr(formatting="latex")
+    assert r"\operatorname{Data}(0)" in latex
+    assert r"\text{x}" in latex
+
+
+def test_constant_folding_in_repr():
+    """Constant-only expressions are folded instead of showing f() (issue #7538)."""
+    import pymc as pm
+
+    with pm.Model() as model:
+        x = pm.Exponential("x", lam=2)
+
+    text = model.str_repr()
+    assert "f()" not in text
+    assert "x ~ Exponential(0.5)" == text
+
+
+def test_data_var_repr_no_params():
+    """Data variable repr without params."""
+    import pymc as pm
+
+    with pm.Model() as model:
+        x = pm.Data("x", 5)
+        pm.Normal("y", x)
+
+    text_no_params = model.str_repr(include_params=False)
+    assert "x ~ Data" in text_no_params
+    assert "y ~ Normal" in text_no_params
+
+
+def test_data_var_latex_underscore_escaping():
+    """Data variable names with underscores are escaped in LaTeX (direct call and model repr)."""
+    import pymc as pm
+
+    from pymc.printing import str_for_data_var
+
+    with pm.Model() as model:
+        my_data = pm.Data("my_data", 42)
+        pm.Normal("y", my_data)
+
+    # Direct call
+    latex_with_params = str_for_data_var(my_data, formatting="latex", include_params=True)
+    assert r"my\_data" in latex_with_params
+    assert r"\operatorname{Data}(42)" in latex_with_params
+
+    latex_no_params = str_for_data_var(my_data, formatting="latex", include_params=False)
+    assert r"my\_data" in latex_no_params
+    assert r"\operatorname{Data}" in latex_no_params
+
+    # Via model repr
+    model_latex = model.str_repr(formatting="latex")
+    assert r"my\_data" in model_latex
+
+
+def test_constant_fold_fallback():
+    """When constant folding fails (non-constant symbolic inputs), fall back to f(...) gracefully."""
+    import pymc as pm
+
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Normal("b", mu=a * 2)
+
+    text = model.str_repr()
+    assert "b ~ Normal(f(a), 1)" in text
 
 
 class TestLatexRepr:

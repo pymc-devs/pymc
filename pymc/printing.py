@@ -17,6 +17,8 @@ import re
 
 from functools import partial
 
+import numpy as np
+
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import walk
@@ -29,6 +31,7 @@ from pymc.logprob.abstract import MeasurableOp
 from pymc.model import Model
 
 __all__ = [
+    "str_for_data_var",
     "str_for_dist",
     "str_for_model",
     "str_for_potential_or_deterministic",
@@ -93,6 +96,31 @@ def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool
                 return dist_name
 
 
+def str_for_data_var(
+    var: Variable, formatting: str = "plain", include_params: bool = True
+) -> str:
+    """Make a human-readable string representation of a Data variable in a model."""
+    print_name = var.name if var.name is not None else "<unnamed>"
+
+    if include_params:
+        value_str = _str_for_constant(var, formatting)
+    else:
+        value_str = None
+
+    if "latex" in formatting:
+        latex_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
+        latex_name = _format_underscore(latex_name)
+        if value_str is not None:
+            return rf"${latex_name} \sim \operatorname{{Data}}({value_str.strip('$')})$"
+        else:
+            return rf"${latex_name} \sim \operatorname{{Data}}$"
+    else:
+        if value_str is not None:
+            return rf"{print_name} ~ Data({value_str})"
+        else:
+            return rf"{print_name} ~ Data"
+
+
 def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of Model.
 
@@ -104,13 +132,15 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
     sfp = partial(
         str_for_potential_or_deterministic, formatting=formatting, include_params=include_params
     )
+    sfdv = partial(str_for_data_var, formatting=formatting, include_params=include_params)
 
+    data_reprs = [sfdv(dv) for dv in model.data_vars]
     free_rv_reprs = [sfd(dist) for dist in model.free_RVs]
     observed_rv_reprs = [sfd(rv) for rv in model.observed_RVs]
     det_reprs = [sfp(dist, dist_name="Deterministic") for dist in model.deterministics]
     potential_reprs = [sfp(pot, dist_name="Potential") for pot in model.potentials]
 
-    var_reprs = free_rv_reprs + det_reprs + observed_rv_reprs + potential_reprs
+    var_reprs = data_reprs + free_rv_reprs + det_reprs + observed_rv_reprs + potential_reprs
 
     if not var_reprs:
         return ""
@@ -178,13 +208,18 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
     elif isinstance(var.owner.op, MeasurableOp) or _is_potential_or_deterministic(var):
-        # show the names for RandomVariables, Deterministics, and Potentials, rather
-        # than the full expression
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
     else:
-        return _str_for_expression(var, formatting)
+        try:
+            from pymc.exceptions import NotConstantValueError
+            from pymc.pytensorf import constant_fold
+
+            [folded] = constant_fold([var], raise_not_constant=True)
+            return _str_for_constant_value(folded, formatting)
+        except NotConstantValueError:
+            return _str_for_expression(var, formatting)
 
 
 def _str_for_input_rv(var: Variable, formatting: str) -> str:
@@ -207,6 +242,12 @@ def _str_for_constant(var: Constant | SharedVariable, formatting: str) -> str:
         var_data = var.get_value()
         var_type = "shared"
 
+    return _str_for_constant_value(var_data, formatting, var_type=var_type)
+
+
+def _str_for_constant_value(
+    var_data: np.ndarray, formatting: str, var_type: str = "constant"
+) -> str:
     if len(var_data.shape) == 0:
         return f"{var_data:.3g}"
     elif len(var_data.shape) == 1 and var_data.shape[0] == 1:
@@ -220,7 +261,7 @@ def _str_for_constant(var: Constant | SharedVariable, formatting: str) -> str:
 def _str_for_expression(var: Variable, formatting: str) -> str:
     # Avoid circular import
 
-    # construct a string like f(a1, ..., aN) listing all random variables a as arguments
+    # construct a string like f(a1, ..., aN) listing all named variables as arguments
     def _expand(x):
         if x.owner and not isinstance(x.owner.op, MeasurableOp):
             return reversed(x.owner.inputs)
@@ -233,12 +274,17 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
             parents.append(x)
             xname = x.name
             if xname is None:
-                # If the variable is unnamed, we show the op's name as we do
-                # with constants
                 if (opname := getattr(x.owner.op, "name", None)) is not None:
                     xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
+        elif (
+            isinstance(x, SharedVariable)
+            and x.name
+            and not isinstance(x.type, RandomType)
+        ):
+            parents.append(x)
+            names.append(x.name)
 
     if "latex" in formatting:
         return (
