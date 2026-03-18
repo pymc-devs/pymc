@@ -96,9 +96,7 @@ def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool
                 return dist_name
 
 
-def str_for_data_var(
-    var: Variable, formatting: str = "plain", include_params: bool = True
-) -> str:
+def str_for_data_var(var: Variable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a Data variable in a model."""
     print_name = var.name if var.name is not None else "<unnamed>"
 
@@ -278,11 +276,7 @@ def _str_for_expression(var: Variable, formatting: str) -> str:
                     xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
-        elif (
-            isinstance(x, SharedVariable)
-            and x.name
-            and not isinstance(x.type, RandomType)
-        ):
+        elif isinstance(x, SharedVariable) and x.name and not isinstance(x.type, RandomType):
             parents.append(x)
             names.append(x.name)
 
