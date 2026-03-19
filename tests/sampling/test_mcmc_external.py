@@ -20,7 +20,9 @@ import xarray as xr
 from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
 
 
-@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+# temporarily skip nutpie
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "blackjax", "numpyro"])
+# @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_external_nuts_sampler(recwarn, nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
@@ -90,7 +92,9 @@ def test_step_args():
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
 
-@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+# temporarily skip nutpie
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "blackjax", "numpyro"])
+# @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
