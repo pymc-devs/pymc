@@ -191,8 +191,9 @@ def compute_log_density(
     coords, dims = coords_and_dims_for_inferencedata(umodel)
 
     is_datatree = hasattr(posterior, "to_dataset")
-    input_dataset = posterior.to_dataset() if is_datatree else posterior
-    input_dataset = input_dataset[[rv.name for rv in model.free_RVs]]
+    input_dataset: Dataset = posterior.to_dataset() if is_datatree else posterior  # type: ignore[assignment]
+    free_rv_names = [rv.name for rv in model.free_RVs]
+    input_dataset = input_dataset[free_rv_names]  # type: ignore[assignment]
 
     logdens_dataset = apply_function_over_dataset(
         elemwise_logdens_fn,

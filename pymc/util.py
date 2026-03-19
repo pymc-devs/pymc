@@ -246,10 +246,12 @@ def drop_warning_stat(dt: xarray.DataTree) -> xarray.DataTree:
     This function should be applied to an ``DataTree`` object obtained with
     ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
     """
-    tree_dict = {}
+    tree_dict: dict[str, xarray.Dataset | None] = {}
 
     for gname, group in dt.items():
-        ds = group.dataset if isinstance(group, xarray.DataTree) else group
+        if not isinstance(group, xarray.DataTree):
+            continue
+        ds: xarray.Dataset | None = group.to_dataset()
 
         if "sample_stat" in gname and ds is not None:
             warning_vars = [
@@ -273,7 +275,7 @@ def chains_and_samples(data: xarray.Dataset | xarray.DataTree) -> tuple[int, int
     if isinstance(data, xarray.Dataset):
         dataset = data
     elif isinstance(data, xarray.DataTree):
-        dataset = data["posterior"]
+        dataset = data["posterior"].dataset
     else:
         raise ValueError(
             "Argument must be xarray Dataset or xarray DataTree. Got %s",
