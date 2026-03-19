@@ -21,7 +21,6 @@ from functools import partial
 from types import ModuleType
 from typing import Any, Literal
 
-import arviz as az
 import jax
 import jax.numpy as jnp
 import numpy as np
@@ -710,7 +709,7 @@ def sample_jax_nuts(
 
     # Use 'partial' to set default arguments before passing 'idata_kwargs'
     to_trace = partial(
-        az.from_dict,
+        DataTree.from_dict,
         log_likelihood=log_likelihood,
         observed_data=find_observations(model),
         constant_data=find_constants(model),
