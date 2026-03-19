@@ -287,8 +287,6 @@ class RichProgressBackend:
             self._progress.update(
                 rich_task_id,
                 completed=self.total if not self.combined else self.total * self.n_bars,
-                sampling_speed=0,
-                speed_unit="",
                 failing=failing,
                 refresh=True,
                 **stats,
