@@ -20,6 +20,8 @@ from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
 
 def format_time(seconds: float) -> str:
     """Format elapsed time as mm:ss or hh:mm:ss."""
+    if seconds < 1:
+        return f"{seconds:.1f}s"
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     if hours > 0:
