@@ -230,9 +230,7 @@ def str_for_potential_or_deterministic(
             return rf"{print_name} {sep_plain} {dist_name}"
 
 
-def _str_for_input_var(
-    var: Variable, formatting: str, named_vars: set[Variable]
-) -> str:
+def _str_for_input_var(var: Variable, formatting: str, named_vars: set[Variable]) -> str:
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
     elif var in named_vars or isinstance(var.owner.op, MeasurableOp):

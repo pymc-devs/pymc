@@ -210,9 +210,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{pred} = \operatorname{Deterministic}",
             ],
         }
-        self.model_expected = {
-            k: list(v) for k, v in self.expected.items()
-        }
+        self.model_expected = {k: list(v) for k, v in self.expected.items()}
         self.model_expected[("plain", True)][9] = r"Y_obs ~ Normal(mu, sigma)"
         self.model_expected[("latex", True)][9] = (
             r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$"
