@@ -952,6 +952,8 @@ class WishartRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
         scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
+        # Scipy doesn't accept batch nu or V
+        nu = _squeeze_to_ndim(nu, 0)
         V = _squeeze_to_ndim(V, 2)
         result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
         if size == (1,):
