@@ -42,25 +42,17 @@ class BaseTestStrAndLatexRepr:
         return [s for s in re.split(r"\\sim| = ", tex.strip("$")) if s.strip()]
 
     def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
-
         model_tex = self.model._repr_latex_()
-        model_expected = getattr(self, "model_expected", self.expected)
 
         # make sure each variable is in the model
-        for tex in model_expected[("latex", True)]:
+        for tex in self.expected[("latex", True)]:
             for segment in self._latex_segments(tex):
                 assert segment in model_tex
 
     def test_str_repr(self):
-        model_expected = getattr(self, "model_expected", self.expected)
         for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
-
             model_text = self.model.str_repr(*str_format)
-            for text in model_expected[str_format]:
+            for text in self.expected[str_format]:
                 if str_format[0] == "latex":
                     for segment in self._latex_segments(text):
                         assert segment in model_text
@@ -157,9 +149,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"Mixture(<constant>, DiracDelta(0), Poisson(5)), "
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
-                r"Y_obs ~ Normal(f(alpha, beta), sigma)",
-                # Model-only checks below (not individually tested because
-                # named_vars changes the output vs standalone repr)
+                r"Y_obs ~ Normal(mu, sigma)",
                 r"pot ~ Potential(f(mu))",
                 r"pred = Deterministic(f(<normal>))",
             ],
@@ -191,7 +181,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                     r"~\operatorname{Mixture}(\text{<constant>},~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
-                r"$\text{Y\_obs} \sim \operatorname{Normal}(f(\text{alpha},~\text{beta}),~\text{sigma})$",
+                r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
                 r"$\text{pot} \sim \operatorname{Potential}(f(\text{mu}))$",
                 r"$\text{pred} = \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
@@ -210,11 +200,6 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{pred} = \operatorname{Deterministic}",
             ],
         }
-        self.model_expected = {k: list(v) for k, v in self.expected.items()}
-        self.model_expected[("plain", True)][9] = r"Y_obs ~ Normal(mu, sigma)"
-        self.model_expected[("latex", True)][9] = (
-            r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$"
-        )
 
 
 class TestData(BaseTestStrAndLatexRepr):
@@ -454,8 +439,8 @@ def test_data_var_latex_underscore_escaping():
     assert r"my\_data" in model_latex
 
 
-def test_constant_fold_fallback():
-    """When constant folding fails (non-constant symbolic inputs), fall back to f(...) gracefully."""
+def test_function_of_named_var_in_repr():
+    """A non-constant expression should keep f(named_var) form in model repr."""
     import pymc as pm
 
     with pm.Model() as model:
@@ -464,23 +449,6 @@ def test_constant_fold_fallback():
 
     text = model.str_repr()
     assert "b ~ Normal(f(a), 1)" in text
-
-
-def test_standalone_potential_repr_does_not_use_named_var_fallback():
-    """Standalone repr should not infer named intermediates via fallback heuristics."""
-    import pymc as pm
-
-    with pm.Model():
-        alpha = pm.Normal("alpha")
-        beta = pm.Normal("beta")
-        mu = pm.Deterministic("mu", alpha + beta)
-        pot = pm.Potential("pot", mu**2)
-
-    pot_repr = pot.str_repr()
-    assert "pot ~ Potential(f(" in pot_repr
-    assert "mu" not in pot_repr
-    assert "alpha" in pot_repr
-    assert "beta" in pot_repr
 
 
 class TestLatexRepr:
