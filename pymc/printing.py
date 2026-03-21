@@ -49,6 +49,9 @@ def str_for_dist(
     This can be either LaTeX or plain, optionally with distribution parameter
     values included.
     """
+    if named_vars is None:
+        named_vars = set()
+
     dist_op = dist.owner.op
 
     if include_params:
@@ -208,6 +211,9 @@ def str_for_potential_or_deterministic(
     This can be either LaTeX or plain, optionally with distribution parameter
     values included.
     """
+    if named_vars is None:
+        named_vars = set()
+
     print_name = var.name if var.name is not None else "<unnamed>"
     sep_plain = "~" if dist_name == "Potential" else "="
     sep_latex = r"\sim" if dist_name == "Potential" else "="
@@ -225,25 +231,11 @@ def str_for_potential_or_deterministic(
 
 
 def _str_for_input_var(
-    var: Variable, formatting: str, named_vars: set[Variable] | None = None
+    var: Variable, formatting: str, named_vars: set[Variable]
 ) -> str:
-    def _is_potential_or_deterministic(var: Variable) -> bool:
-        # Fallback for standalone calls (named_vars is None).
-        # When named_vars is provided, this is unnecessary.
-        if not hasattr(var, "str_repr"):
-            return False
-        try:
-            return var.str_repr.__func__.func is str_for_potential_or_deterministic
-        except AttributeError:
-            return False
-
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
-    elif (
-        (named_vars is not None and var in named_vars)
-        or isinstance(var.owner.op, MeasurableOp)
-        or _is_potential_or_deterministic(var)
-    ):
+    elif var in named_vars or isinstance(var.owner.op, MeasurableOp):
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting, named_vars)
@@ -287,11 +279,9 @@ def _str_for_constant_value(
         return rf"<{var_type}>"
 
 
-def _str_for_expression(
-    var: Variable, formatting: str, named_vars: set[Variable] | None = None
-) -> str:
+def _str_for_expression(var: Variable, formatting: str, named_vars: set[Variable]) -> str:
     def _expand(x):
-        if named_vars is not None and x in named_vars:
+        if x in named_vars:
             return None
         if x.owner and not isinstance(x.owner.op, MeasurableOp):
             return reversed(x.owner.inputs)
@@ -300,7 +290,7 @@ def _str_for_expression(
     names = []
     for x in walk(nodes=var.owner.inputs, expand=_expand):
         assert isinstance(x, Variable)
-        if named_vars is not None and x in named_vars:
+        if x in named_vars:
             if x.name:
                 parents.append(x)
                 names.append(x.name)
