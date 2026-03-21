@@ -396,9 +396,32 @@ halfflat = HalfFlatRV()
 
 
 class HalfFlat(PositiveContinuous):
-    """Improper flat prior over the positive reals."""
+    r"""
+    Improper flat prior over the positive reals.
 
-    rv_op = halfflat
+    This is an unnormalized distribution and should be used only as
+    a vague, uninformative prior. It is not a valid probability
+    distribution and cannot be used for posterior predictive sampling.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x) \propto \begin{cases} 1 & \text{if } x > 0 \\ 0 & \text{otherwise} \end{cases}
+
+    ========  ============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      undefined
+    Variance  undefined
+    ========  ============================
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.HalfFlat("x")
+    """
 
     @classmethod
     def dist(cls, **kwargs):
@@ -409,9 +432,42 @@ class HalfFlat(PositiveContinuous):
         return pt.ones(() if rv_size_is_none(size) else size)
 
     def logp(value):
+        """
+        Compute the log probability for HalfFlat distribution.
+
+        Since HalfFlat is an improper distribution, the log probability
+        is 0 for all non-negative values and -inf for negative values.
+
+        Parameters
+        ----------
+        value : tensor_like of float
+            Value at which to evaluate the log probability.
+
+        Returns
+        -------
+        TensorVariable
+            0 if value >= 0, else -inf.
+        """
         return pt.switch(pt.lt(value, 0), -np.inf, pt.zeros_like(value))
 
     def logcdf(value):
+        """
+        Compute the log of the cumulative distribution function for HalfFlat.
+
+        Since HalfFlat is an improper distribution, the CDF is undefined
+        for all finite values. Returns -inf for all finite values and 0
+        only at positive infinity.
+
+        Parameters
+        ----------
+        value : tensor_like of float
+            Value at which to evaluate the log CDF.
+
+        Returns
+        -------
+        TensorVariable
+            -inf for all finite values, 0 at positive infinity.
+        """
         return pt.switch(pt.lt(value, np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, -np.inf))
 
 
@@ -3563,6 +3619,9 @@ class Rice(PositiveContinuous):
 
 class Logistic(Continuous):
     r"""
+
+
+
     Logistic distribution.
 
     The pdf of this distribution is
