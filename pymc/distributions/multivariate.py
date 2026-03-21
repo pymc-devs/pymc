@@ -1010,16 +1010,6 @@ class Wishart(Continuous):
         nu = pt.as_tensor_variable(nu, dtype=int)
         V = pt.as_tensor_variable(V)
 
-        warnings.warn(
-            "The Wishart distribution can currently not be used "
-            "for MCMC sampling. The probability of sampling a "
-            "symmetric matrix is basically zero. Instead, please "
-            "use LKJCholeskyCov or LKJCorr. For more information "
-            "on the issues surrounding the Wishart see here: "
-            "https://github.com/pymc-devs/pymc/issues/538.",
-            UserWarning,
-        )
-
         # mean = nu * V
         # p = V.shape[0]
         # mode = pt.switch(pt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
