@@ -103,7 +103,7 @@ def check_jacobian_det(
         x = make_comparable(x)
 
     if not elemwise:
-        jac = pt.log(pt.abs(pt.nlinalg.det(jacobian(x, [y]))))
+        jac = pt.log(pt.abs(pt.linalg.det(jacobian(x, [y]))))
     else:
         jac = pt.log(pt.abs(pt.diag(jacobian(x, [y]))))
 
@@ -241,7 +241,8 @@ def test_interval_near_boundary():
     with pm.Model() as model:
         pm.Uniform("x", initval=x0, lower=lb, upper=ub)
 
-    log_prob = model.point_logps()
+    with pytensor.config.change_flags(numba__fastmath=False):
+        log_prob = model.point_logps()
     assert_allclose(list(log_prob.values()), floatX(np.array([-52.68])))
 
 
@@ -656,12 +657,12 @@ def test_invalid_jacobian_broadcast_raises():
 
     buggy_transform = BuggyTransform()
 
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+    import numpy as np
 
     for jacobian_val in (True, False):
-        with pytest.raises(
-            ValueError,
-            match="are not allowed to broadcast together. There is a bug in the implementation of either one",
-        ):
-            m.logp(jacobian=jacobian_val)
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+
+        logp_fn = m.compile_logp(jacobian=jacobian_val)
+        with pytest.raises(AssertionError, match="SpecifyShape"):
+            logp_fn({"x_buggy__": np.zeros((4, 3))})

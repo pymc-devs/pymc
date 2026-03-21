@@ -18,14 +18,14 @@ import re
 from functools import partial
 
 from pytensor.compile import SharedVariable
-from pytensor.graph.basic import Constant
+from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import walk
-from pytensor.tensor.basic import TensorVariable, Variable
 from pytensor.tensor.elemwise import DimShuffle
-from pytensor.tensor.random.basic import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.type_other import NoneTypeT
+from pytensor.tensor.variable import TensorVariable
 
+from pymc.logprob.abstract import MeasurableOp
 from pymc.model import Model
 
 __all__ = [
@@ -35,28 +35,29 @@ __all__ = [
 ]
 
 
-def str_for_dist(
-    dist: TensorVariable, formatting: str = "plain", include_params: bool = True
-) -> str:
+def str_for_dist(dist: Variable, formatting: str = "plain", include_params: bool = True) -> str:
     """Make a human-readable string representation of a Distribution in a model.
 
     This can be either LaTeX or plain, optionally with distribution parameter
     values included.
     """
+    dist_op = dist.owner.op
+
     if include_params:
-        if isinstance(dist.owner.op, RandomVariable) or getattr(
-            dist.owner.op, "extended_signature", None
-        ):
+        try:
+            dist_args = dist.owner.op.dist_params(dist.owner)
+        except Exception:
+            # Can happen with SymbolicRandomVariable without extended_signature
             dist_args = [
-                _str_for_input_var(x, formatting=formatting)
-                for x in dist.owner.op.dist_params(dist.owner)
+                x for x in dist.owner.inputs if not isinstance(x.type, RandomType | NoneTypeT)
             ]
-        else:
-            dist_args = [
-                _str_for_input_var(x, formatting=formatting)
-                for x in dist.owner.inputs
-                if not isinstance(x.type, RandomType | NoneTypeT)
-            ]
+
+        dist_args_str = [_str_for_input_var(a, formatting=formatting) for a in dist_args]
+
+    if (print_name := getattr(dist_op, "_print_name", None)) is not None:
+        dist_name = print_name[formatting == "latex"]
+    else:
+        dist_name = "Unknown"
 
     print_name = dist.name
 
@@ -65,30 +66,22 @@ def str_for_dist(
             print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
             print_name = _format_underscore(print_name)
 
-        op_name = (
-            dist.owner.op._print_name[1]
-            if hasattr(dist.owner.op, "_print_name")
-            else r"\\operatorname{Unknown}"
-        )
         if include_params:
-            params = ",~".join([d.strip("$") for d in dist_args])
+            params = ",~".join([d.strip("$") for d in dist_args_str])
             if print_name:
-                return rf"${print_name} \sim {op_name}({params})$"
+                return rf"${print_name} \sim {dist_name}({params})$"
             else:
-                return rf"${op_name}({params})$"
+                return rf"${dist_name}({params})$"
 
         else:
             if print_name:
-                return rf"${print_name} \sim {op_name}$"
+                return rf"${print_name} \sim {dist_name}$"
             else:
-                return rf"${op_name}$"
+                return rf"${dist_name}$"
 
     else:  # plain
-        dist_name = (
-            dist.owner.op._print_name[0] if hasattr(dist.owner.op, "_print_name") else "Unknown"
-        )
         if include_params:
-            params = ", ".join(dist_args)
+            params = ", ".join(dist_args_str)
             if print_name:
                 return rf"{print_name} ~ {dist_name}({params})"
             else:
@@ -146,7 +139,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
 
 
 def str_for_potential_or_deterministic(
-    var: TensorVariable,
+    var: Variable,
     formatting: str = "plain",
     include_params: bool = True,
     dist_name: str = "Deterministic",
@@ -171,10 +164,9 @@ def str_for_potential_or_deterministic(
 
 
 def _str_for_input_var(var: Variable, formatting: str) -> str:
-    # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
     def _is_potential_or_deterministic(var: Variable) -> bool:
+        # FIXME: This is an (insufficient) hack. For model_repr we know which nodes are named variables
+        # and we should propagate that information instead of guessing based on whether something was monkey-patched
         if not hasattr(var, "str_repr"):
             return False
         try:
@@ -185,12 +177,9 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
 
     if isinstance(var, Constant | SharedVariable):
         return _str_for_constant(var, formatting)
-    elif isinstance(
-        var.owner.op, RandomVariable | SymbolicRandomVariable
-    ) or _is_potential_or_deterministic(var):
+    elif isinstance(var.owner.op, MeasurableOp) or _is_potential_or_deterministic(var):
         # show the names for RandomVariables, Deterministics, and Potentials, rather
         # than the full expression
-        assert isinstance(var, TensorVariable)
         return _str_for_input_rv(var, formatting)
     elif isinstance(var.owner.op, DimShuffle):
         return _str_for_input_var(var.owner.inputs[0], formatting)
@@ -198,7 +187,7 @@ def _str_for_input_var(var: Variable, formatting: str) -> str:
         return _str_for_expression(var, formatting)
 
 
-def _str_for_input_rv(var: TensorVariable, formatting: str) -> str:
+def _str_for_input_rv(var: Variable, formatting: str) -> str:
     _str = (
         var.name
         if var.name is not None
@@ -230,25 +219,23 @@ def _str_for_constant(var: Constant | SharedVariable, formatting: str) -> str:
 
 def _str_for_expression(var: Variable, formatting: str) -> str:
     # Avoid circular import
-    from pymc.distributions.distribution import SymbolicRandomVariable
 
     # construct a string like f(a1, ..., aN) listing all random variables a as arguments
     def _expand(x):
-        if x.owner and (not isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)):
+        if x.owner and not isinstance(x.owner.op, MeasurableOp):
             return reversed(x.owner.inputs)
 
     parents = []
     names = []
     for x in walk(nodes=var.owner.inputs, expand=_expand):
         assert isinstance(x, Variable)
-        if x.owner and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable):
+        if x.owner and isinstance(x.owner.op, MeasurableOp):
             parents.append(x)
             xname = x.name
             if xname is None:
                 # If the variable is unnamed, we show the op's name as we do
                 # with constants
-                opname = x.owner.op.name
-                if opname is not None:
+                if (opname := getattr(x.owner.op, "name", None)) is not None:
                     xname = rf"<{opname}>"
             assert xname is not None
             names.append(xname)
@@ -278,7 +265,7 @@ def _latex_escape(text: str) -> str:
     return text.replace("$", r"\$")
 
 
-def _default_repr_pretty(obj: TensorVariable | Model, p, cycle):
+def _default_repr_pretty(obj: Variable | Model, p, cycle):
     """Handy plug-in method to instruct IPython-like REPLs to use our str_repr above."""
     # we know that our str_repr does not recurse, so we can ignore cycle
     try:

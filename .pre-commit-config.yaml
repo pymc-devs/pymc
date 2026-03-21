@@ -51,7 +51,7 @@ repos:
 - repo: https://github.com/astral-sh/ruff-pre-commit
   rev: v0.11.13
   hooks:
-    - id: ruff
+    - id: ruff-check
       args: [--fix, --show-fixes]
     - id: ruff-format
 - repo: local
@@ -89,7 +89,7 @@ repos:
                contributing/versioning_schemes_explanation.md|
                learn/examples.md)
       entry: >
-          (?x)(arviz-devs.github.io|
+          (?x)(arviz-devs.github.io/arviz|
                python.arviz.org|
                pytensor.readthedocs.io|
                pymc-experimental.readthedocs.io|

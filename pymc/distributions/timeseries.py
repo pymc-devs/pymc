@@ -442,23 +442,26 @@ class AutoRegressiveRV(SymbolicRandomVariable):
         rhos_bcast = pt.broadcast_to(rhos, rhos_bcast_shape)
 
         def step(*args):
-            *prev_xs, reversed_rhos, sigma, rng = args
+            *prev_xs, rng, reversed_rhos, sigma = args
             if constant_term:
                 mu = reversed_rhos[-1] + pt.sum(prev_xs * reversed_rhos[:-1], axis=0)
             else:
                 mu = pt.sum(prev_xs * reversed_rhos, axis=0)
             next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
-            return new_x, {rng: next_rng}
+            return new_x, next_rng
 
         # We transpose inputs as scan iterates over first dimension
-        innov, innov_updates = pytensor.scan(
+        innov, noise_next_rng = pytensor.scan(
             fn=step,
-            outputs_info=[{"initial": init_dist.T, "taps": range(-ar_order, 0)}],
-            non_sequences=[rhos_bcast.T[::-1], sigma.T, noise_rng],
+            outputs_info=[
+                {"initial": init_dist.T, "taps": range(-ar_order, 0)},
+                noise_rng,
+            ],
+            non_sequences=[rhos_bcast.T[::-1], sigma.T],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
-        (noise_next_rng,) = tuple(innov_updates.values())
         ar = pt.concatenate([init_dist, innov.T], axis=-1)
 
         return AutoRegressiveRV(
@@ -710,24 +713,25 @@ class GARCH11RV(SymbolicRandomVariable):
 
         # Create OpFromGraph representing random draws from GARCH11 process
 
-        def step(prev_y, prev_sigma, omega, alpha_1, beta_1, rng):
+        def step(prev_y, prev_sigma, rng, omega, alpha_1, beta_1):
             new_sigma = pt.sqrt(
                 omega + alpha_1 * pt.square(prev_y) + beta_1 * pt.square(prev_sigma)
             )
             next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
-            return (new_y, new_sigma), {rng: next_rng}
+            return new_y, new_sigma, next_rng
 
-        (y_t, _), innov_updates = pytensor.scan(
+        y_t, _, noise_next_rng = pytensor.scan(
             fn=step,
             outputs_info=[
                 init_dist,
                 pt.broadcast_to(initial_vol.astype("floatX"), init_dist.shape),
+                noise_rng,
             ],
-            non_sequences=[omega, alpha_1, beta_1, noise_rng],
+            non_sequences=[omega, alpha_1, beta_1],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
-        (noise_next_rng,) = tuple(innov_updates.values())
 
         garch11 = pt.concatenate([init_dist[None, ...], y_t], axis=0).dimshuffle(
             (*range(1, y_t.ndim), 0)
@@ -816,12 +820,13 @@ def garch11_logp(
     def volatility_update(x, vol, w, a, b):
         return pt.sqrt(w + a * pt.square(x) + b * pt.square(vol))
 
-    vol, _ = pytensor.scan(
+    vol = pytensor.scan(
         fn=volatility_update,
         sequences=[value_dimswapped[:-1]],
         outputs_info=[initial_vol],
         non_sequences=[omega, alpha_1, beta_1],
         strict=True,
+        return_updates=False,
     )
     sigma_t = pt.concatenate([[initial_vol], vol])
     # Compute and collapse logp across time dimension
@@ -861,21 +866,21 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
 
         # Create OpFromGraph representing random draws from SDE process
         def step(*prev_args):
-            prev_y, *prev_sde_pars, rng = prev_args
+            prev_y, rng, *prev_sde_pars = prev_args
             f, g = sde_fn(prev_y, *prev_sde_pars)
             mu = prev_y + dt * f
             sigma = pt.sqrt(dt) * g
             next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
-            return next_y, {rng: next_rng}
+            return next_y, next_rng
 
-        y_t, innov_updates = pytensor.scan(
+        y_t, noise_next_rng = pytensor.scan(
             fn=step,
-            outputs_info=[init_dist],
-            non_sequences=[*sde_pars, noise_rng],
+            outputs_info=[init_dist, noise_rng],
+            non_sequences=[*sde_pars],
             n_steps=steps,
             strict=True,
+            return_updates=False,
         )
-        (noise_next_rng,) = tuple(innov_updates.values())
 
         sde_out = pt.concatenate([init_dist[None, ...], y_t], axis=0).dimshuffle(
             (*range(1, y_t.ndim), 0)

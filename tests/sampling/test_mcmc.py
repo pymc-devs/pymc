@@ -414,6 +414,33 @@ class TestSampleReturn:
         assert idata.posterior.sizes["draw"] == 100
         assert idata.posterior.sizes["chain"] == 3
 
+    def test_categorical_gibbs_respects_driver_tune_boundary(self):
+        with pm.Model():
+            pm.Categorical("x", p=np.array([0.2, 0.3, 0.5]))
+            sample_kwargs = {
+                "tune": 5,
+                "draws": 7,
+                "chains": 1,
+                "cores": 1,
+                "return_inferencedata": False,
+                "compute_convergence_checks": False,
+                "progressbar": False,
+                "random_seed": 123,
+            }
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                mtrace = pm.sample(discard_tuned_samples=True, **sample_kwargs)
+            assert len(mtrace) == 7
+            assert mtrace.report.n_tune == 5
+            assert mtrace.report.n_draws == 7
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                with pytest.warns(UserWarning, match="will be included"):
+                    mtrace_warmup = pm.sample(discard_tuned_samples=False, **sample_kwargs)
+            assert len(mtrace_warmup) == 12
+            assert mtrace_warmup.report.n_tune == 5
+            assert mtrace_warmup.report.n_draws == 7
+
     @pytest.mark.parametrize("cores", [1, 2])
     def test_logs_sampler_warnings(self, caplog, cores):
         """Asserts that "warning" sampler stats are logged during sampling."""
@@ -905,3 +932,63 @@ class TestShared:
         np.testing.assert_allclose(
             x_pred, pp_trace1.posterior_predictive["obs"].mean(("chain", "draw")), atol=1e-1
         )
+
+
+class TestQuietMode:
+    """Tests for the quiet parameter in pm.sample()."""
+
+    def test_quiet_suppresses_logging(self, caplog):
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    quiet=True,
+                    random_seed=42,
+                    progressbar=False,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) == 0
+
+        assert hasattr(idata, "posterior")
+        assert "x" in idata.posterior
+
+    def test_quiet_overrides_progressbar(self, caplog):
+        """Test that quiet=True overrides progressbar=True."""
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    progressbar=True,
+                    quiet=True,
+                    random_seed=42,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) == 0
+
+    def test_quiet_false_shows_logs(self, caplog):
+        """Test that quiet=False (default) shows logs."""
+        with pm.Model():
+            x = pm.Normal("x", 0, 1)
+            with caplog.at_level(logging.INFO, logger="pymc"):
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    cores=1,
+                    quiet=False,
+                    progressbar=False,
+                    random_seed=42,
+                )
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert len(pymc_logs) > 0

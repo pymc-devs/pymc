@@ -409,7 +409,7 @@ def get_support_shape(
         ]
 
     if inferred_support_shape is None and observed is not None:
-        observed = convert_observed_data(observed)
+        observed = cast(TensorVariable | np.ndarray, convert_observed_data(observed))
         if observed.ndim < ndim_supp:
             raise ValueError(
                 f"Number of observed dimensions is too small for ndim_supp of {ndim_supp}"
@@ -489,3 +489,13 @@ def implicit_size_from_params(
         ),
         dtype="int64",  # In case it's empty, as_tensor will default to floatX
     )
+
+
+def maybe_resize(a: TensorVariable, size) -> TensorVariable:
+    if not (size is None or isinstance(size.type, NoneTypeT)):
+        [size_len] = size.type.shape
+        if (missing_size_entries := a.ndim - size_len) > 0:
+            # Allow expression to broadcast beyond size
+            size = (*a.shape[:missing_size_entries], *size)
+        a = pt.alloc(a, *size)  # type: ignore[assignment]
+    return a

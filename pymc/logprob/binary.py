@@ -25,6 +25,7 @@ from pytensor.tensor.math import ge, gt, invert, le, lt
 
 from pymc.logprob.abstract import (
     MeasurableElemwise,
+    _logccdf_helper,
     _logcdf_helper,
     _logprob,
     _logprob_helper,
@@ -95,7 +96,7 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
     base_rv_op = base_rv.owner.op
 
     logcdf = _logcdf_helper(base_rv, operand, **kwargs)
-    logccdf = pt.log1mexp(logcdf)
+    logccdf = _logccdf_helper(base_rv, operand, **kwargs)
 
     condn_exp = pt.eq(value, np.array(True))
 

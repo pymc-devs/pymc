@@ -2,17 +2,17 @@
 name: pymc-dev
 channels:
 - conda-forge
-- defaults
+- nodefaults
 dependencies:
 # Base dependencies
-- arviz>=0.13.0
+- arviz>=0.13.0,<1.0
 - blas
-- cachetools>=4.2.1
+- cachetools>=4.2.1,<7
 - cloudpickle
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
-- pytensor>=2.35.0,<2.36
+- pytensor>=2.38.2,<2.39
 - python-graphviz
 - networkx
 - scipy>=1.4.1
@@ -37,7 +37,7 @@ dependencies:
 - sphinxext-rediraffe
 - watermark
 - sphinx-remove-toctrees
-- mypy=1.15.0
+- mypy=1.19.1
 - types-cachetools
 - pip:
   - pymc-sphinx-theme>=0.16.0

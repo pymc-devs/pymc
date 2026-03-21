@@ -51,6 +51,8 @@ pytestmark = pytest.mark.filterwarnings(
     "error",
     # Related to https://github.com/arviz-devs/arviz/issues/2327
     "ignore:datetime.datetime.utcnow():DeprecationWarning",
+    "ignore:.*Cannot cache.*:numba.core.errors.NumbaWarning",
+    "ignore::numba.NumbaPerformanceWarning",
 )
 
 

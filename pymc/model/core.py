@@ -32,7 +32,7 @@ import pytensor.sparse as sparse
 import pytensor.tensor as pt
 import scipy.sparse as sps
 
-from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode
+from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
@@ -1638,7 +1638,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
         Other keyword arguments :
-            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile_pymc`.
+            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile`.
 
         Returns
         -------
@@ -1722,9 +1722,9 @@ class Model(WithMemoization, metaclass=ContextMeta):
             transform = self.rvs_to_transforms[rv]
             if transform is not None:
                 names.append(get_transformed_name(rv.name, transform))
-                outputs.append(transform.forward(rv, *rv.owner.inputs).shape)
+                outputs.append(pt.as_tensor(transform.forward(rv, *rv.owner.inputs).shape))
             names.append(rv.name)
-            outputs.append(rv.shape)
+            outputs.append(pt.as_tensor(rv.shape))
         f = pytensor.function(
             inputs=[],
             outputs=outputs,
@@ -2263,7 +2263,7 @@ def Deterministic(name, var, model=None, dims=None):
     random variables.
     """
     model = modelcontext(model)
-    var = var.copy(model.name_for(name))
+    var = view_op(var, name=model.name_for(name))
     model.deterministics.append(var)
     model.add_named_variable(var, dims)
 

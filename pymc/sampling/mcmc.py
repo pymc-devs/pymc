@@ -12,10 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Functions for MCMC sampling."""
-
 import contextlib
 import logging
+import multiprocessing
 import pickle
 import sys
 import time
@@ -54,8 +53,12 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import ProgressBarManager, ProgressBarType, default_progress_theme
-from pymc.sampling.parallel import Draw, _cpu_count
+from pymc.progress_bar import (
+    MCMCProgressBarManager,
+    ProgressBarOptions,
+    default_progress_theme,
+)
+from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
     log_warning_stats,
@@ -99,6 +102,35 @@ class SamplingIteratorCallback(Protocol):
 
 
 _log = logging.getLogger(__name__)
+
+
+@contextlib.contextmanager
+def _quiet_logging(quiet: bool = False):
+    """Context manager to suppress PyMC logging when quiet=True.
+
+    Parameters
+    ----------
+    quiet : bool
+        If True, temporarily suppress all PyMC logging. If False, do nothing.
+    """
+    if not quiet:
+        yield
+        return
+
+    loggers = [
+        logging.getLogger("pymc"),
+        logging.getLogger("pymc.sampling.mcmc"),
+        logging.getLogger("pymc.stats.convergence"),
+    ]
+    original_levels = [(lg, lg.level) for lg in loggers]
+
+    try:
+        for lg in loggers:
+            lg.setLevel(logging.CRITICAL + 1)
+        yield
+    finally:
+        for lg, level in original_levels:
+            lg.setLevel(level)
 
 
 def instantiate_steppers(
@@ -301,6 +333,7 @@ def _sample_external_nuts(
     model: Model,
     var_names: Sequence[str] | None,
     progressbar: bool,
+    quiet: bool,
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
     nuts_sampler_kwargs: dict | None,
@@ -401,6 +434,7 @@ def _sample_external_nuts(
             model=model,
             var_names=var_names,
             progressbar=progressbar,
+            quiet=quiet,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
@@ -422,8 +456,9 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
+    progressbar: bool | ProgressBarOptions = True,
     progressbar_theme: Theme | None = default_progress_theme,
+    quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -454,8 +489,9 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
+    progressbar: bool | ProgressBarOptions = True,
     progressbar_theme: Theme | None = default_progress_theme,
+    quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -486,8 +522,9 @@ def sample(
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarType = True,
-    progressbar_theme: Theme | None = None,
+    progressbar: bool | ProgressBarOptions = True,
+    progressbar_theme: Theme | str | None = None,
+    quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
@@ -549,6 +586,10 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
+    quiet : bool, default False
+        If True, suppress all logging output and progress bars during sampling.
+        This is useful when sampling in loops or when no output is desired.
+        When True, this overrides ``progressbar=True``.
     step : function or iterable of functions
         A step function or collection of functions. If there are variables without step methods,
         step methods for those variables will be assigned automatically. By default the NUTS step
@@ -566,6 +607,7 @@ def sample(
         number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
+        Note that this argument is ignored when using fork multiprocessing start method.
     initvals : optional, dict, array of dict
         Dict or list of dicts with initial value strategies to use instead of the defaults from
         `Model.initial_values`. The keys should be names of transformed random variables.
@@ -718,6 +760,10 @@ def sample(
     # ADVI initialization expect just a bool.
     progress_bool = bool(progressbar)
 
+    if quiet:
+        progressbar = False
+        progress_bool = False
+
     model = modelcontext(model)
     if not model.free_RVs:
         raise SamplingError(
@@ -730,27 +776,10 @@ def sample(
     if chains is None:
         chains = max(2, cores)
 
-    if blas_cores == "auto":
-        blas_cores = cores
-
-    cores = min(cores, chains)
-
-    num_blas_cores_per_chain: int | None
-    joined_blas_limiter: Callable[[], Any]
-
-    if blas_cores is None:
-        joined_blas_limiter = contextlib.nullcontext
-        num_blas_cores_per_chain = None
-    elif isinstance(blas_cores, int):
-
-        def joined_blas_limiter():
-            return threadpool_limits(limits=blas_cores)
-
-        num_blas_cores_per_chain = blas_cores // cores
-    else:
-        raise ValueError(
-            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
-        )
+    mp_ctx = _initialize_multiprocessing_context(mp_ctx, quiet=quiet)
+    joined_blas_limiter, cores, num_blas_cores_per_worker = setup_cores_blas_cores(
+        blas_cores, chains, cores, mp_ctx
+    )
 
     if random_seed == -1:
         raise ValueError(
@@ -775,12 +804,13 @@ def sample(
         )
 
     # small trace warning
-    if draws == 0:
-        msg = "Tuning was enabled throughout the whole trace."
-        _log.warning(msg)
-    elif draws < 100:
-        msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
-        _log.warning(msg)
+    if not quiet:
+        if draws == 0:
+            msg = "Tuning was enabled throughout the whole trace."
+            _log.warning(msg)
+        elif draws < 100:
+            msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
+            _log.warning(msg)
 
     provided_steps, selected_steps = assign_step_methods(model, step, methods=pm.STEP_METHODS)
     exclusive_nuts = (
@@ -813,6 +843,7 @@ def sample(
                 model=model,
                 var_names=var_names,
                 progressbar=progress_bool,
+                quiet=quiet,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 nuts_sampler_kwargs=nuts_sampler_kwargs,
@@ -832,6 +863,7 @@ def sample(
                 model=model,
                 random_seed=random_seed_list,
                 progressbar=progress_bool,
+                quiet=quiet,
                 jitter_max_retries=jitter_max_retries,
                 tune=tune,
                 initvals=initvals,
@@ -897,7 +929,7 @@ def sample(
     }
     parallel_args = {
         "mp_ctx": mp_ctx,
-        "blas_cores": num_blas_cores_per_chain,
+        "blas_cores": num_blas_cores_per_worker,
     }
 
     sample_args.update(kwargs)
@@ -924,34 +956,40 @@ def sample(
         sample_args["rngs"] = rngs
 
     t_start = time.time()
-    if parallel:
-        _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
-        _print_step_hierarchy(step)
-        try:
-            _mp_sample(**sample_args, **parallel_args)
-        except pickle.PickleError:
-            _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exc_info=True)
-            parallel = False
-        except AttributeError as e:
-            if not str(e).startswith("AttributeError: Can't pickle"):
-                raise
-            _log.warning("Could not pickle model, sampling singlethreaded.")
-            _log.debug("Pickling error:", exc_info=True)
-            parallel = False
-    if not parallel:
-        if has_population_samplers:
-            _log.info(f"Population sampling ({chains} chains)")
-            _print_step_hierarchy(step)
-            with joined_blas_limiter():
-                _sample_population(
-                    initial_points=initial_points, parallelize=cores > 1, **sample_args
-                )
-        else:
-            _log.info(f"Sequential sampling ({chains} chains in 1 job)")
-            _print_step_hierarchy(step)
-            with joined_blas_limiter():
-                _sample_many(**sample_args)
+    with _quiet_logging(quiet):
+        if parallel:
+            if not quiet:
+                _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
+                _print_step_hierarchy(step)
+            try:
+                _mp_sample(**sample_args, **parallel_args)
+            except pickle.PickleError:
+                if not quiet:
+                    _log.warning("Could not pickle model, sampling singlethreaded.")
+                    _log.debug("Pickling error:", exc_info=True)
+                parallel = False
+            except AttributeError as e:
+                if not str(e).startswith("AttributeError: Can't pickle"):
+                    raise
+                if not quiet:
+                    _log.warning("Could not pickle model, sampling singlethreaded.")
+                    _log.debug("Pickling error:", exc_info=True)
+                parallel = False
+        if not parallel:
+            if has_population_samplers:
+                if not quiet:
+                    _log.info(f"Population sampling ({chains} chains)")
+                    _print_step_hierarchy(step)
+                with joined_blas_limiter():
+                    _sample_population(
+                        initial_points=initial_points, parallelize=cores > 1, **sample_args
+                    )
+            else:
+                if not quiet:
+                    _log.info(f"Sequential sampling ({chains} chains in 1 job)")
+                    _print_step_hierarchy(step)
+                with joined_blas_limiter():
+                    _sample_many(**sample_args)
 
     t_sampling = time.time() - t_start
 
@@ -968,7 +1006,47 @@ def sample(
         keep_warning_stat=keep_warning_stat,
         idata_kwargs=idata_kwargs or {},
         model=model,
+        quiet=quiet,
     )
+
+
+def setup_cores_blas_cores(
+    blas_cores: int | None | str,
+    chains: int,
+    cores: int,
+    mp_ctx: multiprocessing.context.BaseContext,
+) -> tuple[Callable[[], Any], int, int | None]:
+    if isinstance(blas_cores, str) and blas_cores != "auto":
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    if blas_cores == "auto":
+        blas_cores = cores
+
+    cores = min(cores, chains)
+
+    num_blas_cores_per_worker: int | None
+    joined_blas_limiter: Callable[[], Any]
+
+    if blas_cores is None:
+        joined_blas_limiter = contextlib.nullcontext
+        num_blas_cores_per_worker = None
+
+    elif isinstance(blas_cores, int):
+        if mp_ctx.get_start_method() == "fork":
+            # https://github.com/pymc-devs/pymc/issues/7354
+            joined_blas_limiter = contextlib.nullcontext
+        else:
+
+            def joined_blas_limiter():
+                return threadpool_limits(limits=blas_cores)
+
+        num_blas_cores_per_worker = blas_cores // cores
+    else:
+        raise ValueError(
+            f"Invalid argument `blas_cores`, must be int, 'auto' or None: {blas_cores}"
+        )
+    return joined_blas_limiter, cores, num_blas_cores_per_worker
 
 
 def _sample_return(
@@ -983,6 +1061,7 @@ def _sample_return(
     keep_warning_stat: bool,
     idata_kwargs: dict[str, Any],
     model: Model,
+    quiet: bool = False,
 ) -> InferenceData | MultiTrace | ZarrTrace:
     """Pick/slice chains, run diagnostics and convert to the desired return type.
 
@@ -1006,11 +1085,12 @@ def _sample_return(
         total_n_tune = tuning_steps_per_chain.sum()
         total_draws = draws_per_chain.sum()
 
-        _log.info(
-            f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {desired_tune:_d} desired tune and {desired_draw:_d} desired draw iterations "
-            f"(Actually sampled {total_n_tune:_d} tune and {total_draws:_d} draws total) "
-            f"took {t_sampling:.0f} seconds."
-        )
+        if not quiet:
+            _log.info(
+                f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {desired_tune:_d} desired tune and {desired_draw:_d} desired draw iterations "
+                f"(Actually sampled {total_n_tune:_d} tune and {total_draws:_d} draws total) "
+                f"took {t_sampling:.0f} seconds."
+            )
 
         if compute_convergence_checks or return_inferencedata:
             idata = traces.to_inferencedata(save_warmup=not discard_tuned_samples)
@@ -1030,7 +1110,8 @@ def _sample_return(
                 warns = run_convergence_checks(idata, model)
                 for warn in warns:
                     traces._sampling_state.global_warnings.append(np.array([warn]))
-                log_warnings(warns)
+                if not quiet:
+                    log_warnings(warns)
 
             if return_inferencedata:
                 # By default we drop the "warning" stat which contains `SamplerWarning`
@@ -1046,18 +1127,10 @@ def _sample_return(
     else:
         traces, length = _choose_chains(traces, 0)
     mtrace = MultiTrace(traces)[:length]
-    # count the number of tune/draw iterations that happened
-    # ideally via the "tune" statistic, but not all samplers record it!
-    if "tune" in mtrace.stat_names:
-        # Get the tune stat directly from chain 0, sampler 0
-        stat = mtrace._straces[0].get_sampler_stats("tune", sampler_idx=0)
-        stat = tuple(stat)
-        n_tune = stat.count(True)
-        n_draws = stat.count(False)
-    else:
-        # these may be wrong when KeyboardInterrupt happened, but they're better than nothing
-        n_tune = min(tune, len(mtrace))
-        n_draws = max(0, len(mtrace) - n_tune)
+    # Count the number of tune/draw iterations that happened.
+    # The warmup/draw boundary is owned by the sampling driver.
+    n_tune = min(tune, len(mtrace))
+    n_draws = max(0, len(mtrace) - n_tune)
 
     if discard_tuned_samples:
         mtrace = mtrace[n_tune:]
@@ -1068,11 +1141,12 @@ def _sample_return(
     mtrace.report._t_sampling = t_sampling
 
     n_chains = len(mtrace.chains)
-    _log.info(
-        f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {n_tune:_d} tune and {n_draws:_d} draw iterations "
-        f"({n_tune * n_chains:_d} + {n_draws * n_chains:_d} draws total) "
-        f"took {t_sampling:.0f} seconds."
-    )
+    if not quiet:
+        _log.info(
+            f"Sampling {n_chains} chain{'s' if n_chains > 1 else ''} for {n_tune:_d} tune and {n_draws:_d} draw iterations "
+            f"({n_tune * n_chains:_d} + {n_draws * n_chains:_d} draws total) "
+            f"took {t_sampling:.0f} seconds."
+        )
 
     if compute_convergence_checks or return_inferencedata:
         ikwargs: dict[str, Any] = {"model": model, "save_warmup": not discard_tuned_samples}
@@ -1082,7 +1156,8 @@ def _sample_return(
         if compute_convergence_checks:
             warns = run_convergence_checks(idata, model)
             mtrace.report._add_warnings(warns)
-            log_warnings(warns)
+            if not quiet:
+                log_warnings(warns)
 
         if return_inferencedata:
             # By default we drop the "warning" stat which contains `SamplerWarning`
@@ -1145,7 +1220,7 @@ def _sample_many(
         Step function
     """
     initial_step_state = step.sampling_state
-    progress_manager = ProgressBarManager(
+    progress_manager = MCMCProgressBarManager(
         step_method=step,
         chains=chains,
         draws=draws - kwargs.get("tune", 0),
@@ -1182,7 +1257,7 @@ def _sample(
     tune: int,
     model: Model | None = None,
     callback=None,
-    progress_manager: ProgressBarManager,
+    progress_manager: MCMCProgressBarManager,
     **kwargs,
 ) -> None:
     """Sample one chain (singleprocess).
@@ -1224,7 +1299,7 @@ def _sample(
     try:
         for it, stats in enumerate(sampling_gen):
             progress_manager.update(
-                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it > tune
+                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune
             )
 
         if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
@@ -1295,7 +1370,7 @@ def _iter_sample(
                 step.stop_tuning()
 
             point, stats = step.step(point)
-            trace.record(point, stats)
+            trace.record(point, stats, in_warmup=i < tune)
             log_warning_stats(stats)
 
             if callback is not None:
@@ -1357,7 +1432,7 @@ def _mp_sample(
         Dicts must contain numeric (transformed) initial values for all (transformed) free variables.
     progressbar : bool
         Whether or not to display a progress bar in the command line.
-    progressbar_theme : Theme
+    progressbar_theme : Theme or str
         Optional custom theme for the progress bar.
     traces
         Recording backends for each chain.
@@ -1408,7 +1483,7 @@ def _mp_sample(
                     strace = traces[draw.chain]
                     if not zarr_recording:
                         # Zarr recording happens in each process
-                        strace.record(draw.point, draw.stats)
+                        strace.record(draw.point, draw.stats, in_warmup=draw.tuning)
                     log_warning_stats(draw.stats)
 
                     if callback is not None:
@@ -1497,6 +1572,7 @@ def init_nuts(
     model: Model | None = None,
     random_seed: RandomSeed = None,
     progressbar=True,
+    quiet: bool = False,
     jitter_max_retries: int = 10,
     tune: int | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -1582,7 +1658,8 @@ def init_nuts(
 
     random_seed_list = _get_seeds_per_chain(random_seed, chains)
 
-    _log.info(f"Initializing NUTS using {init}...")
+    if not quiet:
+        _log.info(f"Initializing NUTS using {init}...")
 
     cb = []
     if "advi" in init:
@@ -1646,7 +1723,7 @@ def init_nuts(
             method="advi",
             model=model,
             callbacks=cb,
-            progressbar=progressbar,
+            progressbar=progressbar and not quiet,
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )
@@ -1670,7 +1747,7 @@ def init_nuts(
             method="advi",
             model=model,
             callbacks=cb,
-            progressbar=progressbar,
+            progressbar=progressbar and not quiet,
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )
@@ -1688,7 +1765,7 @@ def init_nuts(
             n=n_init,
             method=pm.KLqp(approx),
             callbacks=cb,
-            progressbar=progressbar,
+            progressbar=progressbar and not quiet,
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )

@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-"""Functions for prior and posterior predictive sampling."""
-
 import logging
 import warnings
 
@@ -43,8 +41,6 @@ from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.var import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant
-from rich.console import Console
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 from rich.theme import Theme
 
 import pymc as pm
@@ -54,7 +50,7 @@ from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.progress_bar import create_simple_progress, default_progress_theme
 from pymc.pytensorf import compile, rvs_in_graph
 from pymc.util import (
     RandomState,
@@ -298,7 +294,7 @@ def draw(
     random_seed : int, RandomState or numpy_Generator, optional
         Seed for the random number generator.
     **kwargs : dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
 
     Returns
     -------
@@ -414,7 +410,7 @@ def sample_prior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
     samples : int
         Number of samples from the prior predictive to generate. Deprecated in favor of `draws`.
 
@@ -584,7 +580,7 @@ def sample_posterior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
 
     Returns
     -------
@@ -921,15 +917,9 @@ def sample_posterior_predictive(
     _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
     ppc_trace_t = _DefaultTrace(samples)
 
-    progress = CustomProgress(
-        "[progress.description]{task.description}",
-        BarColumn(),
-        "[progress.percentage]{task.percentage:>3.0f}%",
-        TimeRemainingColumn(),
-        TextColumn("/"),
-        TimeElapsedColumn(),
-        console=Console(theme=progressbar_theme),
-        disable=not progressbar,
+    progress = create_simple_progress(
+        progressbar=progressbar,
+        progressbar_theme=progressbar_theme,
     )
 
     try:
@@ -941,7 +931,7 @@ def sample_posterior_predictive(
                     if hasattr(_trace, "_straces"):
                         chain_idx, point_idx = np.divmod(idx, len_trace)
                         chain_idx = chain_idx % nchain
-                        param = cast(MultiTrace, _trace)._straces[chain_idx].point(point_idx)
+                        param = _trace._straces[chain_idx].point(point_idx)
                     # ... or a PointList
                     else:
                         param = cast(PointList, _trace)[idx % (len_trace * nchain)]

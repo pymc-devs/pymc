@@ -25,7 +25,8 @@ from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.sparse.basic import DenseFromSparse, sp_sum
+from pytensor.sparse.basic import DenseFromSparse
+from pytensor.sparse.math import sp_sum
 from pytensor.tensor import (
     TensorConstant,
     TensorVariable,
@@ -35,7 +36,7 @@ from pytensor.tensor import (
 )
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
-from pytensor.tensor.linalg import cholesky, det, eigh, solve_triangular, trace
+from pytensor.tensor.linalg import det, eigh, solve_triangular, trace
 from pytensor.tensor.linalg import inv as matrix_inverse
 from pytensor.tensor.random import chisquare
 from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
@@ -123,13 +124,6 @@ def simplex_cont_transform(op, rv):
     return transforms.simplex
 
 
-# Step methods and advi do not catch LinAlgErrors at the
-# moment. We work around that by using a cholesky op
-# that returns a nan as first entry instead of raising
-# an error.
-nan_lower_cholesky = partial(cholesky, lower=True, on_error="nan")
-
-
 def quaddist_matrix(cov=None, chol=None, tau=None, lower=True, *args, **kwargs):
     if len([i for i in [tau, cov, chol] if i is not None]) != 1:
         raise ValueError("Incompatible parameterization. Specify exactly one of tau, cov, or chol.")
@@ -175,12 +169,8 @@ def quaddist_chol(value, mu, cov):
     else:
         onedim = False
 
-    chol_cov = nan_lower_cholesky(cov)
+    chol_cov = pt.linalg.cholesky(cov, lower=True)
     logdet, posdef = _logdet_from_cholesky(chol_cov)
-
-    # solve_triangular will raise if there are nans
-    # (which happens if the cholesky fails)
-    chol_cov = pt.switch(posdef[..., None, None], chol_cov, 1)
 
     delta = value - mu
     delta_trans = solve_lower(chol_cov, delta, b_ndim=1)
@@ -346,7 +336,7 @@ def precision_mv_normal_logp(op: PrecisionMvNormalRV, value, rng, size, mean, ta
 
     delta = value - mean
     quadratic_form = delta.T @ tau @ delta
-    logdet, posdef = _logdet_from_cholesky(nan_lower_cholesky(tau))
+    logdet, posdef = _logdet_from_cholesky(pt.linalg.cholesky(tau, lower=True))
     logp = -0.5 * (k * pt.log(2 * np.pi) + quadratic_form) + logdet
 
     return check_parameters(
@@ -962,6 +952,8 @@ class WishartRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, nu, V, size):
         scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
+        # Scipy doesn't accept batch nu or V
+        nu = _squeeze_to_ndim(nu, 0)
         V = _squeeze_to_ndim(V, 2)
         result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
         if size == (1,):
@@ -1860,8 +1852,6 @@ class MatrixNormal(Continuous):
         *args,
         **kwargs,
     ):
-        lower_cholesky = partial(cholesky, lower=True, on_error="raise")
-
         # Among-row matrices
         if len([i for i in [rowcov, rowchol] if i is not None]) != 1:
             raise ValueError(
@@ -1870,7 +1860,7 @@ class MatrixNormal(Continuous):
         if rowcov is not None:
             if rowcov.ndim != 2:
                 raise ValueError("rowcov must be two dimensional.")
-            rowchol_cov = lower_cholesky(rowcov)
+            rowchol_cov = pt.linalg.cholesky(rowcov, lower=True)
         else:
             if rowchol.ndim != 2:
                 raise ValueError("rowchol must be two dimensional.")
@@ -1885,7 +1875,7 @@ class MatrixNormal(Continuous):
             colcov = pt.as_tensor_variable(colcov)
             if colcov.ndim != 2:
                 raise ValueError("colcov must be two dimensional.")
-            colchol_cov = lower_cholesky(colcov)
+            colchol_cov = pt.linalg.cholesky(colcov, lower=True)
         else:
             if colchol.ndim != 2:
                 raise ValueError("colchol must be two dimensional.")
@@ -2263,10 +2253,12 @@ class CAR(Continuous):
     def dist(cls, mu, W, alpha, tau, *args, **kwargs):
         # This variable has an expensive validation check, that we want to constant-fold if possible
         # So it's passed as an explicit input
-        W = pytensor.sparse.as_sparse_or_tensor_variable(W)
+        from pytensor.sparse import as_sparse_or_tensor_variable, sign
+
+        W = as_sparse_or_tensor_variable(W)
         if isinstance(W.type, pytensor.sparse.SparseTensorType):
-            abs_diff = pytensor.sparse.basic.mul(pytensor.sparse.sign(W - W.T), W - W.T)
-            W_is_valid = pt.isclose(pytensor.sparse.sp_sum(abs_diff), 0)
+            abs_diff = sign(W - W.T) * (W - W.T)
+            W_is_valid = pt.isclose(abs_diff.sum(), 0)
         else:
             W_is_valid = pt.allclose(W, W.T)
 
@@ -2307,7 +2299,7 @@ class CAR(Continuous):
         if W.owner and isinstance(W.owner.op, DenseFromSparse):
             W = W.owner.inputs[0]
 
-        sparse = isinstance(W, pytensor.sparse.SparseVariable)
+        sparse = isinstance(W, pytensor.sparse.variable.SparseVariable)
         if sparse:
             D = sp_sum(W, axis=0)
             Dinv_sqrt = pt.diag(1 / pt.sqrt(D))
@@ -2669,9 +2661,9 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, sigma, support_shape, *, size=None, rng=None):
+        support_shape = _squeeze_to_ndim(pt.as_tensor(support_shape), ndim=1)
         n_zerosum_axes = pt.get_vector_length(support_shape)
         sigma = pt.as_tensor(sigma)
-        support_shape = pt.as_tensor(support_shape, ndim=1)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
@@ -2687,8 +2679,10 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
         for axis in range(n_zerosum_axes):
             zerosum_rv -= zerosum_rv.mean(axis=-axis - 1, keepdims=True)
 
+        # sigma has core_shape = (1, 1, ...) (as many as there are zerosum axes)
+        ones = ",".join("1" for _ in range(n_zerosum_axes))
         support_str = ",".join([f"d{i}" for i in range(n_zerosum_axes)])
-        extended_signature = f"[rng],[size],(),(s)->[rng],({support_str})"
+        extended_signature = f"[rng],[size],({ones}),(s)->[rng],({support_str})"
         return cls(
             inputs=[rng, size, sigma, support_shape],
             outputs=[next_rng, zerosum_rv],
@@ -2784,7 +2778,7 @@ class ZeroSumNormal(Distribution):
     def dist(cls, sigma=1.0, n_zerosum_axes=None, support_shape=None, **kwargs):
         n_zerosum_axes = cls.check_zerosum_axes(n_zerosum_axes)
 
-        sigma = pt.as_tensor(sigma)
+        sigma = pt.atleast_Nd(pt.as_tensor(sigma), n=n_zerosum_axes)
         if not all(sigma.type.broadcastable[-n_zerosum_axes:]):
             raise ValueError("sigma must have length one across the zero-sum axes")
 

@@ -51,7 +51,7 @@ def test_dirichlet_multinomial_dims(mode):
 
     # Should be fine after freezing the dims that specify the shape
     frozen_dm = freeze_dims_and_data(m)["dm"]
-    dm_draws = pm.draw(frozen_dm, mode=mode)
+    dm_draws = pm.draw(frozen_dm, mode=mode, random_seed=36)
     np.testing.assert_equal(dm_draws, np.eye(3) * 5)
 
 

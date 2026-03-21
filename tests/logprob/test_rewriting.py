@@ -76,7 +76,7 @@ def test_local_lift_DiracDelta():
     # Don't lift multi-output `Op`s
     c_at = pt.matrix()
     dd_at = dirac_delta(c_at)
-    Z_at = pt.nlinalg.svd(dd_at)[0]
+    Z_at = pt.linalg.svd(dd_at)[0]
 
     res = rewrite_graph(Z_at, custom_rewrite=in2out(local_lift_DiracDelta), clone=False)
     assert res is Z_at

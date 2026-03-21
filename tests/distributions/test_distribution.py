@@ -237,6 +237,46 @@ class TestSymbolicRandomVariable:
         resized_rv = change_dist_size(rv, new_size=5, expand=True)
         assert resized_rv.type.shape == (5,)
 
+    def test_logccdf_with_extended_signature(self):
+        """Test logccdf registration for SymbolicRandomVariable with extended_signature."""
+        from pymc.distributions.dist_math import normal_lccdf
+        from pymc.distributions.distribution import Distribution
+
+        class TestDistWithLogccdf(Distribution):
+            # Create a SymbolicRandomVariable type with extended_signature
+            rv_type = type(
+                "TestRVWithLogccdf",
+                (SymbolicRandomVariable,),
+                {"extended_signature": "[rng],[size],(),()->[rng],()"},
+            )
+
+            @classmethod
+            def dist(cls, mu, sigma, **kwargs):
+                mu = pt.as_tensor(mu)
+                sigma = pt.as_tensor(sigma)
+                return super().dist([mu, sigma], **kwargs)
+
+            @classmethod
+            def rv_op(cls, mu, sigma, size=None, rng=None):
+                rng = normalize_rng_param(rng)
+                size = normalize_size_param(size)
+                # Internally uses Normal, but wrapped in SymbolicRandomVariable
+                next_rng, draws = Normal.dist(mu, sigma, size=size, rng=rng).owner.outputs
+                return cls.rv_type(
+                    inputs=[rng, size, mu, sigma],
+                    outputs=[next_rng, draws],
+                    ndim_supp=0,
+                )(rng, size, mu, sigma)
+
+            # This logccdf will be registered via params_idxs path
+            def logccdf(value, mu, sigma):
+                return normal_lccdf(mu, sigma, value)
+
+        rv = TestDistWithLogccdf.dist(0, 1)
+        result = pm.logccdf(rv, 0.5).eval()
+        expected = st.norm(0, 1).logsf(0.5)  # ≈ -0.994
+        npt.assert_allclose(result, expected)
+
 
 def test_distribution_op_registered():
     """Test that returned Ops are registered as virtual subclasses of the respective PyMC distributions."""

@@ -338,7 +338,7 @@ def create_sum_stat_op_from_fn(fn):
 
         def perform(self, node, inputs, outputs):
             (x,) = inputs
-            outputs[0][0] = np.atleast_1d(fn(x)).astype(pytensor.config.floatX)
+            outputs[0][0] = np.atleast_1d(fn(x)).astype(node.outputs[0].dtype)
 
     return SumStat()
 
@@ -365,8 +365,6 @@ def create_distance_op_from_fn(fn):
 
         def perform(self, node, inputs, outputs):
             eps, obs_data, sim_data = inputs
-            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(
-                pytensor.config.floatX
-            )
+            outputs[0][0] = np.atleast_1d(fn(eps, obs_data, sim_data)).astype(node.outputs[0].dtype)
 
     return Distance()

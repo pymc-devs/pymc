@@ -55,7 +55,10 @@ from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
 # Raise for any warnings in this file
-pytestmark = pytest.mark.filterwarnings("error")
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    r"ignore:^Numba will use object mode to run.*perform method\.:UserWarning",
+)
 
 
 class TestCustomDist:
@@ -356,19 +359,24 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, expected)
 
     def test_custom_dist_default_support_point_scan(self):
-        def scan_step(left, right):
-            x = Uniform.dist(left, right)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(left, right, rng):
+            x = Uniform.dist(left, right, rng=rng)
+            x_update = collect_default_updates([x], must_be_shared=False)
+            return x, x_update[rng]
 
         def dist(size):
-            xs, updates = scan(
+            rng = pytensor.shared(np.random.default_rng())
+            xs, next_rng = scan(
                 fn=scan_step,
                 sequences=[
                     pt.as_tensor_variable(np.array([-4, -3])),
                     pt.as_tensor_variable(np.array([-2, -1])),
                 ],
+                outputs_info=[None, rng],
                 name="xs",
+                # There's a bug in the ordering of outputs when there's a mapped `None` output
+                # We have to stick with the deprecated API for now
+                return_updates=False,
             )
             return xs
 
@@ -377,17 +385,21 @@ class TestCustomSymbolicDist:
         assert_support_point_is_expected(model, np.array([-3, -2]))
 
     def test_custom_dist_default_support_point_scan_recurring(self):
-        def scan_step(xtm1):
-            x = Normal.dist(xtm1 + 1)
-            x_update = collect_default_updates([x])
-            return x, x_update
+        def scan_step(xtm1, rng):
+            next_rng, x = Normal.dist(xtm1 + 1, rng=rng).owner.outputs
+            return x, next_rng
 
         def dist(size):
-            xs, _ = scan(
+            rng = pytensor.shared(np.random.default_rng())
+            xs, _next_rng = scan(
                 fn=scan_step,
-                outputs_info=pt.as_tensor_variable(np.array([0])).astype(float),
+                outputs_info=[
+                    pt.as_tensor_variable(np.array([0])).astype(float),
+                    rng,
+                ],
                 n_steps=3,
                 name="xs",
+                return_updates=False,
             )
             return xs
 
@@ -527,16 +539,20 @@ class TestCustomSymbolicDist:
         def trw(nu, sigma, steps, size):
             if rv_size_is_none(size):
                 size = ()
+            rng = pytensor.shared(np.random.default_rng())
 
-            def step(xtm1, nu, sigma):
-                x = StudentT.dist(nu=nu, mu=xtm1, sigma=sigma, shape=size)
-                return x, collect_default_updates([x])
+            def step(xtm1, rng, nu, sigma):
+                next_rng, x = StudentT.dist(
+                    nu=nu, mu=xtm1, sigma=sigma, shape=size, rng=rng
+                ).owner.outputs
+                return x, next_rng
 
-            xs, _ = scan(
+            xs, _next_rng = scan(
                 fn=step,
-                outputs_info=pt.zeros(size),
+                outputs_info=[pt.zeros(size), rng],
                 non_sequences=[nu, sigma],
                 n_steps=steps,
+                return_updates=False,
             )
 
             # Logprob inference cannot be derived yet  https://github.com/pymc-devs/pymc/issues/6360
@@ -662,17 +678,20 @@ class TestCustomSymbolicDist:
         batch = 2
 
         def scan_dist(seq, n_steps, size):
-            def step(s):
-                innov = Normal.dist()
-                traffic = s + innov
-                return traffic, {innov.owner.inputs[0]: innov.owner.outputs[0]}
+            rng = pytensor.shared(np.random.default_rng())
 
-            rv_seq, _ = pytensor.scan(
+            def step(s, rng):
+                next_rng, innov = Normal.dist(rng=rng).owner.outputs
+                traffic = s + innov
+                return traffic, next_rng
+
+            rv_seq, _next_rng = pytensor.scan(
                 fn=step,
                 sequences=[seq],
-                outputs_info=[None],
+                outputs_info=[None, rng],
                 n_steps=n_steps,
                 strict=True,
+                return_updates=False,
             )
             return rv_seq
 

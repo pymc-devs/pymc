@@ -36,11 +36,11 @@ from tests.helpers import StepMethodTester
 from tests.models import simple_2model_continuous
 
 
-def test_all_stepmethods_emit_tune_stat():
+def test_stepmethods_do_not_require_tune_stat():
     step_types = pm.step_methods.STEP_METHODS
     assert len(step_types) > 5
     for cls in step_types:
-        assert "tune" in cls.stats_dtypes_shapes
+        assert "tune" not in cls.stats_dtypes_shapes
 
 
 class TestCompoundStep:

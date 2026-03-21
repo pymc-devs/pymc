@@ -134,7 +134,7 @@ class KSD(Operator):
     has_test_function = True
     returns_loss = False
     require_logq = False
-    objective_class = KSDObjective
+    objective_class = KSDObjective  # type: ignore[assignment]
 
     def __init__(self, approx, temperature=1):
         super().__init__(approx)

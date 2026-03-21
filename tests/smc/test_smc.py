@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import logging
-import platform
 import warnings
 
 import numpy as np
@@ -21,6 +20,7 @@ import pytest
 import scipy.stats as st
 
 from arviz.data.inference_data import InferenceData
+from pytensor.compile.ops import wrap_py
 
 import pymc as pm
 
@@ -29,8 +29,6 @@ from pymc.distributions.transforms import Ordered
 from pymc.pytensorf import floatX
 from pymc.smc.kernels import IMH, systematic_resampling
 from tests.helpers import assert_random_state_equal
-
-_IS_WINDOWS = platform.system() == "Windows"
 
 
 class TestSMC:
@@ -76,11 +74,12 @@ class TestSMC:
             x = pm.Normal("x", 0, 1)
             y = pm.Normal("y", x, 1, observed=0)
 
-    def test_sample(self):
+    @pytest.mark.parametrize("cores", [1, 2], ids=["sequential", "parallel"])
+    def test_sample(self, cores):
         initial_rng_state = np.random.get_state()
         with self.SMC_test:
             mtrace = pm.sample_smc(
-                draws=self.samples, return_inferencedata=False, progressbar=not _IS_WINDOWS
+                draws=self.samples, return_inferencedata=False, chains=2, cores=cores
             )
 
         # Verify sampling was done with a non-global random generator
@@ -163,9 +162,7 @@ class TestSMC:
             with pm.Model() as model:
                 a = pm.Beta("a", alpha, beta)
                 y = pm.Bernoulli("y", a, observed=data)
-                trace = pm.sample_smc(
-                    2000, chains=2, return_inferencedata=False, progressbar=not _IS_WINDOWS
-                )
+                trace = pm.sample_smc(2000, chains=2, return_inferencedata=False)
             # log_marginal_likelihood is found in the last value of each chain
             lml = np.mean([chain[-1] for chain in trace.report.log_marginal_likelihood])
             marginals.append(lml)
@@ -226,14 +223,12 @@ class TestSMC:
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 warnings.filterwarnings("ignore", "More chains .* than draws .*", UserWarning)
-                idata = pm.sample_smc(
-                    chains=chains, draws=draws, progressbar=not (chains > 1 and _IS_WINDOWS)
-                )
+                idata = pm.sample_smc(chains=chains, draws=draws, progressbar=not (chains > 1))
                 mt = pm.sample_smc(
                     chains=chains,
                     draws=draws,
                     return_inferencedata=False,
-                    progressbar=not (chains > 1 and _IS_WINDOWS),
+                    progressbar=not (chains > 1),
                 )
 
         assert isinstance(idata, InferenceData)
@@ -248,7 +243,7 @@ class TestSMC:
     def test_convergence_checks(self, caplog):
         with caplog.at_level(logging.INFO):
             with self.fast_model:
-                pm.sample_smc(draws=99, progressbar=not _IS_WINDOWS)
+                pm.sample_smc(draws=99)
         assert "The number of samples is too small" in caplog.text
 
     def test_ordered(self):
@@ -285,7 +280,7 @@ class TestMHKernel:
             mu = pm.Normal("mu", 0, 3)
             sigma = pm.HalfNormal("sigma", 1)
             y = pm.Normal("y", mu, sigma, observed=data)
-            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH, progressbar=not _IS_WINDOWS)
+            idata = pm.sample_smc(draws=2000, kernel=pm.smc.MH)
         assert_random_state_equal(initial_rng_state, np.random.get_state())
 
         post = idata.posterior.stack(sample=("chain", "draw"))
@@ -312,3 +307,22 @@ def test_systematic():
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 1, 2])
     weights = [0.99, 0.01]
     np.testing.assert_array_equal(systematic_resampling(weights, rng), [0, 0])
+
+
+@wrap_py(itypes=[pt.dvector], otypes=[pt.dvector])
+def _twice(x):
+    # Pickle fails if this is defined inside the test function namespace.
+    return 2 * x
+
+
+def test_smc_with_custom_op():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/7078
+
+    with pm.Model() as model:
+        x = pm.Normal("x", mu=[0, 0], sigma=1)
+        y = _twice(x)
+        pm.Normal(name="z", mu=y, observed=[1, 1])
+
+        trace = pm.sample_smc(10, cores=2, chains=2)
+
+    assert trace is not None

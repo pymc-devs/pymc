@@ -12,8 +12,10 @@ Scalar distributions
 
    Flat
    HalfFlat
+   Uniform,
    Normal
    HalfNormal
+   TruncatedNormal
    LogNormal
    StudentT
    HalfStudentT
@@ -23,6 +25,7 @@ Scalar distributions
    Laplace
    Gamma
    InverseGamma
+   Weibull
 
 
 Vector distributions
@@ -36,3 +39,14 @@ Vector distributions
    Categorical
    MvNormal
    ZeroSumNormal
+
+
+Higher-Order distributions
+==========================
+
+.. currentmodule:: pymc.dims
+.. autosummary::
+   :toctree: generated/
+   :template: distribution.rst
+
+   Censored

@@ -114,14 +114,14 @@ class TestCensored:
         assert tuple(x.owner.inputs[0].shape.eval()) == (3, 4, 2)
 
     def test_censored_categorical(self):
-        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=(5,))
+        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=())
 
         np.testing.assert_allclose(
             logp(cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
             [0, 0.1, 0.2, 0.2, 0.3, 0.2, 0],
         )
 
-        censored_cat = pm.Censored.dist(cat, lower=1, upper=3, shape=(5,))
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=3, shape=())
 
         np.testing.assert_allclose(
             logp(censored_cat, [-1, 0, 1, 2, 3, 4, 5]).exp().eval(),
@@ -213,3 +213,27 @@ class TestCensored:
             logcdf(censored_cat, eval_points).eval(),
             expected_interval,
         )
+
+    @pytest.mark.parametrize(
+        "censoring_side,bound_value",
+        [
+            ("right", 100.0),
+            ("left", -100.0),
+        ],
+    )
+    def test_censored_logp_numerical_stability(self, censoring_side, bound_value):
+        """Censored logp at 100 sigma should be finite, not -inf."""
+        ref_scipy = sp.stats.norm(0, 1)
+
+        normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
+        if censoring_side == "right":
+            censored = pm.Censored.dist(normal_dist, lower=None, upper=bound_value)
+            expected_logp = ref_scipy.logsf(bound_value)
+        else:
+            censored = pm.Censored.dist(normal_dist, lower=bound_value, upper=None)
+            expected_logp = ref_scipy.logcdf(bound_value)
+
+        logp_at_bound = logp(censored, bound_value).eval()
+
+        assert np.isfinite(logp_at_bound)
+        assert np.isclose(logp_at_bound, expected_logp, rtol=1e-6)

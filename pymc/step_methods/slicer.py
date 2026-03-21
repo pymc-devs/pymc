@@ -72,7 +72,6 @@ class Slice(ArrayStepShared):
     name = "slice"
     default_blocked = False
     stats_dtypes_shapes = {
-        "tune": (bool, []),
         "nstep_out": (int, []),
         "nstep_in": (int, []),
     }
@@ -184,7 +183,6 @@ class Slice(ArrayStepShared):
             self.n_tunes += 1
 
         stats = {
-            "tune": self.tune,
             "nstep_out": nstep_out,
             "nstep_in": nstep_in,
         }
@@ -202,18 +200,17 @@ class Slice(ArrayStepShared):
     @staticmethod
     def _progressbar_config(n_chains=1):
         columns = [
-            TextColumn("{task.fields[tune]}", table_column=Column("Tuning", ratio=1)),
             TextColumn("{task.fields[nstep_out]}", table_column=Column("Steps out", ratio=1)),
             TextColumn("{task.fields[nstep_in]}", table_column=Column("Steps in", ratio=1)),
         ]
 
-        stats = {"tune": [True] * n_chains, "nstep_out": [0] * n_chains, "nstep_in": [0] * n_chains}
+        stats = {"nstep_out": [0] * n_chains, "nstep_in": [0] * n_chains}
 
         return columns, stats
 
     @staticmethod
     def _make_progressbar_update_functions():
         def update_stats(step_stats):
-            return {key: step_stats[key] for key in {"tune", "nstep_out", "nstep_in"}}
+            return {key: step_stats[key] for key in {"nstep_out", "nstep_in"}}
 
         return (update_stats,)

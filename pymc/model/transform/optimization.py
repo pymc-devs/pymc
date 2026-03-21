@@ -15,18 +15,14 @@ from collections.abc import Sequence
 
 from pytensor import clone_replace
 from pytensor.compile import SharedVariable
-from pytensor.graph import FunctionGraph
-from pytensor.tensor import constant
-from pytensor.tensor.sharedvar import TensorSharedVariable
-from pytensor.tensor.variable import TensorConstant
+from pytensor.graph import Constant, FunctionGraph
 
 from pymc import Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
 
 
-def _constant_from_shared(shared: SharedVariable) -> TensorConstant:
-    assert isinstance(shared, TensorSharedVariable)
-    return constant(shared.get_value(), name=shared.name, dtype=shared.type.dtype)
+def _constant_from_shared(shared: SharedVariable) -> Constant:
+    return shared.type.constant_type(type=shared.type, data=shared.get_value(), name=shared.name)
 
 
 def freeze_dims_and_data(

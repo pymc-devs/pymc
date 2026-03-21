@@ -22,6 +22,7 @@ import traceback
 
 from collections import namedtuple
 from collections.abc import Sequence
+from contextlib import nullcontext
 from typing import cast
 
 import cloudpickle
@@ -33,7 +34,7 @@ from threadpoolctl import threadpool_limits
 from pymc.backends.zarr import ZarrChain
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
-from pymc.progress_bar import ProgressBarManager, default_progress_theme
+from pymc.progress_bar import MCMCProgressBarManager, default_progress_theme
 from pymc.util import (
     RandomGeneratorState,
     get_state_from_generator,
@@ -76,6 +77,28 @@ def rebuild_exc(exc, tb):
     return exc
 
 
+def _initialize_multiprocessing_context(
+    mp_ctx: str | multiprocessing.context.BaseContext | None, quiet: bool = False
+) -> multiprocessing.context.BaseContext:
+    if mp_ctx is None or isinstance(mp_ctx, str):
+        # Closes issue https://github.com/pymc-devs/pymc/issues/3849
+        # Related issue https://github.com/pymc-devs/pymc/issues/5339
+        if mp_ctx is None and platform.system() == "Darwin":
+            if platform.processor() == "arm":
+                mp_ctx = "fork"
+                if not quiet:
+                    logger.debug(
+                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
+                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
+                    )
+            else:
+                mp_ctx = "forkserver"
+
+        mp_ctx = multiprocessing.get_context(mp_ctx)
+
+    return mp_ctx
+
+
 # Messages
 # ('writing_done', is_last, sample_idx, tuning, stats)
 # ('error', *exception_info)
@@ -104,6 +127,7 @@ class _Process:
         rng_state: RandomGeneratorState,
         blas_cores,
         chain: int,
+        mp_start_method: str,
         zarr_chains: list[ZarrChain] | bytes | None = None,
         zarr_chains_is_pickled: bool = False,
     ):
@@ -129,6 +153,7 @@ class _Process:
         self._draws = draws
         self._tune = tune
         self._blas_cores = blas_cores
+        self._mp_start_method = mp_start_method
 
     def _unpickle_step_method(self):
         unpickle_error = (
@@ -143,7 +168,12 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        with threadpool_limits(limits=self._blas_cores):
+        # Only apply threadpool_limits for non-fork methods.
+        with (
+            nullcontext()
+            if self._mp_start_method == "fork"
+            else threadpool_limits(limits=self._blas_cores)
+        ):
             try:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
@@ -219,7 +249,7 @@ class _Process:
                 raise KeyboardInterrupt()
             elif msg[0] == "write_next":
                 if zarr_recording:
-                    self._zarr_chain.record(point, stats)
+                    self._zarr_chain.record(point, stats, in_warmup=tuning)
                 self._write_point(point)
                 is_last = draw + 1 == self._draws + self._tune
                 self._msg_pipe.send(("writing_done", is_last, draw, tuning, stats))
@@ -304,6 +334,7 @@ class ProcessAdapter:
                 get_state_from_generator(rng),
                 blas_cores,
                 self.chain,
+                mp_ctx.get_start_method(),
                 zarr_chains_send,
                 zarr_chains_pickled is not None,
             ),
@@ -432,22 +463,8 @@ class ParallelSampler:
     ):
         if any(len(arg) != chains for arg in [rngs, start_points]):
             raise ValueError(f"Number of rngs and start_points must be {chains}.")
-
         if mp_ctx is None or isinstance(mp_ctx, str):
-            # Closes issue https://github.com/pymc-devs/pymc/issues/3849
-            # Related issue https://github.com/pymc-devs/pymc/issues/5339
-            if mp_ctx is None and platform.system() == "Darwin":
-                if platform.processor() == "arm":
-                    mp_ctx = "fork"
-                    logger.debug(
-                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
-                    )
-                else:
-                    mp_ctx = "forkserver"
-
-            mp_ctx = multiprocessing.get_context(mp_ctx)
-
+            mp_ctx = _initialize_multiprocessing_context(mp_ctx)
         step_method_pickled = None
         zarr_chains_pickled = None
         self.zarr_recording = False
@@ -482,7 +499,7 @@ class ParallelSampler:
         self._max_active = cores
 
         self._in_context = False
-        self._progress = ProgressBarManager(
+        self._progress = MCMCProgressBarManager(
             step_method=step_method,
             chains=chains,
             draws=draws,

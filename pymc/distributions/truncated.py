@@ -44,7 +44,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
 from pymc.logprob.abstract import _logcdf, _logprob
-from pymc.logprob.basic import icdf, logcdf, logp
+from pymc.logprob.basic import icdf, logccdf, logcdf, logp
 from pymc.math import logdiffexp
 from pymc.pytensorf import collect_default_updates
 from pymc.util import check_dist_not_registered
@@ -210,6 +210,23 @@ class TruncatedRV(SymbolicRandomVariable):
         lower_logcdf = logcdf(base_rv, lower_value, warn_rvs=False)
         upper_logcdf = graph_replace(lower_logcdf, {lower_value: upper_value})
         return lower_logcdf, upper_logcdf
+
+    @staticmethod
+    def _create_lower_logccdf_expr(
+        base_rv: TensorVariable,
+        value: TensorVariable,
+        lower: TensorVariable,
+    ) -> TensorVariable:
+        """Create logccdf expression at lower bound for base_rv.
+
+        Uses `value` as a template for broadcasting. This is numerically more
+        stable than computing log(1 - exp(logcdf)) for distributions that have
+        a registered logccdf method.
+        """
+        # For left truncated discrete RVs, we need to include the whole lower bound.
+        lower_value = lower - 1 if base_rv.type.dtype.startswith("int") else lower
+        lower_value = pt.full_like(value, lower_value, dtype=config.floatX)
+        return logccdf(base_rv, lower_value, warn_rvs=False)
 
     def update(self, node: Apply):
         """Return the update mapping for the internal RNGs.
@@ -401,7 +418,7 @@ def truncated_logprob(op, values, *inputs, **kwargs):
     if is_lower_bounded and is_upper_bounded:
         lognorm = logdiffexp(upper_logcdf, lower_logcdf)
     elif is_lower_bounded:
-        lognorm = pt.log1mexp(lower_logcdf)
+        lognorm = TruncatedRV._create_lower_logccdf_expr(base_rv, value, lower)
     elif is_upper_bounded:
         lognorm = upper_logcdf
 
@@ -438,7 +455,7 @@ def truncated_logcdf(op: TruncatedRV, value, *inputs, **kwargs):
     if is_lower_bounded and is_upper_bounded:
         lognorm = logdiffexp(upper_logcdf, lower_logcdf)
     elif is_lower_bounded:
-        lognorm = pt.log1mexp(lower_logcdf)
+        lognorm = TruncatedRV._create_lower_logccdf_expr(base_rv, value, lower)
     elif is_upper_bounded:
         lognorm = upper_logcdf
 
