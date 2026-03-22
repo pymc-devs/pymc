@@ -18,7 +18,18 @@ import numpy as np
 
 from pytensor.tensor.random import normal
 
-from pymc import Bernoulli, Censored, CustomDist, Gamma, HalfCauchy, Mixture, StudentT, Truncated
+from pymc import (
+    Bernoulli,
+    Censored,
+    CustomDist,
+    Data,
+    Exponential,
+    Gamma,
+    HalfCauchy,
+    Mixture,
+    StudentT,
+    Truncated,
+)
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -373,12 +384,10 @@ class TestDimsDist:
 
 def test_data_vars_in_model_repr():
     """Data variables appear in model repr and in Deterministic dependency lists (issue #7536)."""
-    import pymc as pm
-
-    with pm.Model() as model:
-        x = pm.Data("x", 0)
-        y = pm.Normal("y")
-        f = pm.Deterministic("f", x + y)
+    with Model() as model:
+        x = Data("x", 0)
+        y = Normal("y")
+        Deterministic("f", x + y)
 
     text = model.str_repr()
     assert "x = Data(0)" in text
@@ -390,12 +399,10 @@ def test_data_vars_in_model_repr():
     assert r"\text{x}" in latex
 
 
-def test_constant_folding_in_repr():
+def test_constant_only_expression_in_repr():
     """Constant-only expressions show <constant> instead of f() (issue #7538)."""
-    import pymc as pm
-
-    with pm.Model() as model:
-        x = pm.Exponential("x", lam=2)
+    with Model() as model:
+        Exponential("x", lam=2)
 
     text = model.str_repr()
     assert "f()" not in text
@@ -404,11 +411,9 @@ def test_constant_folding_in_repr():
 
 def test_data_var_repr_no_params():
     """Data variable repr without params."""
-    import pymc as pm
-
-    with pm.Model() as model:
-        x = pm.Data("x", 5)
-        pm.Normal("y", x)
+    with Model() as model:
+        x = Data("x", 5)
+        Normal("y", x)
 
     text_no_params = model.str_repr(include_params=False)
     assert "x = Data" in text_no_params
@@ -417,13 +422,11 @@ def test_data_var_repr_no_params():
 
 def test_data_var_latex_underscore_escaping():
     """Data variable names with underscores are escaped in LaTeX (direct call and model repr)."""
-    import pymc as pm
-
     from pymc.printing import str_for_data_var
 
-    with pm.Model() as model:
-        my_data = pm.Data("my_data", 42)
-        pm.Normal("y", my_data)
+    with Model() as model:
+        my_data = Data("my_data", 42)
+        Normal("y", my_data)
 
     # Direct call
     latex_with_params = str_for_data_var(my_data, formatting="latex", include_params=True)
@@ -441,11 +444,9 @@ def test_data_var_latex_underscore_escaping():
 
 def test_function_of_named_var_in_repr():
     """A non-constant expression should keep f(named_var) form in model repr."""
-    import pymc as pm
-
-    with pm.Model() as model:
-        a = pm.Normal("a")
-        b = pm.Normal("b", mu=a * 2)
+    with Model() as model:
+        a = Normal("a")
+        Normal("b", mu=a * 2)
 
     text = model.str_repr()
     assert "b ~ Normal(f(a), 1)" in text
