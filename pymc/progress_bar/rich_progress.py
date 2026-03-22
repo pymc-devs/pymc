@@ -199,7 +199,7 @@ class RichProgressBackend:
         columns += [
             TextColumn(
                 "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Sampling Speed", ratio=1),
+                table_column=Column("Speed", ratio=1),
             ),
             TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
             TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
@@ -285,8 +285,6 @@ class RichProgressBackend:
             self._progress.update(
                 rich_task_id,
                 completed=self.total if not self.combined else self.total * self.n_bars,
-                sampling_speed=0,
-                speed_unit="",
                 failing=failing,
                 refresh=True,
                 **stats,
