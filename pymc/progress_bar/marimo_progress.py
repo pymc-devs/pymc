@@ -209,20 +209,20 @@ class MarimoProgressBackend:
 
         header_cells = ["Progress", self.step_name]
 
-        abbreviations = {
-            "divergences": "Div",
-            "diverging": "Div",
-            "step_size": "Step",
-            "tree_size": "Tree",
-            "tree_depth": "Depth",
-            "n_steps": "Steps",
-            "energy_error": "E-err",
-            "max_energy_error": "Max-E",
-            "mean_tree_accept": "Accept",
-            "scaling": "Scale",
+        column_names = {
+            "divergences": "Divergences",
+            "diverging": "Divergences",
+            "step_size": "Step size",
+            "tree_size": "Grad evals",
+            "tree_depth": "Tree depth",
+            "n_steps": "Grad evals",
+            "energy_error": "Energy error",
+            "max_energy_error": "Max energy error",
+            "mean_tree_accept": "Mean tree accept",
+            "scaling": "Scaling",
             "tune": "Tune",
         }
-        header_cells += [abbreviations.get(k, k[:6].capitalize()) for k in stat_keys]
+        header_cells += [column_names.get(k, k.replace("_", " ").capitalize()) for k in stat_keys]
 
         header_cells += ["Speed", "Elapsed"]
 
