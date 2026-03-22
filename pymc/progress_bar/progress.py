@@ -214,7 +214,7 @@ class MCMCProgressBarManager(ProgressBarManager):
     Tracks progress via draw count with support for tuning phases.
     """
 
-    step_name: str = "Draws"
+    step_name: str = "Draw"
 
     def __init__(
         self,
@@ -249,7 +249,7 @@ class MCMCProgressBarManager(ProgressBarManager):
         )
 
         progress_columns, progress_stats = step_method._progressbar_config(chains)
-        progress_stats["draws"] = [0] * chains
+        progress_stats["draw"] = [0] * chains
 
         self.progress_stats = progress_stats
         self.update_stats_functions = step_method._make_progressbar_update_functions()
@@ -318,7 +318,7 @@ class MCMCProgressBarManager(ProgressBarManager):
             chain_idx = 0
 
         failing, all_step_stats = self._extract_stats(stats)
-        all_step_stats["draws"] = draw + 1 if not self.combined_progress else draw
+        all_step_stats["draw"] = draw + 1 if not self.combined_progress else draw
 
         self._backend.update(
             task_id=chain_idx,
