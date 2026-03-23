@@ -402,7 +402,9 @@ class ParallelSMCSampler:
                         sample_settings,
                     ) = result[2:]
 
-                    progress_manager.update(proc.chain, stage, beta, is_last=True)
+                    old_beta = chain_betas[proc.chain]
+                    chain_betas[proc.chain] = beta
+                    progress_manager.update(proc.chain, stage, beta, old_beta, is_last=True)
 
                     proc.join()
                     self._active.remove(proc)

@@ -414,7 +414,7 @@ def _build_trace_from_kernel_state(
                 var_samples = np.round(var_samples).astype(var.dtype)
             value.append(var_samples.reshape(shape))
             size += new_size
-        strace.record(point=dict(zip(varnames, value)))
+        strace.record(point=dict(zip(varnames, value)), in_warmup=False)
 
     return strace
 
@@ -482,7 +482,9 @@ def _sample_smc_sequentially(
 
                 stage += 1
 
-            progress_manager.update(chain_idx=i, stage=stage, beta=kernel.beta, is_last=True)
+            progress_manager.update(
+                chain_idx=i, stage=stage, beta=kernel.beta, old_beta=kernel.beta, is_last=True
+            )
 
             trace = _build_trace_from_kernel_state(
                 tempered_posterior=kernel.tempered_posterior,

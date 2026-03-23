@@ -20,6 +20,8 @@ from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
 
 def format_time(seconds: float) -> str:
     """Format elapsed time as mm:ss or hh:mm:ss."""
+    if seconds < 1:
+        return f"{seconds:.1f}s"
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     if hours > 0:
@@ -140,12 +142,7 @@ class MarimoProgressBackend:
         self._task_state[task_id]["stats"] = stats
 
         if is_last:
-            # Ensure bar is fully filled on completion
-            total = self._task_state[task_id]["total"]
-            completed = self._task_state[task_id]["completed"]
-            remaining = total - completed
-            if remaining > 0:
-                self._task_state[task_id]["completed"] = total
+            self._task_state[task_id]["completed"] = self._task_state[task_id]["total"]
 
         self._render()
 
@@ -163,24 +160,26 @@ class MarimoProgressBackend:
         """Generate HTML for all progress bars as a table with headers."""
         stat_keys = []
         if self.full_stats and self._task_state and self._task_state[0]["stats"]:
-            stat_keys = list(self._task_state[0]["stats"].keys())
+            stat_keys = [
+                k for k in self._task_state[0]["stats"].keys() if k != self.step_name.lower()
+            ]
 
         header_cells = ["Progress", self.step_name]
 
-        abbreviations = {
-            "divergences": "Div",
-            "diverging": "Div",
-            "step_size": "Step",
-            "tree_size": "Tree",
-            "tree_depth": "Depth",
-            "n_steps": "Steps",
-            "energy_error": "E-err",
-            "max_energy_error": "Max-E",
-            "mean_tree_accept": "Accept",
-            "scaling": "Scale",
+        column_names = {
+            "divergences": "Divergences",
+            "diverging": "Divergences",
+            "step_size": "Step size",
+            "tree_size": "Grad evals",
+            "tree_depth": "Tree depth",
+            "n_steps": "Grad evals",
+            "energy_error": "Energy error",
+            "max_energy_error": "Max energy error",
+            "mean_tree_accept": "Mean tree accept",
+            "scaling": "Scaling",
             "tune": "Tune",
         }
-        header_cells += [abbreviations.get(k, k[:6].capitalize()) for k in stat_keys]
+        header_cells += [column_names.get(k, k.replace("_", " ").capitalize()) for k in stat_keys]
 
         header_cells += ["Speed", "Elapsed"]
 

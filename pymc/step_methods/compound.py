@@ -92,6 +92,10 @@ def infer_warn_stats_info(
                 sds[sname] = (dtype, None)
     elif sds:
         stats_dtypes.append({sname: dtype for sname, (dtype, _) in sds.items()})
+
+    # Even when a step method does not emit any stats, downstream components still assume one stats "slot" per step method. represent that with a single empty dict.
+    if not stats_dtypes:
+        stats_dtypes.append({})
     return stats_dtypes, sds
 
 
@@ -349,16 +353,6 @@ def flatten_steps(step: BlockedStep | CompoundStep) -> list[BlockedStep]:
     for sm in step.methods:
         steps += flatten_steps(sm)
     return steps
-
-
-def check_step_emits_tune(step: CompoundStep | BlockedStep):
-    if isinstance(step, BlockedStep) and "tune" not in step.stats_dtypes_shapes:
-        raise TypeError(f"{type(step)} does not emit the required 'tune' stat.")
-    elif isinstance(step, CompoundStep):
-        for sstep in step.methods:
-            if "tune" not in sstep.stats_dtypes_shapes:
-                raise TypeError(f"{type(sstep)} does not emit the required 'tune' stat.")
-    return
 
 
 class StatsBijection:
