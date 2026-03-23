@@ -31,15 +31,13 @@ import xarray as xr
 from pytensor import tensor as pt
 from pytensor.graph import vectorize_graph
 from pytensor.graph.basic import (
-    Apply,
     Constant,
     Variable,
 )
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.traversal import ancestors, general_toposort, walk
-from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
+from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
-from pytensor.tensor.variable import TensorConstant
 from rich.theme import Theme
 
 import pymc as pm
@@ -48,6 +46,7 @@ from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.exceptions import ImplicitFreezeWarning
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import create_simple_progress, default_progress_theme
 from pymc.pytensorf import compile, rvs_in_graph
@@ -72,26 +71,41 @@ PointList: TypeAlias = list[PointType]
 _log = logging.getLogger(__name__)
 
 
-def get_constant_coords(trace_coords: dict[str, np.ndarray], model: Model) -> set:
-    """Get the set of coords that have remained constant between the trace and model."""
-    constant_coords = set()
-    for dim, coord in trace_coords.items():
-        current_coord = model.coords.get(dim, None)
-        current_length = model.dim_lengths.get(dim, None)
-        if isinstance(current_length, TensorSharedVariable):
-            current_length = current_length.get_value()
-        elif isinstance(current_length, TensorConstant):
-            current_length = current_length.data
-        if (
-            current_coord is not None
-            and len(coord) == len(current_coord)
-            and np.all(coord == current_coord)
-        ) or (
-            # Coord was defined without values (only length)
-            current_coord is None and len(coord) == current_length
-        ):
-            constant_coords.add(dim)
-    return constant_coords
+def _build_constant_data(
+    trace_constant_data: dict[str, np.ndarray],
+    trace_coords: dict[str, np.ndarray],
+    model: Model,
+) -> dict[Variable, Any]:
+    """Collect trace-time values for data-like nodes in the model.
+
+    Returns a mapping from the model's registered data Variables (``pm.Data``
+    SharedVariables plus named Constants introduced by ``pm.do`` /
+    ``freeze_dims_and_data``) and its shared dim-length vars to the value each
+    held at inference time, as recovered from the trace.
+
+    Dim-length shareds are only included when the trace's coord labels still
+    match the model's (or when neither has explicit labels), so a same-length
+    coord with different labels still counts as volatile.
+    """
+    constant_data: dict[Variable, Any] = {}
+    for dv in model.data_vars:
+        if dv.name in trace_constant_data:
+            constant_data[dv] = trace_constant_data[dv.name]
+    for dim, length_var in model.dim_lengths.items():
+        if not isinstance(length_var, SharedVariable) or dim not in trace_coords:
+            continue
+        trace_coord = trace_coords[dim]
+        current_coord = model.coords.get(dim)
+        if current_coord is not None:
+            unchanged = len(current_coord) == len(trace_coord) and bool(
+                np.all(np.asarray(current_coord) == trace_coord)
+            )
+        else:
+            # Coord declared with a length only; match against the current length.
+            unchanged = int(length_var.get_value()) == len(trace_coord)
+        if unchanged:
+            constant_data[length_var] = len(trace_coord)
+    return constant_data
 
 
 def get_vars_in_point_list(trace, model):
@@ -105,13 +119,154 @@ def get_vars_in_point_list(trace, model):
     return vars_in_trace
 
 
+def _data_var_is_volatile(
+    var: Variable,
+    constant_data: dict[Variable, Any],
+) -> bool:
+    """Return True if a data-like variable no longer matches its trace-time value.
+
+    Membership in ``constant_data`` is by Variable identity: registered data
+    variables (``model.data_vars`` — ``pm.Data`` SharedVariables plus named
+    Constants from ``pm.do`` / ``freeze_dims_and_data``) and shared dim-length
+    vars get their trace-time value stored there. For a ``SharedVariable`` or
+    ``Constant`` in the mapping, current value is compared against the stored
+    one. Non-root data variables (e.g. expression Variables introduced by
+    ``pm.do``) have no readable current value; their volatility is determined
+    by propagation from their inputs in :func:`_compute_volatile_vars`, not
+    here.
+    """
+    if isinstance(var.type, RandomType):
+        # RNG variables are not themselves a source of volatility; their consumers are.
+        return False
+    if isinstance(var, SharedVariable):
+        if var in constant_data:
+            stored = var.type.filter(constant_data[var])
+            return not var.type.values_eq_approx(stored, var.get_value(borrow=True))
+        return True  # unknown shared variable — conservatively volatile
+    if isinstance(var, Constant):
+        if var in constant_data:
+            stored = var.type.filter(constant_data[var])
+            return not var.type.values_eq_approx(stored, var.data)
+        return False  # literal constant not in registry — non-volatile
+    # Non-root expression Variable: propagation handles it.
+    return False
+
+
+def _compute_volatile_vars(
+    fg: FunctionGraph,
+    *,
+    vars_in_trace: set[Variable],
+    rvs: set[Variable],
+    constant_data: dict[Variable, Any],
+    volatile_vars: set[Variable],
+    freeze_vars: set[Variable],
+) -> set[Variable]:
+    """Classify every variable reachable from ``fg.outputs`` as volatile or not.
+
+    A variable is volatile when any of these holds (unless it is in
+    ``freeze_vars``, which blocks propagation):
+
+    - It is in ``volatile_vars`` (explicit seed).
+    - It is a data-like variable whose current value no longer matches the
+      trace-time value in ``constant_data`` (see :func:`_data_var_is_volatile`).
+    - It is one of ``rvs`` but not present in the trace.
+    - Any of its inputs is already flagged volatile.
+    """
+    volatile_closure: set[Variable] = set()
+    variables = general_toposort(fg.outputs, deps=lambda x: x.owner.inputs if x.owner else [])
+    for var in variables:
+        if var in freeze_vars:
+            continue
+        if (
+            var in volatile_vars
+            or (var in rvs and var not in vars_in_trace)
+            or (var.owner is None and _data_var_is_volatile(var, constant_data))
+            or (var.owner is not None and any(inp in volatile_closure for inp in var.owner.inputs))
+        ):
+            volatile_closure.add(var)
+    return volatile_closure
+
+
+def _maybe_warn_implicit_freeze(
+    *,
+    auto_frozen: list[Variable],
+    volatile_closure: set[Variable],
+    volatile_vars: set[Variable],
+    rv_set: set[Variable],
+    vars_in_trace_set: set[Variable],
+    constant_data: dict[Variable, Any],
+    model: Model,
+    trace_coords: dict[str, np.ndarray],
+) -> None:
+    """Warn when an auto-frozen trace RV has a volatile ancestor the user may have wanted resampled."""
+    # Partition direct volatile sources once, so the per-RV loop is just intersections.
+    # "data": shared Data/coord values that changed since inference time.
+    # "non-data": RVs in sample_vars plus RVs missing from the trace (both get a fresh draw).
+    data_sources = {
+        var
+        for var in volatile_closure
+        if var.owner is None and _data_var_is_volatile(var, constant_data)
+    }
+    non_data_sources = {
+        var
+        for var in volatile_closure
+        if var in volatile_vars or (var in rv_set and var not in vars_in_trace_set)
+    }
+
+    warn_reasons: dict[str, list[str]] = {}
+    for rv in auto_frozen:
+        ancs = set(ancestors([rv])) - {rv}
+        reasons: list[str] = []
+        changed = sorted({anc.name or "<unnamed>" for anc in ancs & data_sources})
+        if changed:
+            reasons.append(f"upstream Data/coords changed ({', '.join(changed)})")
+        resampled = sorted({anc.name for anc in ancs & non_data_sources if anc.name is not None})
+        if resampled:
+            reasons.append(f"ancestor is resampled ({', '.join(resampled)})")
+        if reasons:
+            assert rv.name is not None  # trace RVs always have names
+            warn_reasons[rv.name] = reasons
+
+    if not warn_reasons:
+        return
+
+    # Flag coord-length changes specifically, since they are very likely to cause
+    # shape errors with the (unchanged-shape) frozen trace values.
+    length_changes = []
+    for dim_name, dim_length_var in model.dim_lengths.items():
+        if dim_name not in trace_coords or not isinstance(dim_length_var, TensorSharedVariable):
+            continue
+        new_length = int(dim_length_var.get_value())
+        old_length = len(trace_coords[dim_name])
+        if new_length != old_length:
+            length_changes.append((dim_name, old_length, new_length))
+
+    details = "; ".join(
+        f"{name!r} ({'; '.join(reasons)})" for name, reasons in sorted(warn_reasons.items())
+    )
+    msg = (
+        f"The following trace variables were implicitly frozen, but something in their "
+        f"upstream suggests you may have wanted them resampled: {details}. To resample "
+        f"them, pass them in `sample_vars`; to silence this warning while keeping the "
+        f"trace values, pass them in `freeze_vars`."
+    )
+    if length_changes:
+        changes_str = ", ".join(f"{name!r} ({old} -> {new})" for name, old, new in length_changes)
+        msg += (
+            f" Coordinates changed length ({changes_str}); this function is likely "
+            f"to fail with shape errors unless the affected variables are added to "
+            f"`sample_vars`."
+        )
+    warnings.warn(msg, ImplicitFreezeWarning, stacklevel=3)
+
+
 def compile_forward_sampling_function(
     outputs: list[Variable],
     vars_in_trace: list[Variable],
     basic_rvs: list[Variable] | None = None,
-    givens_dict: dict[Variable, Any] | None = None,
-    constant_data: dict[str, np.ndarray] | None = None,
-    constant_coords: set[str] | None = None,
+    constant_data: dict[Variable, Any] | None = None,
+    volatile_vars: set[Variable] | None = None,
+    freeze_vars: set[Variable] | None = None,
     **kwargs,
 ) -> tuple[Callable[..., np.ndarray | list[np.ndarray]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
@@ -124,11 +279,14 @@ def compile_forward_sampling_function(
     Volatile variables are variables whose values could change between runs of the
     compiled function or after inference has been run. These variables are:
 
-    - Variables in the outputs list
-    - ``SharedVariable`` instances that are not ``RandomGeneratorSharedVariable``, and whose values changed with respect to what they were at inference time
-    - Variables that are in the `basic_rvs` list but not in the ``vars_in_trace`` list
-    - Variables that are keys in the ``givens_dict``
+    - Variables in ``volatile_vars``
+    - ``SharedVariable`` or ``Constant`` data nodes whose current value no longer matches the trace-time value stored in ``constant_data`` (see :func:`_data_var_is_volatile`)
+    - Variables that are in the ``basic_rvs`` list but not in the ``vars_in_trace`` list
     - Variables that have volatile inputs
+
+    Variables in ``freeze_vars`` are never considered volatile, regardless of the above
+    rules. They act as volatility barriers, stopping the propagation of volatility to
+    their dependents. Frozen variables are always treated as trace inputs.
 
     Concretely, this function can be used to compile a function to sample from the
     posterior predictive distribution of a model that has variables that are conditioned
@@ -138,19 +296,11 @@ def compile_forward_sampling_function(
     ignored and new values will be computed (in the case of deterministics and potentials) or
     sampled (in the case of random variables).
 
-    This function also enables a way to impute values for any variable in the computational
-    graph that produces the desired outputs: the ``givens_dict``. This dictionary can be used
-    to set the ``givens`` argument of the pytensor function compilation. This will essentially
-    replace a node in the computational graph with any other expression that has the same
-    type as the desired node. Passing variables in the givens_dict is considered an intervention
-    that might lead to different variable values from those that could have been seen during
-    inference, as such, **any variable that is passed in the ``givens_dict`` will be considered
-    volatile**.
-
     Parameters
     ----------
     outputs : List[pytensor.graph.basic.Variable]
-        The list of variables that will be returned by the compiled function
+        The list of variables that will be returned by the compiled function.
+        Outputs are not inherently volatile.
     vars_in_trace : List[pytensor.graph.basic.Variable]
         The list of variables that are assumed to have values stored in the trace
     basic_rvs : Optional[List[pytensor.graph.basic.Variable]]
@@ -159,29 +309,25 @@ def compile_forward_sampling_function(
         be considered as random variable instances. This includes variables that have
         a ``RandomVariable`` owner op, but also unpure random variables like Mixtures, or
         Censored distributions.
-    givens_dict : Optional[Dict[pytensor.graph.basic.Variable, Any]]
-        A dictionary that maps tensor variables to the values that should be used to replace them
-        in the compiled function. The types of the key and value should match or an error will be
-        raised during compilation.
-    constant_data : Optional[Dict[str, numpy.ndarray]]
-        A dictionary that maps the names of ``Data`` instances to their
-        corresponding values at inference time. If a model was created with ``Data``, these
-        are stored as ``SharedVariable`` with the name of the data variable and a value equal to
-        the initial data. At inference time, this information is stored in ``DataTree``
-        objects under the ``constant_data`` group, which allows us to check whether a
-        ``SharedVariable`` instance changed its values after inference or not. If the values have
-        changed, then the ``SharedVariable`` is assumed to be volatile. If it has not changed, then
-        the ``SharedVariable`` is assumed to not be volatile. If a ``SharedVariable`` is not found
-        in either ``constant_data`` or ``constant_coords``, then it is assumed to be volatile.
-        Setting ``constant_data`` to ``None`` is equivalent to passing an empty dictionary.
-    constant_coords : Optional[Set[str]]
-        A set with the names of the mutable coordinates that have not changed their shape after
-        inference. If a model was created with mutable coordinates, these are stored as
-        ``SharedVariable`` with the name of the coordinate and a value equal to the length of said
-        coordinate. This set let's us check if a ``SharedVariable`` is a mutated coordinate, in
-        which case, it is considered volatile. If a ``SharedVariable`` is not found
-        in either ``constant_data`` or ``constant_coords``, then it is assumed to be volatile.
-        Setting ``constant_coords`` to ``None`` is equivalent to passing an empty set.
+    constant_data : Optional[Dict[Variable, Any]]
+        A dictionary that maps data-like ``Variable`` instances (``pm.Data``
+        SharedVariables, named ``Constant`` nodes introduced by ``pm.do`` /
+        ``freeze_dims_and_data``, or shared dim-length vars) to the value each
+        held at inference time. At check time the current value of each listed
+        node is compared against the stored one via ``values_eq_approx``; if
+        they differ the node is treated as volatile. A ``SharedVariable``
+        absent from ``constant_data`` is conservatively treated as volatile;
+        an absent ``Constant`` is treated as non-volatile. Setting
+        ``constant_data`` to ``None`` is equivalent to passing an empty
+        dictionary.
+    volatile_vars : Optional[Set[pytensor.graph.basic.Variable]]
+        Variables that are unconditionally volatile. Volatility propagates from these
+        to their dependents in the graph.
+    freeze_vars : Optional[Set[pytensor.graph.basic.Variable]]
+        A set of variables that should never be considered volatile, even if they would
+        otherwise be due to having volatile inputs or depending on changed data. Frozen
+        variables act as volatility barriers: they stop the propagation of volatility to
+        their dependents and are always treated as inputs that pull values from the trace.
 
     Returns
     -------
@@ -191,88 +337,51 @@ def compile_forward_sampling_function(
         Set of all basic_rvs that were considered volatile and will be resampled when
         the function is evaluated
     """
-    if givens_dict is None:
-        givens_dict = {}
-
     if basic_rvs is None:
         basic_rvs = []
 
     if constant_data is None:
         constant_data = {}
-    if constant_coords is None:
-        constant_coords = set()
+    if volatile_vars is None:
+        volatile_vars = set()
+    if freeze_vars is None:
+        freeze_vars = set()
 
-    # We define a helper function to check if shared values match to an array
-    def shared_value_matches(var):
-        try:
-            old_array_value = constant_data[var.name]
-        except KeyError:
-            return var.name in constant_coords
-        current_shared_value = var.get_value(borrow=True)
-        return np.array_equal(old_array_value, current_shared_value)
-
-    # We need a function graph to walk the clients and propagate the volatile property
     fg = FunctionGraph(outputs=outputs, clone=False)
-
-    # Walk the graph from inputs to outputs and tag the volatile variables
-    nodes: list[Variable] = general_toposort(
-        fg.outputs, deps=lambda x: x.owner.inputs if x.owner else []
-    )  # type: ignore[call-overload]
-    volatile_nodes: set[Any] = set()
-    for node in nodes:
-        if (
-            node in fg.outputs
-            or node in givens_dict
-            or (  # SharedVariables, except RandomState/Generators
-                isinstance(node, SharedVariable)
-                and not isinstance(node, RandomGeneratorSharedVariable)
-                and not shared_value_matches(node)
-            )
-            or (  # Basic RVs that are not in the trace
-                node in basic_rvs and node not in vars_in_trace
-            )
-            or (  # Variables that have any volatile input
-                node.owner and any(inp in volatile_nodes for inp in node.owner.inputs)
-            )
-        ):
-            volatile_nodes.add(node)
+    volatile_closure = _compute_volatile_vars(
+        fg,
+        vars_in_trace=set(vars_in_trace),
+        rvs=set(basic_rvs),
+        constant_data=constant_data,
+        volatile_vars=volatile_vars,
+        freeze_vars=freeze_vars,
+    )
 
     # Collect the function inputs by walking the graph from the outputs. Inputs will be:
     # 1. Random variables that are not volatile
     # 2. Variables that have no owner and are not constant or shared
     inputs = []
 
-    def expand(node):
+    def expand(var):
         if (
             (
-                node.owner is None and not isinstance(node, Constant | SharedVariable)
+                var.owner is None and not isinstance(var, Constant | SharedVariable)
             )  # Variables without owners that are not constant or shared
-            or node in vars_in_trace  # Variables in the trace
-        ) and node not in volatile_nodes:
+            or var in vars_in_trace  # Variables in the trace
+        ) and var not in volatile_closure:
             # This test will include variables without owners, and that are not constant
-            # or shared, because these nodes will never be considered volatile
-            inputs.append(node)
-        if node.owner:
-            return node.owner.inputs
+            # or shared, because these variables will never be considered volatile
+            inputs.append(var)
+        if var.owner:
+            return var.owner.inputs
 
     # walk produces a generator, so we have to actually exhaust the generator in a list to walk
     # the entire graph
     list(walk(fg.outputs, expand))
 
-    # Populate the givens list
-    givens = [
-        (
-            node,
-            value
-            if isinstance(value, Variable | Apply)
-            else pt.constant(value, dtype=getattr(node, "dtype", None), name=node.name),
-        )
-        for node, value in givens_dict.items()
-    ]
-
     return (
-        compile(inputs, fg.outputs, givens=givens, on_unused_input="ignore", **kwargs),
-        set(basic_rvs) & (volatile_nodes - set(givens_dict)),  # Basic RVs that will be resampled
+        compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs),
+        set(basic_rvs) & volatile_closure,  # Basic RVs that will be resampled
     )
 
 
@@ -430,7 +539,7 @@ def sample_prior_predictive(
         vars_ = set(var_names)
 
     names = sorted(get_default_varnames(vars_, include_transformed=False))
-    vars_to_sample = [model[name] for name in names]
+    vars_to_evaluate = [model[name] for name in names]
 
     # Any variables from var_names still missing are assumed to be transformed variables.
     missing_names = vars_.difference(names)
@@ -446,10 +555,9 @@ def sample_prior_predictive(
     compile_kwargs.setdefault("accept_inplace", True)
 
     sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
-        vars_to_sample,
+        vars_to_evaluate,
         vars_in_trace=[],
         basic_rvs=model.basic_RVs,
-        givens_dict=None,
         random_seed=random_seed,
         **compile_kwargs,
     )
@@ -479,7 +587,10 @@ def sample_prior_predictive(
 def sample_posterior_predictive(
     trace,
     model: Model | None = None,
+    *,
     var_names: list[str] | None = None,
+    sample_vars: list[str] | None = None,
+    freeze_vars: list[str] | None = None,
     sample_dims: list[str] | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
@@ -494,7 +605,10 @@ def sample_posterior_predictive(
 def sample_posterior_predictive(
     trace,
     model: Model | None = None,
+    *,
     var_names: list[str] | None = None,
+    sample_vars: list[str] | None = None,
+    freeze_vars: list[str] | None = None,
     sample_dims: list[str] | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
@@ -508,7 +622,10 @@ def sample_posterior_predictive(
 def sample_posterior_predictive(
     trace,
     model: Model | None = None,
+    *,
     var_names: list[str] | None = None,
+    sample_vars: list[str] | None = None,
+    freeze_vars: list[str] | None = None,
     sample_dims: list[str] | None = None,
     random_seed: RandomState = None,
     progressbar: bool = True,
@@ -537,10 +654,31 @@ def sample_posterior_predictive(
     model : Model (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
         generally be the model used to generate the `trace`, but it doesn't need to be.
-    var_names : Iterable[str], optional
-        Names of variables for which to compute the posterior predictive samples.
-        By default, only observed variables are sampled.
-        See the example below for what happens when this argument is customized.
+    sample_vars : list of str, optional
+        Random variables or deterministics to regenerate on each draw rather
+        than copy from the trace. Regeneration propagates volatility downstream:
+        an RV that is in the trace and not listed here keeps its trace value,
+        but if one of its ancestors is volatile (listed here, or a changed
+        Data/coord) an :class:`~pymc.exceptions.ImplicitFreezeWarning` flags
+        it so the user can opt in by adding it here, or silence the warning via
+        ``freeze_vars``. Empty by default — RVs missing from the trace (including
+        observed RVs) are always regenerated automatically. Cannot overlap with
+        ``freeze_vars``.
+    freeze_vars : list of str, optional
+        Trace variables (RVs or deterministics) to reuse from the trace. Cannot
+        overlap with ``sample_vars``. Trace RVs not in ``sample_vars`` are already
+        implicitly frozen, so the practical effect of listing an RV here is to
+        silence its :class:`~pymc.exceptions.ImplicitFreezeWarning`. Deterministics
+        don't trigger that warning at all — a volatile deterministic just
+        recomputes with the current upstream values — so listing one only matters
+        when you want to keep the trace value instead (see example below).
+    var_names : list of str, optional
+        Controls only which variables appear in the output; does not trigger
+        resampling. Each listed name is either computed fresh or copied from the
+        input trace, depending on whether it or any of its upstream is volatile
+        (see the behavior section below). Defaults to ``sample_vars`` when that is
+        specified; otherwise (the classic posterior-predictive default) to the
+        observed variables plus any deterministic that depends on these.
     sample_dims : list of str, optional
         Dimensions over which to loop and generate posterior predictive samples.
         When ``sample_dims`` is ``None`` (default) both "chain" and "draw" are considered sample
@@ -582,7 +720,9 @@ def sample_posterior_predictive(
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
     The most common use of `sample_posterior_predictive` is to perform posterior predictive checks (in-sample predictions)
-    and new model predictions (out-of-sample predictions).
+    and new model predictions (out-of-sample predictions). Deterministics that
+    depend on :class:`~pymc.Data` are recomputed automatically when the data
+    changes — no extra work needed:
 
     .. code-block:: python
 
@@ -592,16 +732,74 @@ def sample_posterior_predictive(
             x = pm.Data("x", [-1, 0, 1], dims=["trial"])
             beta = pm.Normal("beta")
             noise = pm.HalfNormal("noise")
-            y = pm.Normal("y", mu=x * beta, sigma=noise, observed=[-2, 0, 3], dims=["trial"])
+            linpred = pm.Deterministic("linpred", x * beta, dims=["trial"])
+            y = pm.Normal("y", mu=linpred, sigma=noise, observed=[-2, 0, 3], dims=["trial"])
 
             idata = pm.sample()
-            # in-sample predictions
+            # in-sample posterior predictive
             posterior_predictive = pm.sample_posterior_predictive(idata).posterior_predictive
 
         with model:
             pm.set_data({"x": [-2, 2]}, coords={"trial": [3, 4]})
-            # out-of-sample predictions
-            predictions = pm.sample_posterior_predictive(idata, predictions=True).predictions
+            # out-of-sample predictions. `linpred` is recomputed with the new `x`
+            # (and the trace's `beta`); `y` is resampled from the new `linpred`.
+            predictions = pm.sample_posterior_predictive(
+                idata, var_names=["linpred", "y"], predictions=True
+            ).predictions
+
+
+    Freezing deterministics
+    ^^^^^^^^^^^^^^^^^^^^^^^
+
+    A deterministic is normally recomputed whenever its inputs change.
+    Occasionally, though, a deterministic captures something
+    that should stay anchored to the *training* data — e.g. an HSGP standardization
+    computed from ``pm.Data`` that must not be rederived from the prediction data.
+    Pass the deterministic in ``freeze_vars`` to keep its trace value:
+
+    .. code-block:: python
+
+        with pm.Model() as model:
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            x_mean = pm.Deterministic("x_mean", x.mean())
+            centered = pm.Deterministic("centered", x - x_mean)
+            mu = pm.Normal("mu")
+            obs = pm.Normal("obs", mu + centered, 1, observed=[0, 0, 0])
+
+            idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
+
+        # New x values. Without freezing, `x_mean` would be recomputed as the new
+        # mean; with `freeze_vars=["x_mean"]` it stays at the training-time mean.
+        with model:
+            pm.set_data({"x": [100.0, 200.0, 300.0]})
+            pm.sample_posterior_predictive(
+                idata, var_names=["obs", "x_mean"], freeze_vars=["x_mean"], **kwargs
+            )
+
+
+    Forcing a deterministic to recompute
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+    If :func:`~pymc.do` swaps a new expression into a deterministic while
+    every RV and Data value stays unchanged, ``sample_posterior_predictive``
+    sees nothing volatile and copies the deterministic from the trace. List
+    it in ``sample_vars`` to force recomputation from the current graph:
+
+    .. code-block:: python
+
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            pm.Deterministic("det", x**2)
+            pm.Normal("obs", m["det"], 1, observed=[0.0])
+            idata = pm.sample(**kwargs)
+
+        do_m = pm.do(m, {m["det"]: m["x"] ** 3})
+
+        with do_m:
+            # Default copies old `x**2` values from the trace.
+            pm.sample_posterior_predictive(idata, var_names=["det"], **kwargs)
+            # Force recomputation using the new `x**3` graph.
+            pm.sample_posterior_predictive(idata, var_names=["det"], sample_vars=["det"], **kwargs)
 
 
     Using different models
@@ -610,8 +808,8 @@ def sample_posterior_predictive(
     It's common to use the same model for posterior and posterior predictive sampling, but this is not required.
     The matching between unobserved model variables and posterior samples is based on the name alone.
 
-    For the last example we could have created a new predictions model. Note that we have to specify
-    `var_names` explicitly, because the newly defined `y` was not given any observations:
+    For the last example we could have created a new predictions model. Since the new ``y``
+    has no observations, we request it via ``var_names`` (or equivalently ``sample_vars``):
 
     .. code-block:: python
 
@@ -627,8 +825,9 @@ def sample_posterior_predictive(
 
 
     The new model may even have a different structure and unobserved variables that don't exist in the trace.
-    These variables will also be forward sampled. In the following example we added a new ``extra_noise``
-    variable between the inferred posterior ``noise`` and the new StudentT observational distribution  ``y``:
+    These variables will be forward sampled automatically because they have no trace values to fall back on.
+    In the following example we added a new ``extra_noise`` variable between the inferred posterior ``noise``
+    and the new StudentT observational distribution  ``y``:
 
     .. code-block:: python
 
@@ -646,26 +845,34 @@ def sample_posterior_predictive(
 
     For more about out-of-model predictions, see this `blog post <https://www.pymc-labs.com/blog-posts/out-of-model-predictions-with-pymc/>`_.
 
-    The behavior of `var_names`
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    The behavior of ``sample_vars``, ``freeze_vars``, and ``var_names``
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    The function returns forward samples for any variable included in `var_names`,
-    conditioned on the values of other random variables found in the trace.
+    Each of these three arguments controls one aspect of the operation:
 
-    To ensure the samples are internally consistent, any random variable that depends
-    on another random variable that is being sampled is itself sampled, even if
-    this variable is present in the trace and was not included in `var_names`.
-    The final list of variables being sampled is shown in the log output.
+    - ``sample_vars`` — trace variables to treat as volatile: regenerate them
+      (from their distribution or expression) instead of copying from the trace.
+      Empty by default.
+    - ``freeze_vars`` — which trace variables to reuse explicitly (silences the
+      implicit-freeze warning below).
+    - ``var_names`` — which variables appear in the output. Does not trigger
+      resampling of variables in the trace. Defaults to ``sample_vars``.
 
-    Note that if a random variable has no dependency on other random variables,
-    these forward samples are equivalent to their prior samples.
-    Likewise, if all random variables are being sampled, the behavior of this function
-    is equivalent to that of :func:`~pymc.sample_prior_predictive`.
+    **Volatility.** Volatility originates from three sources — variables listed
+    in ``sample_vars``, changed Data/coords, and RVs missing from the trace
+    (including observed RVs, which are always regenerated since they have no
+    trace value to reuse). It then propagates downstream through deterministics
+    and other RVs. An RV that *is* in the trace and not listed in ``sample_vars``
+    keeps its trace value — even when one of its ancestors is being resampled.
+    This prevents a single ``sample_vars=["x"]`` call, or a ``set_data`` call,
+    from silently invalidating the posterior values for every downstream
+    variable. When an auto-frozen trace variable has a volatile ancestor, an
+    :class:`~pymc.exceptions.ImplicitFreezeWarning` flags it so the user can
+    opt in by adding it to ``sample_vars`` (to resample) or opt out by adding
+    it to ``freeze_vars`` (to silence the warning while keeping the trace
+    value). The log lists all the RVs being resampled in any given call.
 
-    .. warning:: A random variable included in `var_names` will never be copied from the posterior group. It will always be sampled as described above. If you want, you can copy manually via ``idata.posterior_predictive["var_name"] = idata.posterior["var_name"]``.
-
-
-    The following code block explores how the behavior changes with different `var_names`:
+    The following examples use this model:
 
     .. code-block:: python
 
@@ -687,80 +894,74 @@ def sample_posterior_predictive(
 
             idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
 
-    Default behavior. Generate samples of ``obs``, conditioned on the posterior samples of ``z`` found in the trace.
-    These are often referred to as posterior predictive samples in the literature:
+    Default behavior: Generate samples of ``obs`` conditioned on the posterior
+    samples of ``z`` found in the trace. These are often referred to as posterior
+    predictive samples in the literature:
 
     .. code-block:: python
 
         with model:
-            pm.sample_posterior_predictive(idata, var_names=["obs"], **kwargs)
+            pm.sample_posterior_predictive(idata, **kwargs)
             # Sampling: [obs]
 
-    Re-compute the deterministic variable ``det``, conditioned on the posterior samples of ``z`` found in the trace:
-
-    .. code :: python
-
-          pm.sample_posterior_predictive(idata, var_names=["det"], **kwargs)
-          # Sampling: []
-
-    Generate samples of ``z`` and ``det``, conditioned on the posterior samples of ``x`` and ``y`` found in the trace.
+    Copy the trace values for ``z`` and ``det``. Nothing is resampled without explicit `sample_vars`:
 
     .. code :: python
 
         with model:
             pm.sample_posterior_predictive(idata, var_names=["z", "det"], **kwargs)
+            # Sampling: []
+
+    Generate new samples of z and det, conditioned on the posterior samples of x and y found in the trace.
+
+    .. code :: python
+
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["z", "det"], sample_vars=["z"], **kwargs)
             # Sampling: [z]
 
+    Generate samples of y, z and det, conditioned on the posterior samples of x found in the trace.
 
-    Generate samples of ``y``, ``z`` and ``det``, conditioned on the posterior samples of ``x`` found in the trace.
-
-    Note: The samples of ``y`` are equivalent to its prior, since it does not depend on any other variables.
-    In contrast, the samples of ``z`` and ``det`` depend on the new samples of ``y`` and the posterior samples of
-    ``x`` found in the trace.
+    Note: The samples of y are equivalent to its prior, since it does not depend on any other variables.
+    In contrast, the samples of z and det depend on the new samples of y and the posterior samples of x found in the trace.
 
     .. code :: python
 
         with model:
-            pm.sample_posterior_predictive(idata, var_names=["y", "z", "det"], **kwargs)
+            pm.sample_posterior_predictive(idata, var_names=["y", "z", "det"], sample_vars=["y", "z"], **kwargs)
             # Sampling: [y, z]
 
-
-    Same as before, except ``z`` is not stored in the returned trace.
-    For computing ``det`` we still have to sample ``z`` as it depends on ``y``, which is also being sampled.
-
-    .. code :: python
-
-        with model:
-            pm.sample_posterior_predictive(idata, var_names=["y", "det"], **kwargs)
-            # Sampling: [y, z]
-
-    Every random variable is sampled. This is equivalent to calling :func:`~pymc.sample_prior_predictive`
+    Note that if ``z`` is not placed in `sample_vars` it *won't* be resampled even though it depends on the freshly drawn
+    ``y`` — cascade stops at RVs that are in the trace. A warning flags this behavior for ``z``:
 
     .. code :: python
 
         with model:
-            pm.sample_posterior_predictive(idata, var_names=["x", "y", "z", "det", "obs"], **kwargs)
-            # Sampling: [x, y, z, obs]
+            pm.sample_posterior_predictive(idata, var_names=["y", "z", "det"], sample_vars=["y"], **kwargs)
+            # ImplicitFreezeWarning: 'z' (ancestor is resampled (y))
+            # Sampling: [y]
 
-
-    .. danger:: Including a :func:`~pymc.Deterministic` in `var_names` may incorrectly force a random variable to be resampled, as happens with ``z`` in the following example:
-
+    If this is the intended behavior `z` can be added to freeze_vars explicitly, and the warning is avoided.
 
     .. code :: python
 
-        with pm.Model() as model:
-          x = pm.Normal("x")
-          y = pm.Normal("y")
-          det_xy = pm.Deterministic("det_xy", x + y**2)
-          z = pm.Normal("z", det_xy)
-          det_z = pm.Deterministic("det_z", pm.math.exp(z))
-          obs = pm.Normal("obs", det_z, 1, observed=[20])
+        with model:
+            pm.sample_posterior_predictive(idata, var_names=["y", "z", "det"], sample_vars=["y"], freeze_vars=["z"], **kwargs)
+            # Sampling: [y]
 
-          idata = pm.sample(tune=10, draws=10, chains=2, **kwargs)
+    Passing every RV to ``sample_vars`` makes this equivalent to :func:`~pymc.sample_prior_predictive`.
+    Including ``obs`` in ``sample_vars`` is redundant — it isn't in the trace so it is always regenerated:
 
-          pm.sample_posterior_predictive(idata, var_names=["det_xy", "det_z"], **kwargs)
-          # Sampling: [z]
+    .. code :: python
 
+        with model:
+            pm.sample_posterior_predictive(
+                idata,
+                var_names=["x", "y", "z", "det", "obs"],
+                sample_vars=["x", "y", "z", "obs"],
+                **kwargs,
+            )
+            # Sampling: [obs, x, y, z]
 
     Controlling the number of samples
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -807,7 +1008,7 @@ def sample_posterior_predictive(
         idata_kwargs = idata_kwargs.copy()
     if sample_dims is None:
         sample_dims = ["chain", "draw"]
-    constant_data: dict[str, np.ndarray] = {}
+    trace_constant_data: dict[str, np.ndarray] = {}
     trace_coords: dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
@@ -818,7 +1019,7 @@ def sample_posterior_predictive(
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
-            constant_data.update({str(k): v.data for k, v in _constant_data.items()})
+            trace_constant_data.update({str(k): v.data for k, v in _constant_data.items()})
         idata = trace
         observed_data = trace.get("observed_data", None)
         if "posterior" in trace.children:
@@ -861,28 +1062,126 @@ def sample_posterior_predictive(
             stacklevel=2,
         )
 
-    constant_coords = get_constant_coords(trace_coords, model)
+    constant_data = _build_constant_data(trace_constant_data, trace_coords, model)
+    vars_in_trace = get_vars_in_point_list(_trace, model)
 
+    # Resolve output variables (what to return in the dataset).
+    # - If var_names is given, use it verbatim.
+    # - If sample_vars is given, the output is exactly sample_vars (the user's
+    #   explicit set of variables to re-evaluate).
+    # - Otherwise (the classic PPC default), the output is observed RVs plus any
+    #   deterministic that depends on them — the latter is a hack for partially
+    #   observed RVs (represented internally as a set_subtensor deterministic
+    #   combining the observed and unobserved parts).
     if var_names is not None:
-        vars_ = [model[x] for x in var_names]
+        output_vars = [model[x] for x in var_names]
+    elif sample_vars is not None:
+        output_vars = [model[x] for x in sample_vars]
     else:
-        observed_vars = model.observed_RVs
+        extra_observeds: list[Variable] = []
+        output_vars = list(model.observed_RVs)
         if observed_data is not None:
-            observed_vars += [
-                model[x] for x in observed_data if x in model and x not in observed_vars
-            ]
-        vars_ = observed_vars + observed_dependent_deterministics(model, observed_vars)
+            for name in observed_data:
+                if name in model and model[name] not in output_vars:
+                    output_vars.append(model[name])
+                    extra_observeds.append(model[name])
+        output_vars_set = set(output_vars)
+        output_vars += [
+            d
+            for d in observed_dependent_deterministics(model, extra_observeds)
+            if d not in output_vars_set
+        ]
 
-    vars_to_sample = list(get_default_varnames(vars_, include_transformed=False))
+    # Resolve sample_vars to the set of volatile-seed Variable objects. These override
+    # trace values on each draw (RVs re-sampled, deterministics re-evaluated). Basic
+    # RVs missing from the trace (including observed RVs) are always regenerated via
+    # compile_forward_sampling_function's volatility rule, so the default here is empty.
+    volatile_vars: set[Variable]
+    if sample_vars is None:
+        volatile_vars = set()
+    else:
+        # sample_vars entries must be RVs or deterministics (i.e. things with a
+        # trace-level concept). Data/coord containers don't fit.
+        allowed = set(model.basic_RVs) | set(model.deterministics)
+        if invalid := [name for name in sample_vars if model[name] not in allowed]:
+            raise ValueError(
+                f"sample_vars {sorted(invalid)} are not random variables or "
+                f"deterministics; only those can have trace values to override."
+            )
+        volatile_vars = {model[name] for name in sample_vars}
 
-    if not vars_to_sample:
+    rv_set = set(model.basic_RVs)
+    vars_in_trace_set = set(vars_in_trace)
+    sample_var_names = set(sample_vars or ())
+    trace_rvs = [rv for rv in vars_in_trace if rv in rv_set]
+
+    frozen_vars: set[Variable] = set()
+    if freeze_vars is not None:
+        frozen_vars = {model[x] for x in freeze_vars}
+        vars_in_trace_names = {v.name for v in vars_in_trace}
+        missing = {x for x in freeze_vars if x not in vars_in_trace_names}
+        if missing:
+            raise ValueError(
+                f"freeze_vars {sorted(missing)} are not present in the trace. "
+                f"Cannot freeze variables without stored values."
+            )
+        if sample_vars is not None and (overlap := (set(freeze_vars) & set(sample_vars))):
+            raise ValueError(
+                f"Variables {sorted(overlap)} are in both sample_vars and freeze_vars. "
+                f"A variable cannot be both resampled and frozen."
+            )
+
+    # Auto-freeze every trace basic RV not already in sample_vars or explicit freeze_vars.
+    # A warning below lists cases where this freeze is likely unintended
+    # (upstream Data/coords changed, or an ancestor is being resampled).
+    auto_frozen_vars = [
+        rv for rv in trace_rvs if rv.name not in sample_var_names and rv not in frozen_vars
+    ]
+    frozen_vars.update(auto_frozen_vars)
+
+    # Run the full volatility analysis once, over the combined graph of
+    # output_vars (so we can classify deterministics in var_names)
+    # and the auto-frozen trace RVs (so the warning below can check their ancestors).
+    volatility_fg = FunctionGraph(outputs=list(output_vars) + auto_frozen_vars, clone=False)
+    volatile_closure = _compute_volatile_vars(
+        volatility_fg,
+        vars_in_trace=vars_in_trace_set,
+        rvs=rv_set,
+        constant_data=constant_data,
+        volatile_vars=volatile_vars,
+        freeze_vars=frozen_vars,
+    )
+
+    # Dedupe output_vars preserving order, so downstream loops don't emit duplicates.
+    output_vars = list(dict.fromkeys(output_vars))
+
+    if not output_vars:
+        # Nothing to produce — neither sampled nor copied from the trace.
         if return_inferencedata and not extend_inferencedata:
             return xr.DataTree()
         elif return_inferencedata and extend_inferencedata:
             return trace if idata is None else idata
         return {}
 
-    vars_in_trace = get_vars_in_point_list(_trace, model)
+    # Compiled function outputs are strictly the entries of output_vars that need regeneration.
+    # An output in the trace and not volatile is copied from the trace below.
+    # Upstream volatile_vars and intermediate deterministics are computed by PyTensor as needed
+    # — they don't need to be listed as outputs.
+    compiled_outputs = [
+        var for var in output_vars if not (var in vars_in_trace_set and var not in volatile_closure)
+    ]
+    vars_to_evaluate = list(get_default_varnames(compiled_outputs, include_transformed=False))
+
+    _maybe_warn_implicit_freeze(
+        auto_frozen=auto_frozen_vars,
+        volatile_closure=volatile_closure,
+        volatile_vars=volatile_vars,
+        rv_set=rv_set,
+        vars_in_trace_set=vars_in_trace_set,
+        constant_data=constant_data,
+        model=model,
+        trace_coords=trace_coords,
+    )
 
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
@@ -892,19 +1191,31 @@ def sample_posterior_predictive(
     compile_kwargs.setdefault("allow_input_downcast", True)
     compile_kwargs.setdefault("accept_inplace", True)
 
-    _sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
-        outputs=vars_to_sample,
-        vars_in_trace=vars_in_trace,
-        basic_rvs=model.basic_RVs,
-        givens_dict=None,
-        random_seed=random_seed,
-        constant_data=constant_data,
-        constant_coords=constant_coords,
-        **compile_kwargs,
-    )
-    sampler_fn = point_wrapper(_sampler_fn)
-    # All model variables have a name, but mypy does not know this
-    _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
+    sampler_fn: Callable | None
+    if vars_to_evaluate:
+        _sampler_fn, volatile_basic_rvs = compile_forward_sampling_function(
+            outputs=vars_to_evaluate,
+            vars_in_trace=vars_in_trace,
+            basic_rvs=model.basic_RVs,
+            random_seed=random_seed,
+            constant_data=constant_data,
+            volatile_vars=volatile_vars,
+            freeze_vars=frozen_vars,
+            **compile_kwargs,
+        )
+        sampler_fn = point_wrapper(_sampler_fn)
+        # All model variables have a name, but mypy does not know this
+        _log.info(f"Sampling: {sorted(volatile_basic_rvs, key=lambda var: var.name)}")  # type: ignore[arg-type, return-value]
+    else:
+        # Nothing needs to be sampled — output_vars will be fully populated from the
+        # trace. Skip compilation entirely.
+        sampler_fn = None
+        _log.info("Sampling: []")
+
+    # Determine output-only variables that should be copied from trace, not sampled.
+    evaluated_names = {v.name for v in vars_to_evaluate}
+    copy_from_trace_names = [var.name for var in output_vars if var.name not in evaluated_names]
+
     ppc_trace_t = _DefaultTrace(samples)
 
     progress = create_simple_progress(
@@ -930,10 +1241,14 @@ def sample_posterior_predictive(
                 else:
                     param = _trace[idx % len_trace]
 
-                values = sampler_fn(**param)
+                if sampler_fn is not None:
+                    values = sampler_fn(**param)
+                    for k, v in zip(vars_to_evaluate, values):
+                        ppc_trace_t.insert(k.name, v, idx)
 
-                for k, v in zip(vars_, values):
-                    ppc_trace_t.insert(k.name, v, idx)
+                # Copy output-only variables from trace
+                for name in copy_from_trace_names:
+                    ppc_trace_t.insert(name, param[name], idx)
 
                 progress.advance(task)
             progress.update(task, refresh=True, completed=samples)
