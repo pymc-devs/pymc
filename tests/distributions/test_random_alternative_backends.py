@@ -11,8 +11,6 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from contextlib import nullcontext
-
 import numpy as np
 import pytest
 
@@ -44,15 +42,13 @@ def test_dirichlet_multinomial_dims(mode):
     with pm.Model(coords={"trial": range(3), "item": range(3)}) as m:
         dm = DirichletMultinomial("dm", n=5, a=np.eye(3) * 1e6 + 0.01, dims=("trial", "item"))
 
-    # JAX does not allow us to JIT a function with dynamic shape
-    expected_ctxt = pytest.raises(TypeError) if mode == "JAX" else nullcontext()
-    with expected_ctxt:
-        pm.draw(dm, mode=mode)
-
-    # Should be fine after freezing the dims that specify the shape
-    frozen_dm = freeze_dims_and_data(m)["dm"]
-    dm_draws = pm.draw(frozen_dm, mode=mode, random_seed=36)
+    dm_draws = pm.draw(dm, mode=mode, random_seed=36)
     np.testing.assert_equal(dm_draws, np.eye(3) * 5)
+
+    # Should also work after freezing the dims that specify the shape
+    frozen_dm = freeze_dims_and_data(m)["dm"]
+    frozen_dm_draws = pm.draw(frozen_dm, mode=mode, random_seed=36)
+    np.testing.assert_equal(frozen_dm_draws, np.eye(3) * 5)
 
 
 def test_mvstudentt(mode):
