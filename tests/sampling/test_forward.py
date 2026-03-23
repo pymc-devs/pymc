@@ -14,6 +14,8 @@
 import logging
 import warnings
 
+from contextlib import nullcontext
+
 import numpy as np
 import numpy.random as npr
 import numpy.testing as npt
@@ -35,11 +37,13 @@ import pymc as pm
 
 from pymc.backends.base import MultiTrace
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.exceptions import ImplicitFreezeWarning
+from pymc.model.transform.conditioning import do
 from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.pytensorf import compile, rvs_in_graph
 from pymc.sampling.forward import (
+    _build_constant_data,
     compile_forward_sampling_function,
-    get_constant_coords,
     get_vars_in_point_list,
     observed_dependent_deterministics,
     vectorize_over_posterior,
@@ -172,32 +176,12 @@ class TestCompileForwardSampler:
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=model.observed_RVs,
             vars_in_trace=[beta, mu, sigma],
-            constant_data={"p": p.get_value()},
+            constant_data={p: p.get_value()},
             basic_rvs=model.basic_RVs,
         )
         assert volatile_rvs == {category, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
         assert {i.name for i in self.get_function_roots(f)} == {"x", "p", "beta", "sigma"}
-
-        f, volatile_rvs = compile_forward_sampling_function(
-            outputs=model.observed_RVs,
-            vars_in_trace=[beta, mu, sigma],
-            constant_data={"p": p.get_value()},
-            basic_rvs=model.basic_RVs,
-            givens_dict={category: np.zeros(10, dtype=category.dtype)},
-            # Disable `random_unsafe` so the disconnected `p` and `x` shared
-            # inputs are kept in the compiled graph for the assertion below.
-            mode=pytensor.compile.mode.get_mode(None).excluding("random_unsafe"),
-        )
-        assert volatile_rvs == {obs}
-        assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}
-        assert {i.name for i in self.get_function_roots(f)} == {
-            "x",
-            "p",
-            "category",
-            "beta",
-            "sigma",
-        }
 
     def test_volatile_parameters(self):
         with pm.Model() as model:
@@ -220,13 +204,11 @@ class TestCompileForwardSampler:
             outputs=model.observed_RVs,
             vars_in_trace=[mu, nested_mu, sigma],
             basic_rvs=model.basic_RVs,
-            givens_dict={
-                mu: pytensor.shared(np.array(1.0), name="mu")
-            },  # mu will be considered volatile because it's in givens
+            volatile_vars={mu},  # mu (a deterministic) marked as a volatility seed
         )
-        assert volatile_rvs == {nested_mu, obs}
+        assert volatile_rvs == {mu, nested_mu, obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"sigma"}
-        assert {i.name for i in self.get_function_roots(f)} == {"mu", "sigma"}
+        assert {i.name for i in self.get_function_roots(f)} == {"sigma"}
 
     def test_mixture(self):
         with pm.Model() as model:
@@ -366,7 +348,10 @@ class TestCompileForwardSampler:
             )
             y = pm.Normal("y", mu=mu, sigma=sigma, observed=data, dims=["obs", "name"])
 
-        # When no constant_data and constant_coords, all the dependent nodes will be volatile and
+        name_length = model.dim_lengths["name"]
+        obs_length = model.dim_lengths["obs"]
+
+        # When no constant_data, all the dependent nodes will be volatile and
         # resampled
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=[y],
@@ -382,18 +367,21 @@ class TestCompileForwardSampler:
             outputs=[y],
             vars_in_trace=[a, b, mu, sigma],
             basic_rvs=model.basic_RVs,
-            constant_data={"offsets": offsets.get_value()},
+            constant_data={offsets: offsets.get_value()},
         )
         assert volatile_rvs == {y, a, sigma}
         assert {i.name for i in self.get_function_inputs(f)} == {"b"}
         assert {i.name for i in self.get_function_roots(f)} == {"b", "name", "obs"}
 
-        # When we declare constant_coords, the shared variables with matching names wont be volatile
+        # When we declare the dim-length shareds as constant, they won't be volatile
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=[y],
             vars_in_trace=[a, b, mu, sigma],
             basic_rvs=model.basic_RVs,
-            constant_coords={"name", "obs"},
+            constant_data={
+                name_length: int(name_length.get_value()),
+                obs_length: int(obs_length.get_value()),
+            },
         )
         assert volatile_rvs == {y, b}
         assert {i.name for i in self.get_function_inputs(f)} == {"a", "sigma"}
@@ -405,13 +393,16 @@ class TestCompileForwardSampler:
             "offsets",
         }
 
-        # When we have both constant_data and constant_coords, only y will be volatile
+        # When we mix data and dim-length shareds, only y will be volatile
         f, volatile_rvs = compile_forward_sampling_function(
             outputs=[y],
             vars_in_trace=[a, b, mu, sigma],
             basic_rvs=model.basic_RVs,
-            constant_data={"offsets": offsets.get_value()},
-            constant_coords={"name", "obs"},
+            constant_data={
+                offsets: offsets.get_value(),
+                name_length: int(name_length.get_value()),
+                obs_length: int(obs_length.get_value()),
+            },
         )
         assert volatile_rvs == {y}
         assert {i.name for i in self.get_function_inputs(f)} == {"a", "b", "mu", "sigma"}
@@ -423,8 +414,11 @@ class TestCompileForwardSampler:
             outputs=[y],
             vars_in_trace=[a, b, mu, sigma],
             basic_rvs=model.basic_RVs,
-            constant_data={"offsets": offsets.get_value() + 1},
-            constant_coords={"name", "obs"},
+            constant_data={
+                offsets: offsets.get_value() + 1,
+                name_length: int(name_length.get_value()),
+                obs_length: int(obs_length.get_value()),
+            },
         )
         assert volatile_rvs == {y, b}
         assert {i.name for i in self.get_function_inputs(f)} == {"a", "sigma"}
@@ -461,7 +455,7 @@ class TestCompileForwardSampler:
         )
         with model:
             pp_diff_len = pm.sample_posterior_predictive(
-                trace_diff_len, var_names=["y"]
+                trace_diff_len, var_names=["y"], sample_vars=["x"]
             ).posterior_predictive
         assert pp_diff_len["y"].item() != np.pi
 
@@ -470,9 +464,36 @@ class TestCompileForwardSampler:
         model.set_dim("trial", new_length=7)
         with model:
             pp_diff_len_model_set = pm.sample_posterior_predictive(
-                trace_same_len, var_names=["y"]
+                trace_same_len, var_names=["y"], sample_vars=["x"]
             ).posterior_predictive
         assert pp_diff_len_model_set["y"].item() != np.pi
+
+    def test_freeze_vars_blocks_volatility(self):
+        """Frozen variables should not be marked volatile even when inputs are volatile."""
+        with pm.Model() as model:
+            y = pm.Data("y", np.ones(10))
+            mu = pm.Normal("mu", 0, 1)
+            nested_mu = pm.Normal("nested_mu", mu, 1, size=10)
+            sigma = pm.HalfNormal("sigma", 1)
+            obs = pm.Normal("obs", nested_mu, sigma, observed=y, shape=nested_mu.shape)
+
+        # Without freeze: mu missing from trace makes nested_mu volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[nested_mu, sigma],
+            basic_rvs=model.basic_RVs,
+        )
+        assert volatile_rvs == {mu, nested_mu, obs}
+
+        # With freeze: nested_mu is frozen, so it stays non-volatile despite mu being volatile
+        f, volatile_rvs = compile_forward_sampling_function(
+            outputs=model.observed_RVs,
+            vars_in_trace=[nested_mu, sigma],
+            basic_rvs=model.basic_RVs,
+            freeze_vars={nested_mu},
+        )
+        assert volatile_rvs == {mu, obs}
+        assert {i.name for i in self.get_function_inputs(f)} == {"nested_mu", "sigma"}
 
 
 class TestSamplePPC:
@@ -623,7 +644,9 @@ class TestSamplePPC:
                 10 * [model.initial_point()], return_inferencedata=False
             )
             assert ppc0 == {}
-            ppc = pm.sample_posterior_predictive(idata, return_inferencedata=False, var_names=["b"])
+            ppc = pm.sample_posterior_predictive(
+                idata, return_inferencedata=False, sample_vars=["b"]
+            )
             assert len(ppc) == 1
             assert ppc["b"].shape == (
                 1,
@@ -871,7 +894,9 @@ class TestSamplePPC:
 
             d = pm.Deterministic("d", a - 4)
             pm.Normal("c", d, sigma=0.01)
-            ppc = pm.sample_posterior_predictive(trace, var_names="c", return_inferencedata=True)
+            ppc = pm.sample_posterior_predictive(
+                trace, sample_vars=["c"], return_inferencedata=True
+            )
         assert np.all(np.abs(ppc.posterior_predictive.c + 4) <= 0.1)
 
     def test_logging_sampled_basic_rvs_prior(self, caplog):
@@ -914,16 +939,17 @@ class TestSamplePPC:
         caplog.clear()
 
         with m:
-            pm.sample_posterior_predictive(idata, var_names=["y", "z"])
+            pm.sample_posterior_predictive(idata, var_names=["y", "z"], sample_vars=["y"])
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
         caplog.clear()
 
-        # Resampling `x` will force resampling of `y`, even if it is in trace
+        # Resampling `x` does not cascade to `y`: `y` is in the trace and not in
+        # `sample_vars`, so it's implicitly frozen. A warning fires because `y` is
+        # downstream of a resampled variable.
         with m:
-            pm.sample_posterior_predictive(idata, var_names=["x", "z"])
-        assert caplog.record_tuples == [
-            ("pymc.sampling.forward", logging.INFO, "Sampling: [x, y, z]")
-        ]
+            with pytest.warns(ImplicitFreezeWarning, match="ancestor is resampled"):
+                pm.sample_posterior_predictive(idata, var_names=["x", "z"], sample_vars=["x"])
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
         # Missing deterministic `x_det` does not show in the log, even if it is being
@@ -941,13 +967,14 @@ class TestSamplePPC:
         assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
-        # Missing `x` causes sampling of downstream `y` RV, even if it is present in trace
+        # `x` is missing from the trace, so it must be sampled. `y` is in the trace
+        # and not in `sample_vars`, so it's kept despite having a resampled ancestor;
+        # a warning flags it as a likely cascade candidate.
         idata = az_from_dict({"posterior": {"y": np.ones((1, 5))}})
         with m:
-            pm.sample_posterior_predictive(idata)
-        assert caplog.record_tuples == [
-            ("pymc.sampling.forward", logging.INFO, "Sampling: [x, y, z]")
-        ]
+            with pytest.warns(ImplicitFreezeWarning, match="ancestor is resampled"):
+                pm.sample_posterior_predictive(idata)
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [x, z]")]
         caplog.clear()
 
     def test_logging_sampled_basic_rvs_posterior_deterministic(self, caplog):
@@ -957,14 +984,20 @@ class TestSamplePPC:
             y = pm.Normal("y", x_det)
             z = pm.Normal("z", y, observed=0)
 
-        # Explicit resampling a deterministic will lead to resampling of downstream RV `y`
-        # This behavior could change in the future as the posterior of `y` is still valid
+        # `x_det` is in the trace; listing it in var_names just copies it. Only `z`
+        # (observed, not in trace) is resampled.
         idata = az_from_dict(
-            {"posterior": {"x": np.zeros((1, 5)), "x_det": np.ones((1, 5)), "y": np.ones((1, 5))}}
+            {
+                "posterior": {
+                    "x": np.zeros((1, 5)),
+                    "x_det": np.ones((1, 5)),
+                    "y": np.ones((1, 5)),
+                }
+            }
         )
         with m:
             pm.sample_posterior_predictive(idata, var_names=["x_det", "z"])
-        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y, z]")]
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [z]")]
         caplog.clear()
 
     @staticmethod
@@ -1025,96 +1058,57 @@ class TestSamplePPC:
 
     def test_logging_sampled_basic_rvs_posterior_mutable(self, mock_sample_results, caplog):
         kind, samples, model = mock_sample_results
-        with model:
+        # Trace variables whose upstream Data/coords appear changed are implicitly
+        # frozen (reused from the trace); the observed ``y`` is always resampled
+        # since it has no trace value. Whether a/b/sigma are implicitly frozen
+        # depends on how much each trace kind knows about constant_data/coords:
+        # - MultiTrace has no Data/coord info, so everything is assumed changed and
+        #   every trace variable is frozen.
+        # - DataTree has full info; with no real change nothing is frozen.
+        # - Dataset knows coords are unchanged but not Data, so only `b` (the
+        #   Data-dependent variable) is frozen.
+        # DataTree has full info and sees no change → nothing frozen, no warning.
+        # MultiTrace/Dataset flag mismatches → warning fires.
+        block1_warn = nullcontext() if kind == "DataTree" else pytest.warns(ImplicitFreezeWarning)
+        with model, block1_warn:
             pm.sample_posterior_predictive(samples)
-        if kind == "MultiTrace":
-            # MultiTrace will only have the actual MCMC posterior samples but no information on
-            # the Data and coordinate values, so it will always assume they are volatile
-            # and resample their descendants
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "DataTree":
-            # DataTree has all MCMC posterior samples and the values for both coordinates and
-            # data containers. This enables it to see that no data has changed and it should only
-            # resample the observed variable
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [y]")
-            ]
-            caplog.clear()
-        elif kind == "Dataset":
-            # Dataset has all MCMC posterior samples and the values of the coordinates. This
-            # enables it to see that the coordinates have not changed, but the Data is
-            # assumed volatile by default
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
-            ]
-            caplog.clear()
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y]")]
+        caplog.clear()
 
         original_offsets = model["offsets"].get_value()
         with model:
-            # Changing the Data values. This will only be picked up by DataTree
+            # Change the Data values. `b` depends on `offsets`, so DataTree now
+            # sees the mismatch and freezes `b` (the other kinds already were).
             pm.set_data({"offsets": original_offsets + 1})
-            pm.sample_posterior_predictive(samples)
-        if kind == "MultiTrace":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "DataTree":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
-            ]
-            caplog.clear()
-        elif kind == "Dataset":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [b, y]")
-            ]
-            caplog.clear()
+            with pytest.warns(ImplicitFreezeWarning):
+                pm.sample_posterior_predictive(samples)
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y]")]
+        caplog.clear()
 
+        # Changing a coord's length would freeze variables whose shape no longer
+        # fits and produce shape errors at runtime. The caller must opt in to
+        # resampling those variables via `sample_vars`.
+        # DataTree sees that offsets is back to original and a/sigma are in
+        # sample_vars → nothing implicitly frozen, no warning.
+        block3_warn = nullcontext() if kind == "DataTree" else pytest.warns(ImplicitFreezeWarning)
         with model:
-            # Changing the mutable coordinates. This will be picked up by DataTree and Dataset
             model.set_dim("name", new_length=4, coord_values=["D", "E", "F", "G"])
             pm.set_data({"offsets": original_offsets, "y_obs": np.zeros((10, 4))})
-            pm.sample_posterior_predictive(samples)
-        if kind == "MultiTrace":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "DataTree":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "Dataset":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
+            with block3_warn:
+                pm.sample_posterior_predictive(samples, sample_vars=["a", "sigma", "y"])
+        assert caplog.record_tuples == [
+            ("pymc.sampling.forward", logging.INFO, "Sampling: [a, sigma, y]")
+        ]
+        caplog.clear()
 
         with model:
-            # Changing the mutable coordinate values, but not shape, and also changing Data.
-            # This will trigger resampling of all variables
+            # Coord length unchanged but values changed; shape still matches.
             model.set_dim("name", new_length=3, coord_values=["A", "B", "D"])
             pm.set_data({"offsets": original_offsets + 1, "y_obs": np.zeros((10, 3))})
-            pm.sample_posterior_predictive(samples)
-        if kind == "MultiTrace":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "DataTree":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
-        elif kind == "Dataset":
-            assert caplog.record_tuples == [
-                ("pymc.sampling.forward", logging.INFO, "Sampling: [a, b, sigma, y]")
-            ]
-            caplog.clear()
+            with pytest.warns(ImplicitFreezeWarning):
+                pm.sample_posterior_predictive(samples)
+        assert caplog.record_tuples == [("pymc.sampling.forward", logging.INFO, "Sampling: [y]")]
+        caplog.clear()
 
     def test_observed_data_needed_in_pp(self):
         # Model where y_data is not part of the generative graph.
@@ -1460,6 +1454,297 @@ class TestSamplePosteriorPredictive:
             assert len(pp.posterior_predictive["pred_id"]) == 5
 
 
+@pytest.mark.filterwarnings("error")
+class TestSamplePosteriorPredictiveVolatility:
+    """Tests for the ``var_names`` / ``sample_vars`` / ``freeze_vars`` knobs."""
+
+    def test_var_names_output_vs_sample_vars_resample(self):
+        """`var_names` controls the returned contents only; `sample_vars` is what
+        triggers resampling of a non-volatile trace variable."""
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1)
+            pm.Normal("obs", mu, 1, observed=np.zeros(5))
+
+        trace = az_from_dict({"posterior": {"mu": np.ones((1, 100))}})
+        with model:
+            # Listing mu in var_names alone does not resample it — copied from trace.
+            ppc_copied = pm.sample_posterior_predictive(
+                trace, var_names=["mu", "obs"], return_inferencedata=False
+            )
+            npt.assert_array_equal(ppc_copied["mu"].flatten(), np.ones(100))
+            assert "obs" in ppc_copied
+
+            # Adding sample_vars=["mu"] forces a fresh draw.
+            ppc_resampled = pm.sample_posterior_predictive(
+                trace,
+                var_names=["mu", "obs"],
+                sample_vars=["mu"],
+                return_inferencedata=False,
+            )
+            assert not np.all(ppc_resampled["mu"] == 1.0)
+            assert "obs" in ppc_resampled
+
+    def test_freeze_deterministic(self):
+        """Freezing a deterministic keeps its trace value instead of recomputing
+        from new data. Verified by inspecting the downstream resampled ``obs``
+        (HSGP-style standardization use case)."""
+        # obs is observed with tiny noise, so its resampled values reveal whether
+        # `x_mean` was recomputed from the new x (mean=200) or kept frozen at the
+        # training-time mean (2.0).
+        with pm.Model() as model:
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            x_mean = pm.Deterministic("x_mean", x.mean())
+            centered = pm.Deterministic("centered", x - x_mean)
+            scale = pm.DiracDelta("scale", 1.0)
+            pm.Normal("obs", scale * centered, 1e-6, observed=np.zeros(3))
+            prior = pm.sample_prior_predictive(draws=2, random_seed=0)
+        # Fake the prior as a posterior (the draws don't matter, only the graph).
+        # `x_mean` must be in the trace so it can be frozen.
+        idata = az_from_dict(
+            {
+                "posterior": {
+                    "scale": prior.prior["scale"].values,
+                    "x_mean": prior.prior["x_mean"].values,
+                },
+                "constant_data": {"x": np.array([1.0, 2.0, 3.0])},
+            }
+        )
+
+        with model:
+            pm.set_data({"x": [100.0, 200.0, 300.0]})
+            # No freeze: x_mean is recomputed as mean([100,200,300])=200,
+            # so centered = [-100, 0, 100] and obs ≈ [-100, 0, 100].
+            ppc_recomputed = pm.sample_posterior_predictive(
+                idata, return_inferencedata=False, progressbar=False, random_seed=0
+            )
+            npt.assert_allclose(ppc_recomputed["obs"][0, 0], [-100.0, 0.0, 100.0], atol=1e-3)
+
+            # Freeze x_mean: stays at training-time mean 2.0,
+            # so centered = [98, 198, 298] and obs ≈ [98, 198, 298].
+            ppc_frozen = pm.sample_posterior_predictive(
+                idata,
+                freeze_vars=["x_mean"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+            npt.assert_allclose(ppc_frozen["obs"][0, 0], [98.0, 198.0, 298.0], atol=1e-3)
+
+    def test_freeze_vars_and_sample_vars_overlap_raises(self):
+        """freeze_vars and sample_vars must be disjoint."""
+        with pm.Model() as model:
+            mu = pm.Normal("mu", 0, 1)
+            obs = pm.Normal("obs", mu, 1, observed=np.zeros(5))
+
+        trace = az_from_dict({"posterior": {"mu": np.ones((1, 10))}})
+        with model:
+            with pytest.raises(ValueError, match="both sample_vars and freeze_vars"):
+                pm.sample_posterior_predictive(
+                    trace,
+                    sample_vars=["mu"],
+                    freeze_vars=["mu"],
+                )
+
+    def test_freeze_vars_not_in_trace_raises(self):
+        """freeze_vars entries must exist in the trace."""
+        with pm.Model() as model:
+            mu = pm.Normal("mu")
+            pm.Normal("extra", 0, 1)  # in the model but not in the trace
+            pm.Normal("obs", mu, 1, observed=np.zeros(1))
+        trace = az_from_dict({"posterior": {"mu": np.ones((1, 5))}})
+
+        with model, pytest.raises(ValueError, match="not present in the trace"):
+            pm.sample_posterior_predictive(trace, freeze_vars=["extra"])
+
+    def test_sample_vars_not_in_var_names_excluded_from_output(self):
+        """`var_names` strictly controls the returned contents. A resampled
+        variable is still used as a volatility seed, but if it isn't listed in
+        ``var_names`` it does not appear in the output."""
+        with pm.Model() as model:
+            y = pm.Normal("y")
+            z = pm.Normal("z", y)
+            pm.Normal("obs", z, 1e-6, observed=np.zeros(1))
+            prior = pm.sample_prior_predictive(draws=2, random_seed=0)
+        idata = az_from_dict(
+            {
+                "posterior": {
+                    "y": prior.prior["y"].values,
+                    "z": prior.prior["z"].values,
+                }
+            }
+        )
+
+        # Resampling y makes z volatile (its ancestor is resampled), but z isn't
+        # in sample_vars → implicit freeze warning, z kept from trace.
+        with model, pytest.warns(ImplicitFreezeWarning, match="ancestor is resampled"):
+            ppc = pm.sample_posterior_predictive(
+                idata,
+                sample_vars=["y"],
+                var_names=["z"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+        # z is auto-frozen (not in sample_vars) → kept from trace.
+        npt.assert_allclose(ppc["z"].squeeze(), prior.prior["z"].values.squeeze())
+        # y was resampled as a volatility seed, but isn't in var_names → not returned.
+        assert "y" not in ppc
+        assert set(ppc) == {"z"}
+
+    def test_var_names_not_in_trace_is_sampled(self):
+        """A basic RV listed in `var_names` but missing from the trace is
+        sampled, not silently dropped."""
+        with pm.Model() as model:
+            y = pm.Normal("y")
+            pm.Normal("obs", y, 1, observed=np.zeros(1))
+            prior = pm.sample_prior_predictive(draws=2, random_seed=0)
+
+        with pm.Model() as expanded:
+            y = pm.Normal("y")
+            z = pm.Normal("z", y)  # not in the trace
+            pm.Normal("obs", z, 1e-6, observed=np.zeros(1))
+
+        # Trace has y but not z. Asking for z in var_names should produce fresh z.
+        idata = az_from_dict({"posterior": {"y": prior.prior["y"].values}})
+        with expanded:
+            ppc = pm.sample_posterior_predictive(
+                idata,
+                var_names=["z"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+        assert "z" in ppc
+        assert ppc["z"].size > 0
+
+    def test_sample_vars_rejects_data(self):
+        """Data containers can't be in sample_vars — no trace value to override."""
+        with pm.Model() as model:
+            x = pm.Data("x", [1.0, 2.0, 3.0])
+            mu = pm.Normal("mu")
+            pm.Normal("obs", mu=mu + x.mean(), sigma=1, observed=[0, 0, 0])
+            prior = pm.sample_prior_predictive(draws=2, random_seed=0)
+        idata = az_from_dict({"posterior": {"mu": prior.prior["mu"].values}})
+
+        with model, pytest.raises(ValueError, match="not random variables or deterministics"):
+            pm.sample_posterior_predictive(idata, sample_vars=["x"])
+
+    def test_changed_constant_detected_as_volatile(self):
+        """A TensorConstant whose name is in `constant_data` but whose value
+        changed (e.g. after `pm.do(..., make_interventions_shared=False)`)
+        must register as volatile so downstream basic RVs are flagged."""
+        with pm.Model() as m:
+            x = pm.Data("x", np.array([1.0, 2.0, 3.0]))
+            b = pm.Normal("b", x.sum(), sigma=1)
+            pm.Normal("obs", b, 1e-6, observed=np.zeros(1))
+            prior = pm.sample_prior_predictive(draws=2, random_seed=0)
+
+        new_x = pt.constant([10.0, 20.0, 30.0], name="x")
+        do_m = do(m, {"x": new_x}, make_interventions_shared=False)
+        idata = az_from_dict(
+            {
+                "posterior": {"b": prior.prior["b"].values},
+                "constant_data": {"x": np.array([1.0, 2.0, 3.0])},
+            }
+        )
+
+        with do_m:
+            with pytest.warns(ImplicitFreezeWarning, match="upstream Data/coords changed"):
+                pm.sample_posterior_predictive(
+                    idata, return_inferencedata=False, progressbar=False, random_seed=0
+                )
+
+    def test_sample_vars_deterministic_forces_recompute(self):
+        """When ``pm.do`` swaps in a different expression for a deterministic,
+        the model's graph changes but the trace still has the old values.
+        Default behaviour copies from the trace; putting the deterministic in
+        `sample_vars` forces a fresh computation using the new graph."""
+        with pm.Model() as m:
+            x = pm.Normal("x")
+            pm.Deterministic("det", x**2)
+            pm.Normal("obs", m["det"], 1e-6, observed=np.zeros(1))
+            prior = pm.sample_prior_predictive(draws=3, random_seed=0)
+
+        # Reshape `det` to `x**3`. The new graph is different, but the trace
+        # still carries the old `det = x**2` values.
+        do_m = do(m, {m["det"]: m["x"] ** 3})
+        x_trace = prior.prior["x"].values
+        old_det = prior.prior["det"].values
+        idata = az_from_dict({"posterior": {"x": x_trace, "det": old_det}})
+
+        # Default: `det` is copied from the trace (no volatility detected at the
+        # basic-RV level, and deterministics aren't volatile by default).
+        with do_m:
+            ppc_copied = pm.sample_posterior_predictive(
+                idata,
+                var_names=["det"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+        npt.assert_allclose(ppc_copied["det"].squeeze(), old_det.squeeze())
+
+        # `sample_vars=["det"]`: force recomputation using do_m's graph (x**3).
+        with do_m:
+            ppc_forced = pm.sample_posterior_predictive(
+                idata,
+                var_names=["det"],
+                sample_vars=["det"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+        npt.assert_allclose(ppc_forced["det"].squeeze(), x_trace.squeeze() ** 3)
+
+    def test_implicit_freeze_warning(self):
+        """When upstream Data changes, trace variables are auto-frozen with a
+        warning; no warning fires when nothing changed, or when the user
+        explicitly opts in via `sample_vars` / `freeze_vars`."""
+        with pm.Model() as model:
+            x = pm.Data("x", 0.0)
+            # beta depends on x, so changing x makes beta volatile.
+            beta = pm.Normal("beta", mu=x, sigma=1)
+            # Tiny noise on obs reveals the beta value actually used: if beta is
+            # frozen at the trace value (1.0) obs ≈ 1.0; if it's resampled from
+            # N(mu=5, sigma=1) obs will be nowhere near 1.0.
+            pm.Normal("obs", beta, 1e-6, observed=0.0)
+
+        trace = az_from_dict(
+            {
+                "posterior": {"beta": np.ones((1, 10))},
+                "constant_data": {"x": np.array(0.0)},
+            }
+        )
+        with model:
+            # Nothing has changed — trace x matches model x, so no warning
+            # (the filterwarnings marker would error if one fired).
+            pm.sample_posterior_predictive(
+                trace, return_inferencedata=False, progressbar=False, random_seed=0
+            )
+
+            pm.set_data({"x": 5.0})
+
+            # Default: beta is implicitly frozen at 1.0, with a warning.
+            with pytest.warns(ImplicitFreezeWarning, match="implicitly frozen"):
+                ppc = pm.sample_posterior_predictive(
+                    trace, return_inferencedata=False, progressbar=False, random_seed=0
+                )
+            npt.assert_allclose(ppc["obs"], 1.0, atol=1e-3)
+
+            # Explicit `freeze_vars=["beta"]`: same frozen behavior, no warning.
+            ppc_frozen = pm.sample_posterior_predictive(
+                trace,
+                freeze_vars=["beta"],
+                return_inferencedata=False,
+                progressbar=False,
+                random_seed=0,
+            )
+            npt.assert_allclose(ppc_frozen["obs"], 1.0, atol=1e-3)
+
+            # Explicit `sample_vars=["beta"]`: user opts into resampling, no warning.
+            pm.sample_posterior_predictive(trace, sample_vars=["beta"])
+
+
 def test_distinct_rvs():
     """Make sure `RandomVariable`s generated using a `Model`'s default RNG state all have distinct states."""
 
@@ -1770,18 +2055,30 @@ class TestNestedRandom:
         assert prior["target"].shape == (prior_samples, *shape)
 
 
-def test_get_constant_coords():
+def test_build_constant_data():
     with pm.Model() as model:
         model.add_coord("length_coord", length=1)
         model.add_coord("value_coord", values=(3,))
+        x = pm.Data("x", np.array([1.0, 2.0, 3.0]))
 
+    length_var = model.dim_lengths["length_coord"]
+    value_var = model.dim_lengths["value_coord"]
+
+    trace_constant_data = {"x": np.array([1.0, 2.0, 3.0])}
     trace_coords_same = {"length_coord": np.array([0]), "value_coord": np.array([3])}
-    constant_coords_same = get_constant_coords(trace_coords_same, model)
-    assert constant_coords_same == {"length_coord", "value_coord"}
+    constant_data_same = _build_constant_data(trace_constant_data, trace_coords_same, model)
+    # Both dim-length shareds recorded, plus the pm.Data entry
+    assert set(constant_data_same) == {x, length_var, value_var}
 
+    # Different coord values / length -- the dim-length shareds drop out
     trace_coords_diff = {"length_coord": np.array([0, 1]), "value_coord": np.array([4])}
-    constant_coords_diff = get_constant_coords(trace_coords_diff, model)
-    assert constant_coords_diff == set()
+    constant_data_diff = _build_constant_data(trace_constant_data, trace_coords_diff, model)
+    assert set(constant_data_diff) == {x}
+
+    # pm.Data missing from the trace -> not in mapping (treated volatile later)
+    constant_data_no_x = _build_constant_data({}, trace_coords_same, model)
+    assert x not in constant_data_no_x
+    assert set(constant_data_no_x) == {length_var, value_var}
 
 
 def test_get_vars_in_point_list():
