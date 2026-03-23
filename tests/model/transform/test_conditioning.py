@@ -189,7 +189,7 @@ def test_do_posterior_predictive():
     # Replace `y` by a constant `100.0`
     m_do = do(m, {y: 100.0})
     with m_do:
-        idata_do = pm.sample_posterior_predictive(idata_m, var_names="z")
+        idata_do = pm.sample_posterior_predictive(idata_m, sample_vars=["z"])
 
     assert 120 < idata_do.posterior_predictive["z"].mean() < 130
 
@@ -319,7 +319,7 @@ def test_do_sample_posterior_predictive(make_interventions_shared):
     )
 
     with do(model, {a: 1000}, make_interventions_shared=make_interventions_shared):
-        pp = sample_posterior_predictive(idata, var_names=["c"], predictions=True).predictions
+        pp = sample_posterior_predictive(idata, sample_vars=["c"], predictions=True).predictions
     assert (pp["c"] > 500).all()
 
 
