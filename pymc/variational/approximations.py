@@ -69,7 +69,6 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sigma(self.rho)
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -130,7 +129,6 @@ class FullRankGroup(Group):
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -201,7 +199,6 @@ class EmpiricalGroup(Group):
     __param_spec__ = {"histogram": ("s", "d")}
     short_name = "empirical"
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()

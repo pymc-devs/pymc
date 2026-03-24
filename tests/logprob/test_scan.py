@@ -291,18 +291,15 @@ def test_scan_joint_logprob(require_inner_rewrites):
 
     N_tt = pt.iscalar("N")
     N_val = 10
-    N_tt.tag.test_value = N_val
 
     M_tt = pt.iscalar("M")
     M_val = 2
-    M_tt.tag.test_value = M_val
 
     mus_tt = pt.matrix("mus_t")
 
     mus_val = np.stack([np.arange(0.0, 10), np.arange(0.0, -10, -1)], axis=-1).astype(
         pytensor.config.floatX
     )
-    mus_tt.tag.test_value = mus_val
 
     sigmas_tt = pt.ones((N_tt,))
     next_rng, Gamma_rv = pt.random.dirichlet(

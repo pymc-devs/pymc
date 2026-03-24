@@ -23,10 +23,9 @@ from typing import Any, TypeAlias, cast
 
 import numpy as np
 
-from pytensor import config
 from pytensor import tensor as pt
 from pytensor.graph.basic import Constant, Variable
-from pytensor.graph.op import Op, compute_test_value
+from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.shape import SpecifyShape
@@ -287,9 +286,6 @@ def change_dist_size(
     new_dist.name = dist.name
     for k, v in dist.tag.__dict__.items():
         new_dist.tag.__dict__.setdefault(k, v)
-
-    if config.compute_test_value != "off":
-        compute_test_value(new_dist)
 
     return new_dist
 

@@ -84,7 +84,6 @@ class KSDObjective(ObjectiveFunction):
             raise opvi.ParametrizationError("Op should be KSD")
         super().__init__(op, tf)
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs) -> list[Variable]:
         op: KSD = self.op
         grad = op.apply(self.tf)

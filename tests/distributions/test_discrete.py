@@ -420,14 +420,12 @@ class TestMatchesScipy:
         expected_p = [0.2, 0.5] if method is logp else [1.0, 1.0]
         np.testing.assert_allclose(expr.exp().eval(), expected_p)
 
-    @pytensor.config.change_flags(compute_test_value="raise")
     def test_categorical_bounds(self):
         with pm.Model():
             x = pm.Categorical("x", p=np.array([0.2, 0.3, 0.5]))
             assert np.isinf(logp(x, -1).eval())
             assert np.isinf(logp(x, 3).eval())
 
-    @pytensor.config.change_flags(compute_test_value="raise")
     @pytest.mark.parametrize(
         "p",
         [

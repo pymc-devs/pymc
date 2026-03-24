@@ -304,10 +304,8 @@ class TestMatchesScipy:
     def test_mvnormal_indef(self):
         cov_val = np.array([[1, 0.5], [0.5, -2]])
         cov = pt.matrix("cov")
-        cov.tag.test_value = np.eye(2)
         mu = floatX(np.zeros(2))
         x = pt.vector("x")
-        x.tag.test_value = np.zeros(2)
         mvn_logp = logp(pm.MvNormal.dist(mu=mu, cov=cov), x)
         f_logp = pytensor.function([cov, x], mvn_logp)
         with pytest.raises(ParameterValueError):

@@ -387,10 +387,10 @@ with pm.Model() as m:
 print(m.basic_RVs)    # ==> [z, x, y]
 print(m.free_RVs)     # ==> [z, x]
 
-type(m.logpt)
+type(m.logp)
 # pytensor.tensor.var.TensorVariable
 
-m.logpt.eval({x: np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs})
+m.logpt.eval(m.initial_point())
 # array(-51.25369126)
 ```
 
@@ -419,11 +419,9 @@ On a high level, it allows us to build conditional logp function and its gradien
 Here is a taste of how it works in action:
 
 ```python
-inputlist = [np.random.randn(*x.tag.test_value.shape) for x in m.free_RVs]
-
 func = m.logp_dlogp_function()
 func.set_extra_values({})
-input_dict = {x.name: y for x, y in zip(m.free_RVs, inputlist)}
+input_dict = m.initial_point()
 print(input_dict)
 input_array = func.dict_to_array(input_dict)
 print(input_array)

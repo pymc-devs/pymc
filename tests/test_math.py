@@ -160,7 +160,6 @@ class TestLogDet:
         self.op_class = LogDet
         self.op = logdet
 
-    @pytensor.config.change_flags(compute_test_value="ignore")
     def validate(self, input_mat):
         x = pytensor.tensor.matrix()
         f = pytensor.function([x], self.op(x))
@@ -189,11 +188,9 @@ class TestLogDet:
 def test_expand_packed_triangular():
     with pytest.raises(ValueError):
         x = pt.matrix("x")
-        x.tag.test_value = np.array([[1.0]], dtype=pytensor.config.floatX)
         expand_packed_triangular(5, x)
     N = 5
     packed = pt.vector("packed")
-    packed.tag.test_value = floatX(np.zeros(N * (N + 1) // 2))
     with pytest.raises(TypeError):
         expand_packed_triangular(packed.shape[0], packed)
     np.random.seed(42)
