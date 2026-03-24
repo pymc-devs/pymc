@@ -60,17 +60,14 @@ def create_pytensor_params(dist_params, obs, size):
     dist_params_at = []
     for p in dist_params:
         p_aet = pt.as_tensor(p).type()
-        p_aet.tag.test_value = p
         dist_params_at.append(p_aet)
 
     size_at = []
     for s in size:
         s_aet = pt.iscalar()
-        s_aet.tag.test_value = s
         size_at.append(s_aet)
 
     obs_at = pt.as_tensor(obs).type()
-    obs_at.tag.test_value = obs
 
     return dist_params_at, obs_at, size_at
 

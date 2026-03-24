@@ -149,35 +149,11 @@ def node_property(f):
 
         def wrapper(fn):
             ff = append_name(f)(fn)
-            f_ = pytensor.config.change_flags(compute_test_value="off")(ff)
-            return property(locally_cachedmethod(f_))
+            return property(locally_cachedmethod(ff))
 
         return wrapper
     else:
-        f_ = pytensor.config.change_flags(compute_test_value="off")(f)
-        return property(locally_cachedmethod(f_))
-
-
-@pytensor.config.change_flags(compute_test_value="ignore")
-def try_to_set_test_value(node_in, node_out, s):
-    _s = s
-    if s is None:
-        s = 1
-    s = pytensor.compile.view_op(pt.as_tensor(s))
-    if not isinstance(node_in, list | tuple):
-        node_in = [node_in]
-    if not isinstance(node_out, list | tuple):
-        node_out = [node_out]
-    for i, o in zip(node_in, node_out):
-        if hasattr(i.tag, "test_value"):
-            if not hasattr(s.tag, "test_value"):
-                continue
-            else:
-                tv = i.tag.test_value[None, ...]
-                tv = np.repeat(tv, s.tag.test_value, 0)
-                if _s is None:
-                    tv = tv[0]
-                o.tag.test_value = tv
+        return property(locally_cachedmethod(f))
 
 
 class ObjectiveUpdates(pytensor.OrderedUpdates):
@@ -320,7 +296,6 @@ class ObjectiveFunction:
         if self.op.returns_loss:
             updates.loss = obj_target
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def step_function(
         self,
         obj_n_mc=None,
@@ -408,7 +383,6 @@ class ObjectiveFunction:
             step_fn = compile([], [], updates=updates, random_seed=seed, **compile_kwargs)
         return step_fn
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def score_function(
         self, sc_n_mc=None, more_replacements=None, compile_kwargs=None, fn_kwargs=None
     ):  # pragma: no cover
@@ -449,7 +423,6 @@ class ObjectiveFunction:
         seed = self.approx.rng.randint(2**30, dtype=np.int64)
         return compile([], loss, random_seed=seed, **compile_kwargs)
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __call__(self, nmc, **kwargs):
         if "more_tf_params" in kwargs:
             m = -1.0
@@ -862,7 +835,6 @@ class Group(WithMemoization):
         """
         return pt.vector(name)
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         """Initialize the group."""
         if not group:
@@ -1016,7 +988,6 @@ class Group(WithMemoization):
         self, node: list[Variable], s, d: bool, more_replacements: dict | None = None
     ) -> list[Variable]: ...
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(
         self, node: Variable | list[Variable], s, d: bool, more_replacements: dict | None = None
     ) -> Variable | list[Variable]:
@@ -1042,7 +1013,6 @@ class Group(WithMemoization):
         assert not (
             set(makeiter(self.input)) & set(pytensor.graph.graph_inputs(makeiter(node_out)))
         )
-        try_to_set_test_value(node, node_out, s)
         assert self.symbolic_random not in set(pytensor.graph.graph_inputs(makeiter(node_out)))
         return node_out
 
@@ -1410,7 +1380,6 @@ class Approximation(WithMemoization):
         flat2rand.update(more_replacements)
         return flat2rand
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def set_size_and_deterministic(self, node, s, d, more_replacements=None):
         """*Dev* - after node is sampled via :func:`symbolic_sample_over_posterior` or :func:`symbolic_single_sample` new random generator can be allocated and applied to node.
 
@@ -1435,7 +1404,6 @@ class Approximation(WithMemoization):
         node = graph_replace(node, optimizations, strict=False)
         node = graph_replace(node, flat2rand, strict=False)
         assert not (set(self.symbolic_randoms) & set(pytensor.graph.graph_inputs(makeiter(node))))
-        try_to_set_test_value(_node, node, s)
         return node
 
     def to_flat_input(self, node, more_replacements=None):
@@ -1487,7 +1455,6 @@ class Approximation(WithMemoization):
             repl[self.datalogp] = self.single_symbolic_datalogp
         return repl
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def sample_node(self, node, size=None, deterministic=False, more_replacements=None):
         """Sample given node or nodes over shared posterior.
 
@@ -1519,7 +1486,6 @@ class Approximation(WithMemoization):
         else:
             node_out = self.symbolic_sample_over_posterior(node)
         node_out = self.set_size_and_deterministic(node_out, size, deterministic)
-        try_to_set_test_value(node_in, node_out, size)
         return node_out
 
     def rslice(self, name):

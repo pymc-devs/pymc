@@ -69,25 +69,24 @@ _n2 = _b + _n + _m2.sum()
     ids=["scalar", "matrix", "mixed"],
 )
 def test_updates_fast(opt, loss_and_params, kwargs, getter):
-    with pytensor.config.change_flags(compute_test_value="ignore"):
-        loss, param = getter(loss_and_params)
-        args = {}
-        args.update(**kwargs)
-        args.update({"loss_or_grads": loss, "params": param})
-        if loss is None and param is None:
-            updates = opt(**args)
-            # Here we should get new callable
-            assert callable(updates)
-            # And be able to get updates
-            updates = opt(_b, [_a])
-            assert isinstance(updates, dict)
-        # case when both are None is above
-        elif loss is None or param is None:
-            # Here something goes wrong and user provides not full set of [params + loss_or_grads]
-            # We raise Value error
-            with pytest.raises(ValueError):
-                opt(**args)
-        else:
-            # Usual call to optimizer, old behaviour
-            updates = opt(**args)
-            assert isinstance(updates, dict)
+    loss, param = getter(loss_and_params)
+    args = {}
+    args.update(**kwargs)
+    args.update({"loss_or_grads": loss, "params": param})
+    if loss is None and param is None:
+        updates = opt(**args)
+        # Here we should get new callable
+        assert callable(updates)
+        # And be able to get updates
+        updates = opt(_b, [_a])
+        assert isinstance(updates, dict)
+    # case when both are None is above
+    elif loss is None or param is None:
+        # Here something goes wrong and user provides not full set of [params + loss_or_grads]
+        # We raise Value error
+        with pytest.raises(ValueError):
+            opt(**args)
+    else:
+        # Usual call to optimizer, old behaviour
+        updates = opt(**args)
+        assert isinstance(updates, dict)
