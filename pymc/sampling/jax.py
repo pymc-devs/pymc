@@ -690,6 +690,7 @@ def sample_jax_nuts(
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
+    sample_dims = ["chain", "draw"]
 
     az_trace = from_dict(
         data={
@@ -701,6 +702,7 @@ def sample_jax_nuts(
         },
         coords=coords,
         dims=dims,
+        sample_dims=sample_dims,
         attrs=make_attrs(attrs, inference_library=library),
     )
 
