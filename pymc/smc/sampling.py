@@ -18,8 +18,10 @@ import time
 from typing import Any
 
 import numpy as np
+
 from rich.theme import Theme
 from xarray import DataTree
+
 import pymc
 
 from pymc.backends.arviz import dict_to_dataset, to_inference_data
@@ -31,10 +33,7 @@ from pymc.sampling.parallel import _cpu_count, _initialize_multiprocessing_conte
 from pymc.smc.kernels import IMH
 from pymc.smc.parallel import ParallelSMCSampler
 from pymc.stats.convergence import log_warnings, run_convergence_checks
-from pymc.util import (
-    RandomState,
-    _get_seeds_per_chain,
-)
+from pymc.util import RandomState, _get_seeds_per_chain
 
 logger = logging.getLogger(__name__)
 
