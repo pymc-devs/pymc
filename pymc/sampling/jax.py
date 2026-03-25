@@ -713,7 +713,7 @@ def sample_jax_nuts(
         coords=coords,
         dims=dims,
         sample_dims=sample_dims,
-        attrs=make_attrs(attrs, inference_library=library),
+        attrs={"posterior": make_attrs(attrs, inference_library=library)},
     )
 
     if compute_convergence_checks:
