@@ -45,49 +45,6 @@ def in_marimo_notebook() -> bool:
         return False
 
 
-def _mo_write_internal(cell_id: str, value: object) -> None:
-    """Write to marimo cell given cell_id."""
-    from marimo._messaging.cell_output import CellChannel
-    from marimo._messaging.notification_utils import CellNotificationUtils
-    from marimo._messaging.tracebacks import write_traceback
-    from marimo._output import formatting
-
-    output = formatting.try_format(value)
-    if output.traceback is not None:
-        write_traceback(output.traceback)
-    CellNotificationUtils.broadcast_output(
-        channel=CellChannel.OUTPUT,
-        mimetype=output.mimetype,
-        data=output.data,
-        cell_id=cell_id,  # type: ignore[arg-type]
-        status=None,
-    )
-
-
-def _mo_create_replace() -> Callable[[object], None] | None:
-    """Create mo.output.replace with current cell context pinned."""
-    from marimo._output import formatting
-    from marimo._runtime.context import get_context
-    from marimo._runtime.context.types import ContextNotInitializedError
-
-    try:
-        ctx = get_context()
-    except ContextNotInitializedError:
-        return None
-
-    if ctx.execution_context is None:
-        return None
-
-    cell_id = ctx.execution_context.cell_id
-    execution_context = ctx.execution_context
-
-    def replace(value: object) -> None:
-        execution_context.output = [formatting.as_html(value)]
-        _mo_write_internal(cell_id=cell_id, value=value)
-
-    return replace
-
-
 class MarimoProgressBackend:
     """Marimo-based progress bar backend for HTML rendering.
 
@@ -124,7 +81,7 @@ class MarimoProgressBackend:
         """Enter the context manager and initialize display."""
         import marimo as mo
 
-        self._mo_replace = _mo_create_replace()
+        self._mo_replace = mo.output.replace
         self._initialize_tasks()
         mo.output.clear()
         self._render()
@@ -302,11 +259,10 @@ class MarimoSimpleProgress:
 
     def __enter__(self) -> Self:
         """Enter the context manager."""
-        self._mo_replace = _mo_create_replace()
-        self._start_time = perf_counter()
-
         import marimo as mo
 
+        self._mo_replace = mo.output.replace
+        self._start_time = perf_counter()
         mo.output.clear()
         self._render()
         return self
