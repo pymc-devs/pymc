@@ -1238,7 +1238,7 @@ def mock_sample(
         .isel(chain=0)
         .expand_dims({"chain": range(n_chains)})
         .transpose("chain", "draw", ...)
-)
+    )
     del idata["prior"]
     if "prior_predictive" in idata:
         del idata["prior_predictive"]
