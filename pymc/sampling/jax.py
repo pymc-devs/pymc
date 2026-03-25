@@ -692,14 +692,24 @@ def sample_jax_nuts(
     coords, dims = coords_and_dims_for_inferencedata(model)
     sample_dims = ["chain", "draw"]
 
+    groups = {
+        "posterior": mcmc_samples,
+        "sample_stats": sample_stats,
+    }
+
+    if log_likelihood is not None:
+        groups["log_likelihood"] = log_likelihood
+
+    observed_data = find_observations(model)
+    if observed_data is not None:
+        groups["observed_data"] = observed_data
+
+    constant_data = find_constants(model)
+    if constant_data is not None:
+        groups["constant_data"] = constant_data
+
     az_trace = from_dict(
-        data={
-            "posterior": mcmc_samples,
-            "log_likelihood": log_likelihood,
-            "observed_data": find_observations(model),
-            "constant_data": find_constants(model),
-            "sample_stats": sample_stats,
-        },
+        data=groups,
         coords=coords,
         dims=dims,
         sample_dims=sample_dims,
