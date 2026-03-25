@@ -422,6 +422,12 @@ def _sample_external_nuts(
     elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
 
+        if idata_kwargs is not None:
+            warnings.warn(
+                "`idata_kwargs` are currently ignored by the nutpie sampler",
+                UserWarning,
+            )
+
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             tune=tune,
@@ -434,7 +440,6 @@ def _sample_external_nuts(
             progressbar=progressbar,
             quiet=quiet,
             nuts_sampler=sampler,
-            idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
             **nuts_sampler_kwargs,
         )
