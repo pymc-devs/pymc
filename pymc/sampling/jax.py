@@ -26,7 +26,7 @@ import jax.numpy as jnp
 import numpy as np
 import pytensor.tensor as pt
 
-from arviz_base import make_attrs
+from arviz_base import from_dict, make_attrs
 from jax.lax import scan
 from numpy.typing import ArrayLike
 from pytensor.compile import SharedVariable, mode
@@ -523,7 +523,6 @@ def sample_jax_nuts(
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     postprocessing_chunks=None,
-    idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
 ) -> DataTree:
@@ -574,13 +573,6 @@ def sample_jax_nuts(
         How to vectorize the postprocessing: vmap or sequential scan
     postprocessing_chunks : None
         This argument is deprecated
-    idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
-        value for the ``log_likelihood`` key to indicate that the pointwise log
-        likelihood should not be included in the returned object. Values for
-        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
-        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
-        ``dims`` are provided, they are used to update the inferred dictionaries.
     compute_convergence_checks : bool, default True
         If True, compute ess and rhat values and warn if they indicate potential sampling issues.
     nuts_sampler : Literal["numpyro", "blackjax"]
@@ -668,10 +660,8 @@ def sample_jax_nuts(
     )
     tic2 = datetime.now()
 
-    if idata_kwargs is None:
-        idata_kwargs = {}
-    else:
-        idata_kwargs = idata_kwargs.copy()
+    # TODO: Add a better way to do idata_kwargs that is better combatible with Arviz 1.0
+    idata_kwargs = {}
 
     if idata_kwargs.pop("log_likelihood", False):
         log_likelihood = _get_log_likelihood(
@@ -700,26 +690,19 @@ def sample_jax_nuts(
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
-    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
-    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
-    if "coords" in idata_kwargs:
-        coords.update(idata_kwargs.pop("coords"))
-    if "dims" in idata_kwargs:
-        dims.update(idata_kwargs.pop("dims"))
 
-    # Use 'partial' to set default arguments before passing 'idata_kwargs'
-    to_trace = partial(
-        DataTree.from_dict,
-        log_likelihood=log_likelihood,
-        observed_data=find_observations(model),
-        constant_data=find_constants(model),
-        sample_stats=sample_stats,
+    az_trace = from_dict(
+        data={
+            "posterior": mcmc_samples,
+            "log_likelihood": log_likelihood,
+            "observed_data": find_observations(model),
+            "constant_data": find_constants(model),
+            "sample_stats": sample_stats,
+        },
         coords=coords,
         dims=dims,
         attrs=make_attrs(attrs, inference_library=library),
-        posterior_attrs=make_attrs(attrs, inference_library=library),
     )
-    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 
     if compute_convergence_checks:
         warns = run_convergence_checks(az_trace, model)
