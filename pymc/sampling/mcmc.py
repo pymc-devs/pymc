@@ -424,7 +424,7 @@ def _sample_external_nuts(
 
         if idata_kwargs is not None:
             warnings.warn(
-                "`idata_kwargs` are currently ignored by the nutpie sampler",
+                "`idata_kwargs` are currently ignored by the jax samplers",
                 UserWarning,
             )
 
