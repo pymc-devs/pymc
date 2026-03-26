@@ -1988,3 +1988,31 @@ def test_vectorize_over_posterior_with_intermediate_rvs():
     assert np.array_equiv(a_ancestor1.eval(), idata.posterior.a.data)
     assert isinstance(a_ancestor2, TensorConstant)
     assert np.array_equiv(a_ancestor2.eval(), idata.posterior.a.data)
+
+
+def test_vectorize_over_posterior_zero_sum_normal():
+    with pm.Model() as model:
+        intercept = pm.ZeroSumNormal("intercept", sigma=1.0, shape=2)
+        mu = intercept
+        sigma = pm.HalfNormal("sigma", sigma=1.0)
+
+        pm.Normal("y", mu=mu, sigma=sigma, observed=[0.0, 0.0], shape=2)
+
+        idata = pm.sample_prior_predictive(10, var_names=["intercept", "sigma"])
+        idata.add_groups({"posterior": idata.prior})
+
+    [vectorized_mu] = vectorize_over_posterior(
+        outputs=[mu],
+        posterior=idata.posterior,
+        input_rvs=model.free_RVs,
+    )
+
+    assert vectorized_mu.type.shape == (1, 10, 2)
+
+    [intercept_ancestor] = get_var_by_name([vectorized_mu], "intercept")
+
+    assert isinstance(intercept_ancestor, TensorConstant)
+    assert np.array_equiv(
+        intercept_ancestor.value,
+        idata.posterior["intercept"].data,
+    )
