@@ -47,7 +47,6 @@ tol = 1e-7 if pytensor.config.floatX == "float64" else 1e-5
 
 def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=None):
     x = constructor("x")
-    x.tag.test_value = test
     if rv_var is None:
         rv_var = x
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
@@ -70,7 +69,6 @@ def check_vector_transform(transform, domain, rv_var=None):
 
 def get_values(transform, domain=R, constructor=pt.scalar, test=0, rv_var=None):
     x = constructor("x")
-    x.tag.test_value = test
     if rv_var is None:
         rv_var = x
     rv_inputs = rv_var.owner.inputs if rv_var.owner else []
@@ -88,7 +86,6 @@ def check_jacobian_det(
     rv_var=None,
 ):
     y = constructor("y")
-    y.tag.test_value = test
 
     if rv_var is None:
         rv_var = y
@@ -142,7 +139,6 @@ def test_simplex_bounds():
 def test_simplex_accuracy():
     val = floatX(np.array([-30]))
     x = pt.vector("x")
-    x.tag.test_value = val
     identity_f = pytensor.function([x], tr.simplex.forward(tr.simplex.backward(x)))
     assert_allclose(val, identity_f(val), tol)
 
@@ -657,12 +653,12 @@ def test_invalid_jacobian_broadcast_raises():
 
     buggy_transform = BuggyTransform()
 
-    with pm.Model() as m:
-        pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+    import numpy as np
 
     for jacobian_val in (True, False):
-        with pytest.raises(
-            ValueError,
-            match="are not allowed to broadcast together. There is a bug in the implementation of either one",
-        ):
-            m.logp(jacobian=jacobian_val)
+        with pm.Model() as m:
+            pm.Uniform("x", shape=(4, 3), default_transform=buggy_transform)
+
+        logp_fn = m.compile_logp(jacobian=jacobian_val)
+        with pytest.raises(AssertionError, match="SpecifyShape"):
+            logp_fn({"x_buggy__": np.zeros((4, 3))})

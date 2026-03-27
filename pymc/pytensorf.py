@@ -364,7 +364,6 @@ def jacobian_diag(f, x):
     )
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian(f, vars=None, negate_output=True):
     res = jacobian(gradient(f, vars), vars)
     if negate_output:
@@ -378,7 +377,6 @@ def hessian(f, vars=None, negate_output=True):
     return res
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = pt.arange(g.shape[0], dtype="int32")
@@ -389,7 +387,6 @@ def hessian_diag1(f, v):
     return pytensor.map(hess_ii, idx, return_updates=False)
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
@@ -579,9 +576,6 @@ def join_nonshared_inputs(
     else:
         joined_values = np.concatenate([point[var.name].ravel() for var in inputs])
         joined_inputs = pytensor.shared(joined_values, "joined_inputs")
-
-    if pytensor.config.compute_test_value != "off":
-        joined_inputs.tag.test_value = raveled_inputs.tag.test_value
 
     replace: dict[Variable, Variable] = {}
     last_idx = 0

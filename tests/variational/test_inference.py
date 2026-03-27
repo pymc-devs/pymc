@@ -277,8 +277,6 @@ def test_replacements(binomial_model_inference):
         for n in pytensor.graph.ancestors([p_s])
         if n.owner
     ), "p should be replaced"
-    if pytensor.config.compute_test_value != "off":
-        assert p_s.tag.test_value.shape == p_t.tag.test_value.shape
     sampled = [pm.draw(p_s) for _ in range(100)]
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
     p_z = approx.sample_node(p_t, deterministic=False, size=10)
@@ -307,13 +305,10 @@ def test_replacements(binomial_model_inference):
 
 def test_sample_replacements(binomial_model_inference):
     i = pt.iscalar()
-    i.tag.test_value = 1
     approx = binomial_model_inference.approx
     p = approx.model.p
     p_t = p**3
     p_s = approx.sample_node(p_t, size=100)
-    if pytensor.config.compute_test_value != "off":
-        assert p_s.tag.test_value.shape == (100, *p_t.tag.test_value.shape)
     sampled = p_s.eval()
     assert any(map(operator.ne, sampled[1:], sampled[:-1]))  # stochastic
     assert sampled.shape[0] == 100

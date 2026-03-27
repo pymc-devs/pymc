@@ -1758,6 +1758,19 @@ class LogNormal(PositiveContinuous):
             msg="sigma > 0",
         )
 
+    def logccdf(value, mu, sigma):
+        res = pt.switch(
+            pt.le(value, 0),
+            0.0,
+            normal_lccdf(mu, sigma, pt.log(value)),
+        )
+
+        return check_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
     def icdf(value, mu, sigma):
         res = pt.exp(icdf(Normal.dist(mu, sigma), value))
         return res

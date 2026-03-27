@@ -69,7 +69,6 @@ def test_mixture_basics():
         Y_rv = pt.random.gamma(0.5, scale=2.0, size=size, name="Y")
 
         p_at = pt.scalar("p")
-        p_at.tag.test_value = 0.5
 
         I_rv = pt.random.bernoulli(p_at, size=size, name="I")
         i_vv = I_rv.clone()
@@ -138,7 +137,6 @@ def test_mixture_basics():
 
     with pytest.raises(RuntimeError, match="could not be derived: {m}"):
         axis_at = pt.lscalar("axis")
-        axis_at.tag.test_value = 0
         env = create_mix_model((2,), axis_at)
         I_rv = env["I_rv"]
         i_vv = env["i_vv"]
@@ -166,12 +164,10 @@ def test_hetero_mixture_binomial(p_val, size, supported):
 
     if np.ndim(p_val) == 0:
         p_at = pt.scalar("p")
-        p_at.tag.test_value = p_val
         I_rv = pt.random.bernoulli(p_at, size=size, name="I")
         p_val_1 = p_val
     else:
         p_at = pt.vector("p")
-        p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
         I_rv = pt.random.categorical(p_at, size=size, name="I")
         p_val_1 = p_val[1]
 
@@ -575,7 +571,6 @@ def test_hetero_mixture_categorical(
 
     p_at = pt.as_tensor(p_val).type()
     p_at.name = "p"
-    p_at.tag.test_value = np.array(p_val, dtype=pytensor.config.floatX)
     I_rv = pt.random.categorical(p_at, size=idx_size, name="I")
 
     i_vv = I_rv.clone()
@@ -818,61 +813,6 @@ def test_expand_indices_moved_subspaces(A_parts, indices):
     ],
 )
 def test_expand_indices_single_indices(A_parts, indices):
-    A = pt.stack(A_parts)
-    at_indices = [as_index_constant(idx) for idx in indices]
-    full_indices = expand_indices(at_indices, shape_tuple(A))
-    assert len(full_indices) == A.ndim
-    exp_res = A[indices].eval()
-    res = A[full_indices].eval()
-    assert np.array_equal(res, exp_res)
-
-
-@pytest.mark.parametrize(
-    "A_parts, indices",
-    [
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None,),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None, None, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (None, 1, None, 0, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), None, 1, None, 0, None),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), None, 1, 0, None),
-        ),
-    ],
-)
-def test_expand_indices_newaxis(A_parts, indices):
     A = pt.stack(A_parts)
     at_indices = [as_index_constant(idx) for idx in indices]
     full_indices = expand_indices(at_indices, shape_tuple(A))

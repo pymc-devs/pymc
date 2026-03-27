@@ -1429,17 +1429,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 # Create value variable with the same type as the RV
                 value_var = rv_var.type()
                 value_var.name = rv_var.name
-                if pytensor.config.compute_test_value != "off":
-                    value_var.tag.test_value = rv_var.tag.test_value
             else:
                 # Create value variable with the same type as the transformed RV
                 value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
                 value_var.name = f"{rv_var.name}_{transform.name}__"
                 value_var.tag.transform = transform
-                if pytensor.config.compute_test_value != "off":
-                    value_var.tag.test_value = transform.forward(
-                        rv_var, *rv_var.owner.inputs
-                    ).tag.test_value
 
         self.rvs_to_transforms[rv_var] = transform
         self.rvs_to_values[rv_var] = value_var

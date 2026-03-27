@@ -259,14 +259,6 @@ class TestObserved:
         assert x1.type.dtype == X.type.dtype
         assert x2.type.dtype == X.type.dtype
 
-    @pytensor.config.change_flags(compute_test_value="raise")
-    def test_observed_compute_test_value(self):
-        data = np.zeros(100)
-        with pm.Model():
-            obs = pm.Normal("obs", mu=pt.zeros_like(data), sigma=1, observed=data)
-        assert obs.tag.test_value.shape == data.shape
-        assert obs.tag.test_value.dtype == data.dtype
-
 
 def test_duplicate_vars():
     with pytest.raises(ValueError) as err:
@@ -1775,13 +1767,11 @@ class TestModelCopy:
         copy_simple_model = copy_method(simple_model)
 
         with simple_model:
-            simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
+            simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         with copy_simple_model:
             z = pm.Deterministic("z", copy_simple_model["y"] + 1)
-            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
-                samples=1, random_seed=42
-            )
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         assert (
             simple_model_prior_predictive["prior"]["y"].values

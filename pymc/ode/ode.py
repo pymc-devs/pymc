@@ -20,10 +20,10 @@ import pytensor.tensor as pt
 import scipy
 
 from pytensor.graph.basic import Apply
-from pytensor.graph.op import Op, get_test_value
+from pytensor.graph.op import Op
 from pytensor.tensor.type import TensorType
 
-from pymc.exceptions import DtypeError, ShapeError
+from pymc.exceptions import ShapeError
 from pymc.ode import utils
 
 _log = logging.getLogger(__name__)
@@ -171,46 +171,6 @@ class DifferentialEquation(Op):
 
         # use default implementation to prepare symbolic outputs (via make_node)
         states, sens = super().__call__(y0, theta, **kwargs)
-
-        if pytensor.config.compute_test_value != "off":
-            # compute test values from input test values
-            test_states, test_sens = self._simulate(
-                y0=get_test_value(y0), theta=get_test_value(theta)
-            )
-
-            # check types of simulation result
-            if not test_states.dtype == self._otypes[0].dtype:
-                raise DtypeError(
-                    "Simulated states have the wrong type.",
-                    actual=test_states.dtype,
-                    expected=self._otypes[0].dtype,
-                )
-            if not test_sens.dtype == self._otypes[1].dtype:
-                raise DtypeError(
-                    "Simulated sensitivities have the wrong type.",
-                    actual=test_sens.dtype,
-                    expected=self._otypes[1].dtype,
-                )
-
-            # check shapes of simulation result
-            expected_states_shape = (self.n_times, self.n_states)
-            expected_sens_shape = (self.n_times, self.n_states, self.n_p)
-            if not test_states.shape == expected_states_shape:
-                raise ShapeError(
-                    "Simulated states have the wrong shape.",
-                    test_states.shape,
-                    expected_states_shape,
-                )
-            if not test_sens.shape == expected_sens_shape:
-                raise ShapeError(
-                    "Simulated sensitivities have the wrong shape.",
-                    test_sens.shape,
-                    expected_sens_shape,
-                )
-
-            # attach results as test values to the outputs
-            states.tag.test_value = test_states
-            sens.tag.test_value = test_sens
 
         if return_sens:
             return states, sens

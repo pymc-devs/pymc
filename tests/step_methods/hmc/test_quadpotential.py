@@ -195,16 +195,17 @@ def test_weighted_covariance(ndim=10, seed=5432):
     assert np.allclose(cov_est2, cov_est0)
 
 
-def test_full_adapt_sample_p(seed=4566):
+def test_full_adapt_sample_p():
     # ref: https://github.com/stan-dev/stan/pull/2672
-    np.random.seed(seed)
+    # Note: the Stan PR has an incorrect Wishart variance formula for diagonal
+    # entries (2*Sigma_ii instead of 2*Sigma_ii^2). We correct it here.
     m = np.array([[3.0, -2.0], [-2.0, 4.0]])
     m_inv = np.linalg.inv(m)
 
     var = np.array(
         [
-            [2 * m[0, 0], m[1, 0] * m[1, 0] + m[1, 1] * m[0, 0]],
-            [m[0, 1] * m[0, 1] + m[1, 1] * m[0, 0], 2 * m[1, 1]],
+            [2 * m[0, 0] ** 2, m[1, 0] * m[1, 0] + m[1, 1] * m[0, 0]],
+            [m[0, 1] * m[0, 1] + m[1, 1] * m[0, 0], 2 * m[1, 1] ** 2],
         ]
     )
 

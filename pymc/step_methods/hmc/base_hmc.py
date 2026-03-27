@@ -273,7 +273,6 @@ class BaseHMC(GradientSharedStep):
         self.iter_count += 1
 
         stats: dict[str, Any] = {
-            "tune": self.tune,
             "diverging": diverging,
             "divergences": self.divergences,
             "perf_counter_diff": perf_end - perf_start,

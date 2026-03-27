@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 from collections.abc import Iterable
+from sys import stderr
 from typing import Any, Self
 
 from rich.box import SIMPLE_HEAD
@@ -198,7 +199,7 @@ class RichProgressBackend:
         columns += [
             TextColumn(
                 "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Sampling Speed", ratio=1),
+                table_column=Column("Speed", ratio=1),
             ),
             TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
             TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
@@ -212,7 +213,7 @@ class RichProgressBackend:
                 finished_style=Style.parse("rgb(31,119,180)"),
             ),
             *columns,
-            console=Console(theme=theme),
+            console=Console(file=stderr, theme=theme),
             include_headers=True,
         )
 
@@ -230,7 +231,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total * self.n_bars - 1,
+                    total=self.total * self.n_bars,
                     task_idx=0,
                     sampling_speed=0,
                     speed_unit="draws/s",
@@ -243,7 +244,7 @@ class RichProgressBackend:
                 self._progress.add_task(
                     "Sampling",
                     completed=0,
-                    total=self.total - 1,
+                    total=self.total,
                     task_idx=task_idx,
                     sampling_speed=0,
                     speed_unit="draws/s",
@@ -280,6 +281,16 @@ class RichProgressBackend:
         if rich_task_id is None:
             return
 
+        if is_last:
+            self._progress.update(
+                rich_task_id,
+                completed=self.total if not self.combined else self.total * self.n_bars,
+                failing=failing,
+                refresh=True,
+                **stats,
+            )
+            return
+
         self._progress.advance(rich_task_id, advance=advance)
 
         task = self._progress.tasks[task_id]
@@ -302,18 +313,6 @@ class RichProgressBackend:
             **stats,
         )
 
-        if is_last:
-            # Ensure bar is fully filled on completion
-            remaining = task.total - task.completed if task.total else 0
-            if remaining > 0:
-                self._progress.advance(rich_task_id, advance=remaining)
-            self._progress.update(
-                rich_task_id,
-                failing=failing,
-                **stats,
-                refresh=True,
-            )
-
 
 def RichSimpleProgress(theme: Theme | None):
     return CustomProgress(
@@ -323,5 +322,5 @@ def RichSimpleProgress(theme: Theme | None):
         TimeRemainingColumn(),
         TextColumn("/"),
         TimeElapsedColumn(),
-        console=Console(theme=default_progress_theme if theme is None else theme),
+        console=Console(file=stderr, theme=default_progress_theme if theme is None else theme),
     )

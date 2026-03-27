@@ -1798,15 +1798,6 @@ def test_observed_dependent_deterministics():
     assert set(observed_dependent_deterministics(m)) == {det_obs, det_obs2, det_mixed}
 
 
-def test_sample_prior_predictive_samples_deprecated_warns() -> None:
-    with pm.Model() as m:
-        pm.Normal("a")
-
-    match = "The samples argument has been deprecated"
-    with pytest.warns(DeprecationWarning, match=match):
-        pm.sample_prior_predictive(model=m, samples=10)
-
-
 @pytest.fixture(params=["deterministic", "observed", "conditioned_on_observed"])
 def variable_to_vectorize(request):
     if request.param == "deterministic":

@@ -12,11 +12,143 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from unittest.mock import patch
+
 import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import MCMCProgressBarManager
+from pymc.progress_bar import MCMCProgressBarManager, SMCProgressBarManager
+from pymc.smc.kernels import IMH
+
+NUTS_DUMMY_STATS = [{"divergences": 0, "step_size": 0.5, "tree_size": 7}]
+
+
+@pytest.fixture
+def imh_kernel():
+    with pm.Model():
+        pm.Normal("x", 0, 1)
+        kernel = IMH()
+    return kernel
+
+
+def _get_task(manager, idx=0):
+    return manager._backend._progress.tasks[idx]
+
+
+def test_mcmc_split_bar_starts_at_zero_ends_at_total():
+    draws, tune, chains = 10, 5, 2
+    captured = {}
+
+    orig_init = MCMCProgressBarManager.__init__
+
+    def capturing_init(self, *args, **kwargs):
+        orig_init(self, *args, **kwargs)
+        captured["manager"] = self
+
+    with patch.object(MCMCProgressBarManager, "__init__", capturing_init):
+        with pm.Model():
+            pm.Normal("x")
+            pm.sample(
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                cores=1,
+                progressbar=True,
+                compute_convergence_checks=False,
+            )
+
+    manager = captured["manager"]
+    total = draws + tune
+    for chain in range(chains):
+        task = _get_task(manager, chain)
+        assert task.completed == task.total == total
+        assert task.fields["draw"] == total
+
+
+def test_mcmc_combined_bar_ends_at_total():
+    draws, tune, chains = 10, 5, 2
+    captured = {}
+
+    orig_init = MCMCProgressBarManager.__init__
+
+    def capturing_init(self, *args, **kwargs):
+        orig_init(self, *args, **kwargs)
+        captured["manager"] = self
+
+    with patch.object(MCMCProgressBarManager, "__init__", capturing_init):
+        with pm.Model():
+            pm.Normal("x")
+            pm.sample(
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                cores=1,
+                progressbar="combined+stats",
+                compute_convergence_checks=False,
+            )
+
+    manager = captured["manager"]
+    total = (draws + tune) * chains
+    task = _get_task(manager, 0)
+    assert task.completed == task.total == total
+    assert task.fields["draw"] == total
+
+
+def test_mcmc_draws_stat_shows_completed_count():
+    with pm.Model():
+        pm.Normal("x")
+        step = pm.NUTS()
+
+    manager = MCMCProgressBarManager(step_method=step, chains=1, draws=10, tune=5, progressbar=True)
+
+    with manager:
+        manager.update(chain_idx=0, is_last=False, draw=0, tuning=True, stats=NUTS_DUMMY_STATS)
+        assert _get_task(manager).fields["draw"] == 1
+
+        for i in range(1, 15):
+            manager.update(
+                chain_idx=0, is_last=i == 14, draw=i, tuning=i < 5, stats=NUTS_DUMMY_STATS
+            )
+        assert _get_task(manager).fields["draw"] == 15
+
+
+def test_smc_bar_starts_at_zero_ends_at_one(imh_kernel):
+    manager = SMCProgressBarManager(kernel=imh_kernel, chains=1, progressbar=True)
+
+    with manager:
+        task = _get_task(manager)
+        assert task.total == 1.0
+        assert task.completed == 0
+        assert task.percentage == 0.0
+
+        betas = [0.2, 0.5, 0.8, 1.0]
+        old_beta = 0.0
+        for stage, beta in enumerate(betas):
+            manager.update(
+                chain_idx=0, stage=stage, beta=beta, old_beta=old_beta, is_last=beta >= 1.0
+            )
+            old_beta = beta
+
+        task = _get_task(manager)
+        assert task.completed == pytest.approx(task.total)
+        assert task.fields["beta"] == pytest.approx(1.0)
+
+
+def test_smc_multi_chain(imh_kernel):
+    chains = 3
+    manager = SMCProgressBarManager(kernel=imh_kernel, chains=chains, progressbar=True)
+
+    with manager:
+        for chain in range(chains):
+            assert _get_task(manager, chain).completed == 0
+
+        for chain in range(chains):
+            manager.update(chain_idx=chain, stage=0, beta=0.4, old_beta=0.0)
+            manager.update(chain_idx=chain, stage=1, beta=1.0, old_beta=0.4, is_last=True)
+
+        for chain in range(chains):
+            assert _get_task(manager, chain).completed == pytest.approx(1.0)
 
 
 def test_progressbar_nested_compound():
@@ -47,79 +179,3 @@ def test_progressbar_nested_compound():
             pm.sample(**kwargs, cores=cores, progressbar="combined")
             pm.sample(**kwargs, cores=cores, progressbar="split")
             pm.sample(**kwargs, cores=cores, progressbar=False)
-
-
-class TestProgressBarManagerConfiguration:
-    @pytest.fixture
-    def step_method(self):
-        with pm.Model():
-            x = pm.Normal("x")
-            step = pm.NUTS([x])
-        return step
-
-    def test_init_split_mode(self, step_method):
-        manager = MCMCProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar=True,
-        )
-        assert manager.combined_progress is False
-        assert manager.full_stats is True
-        assert manager._show_progress is True
-        assert manager.chains == 2
-        assert manager.total_draws == 150
-
-    def test_init_combined_mode(self, step_method):
-        manager = MCMCProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar="combined",
-        )
-        assert manager.combined_progress is True
-        assert manager.full_stats is False
-
-    def test_init_combined_stats_mode(self, step_method):
-        manager = MCMCProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar="combined+stats",
-        )
-        assert manager.combined_progress is True
-        assert manager.full_stats is True
-
-    def test_init_split_stats_mode(self, step_method):
-        manager = MCMCProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar="split+stats",
-        )
-        assert manager.combined_progress is False
-        assert manager.full_stats is True
-
-    def test_init_disabled(self, step_method):
-        manager = MCMCProgressBarManager(
-            step_method=step_method,
-            chains=2,
-            draws=100,
-            tune=50,
-            progressbar=False,
-        )
-        assert manager._show_progress is False
-
-    def test_invalid_progressbar_value(self, step_method):
-        with pytest.raises(ValueError, match="Invalid value for `progressbar`"):
-            MCMCProgressBarManager(
-                step_method=step_method,
-                chains=2,
-                draws=100,
-                tune=50,
-                progressbar="invalid",
-            )

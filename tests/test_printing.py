@@ -12,11 +12,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import re
+
 import numpy as np
 
 from pytensor.tensor.random import normal
 
-from pymc import Bernoulli, Censored, CustomDist, Gamma, HalfCauchy, Mixture, StudentT, Truncated
+from pymc import (
+    Bernoulli,
+    Censored,
+    CustomDist,
+    Data,
+    Exponential,
+    Gamma,
+    HalfCauchy,
+    Mixture,
+    StudentT,
+    Truncated,
+)
 from pymc.distributions import (
     Dirichlet,
     DirichletMultinomial,
@@ -34,26 +47,25 @@ from pymc.pytensorf import floatX
 
 
 class BaseTestStrAndLatexRepr:
-    def test__repr_latex_(self):
-        for distribution, tex in zip(self.distributions, self.expected[("latex", True)]):
-            assert distribution._repr_latex_() == tex
+    @staticmethod
+    def _latex_segments(tex: str) -> list[str]:
+        """Split a LaTeX repr on its separator (\\sim or =) into segments for substring checks."""
+        return [s for s in re.split(r"\\sim| = ", tex.strip("$")) if s.strip()]
 
+    def test__repr_latex_(self):
         model_tex = self.model._repr_latex_()
 
         # make sure each variable is in the model
         for tex in self.expected[("latex", True)]:
-            for segment in tex.strip("$").split(r"\sim"):
+            for segment in self._latex_segments(tex):
                 assert segment in model_tex
 
     def test_str_repr(self):
         for str_format in self.formats:
-            for dist, text in zip(self.distributions, self.expected[str_format]):
-                assert dist.str_repr(*str_format) == text
-
             model_text = self.model.str_repr(*str_format)
             for text in self.expected[str_format]:
                 if str_format[0] == "latex":
-                    for segment in text.strip("$").split(r"\sim"):
+                    for segment in self._latex_segments(text):
                         assert segment in model_text
                 else:
                     assert text in model_text
@@ -129,7 +141,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             # add a deterministic that depends on an unnamed random variable
             pred = Deterministic("pred", Normal.dist(0, 1))
 
-        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs, pot]
+        self.distributions = [alpha, sigma, mu, b, Z, nb2, zip, w, nested_mix, Y_obs]
         self.deterministics_or_potentials = [mu, pot, pred]
         # tuples of (formatting, include_params)
         self.formats = [("plain", True), ("plain", False), ("latex", True), ("latex", False)]
@@ -137,25 +149,25 @@ class TestMonolith(BaseTestStrAndLatexRepr):
             ("plain", True): [
                 r"alpha ~ Normal(0, 10)",
                 r"sigma ~ HalfNormal(0, 1)",
-                r"mu ~ Deterministic(f(alpha, beta))",
+                r"mu = Deterministic(f(alpha, beta))",
                 r"beta ~ Normal(0, 10)",
-                r"Z ~ MultivariateNormal(f(), f())",
+                r"Z ~ MultivariateNormal(<constant>, <constant>)",
                 r"nb_with_p_n ~ NegativeBinomial(10, nbp)",
-                r"zip ~ Mixture(f(), DiracDelta(0), Poisson(5))",
+                r"zip ~ Mixture(<constant>, DiracDelta(0), Poisson(5))",
                 r"w ~ Dirichlet(<constant>)",
                 (
                     r"nested_mix ~ Mixture(w, "
-                    r"Mixture(f(), DiracDelta(0), Poisson(5)), "
+                    r"Mixture(<constant>, DiracDelta(0), Poisson(5)), "
                     r"Censored(Bernoulli(0.5), -1, 1))"
                 ),
                 r"Y_obs ~ Normal(mu, sigma)",
-                r"pot ~ Potential(f(alpha, beta))",
-                r"pred ~ Deterministic(f(<normal>))",
+                r"pot ~ Potential(f(mu))",
+                r"pred = Deterministic(f(<normal>))",
             ],
             ("plain", False): [
                 r"alpha ~ Normal",
                 r"sigma ~ HalfNormal",
-                r"mu ~ Deterministic",
+                r"mu = Deterministic",
                 r"beta ~ Normal",
                 r"Z ~ MultivariateNormal",
                 r"nb_with_p_n ~ NegativeBinomial",
@@ -164,30 +176,30 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"nested_mix ~ Mixture",
                 r"Y_obs ~ Normal",
                 r"pot ~ Potential",
-                r"pred ~ Deterministic",
+                r"pred = Deterministic",
             ],
             ("latex", True): [
                 r"$\text{alpha} \sim \operatorname{Normal}(0,~10)$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}(0,~1)$",
-                r"$\text{mu} \sim \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
+                r"$\text{mu} = \operatorname{Deterministic}(f(\text{alpha},~\text{beta}))$",
                 r"$\text{beta} \sim \operatorname{Normal}(0,~10)$",
-                r"$\text{Z} \sim \operatorname{MultivariateNormal}(f(),~f())$",
+                r"$\text{Z} \sim \operatorname{MultivariateNormal}(\text{<constant>},~\text{<constant>})$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}(10,~\text{nbp})$",
-                r"$\text{zip} \sim \operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
+                r"$\text{zip} \sim \operatorname{Mixture}(\text{<constant>},~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5))$",
                 r"$\text{w} \sim \operatorname{Dirichlet}(\text{<constant>})$",
                 (
                     r"$\text{nested\_mix} \sim \operatorname{Mixture}(\text{w},"
-                    r"~\operatorname{Mixture}(f(),~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
+                    r"~\operatorname{Mixture}(\text{<constant>},~\operatorname{DiracDelta}(0),~\operatorname{Poisson}(5)),"
                     r"~\operatorname{Censored}(\operatorname{Bernoulli}(0.5),~-1,~1))$"
                 ),
                 r"$\text{Y\_obs} \sim \operatorname{Normal}(\text{mu},~\text{sigma})$",
-                r"$\text{pot} \sim \operatorname{Potential}(f(\text{alpha},~\text{beta}))$",
-                r"$\text{pred} \sim \operatorname{Deterministic}(f(\text{<normal>}))",
+                r"$\text{pot} \sim \operatorname{Potential}(f(\text{mu}))$",
+                r"$\text{pred} = \operatorname{Deterministic}(f(\text{<normal>}))",
             ],
             ("latex", False): [
                 r"$\text{alpha} \sim \operatorname{Normal}$",
                 r"$\text{sigma} \sim \operatorname{HalfNormal}$",
-                r"$\text{mu} \sim \operatorname{Deterministic}$",
+                r"$\text{mu} = \operatorname{Deterministic}$",
                 r"$\text{beta} \sim \operatorname{Normal}$",
                 r"$\text{Z} \sim \operatorname{MultivariateNormal}$",
                 r"$\text{nb\_with\_p\_n} \sim \operatorname{NegativeBinomial}$",
@@ -196,7 +208,7 @@ class TestMonolith(BaseTestStrAndLatexRepr):
                 r"$\text{nested\_mix} \sim \operatorname{Mixture}$",
                 r"$\text{Y\_obs} \sim \operatorname{Normal}$",
                 r"$\text{pot} \sim \operatorname{Potential}$",
-                r"$\text{pred} \sim \operatorname{Deterministic}",
+                r"$\text{pred} = \operatorname{Deterministic}",
             ],
         }
 
@@ -317,6 +329,127 @@ def test_custom_dist_repr():
 
     str_repr = model.str_repr(include_params=False)
     assert str_repr == "\n".join(["x ~ CustomDistNormal", "y ~ CustomRandomNormal"])
+
+
+class TestDimsDist:
+    def setup_class(self):
+        from pymc.dims.distributions import Normal as DimsNormal
+        from pymc.dims.distributions import ZeroSumNormal as DimsZeroSumNormal
+
+        with Model(coords={"group": range(3), "obs": range(5)}) as self.model:
+            mu = DimsNormal("mu", 0, 10, dims=("group",))
+            sigma = DimsNormal("sigma", 0, 1)
+            zsn = DimsZeroSumNormal("zsn", sigma=1, core_dims="group")
+            DimsNormal("y", mu + zsn, sigma, dims=("obs", "group"))
+
+        self.expected = {
+            ("plain", True): [
+                r"mu ~ Normal(0, 10)",
+                r"sigma ~ Normal(0, 1)",
+                r"zsn ~ ZeroSumNormal(<constant>, <constant>)",
+                r"y ~ Normal(f(mu, zsn), sigma)",
+            ],
+            ("plain", False): [
+                r"mu ~ Normal",
+                r"sigma ~ Normal",
+                r"zsn ~ ZeroSumNormal",
+                r"y ~ Normal",
+            ],
+            ("latex", True): [
+                r"\text{mu} &\sim & \operatorname{Normal}(0,~10)",
+                r"\text{sigma} &\sim & \operatorname{Normal}(0,~1)",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}(\text{<constant>},~\text{<constant>})",
+                r"\text{y} &\sim & \operatorname{Normal}(f(\text{mu},~\text{zsn}),~\text{sigma})",
+            ],
+            ("latex", False): [
+                r"\text{mu} &\sim & \operatorname{Normal}",
+                r"\text{sigma} &\sim & \operatorname{Normal}",
+                r"\text{zsn} &\sim & \operatorname{ZeroSumNormal}",
+                r"\text{y} &\sim & \operatorname{Normal}",
+            ],
+        }
+
+    def test_str_repr(self):
+        for formatting, include_params in [("plain", True), ("plain", False)]:
+            model_text = self.model.str_repr(formatting=formatting, include_params=include_params)
+            for text in self.expected[(formatting, include_params)]:
+                assert text in model_text
+
+    def test_latex_repr(self):
+        for formatting, include_params in [("latex", True), ("latex", False)]:
+            model_text = self.model.str_repr(formatting=formatting, include_params=include_params)
+            for text in self.expected[(formatting, include_params)]:
+                assert text in model_text
+
+
+def test_data_vars_in_model_repr():
+    """Data variables appear in model repr and in Deterministic dependency lists (issue #7536)."""
+    with Model() as model:
+        x = Data("x", 0)
+        y = Normal("y")
+        Deterministic("f", x + y)
+
+    text = model.str_repr()
+    assert "x = Data(0)" in text
+    assert "y ~ Normal(0, 1)" in text
+    assert "f = Deterministic(f(y, x))" in text
+
+    latex = model.str_repr(formatting="latex")
+    assert r"&= &\operatorname{Data}(0)" in latex
+    assert r"\text{x}" in latex
+
+
+def test_constant_only_expression_in_repr():
+    """Constant-only expressions show <constant> instead of f() (issue #7538)."""
+    with Model() as model:
+        Exponential("x", lam=2)
+
+    text = model.str_repr()
+    assert "f()" not in text
+    assert "x ~ Exponential(<constant>)" == text
+
+
+def test_data_var_repr_no_params():
+    """Data variable repr without params."""
+    with Model() as model:
+        x = Data("x", 5)
+        Normal("y", x)
+
+    text_no_params = model.str_repr(include_params=False)
+    assert "x = Data" in text_no_params
+    assert "y ~ Normal" in text_no_params
+
+
+def test_data_var_latex_underscore_escaping():
+    """Data variable names with underscores are escaped in LaTeX (direct call and model repr)."""
+    from pymc.printing import str_for_data_var
+
+    with Model() as model:
+        my_data = Data("my_data", 42)
+        Normal("y", my_data)
+
+    # Direct call
+    latex_with_params = str_for_data_var(my_data, formatting="latex", include_params=True)
+    assert r"my\_data" in latex_with_params
+    assert r"\operatorname{Data}(42)" in latex_with_params
+
+    latex_no_params = str_for_data_var(my_data, formatting="latex", include_params=False)
+    assert r"my\_data" in latex_no_params
+    assert r"\operatorname{Data}" in latex_no_params
+
+    # Via model repr
+    model_latex = model.str_repr(formatting="latex")
+    assert r"my\_data" in model_latex
+
+
+def test_function_of_named_var_in_repr():
+    """A non-constant expression should keep f(named_var) form in model repr."""
+    with Model() as model:
+        a = Normal("a")
+        Normal("b", mu=a * 2)
+
+    text = model.str_repr()
+    assert "b ~ Normal(f(a), 1)" in text
 
 
 class TestLatexRepr:
