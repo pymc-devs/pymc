@@ -305,8 +305,7 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
-    new_rv = rv_node.op(*dist_params, size=new_size, dtype=rv.type.dtype)
-
+    new_rv = rv_node.op(*dist_params, size=new_size)
     # Replicate "traditional" rng default_update, if that was set for old_rng
     default_update = getattr(old_rng, "default_update", None)
     if default_update is not None:
