@@ -53,7 +53,7 @@ Likelihood
   - For univariate, continuous scenarios, see the calibr8 paper: Bayesian calibration, process modeling and uncertainty quantification in biotechnology by Laura Marie Helleckes,  Michael Osthege, Wolfgang Wiechert, Eric von Lieres, Marco Oldiges
 
 Posterior
-  The outcome of Bayesian inference is a posterior distribution, which describes the relative plausibilities of every possible combination of parameter values, given the observed data. We can think of the posterior as the updated {term}`priors` after the model has seen the data.
+  The outcome of Bayesian inference is a posterior distribution, which describes the relative plausibilities of every possible combination of parameter values, given the observed data. We can think of the posterior as the updated {term}`prior` after the model has seen the data.
 
   When the posterior is obtained using numerical methods we generally need to first diagnose the quality of the computed approximation. This is necessary as, for example, methods like {term}`MCMC` has only asymptotic guarantees. In a Bayesian setting predictions can be simulated by sampling from the posterior predictive distribution. When such predictions are used to check the internal consistency of the models by comparing it with the observed data used for inference, the process is known as the posterior predictive checks.
 
@@ -75,6 +75,10 @@ GLM
 [Probability Mass Function](https://en.wikipedia.org/wiki/Probability_mass_function)
 [PMF](https://en.wikipedia.org/wiki/Probability_mass_function)
   A function that gives the probability that a discrete random variable is exactly equal to some value.
+
+[Maximum Likelihood Estimate](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)
+[MLE](https://en.wikipedia.org/wiki/Maximum_likelihood_estimation)
+  A point-estimate of an unknown quantity obtained by finding the parameter values that maximize the {term}`likelihood` function.
 
 [Maximum a Posteriori](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
 [MAP](https://en.wikipedia.org/wiki/Maximum_a_posteriori_estimation)
@@ -104,7 +108,7 @@ Hierarchical Ordinary Differential Equation
   Individual, group, or other level types calculations of {term}`Ordinary Differential Equation`'s.
 
 [Generalized Poisson Distribution](https://doi.org/10.2307/1267389)
-  A generalization of the {term}`Poisson distribution`, with two parameters X1, and X2, is obtained as a limiting form of the generalized negative binomial distribution. The variance of the distribution is greater than, equal to or smaller than the mean according as X2 is positive, zero or negative. For formula and more detail, visit the link in the title.
+  A generalization of the [Poisson distribution](https://en.wikipedia.org/wiki/Poisson_distribution), with two parameters X1, and X2, is obtained as a limiting form of the generalized negative binomial distribution. The variance of the distribution is greater than, equal to or smaller than the mean according as X2 is positive, zero or negative. For formula and more detail, visit the link in the title.
 
 [Bayes' theorem](https://en.wikipedia.org/wiki/Bayes%27_theorem)
   Describes the probability of an event, based on prior knowledge of conditions that might be related to the event. For example, if the risk of developing health problems is known to increase with age, Bayes' theorem allows the risk to an individual of a known age to be assessed more accurately (by conditioning it on their age) than simply assuming that the individual is typical of the population as a whole.

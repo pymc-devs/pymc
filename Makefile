@@ -40,4 +40,4 @@ rtd: clean
 	@echo "Build finished. The HTML pages are in $(BUILDDIR)."
 
 view:
-	python -m webbrowser $(BUILDDIR)/index.html
+	python -m webbrowser file://$(abspath $(BUILDDIR))/index.html

@@ -219,7 +219,7 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
 
     This is a subclasse of `OpFromGraph` which is used to encapsulate the symbolic
     random graph of complex distributions which are built on top of pure
-    `RandomVariable`s.
+    `RandomVariable` s.
 
     These graphs may vary structurally based on the inputs (e.g., their dimensionality),
     and usually require that random inputs have specific shapes for correct outputs
@@ -305,7 +305,7 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
         tuple[tuple[int, ...], int | None, tuple[int, ...]],
         tuple[tuple[int, ...], tuple[int, ...]],
     ]:
-        """Parse extended_signature and return indexes for *[rng], [size] and parameters as well as outputs."""
+        """Parse extended_signature and return indexes for ``*[rng]``, ``[size]`` and parameters as well as outputs."""
         if extended_signature is None:
             raise ValueError("extended_signature must be provided")
 
