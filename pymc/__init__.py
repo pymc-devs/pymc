@@ -78,5 +78,5 @@ from pymc.tuning import *
 from pymc.util import drop_warning_stat
 from pymc.variational import *
 from pymc.vartypes import *
-
+from pymc.printing import print_value
 __version__ = _version.get_versions()["version"]
