@@ -2,7 +2,6 @@
 
 import pymc as pm
 import pytensor.tensor as pt
-from pytensor.printing import Print
 from pymc.printing import print_value
 
 
