@@ -12,6 +12,7 @@ dependencies:
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
+- pytensor>=2.38.2,<2.39
 - python-graphviz
 - networkx
 - scipy>=1.4.1
@@ -39,7 +40,6 @@ dependencies:
 - mypy=1.19.1
 - types-cachetools
 - pip:
-  - pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3
   - pymc-sphinx-theme>=0.16.0
   - numdifftools>=0.9.40
   - mcbackend>=0.4.0
