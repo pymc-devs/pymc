@@ -998,8 +998,9 @@ class Wishart(Continuous):
 
     Notes
     -----
-    This distribution is unusable in a PyMC model. You should instead
-    use LKJCholeskyCov or LKJCorr.
+    PyMC can evaluate the log-probability of a Wishart distribution, but it
+    should not be used as a prior for covariance matrices in a PyMC model.
+    Use LKJCholeskyCov or LKJCorr instead.
     """
 
     rv_op = wishart
@@ -1010,11 +1011,11 @@ class Wishart(Continuous):
         V = pt.as_tensor_variable(V)
 
         warnings.warn(
-            "The Wishart distribution can currently not be used "
-            "for MCMC sampling. The probability of sampling a "
-            "symmetric matrix is basically zero. Instead, please "
-            "use LKJCholeskyCov or LKJCorr. For more information "
-            "on the issues surrounding the Wishart see here: "
+            "The Wishart distribution should not be used as a prior "
+            "for covariance matrices in a PyMC model. The probability "
+            "of sampling a symmetric matrix is basically zero. "
+            "Use LKJCholeskyCov or LKJCorr instead. For more information "
+            "on the issues surrounding Wishart see here: "
             "https://github.com/pymc-devs/pymc/issues/538.",
             UserWarning,
         )

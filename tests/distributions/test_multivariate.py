@@ -549,7 +549,7 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
-        with pytest.warns(UserWarning, match="Wishart distribution can currently not be used"):
+        with pytest.warns(UserWarning, match="should not be used as a prior for covariance matrices"):
             check_logp(
                 pm.Wishart,
                 PdMatrix(n),
