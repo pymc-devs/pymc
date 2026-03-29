@@ -24,7 +24,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions import transforms
-from pymc.distributions.continuous import Gamma, LogNormal, Normal, get_tau_sigma
+from pymc.distributions.continuous import Beta, Gamma, LogNormal, Normal, get_tau_sigma
 from pymc.distributions.discrete import Binomial, NegativeBinomial, Poisson
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
@@ -50,6 +50,7 @@ __all__ = [
     "HurdlePoisson",
     "Mixture",
     "NormalMixture",
+    "ZeroOneInflatedBeta",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
@@ -573,6 +574,87 @@ def _zero_inflated_mixture(*, name, nonzero_p, nonzero_dist, **kwargs):
         return Mixture(name, weights, comp_dists, **kwargs)
     else:
         return Mixture.dist(weights, comp_dists, **kwargs)
+
+
+def _zero_one_inflated_mixture(*, name, zero_p, one_p, middle_dist, **kwargs):
+    """Create a zero-one-inflated mixture (helper function).
+
+    If name is `None`, this function returns an unregistered variable.
+    """
+    zero_p = pt.as_tensor_variable(zero_p)
+    one_p = pt.as_tensor_variable(one_p)
+    middle_p = 1 - zero_p - one_p
+    weights = pt.stack([zero_p, one_p, middle_p], axis=-1)
+    dtype = middle_dist.dtype
+    comp_dists = [
+        DiracDelta.dist(np.asarray(0, dtype=dtype)),
+        DiracDelta.dist(np.asarray(1, dtype=dtype)),
+        middle_dist,
+    ]
+    if name is not None:
+        return Mixture(name, weights, comp_dists, **kwargs)
+    else:
+        return Mixture.dist(weights, comp_dists, **kwargs)
+
+
+class ZeroOneInflatedBeta:
+    R"""
+    Zero-one-inflated Beta distribution.
+
+    The pdf of this distribution is
+
+    .. math::
+
+        f(x \mid \text{zoi}, \text{coi}, \mu, \kappa) =
+            \left\{ \begin{array}{l}
+            \text{zoi}(1-\text{coi}), \text{if } x = 0 \\
+            \text{zoi}\,\text{coi}, \text{if } x = 1 \\
+            (1-\text{zoi})\text{BetaPDF}(x \mid \mu, \kappa), \text{if } 0 < x < 1
+            \end{array} \right.
+
+    ========  ==========================
+    Support   :math:`x \in [0, 1]`
+    Mean      :math:`\text{zoi}\,\text{coi} + (1-\text{zoi})\mu`
+    ========  ==========================
+
+    Parameters
+    ----------
+    zoi : tensor_like of float
+        Probability of boundary inflation (0 <= zoi <= 1).
+    coi : tensor_like of float
+        Conditional probability of one given boundary inflation (0 <= coi <= 1).
+    mu : tensor_like of float
+        Mean of the beta component (0 < mu < 1).
+    kappa : tensor_like of float
+        Precision of the beta component (kappa > 0).
+    """
+
+    def __new__(cls, name, zoi, coi, mu, kappa, **kwargs):
+        zoi = pt.as_tensor_variable(zoi)
+        coi = pt.as_tensor_variable(coi)
+        mu = pt.as_tensor_variable(mu)
+        kappa = pt.as_tensor_variable(kappa)
+        return _zero_one_inflated_mixture(
+            name=name,
+            zero_p=zoi * (1 - coi),
+            one_p=zoi * coi,
+            middle_dist=Beta.dist(mu=mu, nu=kappa),
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, zoi, coi, mu, kappa, **kwargs):
+        zoi = pt.as_tensor_variable(zoi)
+        coi = pt.as_tensor_variable(coi)
+        mu = pt.as_tensor_variable(mu)
+        kappa = pt.as_tensor_variable(kappa)
+        return _zero_one_inflated_mixture(
+            name=None,
+            zero_p=zoi * (1 - coi),
+            one_p=zoi * coi,
+            middle_dist=Beta.dist(mu=mu, nu=kappa),
+            **kwargs,
+        )
 
 
 class ZeroInflatedPoisson:

@@ -51,6 +51,7 @@ from pymc.distributions import (
     StickBreakingWeights,
     Triangular,
     Uniform,
+    ZeroOneInflatedBeta,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -1496,6 +1497,39 @@ class TestZeroInflatedMixture:
             {"n": NatSmall, "p": Unit, "psi": Unit},
         )
 
+    def test_zerooneinflatedbeta_logp(self):
+        def logp_fn(value, zoi, coi, mu, kappa):
+            if value == 0:
+                return np.log(zoi * (1 - coi))
+            elif value == 1:
+                return np.log(zoi * coi)
+            else:
+                alpha = mu * kappa
+                beta = (1 - mu) * kappa
+                return np.log(1 - zoi) + st.beta.logpdf(value, alpha, beta)
+
+        def logcdf_fn(value, zoi, coi, mu, kappa):
+            if value == 1:
+                return 0.0
+            alpha = mu * kappa
+            beta = (1 - mu) * kappa
+            cdf = zoi * (1 - coi) + (1 - zoi) * st.beta.cdf(value, alpha, beta)
+            return np.log(cdf)
+
+        check_logp(
+            ZeroOneInflatedBeta,
+            Unit,
+            {"zoi": Unit, "coi": Unit, "mu": Unit, "kappa": Rplusbig},
+            logp_fn,
+        )
+
+        check_logcdf(
+            ZeroOneInflatedBeta,
+            Unit,
+            {"zoi": Unit, "coi": Unit, "mu": Unit, "kappa": Rplusbig},
+            logcdf_fn,
+        )
+
     @pytest.mark.parametrize(
         "psi, mu, size, expected",
         [
@@ -1557,6 +1591,31 @@ class TestZeroInflatedMixture:
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "zoi, coi, mu, kappa, size, expected",
+        [
+            (0.5, 0.4, 0.6, 10.0, None, 0.5 * 0.4 + (1 - 0.5) * 0.6),
+            (0.7, 0.2, 0.3, 5.0, 4, np.full(4, 0.7 * 0.2 + (1 - 0.7) * 0.3)),
+            (
+                np.array([0.2, 0.8]),
+                np.array([0.1, 0.9]),
+                np.array([0.4, 0.6]),
+                np.array([2.0, 8.0]),
+                None,
+                np.array(
+                    [
+                        0.2 * 0.1 + (1 - 0.2) * 0.4,
+                        0.8 * 0.9 + (1 - 0.8) * 0.6,
+                    ]
+                ),
+            ),
+        ],
+    )
+    def test_zero_one_inflated_beta_support_point(self, zoi, coi, mu, kappa, size, expected):
+        with Model() as model:
+            ZeroOneInflatedBeta("x", zoi=zoi, coi=coi, mu=mu, kappa=kappa, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "dist, non_psi_args",
         [
             (ZeroInflatedPoisson.dist, (2,)),
@@ -1567,6 +1626,16 @@ class TestZeroInflatedMixture:
     def test_zero_inflated_dists_dtype_and_broadcast(self, dist, non_psi_args):
         x = dist([0.5, 0.5, 0.5], *non_psi_args)
         assert x.dtype in discrete_types
+        assert x.eval().shape == (3,)
+
+    def test_zero_one_inflated_beta_dtype_and_broadcast(self):
+        x = ZeroOneInflatedBeta.dist(
+            zoi=[0.2, 0.6, 0.8],
+            coi=[0.7, 0.5, 0.1],
+            mu=[0.4, 0.3, 0.9],
+            kappa=[3.0, 5.0, 10.0],
+        )
+        assert x.dtype not in discrete_types
         assert x.eval().shape == (3,)
 
 

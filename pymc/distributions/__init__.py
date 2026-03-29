@@ -81,6 +81,7 @@ from pymc.distributions.mixture import (
     HurdlePoisson,
     Mixture,
     NormalMixture,
+    ZeroOneInflatedBeta,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -203,6 +204,7 @@ __all__ = [
     "WishartBartlett",
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
+    "ZeroOneInflatedBeta",
     "ZeroInflatedPoisson",
     "ZeroSumNormal",
 ]
