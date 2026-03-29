@@ -523,6 +523,7 @@ def sample_jax_nuts(
     postprocessing_backend: Literal["cpu", "gpu"] | None = None,
     postprocessing_vectorize: Literal["vmap", "scan"] | None = None,
     postprocessing_chunks=None,
+    idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
 ) -> DataTree:
@@ -573,6 +574,13 @@ def sample_jax_nuts(
         How to vectorize the postprocessing: vmap or sequential scan
     postprocessing_chunks : None
         This argument is deprecated
+    idata_kwargs : dict, optional
+        Keyword arguments for :func:`arviz_base.from_dict`. It also accepts a boolean as
+        value for the ``log_likelihood`` key to indicate that the pointwise log
+        likelihood should not be included in the returned object. Values for
+        ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
+        the ``model`` argument if not provided in ``idata_kwargs``. If ``coords`` and
+        ``dims`` are provided, they are used to update the inferred dictionaries.
     compute_convergence_checks : bool, default True
         If True, compute ess and rhat values and warn if they indicate potential sampling issues.
     nuts_sampler : Literal["numpyro", "blackjax"]
@@ -660,10 +668,18 @@ def sample_jax_nuts(
     )
     tic2 = datetime.now()
 
-    # TODO: Add a better way to do idata_kwargs that is better combatible with Arviz 1.0
-    idata_kwargs = {}
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", False):
+        warnings.warn(
+            "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
+            ":func:`pymc.compute_log_likelihood` instead.",
+            DeprecationWarning,
+        )
+
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
@@ -690,6 +706,12 @@ def sample_jax_nuts(
     }
 
     coords, dims = coords_and_dims_for_inferencedata(model)
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
     sample_dims = ["chain", "draw"]
 
     groups = {
@@ -708,12 +730,24 @@ def sample_jax_nuts(
     if constant_data is not None:
         groups["constant_data"] = constant_data
 
+    if not idata_kwargs:
+        warnings.warn(
+            "The arguments to `from_dict` have changed with the release of arviz 1.0"
+            "Please refer to the arviz documentation for more details",
+            DeprecationWarning,
+        )
+
+    attrs = {"posterior": make_attrs(attrs, inference_library=library)}
+    if "attrs" in idata_kwargs:
+        attrs.update(idata_kwargs.pop("attrs"))
+
     az_trace = from_dict(
         data=groups,
         coords=coords,
         dims=dims,
         sample_dims=sample_dims,
-        attrs={"posterior": make_attrs(attrs, inference_library=library)},
+        attrs=attrs,
+        **idata_kwargs,
     )
 
     if compute_convergence_checks:
