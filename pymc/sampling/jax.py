@@ -14,6 +14,7 @@
 import logging
 import os
 import re
+import warnings
 
 from collections.abc import Callable, Sequence
 from datetime import datetime
@@ -595,8 +596,6 @@ def sample_jax_nuts(
         skipped with ``idata_kwargs``).
     """
     if postprocessing_chunks is not None:
-        import warnings
-
         warnings.warn(
             "postprocessing_chunks is deprecated due to being unstable, "
             "using postprocessing_vectorize='scan' instead",
@@ -604,8 +603,6 @@ def sample_jax_nuts(
         )
 
     if postprocessing_vectorize is not None:
-        import warnings
-
         warnings.warn(
             'postprocessing_vectorize={"scan", "vmap"} will be removed in a future release.',
             FutureWarning,
@@ -732,7 +729,7 @@ def sample_jax_nuts(
 
     if not idata_kwargs:
         warnings.warn(
-            "The arguments to `from_dict` have changed with the release of arviz 1.0"
+            "The arguments to `from_dict` have changed with the release of arviz 1.0. "
             "Please refer to the arviz documentation for more details",
             DeprecationWarning,
         )
