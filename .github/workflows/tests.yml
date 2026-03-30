@@ -1,19 +1,15 @@
 name: tests
-
 permissions: {}
-
 on:
   pull_request:
   push:
     branches:
       - main
-
 # Cancel running workflows for updated PRs
 # https://turso.tech/blog/simple-trick-to-save-environment-and-money-when-using-github-actions
 concurrency:
   group: ${{ github.workflow}}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
-
 # Tests are split into multiple jobs to accelerate the CI.
 # Different jobs should be organized to take approximately the same
 # time to complete (and not be prohibitely slow).
@@ -22,7 +18,6 @@ concurrency:
 # and can't re-use the groups across jobs.
 # A pre-commit hook (scripts/check_all_tests_are_covered.py)
 # enforces that test run just once per OS / floatX setting.
-
 jobs:
   changes:
     name: "Check for changes"
@@ -47,7 +42,6 @@ jobs:
               - "requirements*.txt"
               - "codecov.yml"
               - "scripts/*.sh"
-
   ubuntu:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -69,12 +63,10 @@ jobs:
             tests/test_testing.py
             tests/progress_bar/test_manager.py
             tests/progress_bar/test_marimo.py
-
           - |
             tests/distributions/test_continuous.py
             tests/distributions/test_multivariate.py
             tests/distributions/moments/test_means.py
-
           - |
             tests/distributions/test_censored.py
             tests/distributions/test_custom.py
@@ -86,7 +78,6 @@ jobs:
             tests/stats/test_log_density.py
             tests/distributions/test_distribution.py
             tests/distributions/test_discrete.py
-
           - |
             tests/tuning/test_scaling.py
             tests/tuning/test_starting.py
@@ -95,7 +86,6 @@ jobs:
             tests/sampling/test_mcmc.py
             tests/sampling/test_parallel.py
             tests/test_printing.py
-
           - |
             tests/distributions/test_timeseries.py
             tests/gp/test_cov.py
@@ -113,7 +103,6 @@ jobs:
             tests/ode/test_utils.py
             tests/step_methods/hmc/test_quadpotential.py
             tests/step_methods/test_state.py
-
           - |
             tests/backends/test_mcbackend.py
             tests/backends/test_zarr.py
@@ -136,14 +125,12 @@ jobs:
             tests/logprob/test_transform_value.py
             tests/logprob/test_transforms.py
             tests/logprob/test_utils.py
-
           - |
             tests/dims/distributions/test_core.py
             tests/dims/distributions/test_censored.py
             tests/dims/distributions/test_scalar.py
             tests/dims/distributions/test_vector.py
             tests/dims/test_model.py
-
       fail-fast: false
     runs-on: ubuntu-latest
     env:
@@ -166,7 +153,6 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
           pip install -e . --no-deps
           python --version
           micromamba list
@@ -180,7 +166,6 @@ jobs:
           env_vars: TEST_SUBSET
           name: Ubuntu py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
-
   windows:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -193,7 +178,6 @@ jobs:
           - tests/model/test_core.py tests/sampling/test_mcmc.py
           - tests/gp/test_cov.py tests/gp/test_gp.py tests/gp/test_mean.py tests/gp/test_util.py tests/ode/test_ode.py tests/ode/test_utils.py tests/smc/test_smc.py tests/sampling/test_parallel.py
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
-
       fail-fast: false
     runs-on: windows-latest
     env:
@@ -216,7 +200,6 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
           pip install -e . --no-deps
           python --version
           micromamba list
@@ -230,7 +213,6 @@ jobs:
           env_vars: TEST_SUBSET
           name: Windows py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
-
   macos:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -244,10 +226,8 @@ jobs:
             tests/test_data.py
             tests/variational/test_minibatch_rv.py
             tests/model/test_core.py
-
           - |
             tests/sampling/test_mcmc.py
-
           - |
             tests/backends/test_arviz.py
             tests/backends/test_zarr.py
@@ -274,7 +254,6 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
           pip install -e . --no-deps
           python --version
           micromamba list
@@ -288,7 +267,6 @@ jobs:
           env_vars: TEST_SUBSET
           name: MacOS py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
-
   alternative_backends:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -303,7 +281,6 @@ jobs:
             tests/distributions/test_random_alternative_backends.py
             tests/sampling/test_jax.py
             tests/sampling/test_mcmc_external.py
-
       fail-fast: false
     runs-on: ubuntu-latest
     env:
@@ -326,7 +303,6 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
           pip install -e . --no-deps
           python --version
           micromamba list
@@ -340,7 +316,6 @@ jobs:
           env_vars: TEST_SUBSET
           name: Alternative backends py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
-
   float32:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -373,7 +348,6 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
           pip install -e . --no-deps
           python --version
           micromamba list
@@ -387,7 +361,6 @@ jobs:
           env_vars: TEST_SUBSET
           name: float32 ${{ matrix.os }} py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
-
   all_tests:
     if: ${{ always() }}
     runs-on: ubuntu-latest
