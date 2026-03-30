@@ -674,7 +674,8 @@ def sample_jax_nuts(
         warnings.warn(
             "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
             ":func:`pymc.compute_log_likelihood` instead.",
-            DeprecationWarning,
+            FutureWarning,
+            stacklevel=3,
         )
 
         log_likelihood = _get_log_likelihood(
@@ -731,7 +732,8 @@ def sample_jax_nuts(
         warnings.warn(
             "The arguments to `from_dict` have changed with the release of arviz 1.0. "
             "Please refer to the arviz documentation for more details",
-            DeprecationWarning,
+            FutureWarning,
+            stacklevel=3,
         )
 
     attrs = {"posterior": make_attrs(attrs, inference_library=library)}
