@@ -463,7 +463,7 @@ class Normal(Continuous):
     Parameters
     ----------
     mu : tensor_like of float, default 0
-        Mean.
+        Mean of the distribution.
     sigma : tensor_like of float, optional
         Standard deviation (sigma > 0) (only required if tau is not specified).
         Defaults to 1 if neither sigma nor tau is specified.
