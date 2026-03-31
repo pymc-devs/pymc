@@ -2381,7 +2381,17 @@ def Potential(name, var: TensorVariable, model=None, dims=None) -> TensorVariabl
 
             data = [0.1, 0.5, 0.9]
             llike = pm.Potential("llike", normal_logp(data, mu, sigma))
+    A Potential can be used to implement custom transition or observation terms in state-space models.
 
+    .. code-block:: python
+        import pymc as pm
+        with pm.Model() as model:
+            # Custom smoothness penalty between consecutive states (common in SSMs)
+            x = pm.Normal("x", 0, 1, shape=10)
+            smoothness = pm.Potential(
+                "smoothness",
+                -0.5 * pm.math.sum((x[1:] - x[:-1]) ** 2)
+            )
 
     """
     model = modelcontext(model)
