@@ -28,7 +28,6 @@ import numpy as np
 import xarray
 import xarray as xr
 
-from arviz import InferenceData
 from pytensor import tensor as pt
 from pytensor.graph import vectorize_graph
 from pytensor.graph.basic import (
@@ -168,7 +167,7 @@ def compile_forward_sampling_function(
         A dictionary that maps the names of ``Data`` instances to their
         corresponding values at inference time. If a model was created with ``Data``, these
         are stored as ``SharedVariable`` with the name of the data variable and a value equal to
-        the initial data. At inference time, this information is stored in ``InferenceData``
+        the initial data. At inference time, this information is stored in ``DataTree``
         objects under the ``constant_data`` group, which allows us to check whether a
         ``SharedVariable`` instance changed its values after inference or not. If the values have
         changed, then the ``SharedVariable`` is assumed to be volatile. If it has not changed, then
@@ -368,7 +367,7 @@ def sample_prior_predictive(
     return_inferencedata: Literal[True] = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-) -> InferenceData: ...
+) -> xarray.DataTree: ...
 @overload
 def sample_prior_predictive(
     draws: int = 500,
@@ -387,7 +386,7 @@ def sample_prior_predictive(
     return_inferencedata: bool = True,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-) -> InferenceData | dict[str, np.ndarray]:
+) -> xarray.DataTree | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -402,7 +401,7 @@ def sample_prior_predictive(
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     return_inferencedata : bool
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Whether to return an :class:`xarray:xarray.DataTree` (True) object or a dictionary (False).
         Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
@@ -411,8 +410,8 @@ def sample_prior_predictive(
 
     Returns
     -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the prior and prior predictive samples (default),
+    xarray.DataTree or dict
+        A ``DataTree`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
     model = modelcontext(model)
@@ -490,7 +489,7 @@ def sample_posterior_predictive(
     predictions: bool = False,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-) -> InferenceData: ...
+) -> xarray.DataTree: ...
 @overload
 def sample_posterior_predictive(
     trace,
@@ -519,7 +518,7 @@ def sample_posterior_predictive(
     predictions: bool = False,
     idata_kwargs: dict | None = None,
     compile_kwargs: dict | None = None,
-) -> InferenceData | dict[str, np.ndarray]:
+) -> xarray.DataTree | dict[str, np.ndarray]:
     """Generate forward samples for `var_names`, conditioned on the posterior samples of variables found in the `trace`.
 
     This method can be used to perform different kinds of model predictions, including posterior predictive checks.
@@ -532,9 +531,9 @@ def sample_posterior_predictive(
 
     Parameters
     ----------
-    trace : backend, list, xarray.Dataset, arviz.InferenceData, or MultiTrace
+    trace : backend, list, xarray.Dataset, xarray.DataTree, or MultiTrace
         Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
-        or :class:`xarray.Dataset` (eg. InferenceData.posterior or InferenceData.prior)
+        or :class:`xarray.Dataset` (eg. DataTree.posterior or DataTree.prior)
     model : Model (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
         generally be the model used to generate the `trace`, but it doesn't need to be.
@@ -545,7 +544,7 @@ def sample_posterior_predictive(
     sample_dims : list of str, optional
         Dimensions over which to loop and generate posterior predictive samples.
         When ``sample_dims`` is ``None`` (default) both "chain" and "draw" are considered sample
-        dimensions. Only taken into account when `trace` is InferenceData or Dataset.
+        dimensions. Only taken into account when `trace` is xarray.DataTree or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -553,12 +552,14 @@ def sample_posterior_predictive(
         of completion, the sampling speed in samples per second (SPS), and the estimated remaining
         time until completion ("expected time of arrival"; ETA).
     return_inferencedata : bool, default True
-        Whether to return an :class:`arviz:arviz.InferenceData` (True) object or a dictionary (False).
+        Whether to return an :class:`xarray:xarray.DataTree` (True) object or a dictionary (False).
     extend_inferencedata : bool, default False
-        Whether to automatically use :meth:`arviz.InferenceData.extend` to add the posterior predictive samples to
-        `trace` or not. If True, `trace` is modified inplace but still returned.
+        Whether to automatically use :meth:`xarray.DataTree.update` to add the posterior predictive samples to
+        `trace` or not. If True, `trace` is modified inplace but still returned. If the DataTree
+        already contains a group that would be added (e.g. ``posterior_predictive``), a warning
+        is issued and the existing group is overwritten.
     predictions : bool, default False
-        Flag used to set the location of posterior predictive samples within the returned ``arviz.InferenceData`` object.
+        Flag used to set the location of posterior predictive samples within the returned ``xarray.DataTree`` object.
         If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks,
         and samples are stored in the ``posterior_predictive``. If True, assumes samples are generated based on
         out-of-sample data as predictions, and samples are stored in the ``predictions`` group.
@@ -570,8 +571,8 @@ def sample_posterior_predictive(
 
     Returns
     -------
-    arviz.InferenceData or Dict
-        An ArviZ ``InferenceData`` object containing the posterior predictive samples (default), or
+    xarray.DataTree or Dict
+        A ``xarray.DataTree`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
 
 
@@ -764,7 +765,7 @@ def sample_posterior_predictive(
     Controlling the number of samples
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-    You can manipulate the InferenceData to control the number of samples
+    You can manipulate the DataTree to control the number of samples
 
     .. code-block:: python
 
@@ -780,7 +781,7 @@ def sample_posterior_predictive(
 
         thinned_idata = idata.sel(draw=slice(None, None, 5))
         with model:
-            idata.extend(pm.sample_posterior_predictive(thinned_idata))
+            idata.update(pm.sample_posterior_predictive(thinned_idata))
 
 
     Generate 5 posterior predictive samples for every posterior sample.
@@ -810,17 +811,20 @@ def sample_posterior_predictive(
     trace_coords: dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
-    idata: InferenceData | None = None
+    idata: xarray.DataTree | None = None
     observed_data = None
     stacked_dims = None
-    if isinstance(trace, InferenceData):
+    if isinstance(trace, xarray.DataTree):
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
             constant_data.update({str(k): v.data for k, v in _constant_data.items()})
         idata = trace
         observed_data = trace.get("observed_data", None)
-        trace = trace["posterior"]
+        if "posterior" in trace.children:
+            trace = trace["posterior"].dataset
+        else:
+            trace = trace.dataset
     if isinstance(trace, xarray.Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
         _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
@@ -873,7 +877,7 @@ def sample_posterior_predictive(
 
     if not vars_to_sample:
         if return_inferencedata and not extend_inferencedata:
-            return InferenceData()
+            return xr.DataTree()
         elif return_inferencedata and extend_inferencedata:
             return trace if idata is None else idata
         return {}
@@ -962,7 +966,16 @@ def sample_posterior_predictive(
     idata_pp = pm.to_inference_data(posterior_predictive=ppc_trace, **ikwargs)
 
     if extend_inferencedata and idata is not None:
-        idata.extend(idata_pp)
+        existing_groups = set(idata.children) & set(idata_pp.children)
+        conflicting = existing_groups - {"observed_data", "constant_data"}
+        if conflicting:
+            warnings.warn(
+                f"groups {conflicting} already exist in the DataTree and will be overwritten. "
+                "To avoid this, set extend_inferencedata=False.",
+                UserWarning,
+                stacklevel=2,
+            )
+        idata.update(idata_pp)
         return idata
     return idata_pp
 

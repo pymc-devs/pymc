@@ -19,12 +19,12 @@ from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
-import arviz as az
 import jax
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
+import xarray as xr
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
@@ -270,11 +270,11 @@ def model_test_idata_kwargs() -> pm.Model:
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
 def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
-    sampler: Callable[..., az.InferenceData],
+    sampler: Callable[..., xr.DataTree],
     idata_kwargs: dict[str, Any],
     postprocessing_backend: str | None,
 ):
-    idata: az.InferenceData | None = None
+    idata: xr.DataTree | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
@@ -434,7 +434,7 @@ def test_numpyro_nuts_kwargs_are_used(mocked: mock.MagicMock):
 )
 def test_idata_contains_stats(sampler_name: str):
     """Tests whether sampler statistics were written to sample_stats
-    group of InferenceData"""
+    group of idata"""
     if sampler_name == "sample_blackjax_nuts":
         sampler = sample_blackjax_nuts
     elif sampler_name == "sample_numpyro_nuts":
