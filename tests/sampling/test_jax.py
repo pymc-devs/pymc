@@ -25,6 +25,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
+import xarray as xr
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
@@ -274,7 +275,7 @@ def test_idata_kwargs(
     idata_kwargs: dict[str, Any],
     postprocessing_backend: str | None,
 ):
-    idata: az.InferenceData | None = None
+    idata: xr.DataTree | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
