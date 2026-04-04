@@ -13,7 +13,7 @@ dependencies:
 - numba
 - nutpie >= 0.15.1
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.2.2
+- blackjax>=1.2.2,<1.5
 - jax>=0.4.28
 - jaxlib>=0.4.28
 - libblas=*=*mkl
