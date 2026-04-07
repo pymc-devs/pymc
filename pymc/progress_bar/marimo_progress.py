@@ -71,6 +71,8 @@ class MarimoProgressBackend:
         self._mo_replace: Callable[[object], None] | None = None
         self._task_state: list[dict[str, Any]] = []
         self._start_times: list[float] = []
+        self._last_render_time: float = 0.0
+        self._min_render_interval: float = 0.1
 
     @property
     def is_enabled(self) -> bool:
@@ -144,7 +146,10 @@ class MarimoProgressBackend:
         if is_last:
             self._task_state[task_id]["completed"] = self._task_state[task_id]["total"]
 
-        self._render()
+        now = perf_counter()
+        if is_last or (now - self._last_render_time) >= self._min_render_interval:
+            self._last_render_time = now
+            self._render()
 
     def _render(self) -> None:
         """Render HTML progress display to marimo output."""
@@ -256,6 +261,8 @@ class MarimoSimpleProgress:
         self._mo_replace: Callable[[object], None] | None = None
         self._start_time: float = 0.0
         self._task_id = 0
+        self._last_render_time: float = 0.0
+        self._min_render_interval: float = 0.1
 
     def __enter__(self) -> Self:
         """Enter the context manager."""
@@ -269,7 +276,7 @@ class MarimoSimpleProgress:
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
-        self._render()
+        self._render(force=True)
 
     def add_task(
         self, description: str, completed: int = 0, total: int | None = None, **kwargs
@@ -324,13 +331,18 @@ class MarimoSimpleProgress:
         if refresh:
             self._render()
 
-    def _render(self) -> None:
+    def _render(self, force: bool = False) -> None:
         """Render HTML progress to marimo output."""
         if self._mo_replace is None:
             return
 
+        now = perf_counter()
+        if not force and (now - self._last_render_time) < self._min_render_interval:
+            return
+
         import marimo as mo
 
+        self._last_render_time = now
         html = self._render_html()
         self._mo_replace(mo.Html(html))
 
