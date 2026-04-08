@@ -16,9 +16,10 @@ import re
 
 from collections.abc import Callable, Sequence
 
-from pytensor import Variable, clone_replace
 from pytensor import tensor as pt
+from pytensor.graph.basic import Variable
 from pytensor.graph.features import ReplaceValidate
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter
 from pytensor.graph.traversal import io_toposort
 from pytensor.scan.op import Scan

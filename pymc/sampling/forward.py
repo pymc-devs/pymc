@@ -37,7 +37,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.traversal import ancestors, general_toposort, walk
-from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from pytensor.tensor.variable import TensorConstant
 from rich.theme import Theme

@@ -20,10 +20,10 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor import graph_replace
 from pytensor.compile.ops import TypeCastingOp
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.replace import graph_replace
 from pytensor.graph.rewriting.db import RewriteDatabaseQuery, SequenceDB
 from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.variable import TensorVariable

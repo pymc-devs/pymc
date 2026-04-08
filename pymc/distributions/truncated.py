@@ -17,9 +17,10 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor import config, graph_replace, scan
+from pytensor import config, scan
 from pytensor.graph import Op
 from pytensor.graph.basic import Apply
+from pytensor.graph.replace import graph_replace
 from pytensor.raise_op import CheckAndRaise
 from pytensor.scan import until
 from pytensor.tensor import TensorConstant, TensorVariable

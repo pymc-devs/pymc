@@ -13,9 +13,10 @@
 #   limitations under the License.
 from collections.abc import Sequence
 
-from pytensor import Variable, clone_replace
 from pytensor.graph import ancestors
+from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
+from pytensor.graph.replace import clone_replace
 
 from pymc.data import MinibatchOp
 from pymc.model.core import Model

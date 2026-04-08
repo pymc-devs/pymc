@@ -24,7 +24,7 @@ from pytensor.compile.mode import get_default_mode
 from pytensor.graph import ancestors
 from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.op import RandomVariable
-from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.sort import SortOp
 
 import pymc as pm
