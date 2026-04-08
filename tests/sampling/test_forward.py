@@ -185,6 +185,9 @@ class TestCompileForwardSampler:
             constant_data={"p": p.get_value()},
             basic_rvs=model.basic_RVs,
             givens_dict={category: np.zeros(10, dtype=category.dtype)},
+            # Disable `random_unsafe` so the disconnected `p` and `x` shared
+            # inputs are kept in the compiled graph for the assertion below.
+            mode=pytensor.compile.mode.get_mode(None).excluding("random_unsafe"),
         )
         assert volatile_rvs == {obs}
         assert {i.name for i in self.get_function_inputs(f)} == {"beta", "sigma"}

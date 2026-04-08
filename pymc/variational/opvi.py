@@ -156,7 +156,7 @@ def node_property(f):
         return property(locally_cachedmethod(f))
 
 
-class ObjectiveUpdates(pytensor.OrderedUpdates):
+class ObjectiveUpdates(dict):
     """OrderedUpdates extension for storing loss."""
 
     loss = None

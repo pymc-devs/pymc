@@ -26,7 +26,7 @@ import numpy as np
 import pytensor.gradient as tg
 
 from numpy import isfinite
-from pytensor import Variable
+from pytensor.graph.basic import Variable
 from rich.console import Console
 from rich.progress import Progress, TextColumn
 from scipy.optimize import minimize

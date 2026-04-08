@@ -15,11 +15,10 @@ import warnings
 
 from copy import copy, deepcopy
 
-import pytensor
-
-from pytensor import Variable
+from pytensor.basic import as_symbolic
 from pytensor.compile import SharedVariable, ViewOp, view_op
 from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
+from pytensor.graph.basic import Variable
 from pytensor.graph.rewriting.basic import out2in
 
 from pymc.logprob.transforms import Transform
@@ -37,7 +36,7 @@ class ModelVar(Op):
 
     def _parse_dims(self, rv, *dims):
         if dims:
-            dims = [pytensor.as_symbolic(dim) for dim in dims]
+            dims = [as_symbolic(dim) for dim in dims]
             assert all(isinstance(dim.type, StringType) for dim in dims)
             assert len(dims) == rv.type.ndim
         return dims

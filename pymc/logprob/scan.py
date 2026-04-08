@@ -50,7 +50,6 @@ from pytensor.tensor.basic import AllocEmpty
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.subtensor import IncSubtensor, Subtensor
 from pytensor.tensor.variable import TensorVariable
-from pytensor.updates import OrderedUpdates
 
 from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.basic import conditional_logp
@@ -288,10 +287,10 @@ def get_random_outer_outputs(
     return rv_vars
 
 
-def construct_scan(scan_args: ScanArgs, **kwargs) -> tuple[list[TensorVariable], OrderedUpdates]:
+def construct_scan(scan_args: ScanArgs, **kwargs) -> tuple[list[TensorVariable], dict]:
     scan_op = Scan(scan_args.inner_inputs, scan_args.inner_outputs, scan_args.info, **kwargs)
     node = scan_op.make_node(*scan_args.outer_inputs)
-    updates = OrderedUpdates(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
+    updates = dict(zip(scan_args.outer_in_shared, scan_args.outer_out_shared))
     return node.outputs, updates
 
 

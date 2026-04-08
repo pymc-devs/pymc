@@ -35,6 +35,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -42,7 +43,7 @@ from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
@@ -591,9 +592,7 @@ def join_nonshared_inputs(
     if shared_inputs is not None:
         replace.update(shared_inputs)
 
-    new_outputs = [
-        pytensor.clone_replace(output, replace, rebuild_strict=False) for output in outputs
-    ]
+    new_outputs = [clone_replace(output, replace, rebuild_strict=False) for output in outputs]
     return new_outputs, joined_inputs
 
 
@@ -626,7 +625,7 @@ class CallableTensor:
         input: TensorVariable
         """
         (oldinput,) = explicit_graph_inputs(self.tensor)
-        return pytensor.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
+        return clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
 
 
 def ix_(*args):
@@ -1026,7 +1025,7 @@ class StringConstant(Constant):
     pass
 
 
-@pytensor._as_symbolic.register(str)
+@pytensor.basic._as_symbolic.register(str)
 def as_symbolic_string(x, **kwargs):
     return StringConstant(stringtype, x)
 
