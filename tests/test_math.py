@@ -173,10 +173,6 @@ class TestLogDet:
         # Test gradient:
         verify_grad(self.op, [input_mat])
 
-    @pytest.mark.skipif(
-        pytensor.config.device in ["cuda", "gpu"],
-        reason="No logDet implementation on GPU.",
-    )
     def test_basic(self):
         # Calls validate with different params
         test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
