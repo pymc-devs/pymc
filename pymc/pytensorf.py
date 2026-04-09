@@ -81,6 +81,31 @@ def convert_observed_data(data) -> np.ndarray | Variable:
 
 
 def convert_data(data) -> np.ndarray | Variable:
+    """
+    Convert input data to a NumPy array or PyTensor variable.
+
+    Handles pandas objects, NumPy arrays, and masked arrays. Missing
+    values are preserved as a masked array where applicable.
+
+    Parameters
+    ----------
+    data : array-like
+        Input data to convert. Accepts pandas Series, pandas Index,
+        NumPy arrays, masked arrays, or PyTensor variables.
+
+    Returns
+    -------
+    np.ndarray or pytensor.graph.basic.Variable
+        Converted data. Returns a masked array if missing values are
+        detected, otherwise a plain NumPy array or PyTensor variable.
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> import pymc as pm
+    >>> pm.convert_data(np.array([1.0, 2.0, 3.0]))
+    array([1., 2., 3.])
+    """
     ret: np.ndarray | Variable
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
