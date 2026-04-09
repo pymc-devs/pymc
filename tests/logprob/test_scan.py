@@ -80,7 +80,6 @@ def test_convert_outer_out_to_in_sit_sot():
     rng_state = np.random.default_rng(123)
     rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
-    rng_tt.default_update = rng_tt
 
     #
     # We create a `Scan` representing a time-series model with normally
@@ -196,7 +195,6 @@ def test_convert_outer_out_to_in_mit_sot():
     rng_state = np.random.default_rng(1234)
     rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
-    rng_tt.default_update = rng_tt
 
     #
     # This is a very simple model with only one output, but multiple

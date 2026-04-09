@@ -869,16 +869,9 @@ def collect_default_updates(
             and isinstance(inp.type, RandomType)
         )
     ):
-        # Even if an explicit default update is provided, we call it to
-        # issue any warnings about invalid random graphs.
         default_update = find_default_update(clients, input_rng)
-
-        # Respect default update if provided
-        if hasattr(input_rng, "default_update") and input_rng.default_update is not None:
-            rng_updates[input_rng] = input_rng.default_update
-        else:
-            if default_update is not None:
-                rng_updates[input_rng] = default_update
+        if default_update is not None:
+            rng_updates[input_rng] = default_update
 
     return rng_updates
 

@@ -378,11 +378,7 @@ def logprob_scan(op, values, *inputs, name=None, **kwargs):
     # XXX TODO: Remove this properly
     # logp_scan_args.outer_out_shared = []
 
-    logp_scan_out, updates = construct_scan(logp_scan_args, mode=op.mode)
-
-    # Automatically pick up updates so that we don't have to pass them around
-    for key, value in updates.items():
-        key.default_update = value
+    logp_scan_out, _updates = construct_scan(logp_scan_args, mode=op.mode)
 
     # Return only the logp outputs, not any potentially carried states
     logp_outputs = logp_scan_out[-len(values) :]
