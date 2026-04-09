@@ -1049,7 +1049,7 @@ def toposort_replace(
 def normalize_rng_param(rng: None | Variable) -> Variable:
     """Validate rng is a valid type or create a new one if None."""
     if rng is None:
-        rng = pytensor.shared(np.random.default_rng())
+        rng = pt.random.shared_rng(seed=None)
     elif not isinstance(rng.type, RandomType):
         raise TypeError(
             "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"

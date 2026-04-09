@@ -16,6 +16,7 @@ from itertools import chain
 from typing import Any, cast
 
 import numpy as np
+import pytensor.tensor as pt
 
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
@@ -322,6 +323,8 @@ class DimDistribution:
             extra_dims = {
                 dim: length for dim, length in dim_lengths.items() if dim not in implied_dims
             }
+        if kwargs.get("rng") is None:
+            kwargs["rng"] = pt.random.shared_rng(seed=None)
         _, rv = cls.xrv_op(
             *dist_params,
             extra_dims=extra_dims,

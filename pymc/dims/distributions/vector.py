@@ -239,7 +239,7 @@ class ZeroSumNormal(VectorDimDistribution):
         )
 
     @classmethod
-    def xrv_op(cls, sigma, support_shape, core_dims, extra_dims=None, rng=None):
+    def xrv_op(cls, sigma, support_shape, core_dims, extra_dims=None, rng=None, **kwargs):
         # ZeroSumNormal expects dummy dimensions on sigma for the support_shape
         sigma = cls._as_xtensor(sigma).expand_dims(core_dims)
         support_shape = as_xtensor(support_shape, dims=("__support_shape__",))
@@ -260,4 +260,5 @@ class ZeroSumNormal(VectorDimDistribution):
             core_dims=("__support_shape__", *core_dims),
             extra_dims=extra_dims,
             rng=rng,
+            **kwargs,
         )

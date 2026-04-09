@@ -32,6 +32,7 @@ from pytensor.tensor.utils import safe_signature
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
+    _call_rv_op,
     _support_point,
     support_point,
 )
@@ -189,7 +190,8 @@ class _CustomDist(Distribution):
             return support_point(rv, size, *dist_params)
 
         rv_op = rv_type()
-        return rv_op(*dist_params, **kwargs)
+        _, rv = _call_rv_op(rv_op, *dist_params, **kwargs)
+        return rv
 
 
 class CustomSymbolicDistRV(SymbolicRandomVariable):

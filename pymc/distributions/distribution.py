@@ -449,11 +449,14 @@ def _call_rv_op(rv_op, *args, **kwargs) -> tuple[TensorVariable, TensorVariable]
     """Call ``rv_op`` and always return a ``(next_rng, rv)`` tuple.
 
     For ``RandomVariable`` ``Op`` instances we use the ``return_next_rng=True``
-    API to suppress the deprecation warning emitted by PyTensor v3. For other
-    callables (e.g. ``SymbolicRandomVariable`` builders) we call as-is and
-    extract the next-rng output from the resulting node.
+    API to suppress the deprecation warning emitted by PyTensor v3, and we
+    always supply an explicit shared rng (also a deprecation source upstream).
+    For other callables (e.g. ``SymbolicRandomVariable`` builders) we call
+    as-is and extract the next-rng output from the resulting node.
     """
     if isinstance(rv_op, RandomVariable):
+        if kwargs.get("rng") is None:
+            kwargs["rng"] = pt.random.shared_rng(seed=None)
         return rv_op(*args, return_next_rng=True, **kwargs)
     rv = rv_op(*args, **kwargs)
     next_rng = rv.owner.outputs[0]
@@ -865,7 +868,12 @@ def create_partial_observed_rv(
         # Make a clone of the observedRV, with a distinct rng so that observed and
         # unobserved are never treated as equivalent (and mergeable) nodes by pytensor.
         _, size, *inps = observed_rv.owner.inputs
-        observed_rv = observed_rv.owner.op(*inps, size=size)
+        _, observed_rv = observed_rv.owner.op(
+            *inps,
+            size=size,
+            rng=pt.random.shared_rng(seed=None),
+            return_next_rng=True,
+        )
 
     # For all other cases use the more general PartialObservedRV
     else:

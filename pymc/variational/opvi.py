@@ -955,13 +955,23 @@ class Group(WithMemoization):
         size = pt.as_tensor(size)
         shape = self._new_initial_shape(size, dim, more_replacements)
         # apply optimizations if possible
+        rv_op = getattr(pt.random, dist_name)
         if not isinstance(deterministic, Variable):
             if deterministic:
                 return pt.ones(shape, dtype) * dist_map
             else:
-                return getattr(pt.random, dist_name)(size=shape)
+                _, sample = rv_op(
+                    size=shape,
+                    rng=pt.random.shared_rng(seed=None),
+                    return_next_rng=True,
+                )
+                return sample
         else:
-            sample = getattr(pt.random, dist_name)(size=shape)
+            _, sample = rv_op(
+                size=shape,
+                rng=pt.random.shared_rng(seed=None),
+                return_next_rng=True,
+            )
             initial = pt.switch(deterministic, pt.ones(shape, dtype) * dist_map, sample)
             return initial
 

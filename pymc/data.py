@@ -149,7 +149,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
             "All variables shape[0] in Minibatch should be equal, check your Minibatch(data1, data2, ...) code"
         )(upper, pt.all([pt.eq(upper, other_tensor.shape[0]) for other_tensor in tensors[1:]]))
 
-    rng = pytensor.shared(np.random.default_rng())
+    rng = pt.random.shared_rng(seed=None)
     rng_update, mb_indices = minibatch_index(
         0, upper, size=batch_size, rng=rng, return_next_rng=True
     )
