@@ -258,7 +258,7 @@ class EmpiricalGroup(Group):
             size=size,
             low=0,
             high=self.histogram.shape[0],
-            rng=pytensor.shared(np.random.default_rng()),
+            rng=pt.random.shared_rng(seed=None),
             return_next_rng=True,
         )
         return draws

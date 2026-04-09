@@ -17,7 +17,6 @@ import warnings
 from abc import ABCMeta
 from collections.abc import Callable
 
-import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
@@ -412,7 +411,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
         size = normalize_size_param(size)
 
         # Init dist should have shape (*size, ar_order)
@@ -700,7 +699,7 @@ class GARCH11RV(SymbolicRandomVariable):
         alpha_1 = pt.as_tensor(alpha_1)
         beta_1 = pt.as_tensor(beta_1)
         initial_vol = pt.as_tensor(initial_vol)
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
         size = normalize_size_param(size)
 
         if rv_size_is_none(size):
@@ -855,7 +854,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
 
         # Init dist should have shape (*size,)
         if size is not None:

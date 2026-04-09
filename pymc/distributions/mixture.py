@@ -15,7 +15,6 @@ import itertools
 import warnings
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, equal_computations
@@ -62,7 +61,7 @@ class _BaseMixtureRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, weights, *components, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        mix_indexes_rng = pytensor.shared(np.random.default_rng())
+        mix_indexes_rng = pt.random.shared_rng(seed=None)
 
         single_component = len(components) == 1
         ndim_supp = components[0].owner.op.ndim_supp

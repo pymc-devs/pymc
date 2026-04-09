@@ -13,6 +13,8 @@
 #   limitations under the License.
 import numpy as np
 
+from pytensor.xtensor.random.variable import shared_rng as xtensor_shared_rng
+
 from pymc.dims.distributions.core import DimDistribution, copy_docstring, expand_dist_dims
 from pymc.distributions.censored import Censored as RegularCensored
 
@@ -28,7 +30,7 @@ class Censored(DimDistribution):
         return super().dist([dist, lower, upper], dim_lengths=dim_lengths, **kwargs)
 
     @classmethod
-    def xrv_op(cls, dist, lower, upper, core_dims=None, extra_dims=None, rng=None):
+    def xrv_op(cls, dist, lower, upper, core_dims=None, extra_dims=None, rng=None, **kwargs):
         if extra_dims is None:
             extra_dims = {}
 
@@ -48,4 +50,12 @@ class Censored(DimDistribution):
 
         # Probability is inferred from the clip operation
         # TODO: Make this a SymbolicRandomVariable that can itself be resized
-        return dist.clip(lower, upper)
+        clipped = dist.clip(lower, upper)
+        if kwargs.get("return_next_rng"):
+            # TODO: Hack -- we have no rng of our own to thread forward.
+            # change_dist_size should grow a return_next_rng option so that
+            # Censored (and similar wrappers) can retrieve and forward the
+            # underlying dist's next_rng instead of returning a throwaway
+            # shared rng here.
+            return xtensor_shared_rng(seed=None), clipped
+        return clipped

@@ -173,12 +173,12 @@ class HalfStudentT(PositiveDimDistribution):
         return super().dist([nu, sigma], **kwargs)
 
     @classmethod
-    def xrv_op(self, nu, sigma, core_dims=None, extra_dims=None, rng=None):
+    def xrv_op(self, nu, sigma, core_dims=None, extra_dims=None, rng=None, **kwargs):
         nu = as_xtensor(nu)
         sigma = as_xtensor(sigma)
         core_rv = HalfStudentTRV.rv_op(nu=nu.values, sigma=sigma.values).owner.op
         xop = ptxr.as_xrv(core_rv)
-        return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
+        return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
 @copy_docstring(regular_dists.Cauchy)
@@ -197,11 +197,11 @@ class HalfCauchy(PositiveDimDistribution):
         return super().dist([beta], **kwargs)
 
     @classmethod
-    def xrv_op(self, beta, core_dims, extra_dims=None, rng=None):
+    def xrv_op(self, beta, core_dims, extra_dims=None, rng=None, **kwargs):
         beta = as_xtensor(beta)
         core_rv = HalfCauchyRV.rv_op(beta=beta.values).owner.op
         xop = ptxr.as_xrv(core_rv)
-        return xop(beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
+        return xop(beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
 @copy_docstring(regular_dists.Beta)
@@ -289,9 +289,9 @@ class Weibull(PositiveDimDistribution):
         return super().dist([alpha, beta], **kwargs)
 
     @classmethod
-    def xrv_op(self, alpha, beta, core_dims=None, extra_dims=None, rng=None):
+    def xrv_op(self, alpha, beta, core_dims=None, extra_dims=None, rng=None, **kwargs):
         alpha = as_xtensor(alpha)
         beta = as_xtensor(beta)
         core_rv = WeibullBetaRV.rv_op(alpha=alpha.values, beta=beta.values).owner.op
         xop = ptxr.as_xrv(core_rv)
-        return xop(alpha, beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng)
+        return xop(alpha, beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
