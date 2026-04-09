@@ -446,11 +446,14 @@ class TestCompile:
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
 
-    @pytest.mark.filterwarnings("error")  # This is part of the test
+    @pytest.mark.filterwarnings(
+        "error",
+        "ignore:Setting default_update is deprecated:DeprecationWarning",
+    )
     def test_multiple_updates_same_variable(self):
         rng = pytensor.shared(np.random.default_rng(), name="rng")
-        x = pt.random.normal(0, rng=rng)
-        y = pt.random.normal(1, rng=rng)
+        _, x = pt.random.normal(0, rng=rng, return_next_rng=True)
+        _, y = pt.random.normal(1, rng=rng, return_next_rng=True)
 
         # No warnings if only one variable is used
         assert compile([], [x])
@@ -476,7 +479,7 @@ class TestCompile:
     def test_duplicated_client_nodes(self):
         """Test compile_pymc can handle duplicated (mergeable) RV updates."""
         rng = pytensor.shared(np.random.default_rng(1))
-        x = pt.random.normal(rng=rng)
+        _, x = pt.random.normal(rng=rng, return_next_rng=True)
         y = x.owner.clone().default_output()
 
         fn = compile([], [x, y], random_seed=1)

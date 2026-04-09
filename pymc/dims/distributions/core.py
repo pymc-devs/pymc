@@ -322,7 +322,14 @@ class DimDistribution:
             extra_dims = {
                 dim: length for dim, length in dim_lengths.items() if dim not in implied_dims
             }
-        return cls.xrv_op(*dist_params, extra_dims=extra_dims, core_dims=core_dims, **kwargs)
+        _, rv = cls.xrv_op(
+            *dist_params,
+            extra_dims=extra_dims,
+            core_dims=core_dims,
+            return_next_rng=True,
+            **kwargs,
+        )
+        return rv
 
 
 class VectorDimDistribution(DimDistribution):

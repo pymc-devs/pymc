@@ -254,12 +254,14 @@ class EmpiricalGroup(Group):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return pt.random.integers(
+        _, draws = pt.random.integers(
             size=size,
             low=0,
             high=self.histogram.shape[0],
             rng=pytensor.shared(np.random.default_rng()),
+            return_next_rng=True,
         )
+        return draws
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         pytensor_condition_is_here = isinstance(deterministic, Variable)

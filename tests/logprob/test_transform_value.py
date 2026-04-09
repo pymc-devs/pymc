@@ -479,9 +479,9 @@ def test_mixture_transform():
     This test is specific to `MixtureRV`, which is derived from an `OpFromGraph`.
     """
 
-    I_rv = pt.random.bernoulli(0.5, name="I")
-    Y_1_rv = pt.random.beta(100, 1, name="Y_1")
-    Y_2_rv = pt.random.beta(1, 100, name="Y_2")
+    _, I_rv = pt.random.bernoulli(0.5, name="I", return_next_rng=True)
+    _, Y_1_rv = pt.random.beta(100, 1, name="Y_1", return_next_rng=True)
+    _, Y_2_rv = pt.random.beta(1, 100, name="Y_2", return_next_rng=True)
 
     # A `MixtureRV`, which is an `OpFromGraph` subclass, will replace this
     # `pt.stack` in the graph

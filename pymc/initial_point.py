@@ -326,7 +326,7 @@ def make_initial_point_expression(
             value = transform.forward(value, *variable.owner.inputs)
 
         if original_variable in jitter_rvs:
-            jitter = pt.random.uniform(-1, 1, size=value.shape)
+            _, jitter = pt.random.uniform(-1, 1, size=value.shape, return_next_rng=True)
             # Hack to allow xtensor value to be added to tensor jitter
             jitter = value.type.filter_variable(jitter)
             jitter.name = f"{variable.name}_jitter"

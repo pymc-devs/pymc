@@ -121,8 +121,8 @@ class _BaseMixtureRV(SymbolicRandomVariable):
 
         # Draw mixture indexes and append (stack + ndim_supp) broadcastable dimensions to the right
         mix_indexes_rng_next, mix_indexes = pt.random.categorical(
-            weights_broadcasted, rng=mix_indexes_rng
-        ).owner.outputs
+            weights_broadcasted, rng=mix_indexes_rng, return_next_rng=True
+        )
         mix_indexes_padded = pt.shape_padright(mix_indexes, ndim_supp + 1)
 
         # Index components and squeeze mixture dimension

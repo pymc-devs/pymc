@@ -447,7 +447,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
                 mu = reversed_rhos[-1] + pt.sum(prev_xs * reversed_rhos[:-1], axis=0)
             else:
                 mu = pt.sum(prev_xs * reversed_rhos, axis=0)
-            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng, return_next_rng=True)
             return new_x, next_rng
 
         # We transpose inputs as scan iterates over first dimension
@@ -717,7 +717,7 @@ class GARCH11RV(SymbolicRandomVariable):
             new_sigma = pt.sqrt(
                 omega + alpha_1 * pt.square(prev_y) + beta_1 * pt.square(prev_sigma)
             )
-            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
+            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng, return_next_rng=True)
             return new_y, new_sigma, next_rng
 
         y_t, _, noise_next_rng = pytensor.scan(
@@ -870,7 +870,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
             f, g = sde_fn(prev_y, *prev_sde_pars)
             mu = prev_y + dt * f
             sigma = pt.sqrt(dt) * g
-            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng, return_next_rng=True)
             return next_y, next_rng
 
         y_t, noise_next_rng = pytensor.scan(
