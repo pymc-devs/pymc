@@ -17,7 +17,7 @@ import numpy as np
 import pytest
 import scipy.stats as st
 
-from arviz import from_dict
+from arviz_base import from_dict
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log

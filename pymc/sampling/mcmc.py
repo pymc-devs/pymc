@@ -32,8 +32,7 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import dict_to_dataset
-from arviz_base import make_attrs
+from arviz_base import dict_to_dataset, make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
@@ -391,17 +390,17 @@ def _sample_external_nuts(
         coords, dims = coords_and_dims_for_inferencedata(model)
         constant_data = dict_to_dataset(
             find_constants(model),
-            library=pm,
+            inference_library=pm,
             coords=coords,
             dims=dims,
-            default_dims=[],
+            sample_dims=[],
         )
         observed_data = dict_to_dataset(
             find_observations(model),
-            library=pm,
+            inference_library=pm,
             coords=coords,
             dims=dims,
-            default_dims=[],
+            sample_dims=[],
         )
         attrs = make_attrs(
             {
