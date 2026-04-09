@@ -28,7 +28,7 @@ from typing import (
 import numpy as np
 import xarray
 
-from arviz import dict_to_dataset, rcParams
+from arviz_base import dict_to_dataset, rcParams
 from arviz_base.base import requires
 from arviz_base.types import CoordSpec, DimSpec
 from pytensor.graph import ancestors
