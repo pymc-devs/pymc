@@ -125,7 +125,8 @@ class TruncatedRV(SymbolicRandomVariable):
                 pt.exp(logcdf_upper_),
                 rng=uniform_rng_,
                 size=rv_.shape,
-            ).owner.outputs
+                return_next_rng=True,
+            )
             truncated_rv_ = icdf(rv_, uniform_, warn_rvs=False)
             return TruncatedRV(
                 base_rv_op=dist.owner.op,

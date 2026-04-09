@@ -1232,7 +1232,7 @@ class KumaraswamyRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(a, b, ndims_params=cls.ndims_params)
 
-        next_rng, u = uniform(size=size, rng=rng).owner.outputs
+        next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
         draws = (1 - (1 - u) ** (1 / b)) ** (1 / a)
 
         return cls(
@@ -1545,7 +1545,7 @@ class AsymmetricLaplaceRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(b, kappa, mu, ndims_params=cls.ndims_params)
 
-        next_rng, u = uniform(size=size, rng=rng).owner.outputs
+        next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
         switch = kappa**2 / (1 + kappa**2)
         non_positive_x = mu + kappa * pt.log(u * (1 / switch)) / b
         positive_x = mu - pt.log((1 - u) * (1 + kappa**2)) / (kappa * b)
@@ -2248,7 +2248,7 @@ class HalfCauchyRV(SymbolicRandomVariable):
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
-        next_rng, cauchy_draws = cauchy(loc=0, scale=beta, size=size, rng=rng).owner.outputs
+        next_rng, cauchy_draws = cauchy(loc=0, scale=beta, size=size, rng=rng, return_next_rng=True)
         draws = pt.abs(cauchy_draws)
 
         return cls(inputs=[rng, size, beta], outputs=[next_rng, draws])(rng, size, beta)
@@ -2656,7 +2656,7 @@ class WeibullBetaRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(alpha, beta, ndims_params=cls.ndims_params)
 
-        next_rng, raw_weibull = pt.random.weibull(alpha, size=size, rng=rng).owner.outputs
+        next_rng, raw_weibull = pt.random.weibull(alpha, size=size, rng=rng, return_next_rng=True)
         draws = beta * raw_weibull
         return cls(
             inputs=[rng, size, alpha, beta],
@@ -2780,7 +2780,7 @@ class HalfStudentTRV(SymbolicRandomVariable):
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
-        next_rng, t_draws = t(df=nu, scale=sigma, size=size, rng=rng).owner.outputs
+        next_rng, t_draws = t(df=nu, scale=sigma, size=size, rng=rng, return_next_rng=True)
         draws = pt.abs(t_draws)
 
         return cls(inputs=[rng, size, nu, sigma], outputs=[next_rng, draws])(rng, size, nu, sigma)
@@ -2905,8 +2905,12 @@ class ExGaussianRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(mu, sigma, nu, ndims_params=cls.ndims_params)
 
-        next_rng, normal_draws = normal(loc=mu, scale=sigma, size=size, rng=rng).owner.outputs
-        final_rng, exponential_draws = exponential(scale=nu, size=size, rng=next_rng).owner.outputs
+        next_rng, normal_draws = normal(
+            loc=mu, scale=sigma, size=size, rng=rng, return_next_rng=True
+        )
+        final_rng, exponential_draws = exponential(
+            scale=nu, size=size, rng=next_rng, return_next_rng=True
+        )
         draws = normal_draws + exponential_draws
 
         return cls(inputs=[rng, size, mu, sigma, nu], outputs=[final_rng, draws])(

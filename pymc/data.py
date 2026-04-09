@@ -150,7 +150,9 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
         )(upper, pt.all([pt.eq(upper, other_tensor.shape[0]) for other_tensor in tensors[1:]]))
 
     rng = pytensor.shared(np.random.default_rng())
-    rng_update, mb_indices = minibatch_index(0, upper, size=batch_size, rng=rng).owner.outputs
+    rng_update, mb_indices = minibatch_index(
+        0, upper, size=batch_size, rng=rng, return_next_rng=True
+    )
     mb_tensors = [tensor[mb_indices] for tensor in tensors]
 
     # Wrap graph in OFG so it's easily identifiable and not rewritten accidentally
