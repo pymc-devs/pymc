@@ -17,8 +17,6 @@
 Store sampling values in memory as a NumPy array.
 """
 
-from typing import Any
-
 import numpy as np
 
 from pymc.backends import base
@@ -190,13 +188,15 @@ class NDArray(base.BaseTrace):
 
         return sliced
 
-    def point(self, idx) -> dict[str, Any]:
+    def point(self, idx) -> dict[str, np.ndarray | np.number]:
         """Return point values at `idx` for current chain.
 
         Returns
         -------
-        values : dict[str, Any]
-            Dictionary of values with variable names as keys.
+        values : dict[str, np.ndarray | np.number]
+            Dictionary of values with variable names as keys. Scalar
+            (0-d) variables are returned as numpy scalars rather than
+            0-d ndarrays.
         """
         idx = int(idx)
         return {varname: values[idx] for varname, values in self.samples.items()}

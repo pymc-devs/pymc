@@ -103,13 +103,16 @@ class IBaseTrace(ABC, Sized):
         """Slice trace object."""
         raise NotImplementedError()
 
-    def point(self, idx: int) -> dict[str, np.ndarray]:
+    def point(self, idx: int) -> Mapping[str, np.ndarray | np.number]:
         """Return point values at `idx` for current chain.
 
         Returns
         -------
-        values : dict[str, np.ndarray]
-            Dictionary of values with variable names as keys.
+        values : Mapping[str, np.ndarray | np.number]
+            Dictionary of values with variable names as keys. Values for
+            scalar (0-d) variables may be returned as numpy scalars rather
+            than 0-d ndarrays; callers that need a strict ndarray must
+            wrap with ``np.asarray``.
         """
         raise NotImplementedError()
 
@@ -573,7 +576,7 @@ class MultiTrace:
         trace._report = self._report._slice(*idxs)
         return trace
 
-    def point(self, idx: int, chain: int | None = None) -> dict[str, np.ndarray]:
+    def point(self, idx: int, chain: int | None = None) -> Mapping[str, np.ndarray | np.number]:
         """Return a dictionary of point values at `idx`.
 
         Parameters

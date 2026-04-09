@@ -1735,7 +1735,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         std_apoint = approx.std.eval()
         cov = std_apoint**2
         mean = approx.mean.get_value()
@@ -1759,7 +1761,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "advi_map":
@@ -1777,7 +1781,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "map":
