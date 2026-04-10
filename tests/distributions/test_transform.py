@@ -84,6 +84,7 @@ def check_jacobian_det(
     make_comparable=None,
     elemwise=False,
     rv_var=None,
+    tol=tol,
 ):
     y = constructor("y")
 
@@ -298,10 +299,33 @@ def test_chain_vector_transform():
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
 
-@pytest.mark.xfail(reason="Fails due to precision issue. Values just close to expected.")
 def test_chain_jacob_det():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
-    check_jacobian_det(chain_tranf, Vector(R, 4), pt.vector, floatX(np.zeros(4)), elemwise=False)
+
+    # Numerical det(jacobian) baseline loses precision for large values (see commit msg),
+    # so we use a looser tolerance here.
+    check_jacobian_det(
+        chain_tranf, Vector(R, 4), pt.vector, floatX(np.zeros(4)), elemwise=False, tol=1e-4
+    )
+
+    # The analytical log_jac_det itself is precise; verify against mpmath reference.
+    # Reference log|det(J)| values computed with mpmath at 50-digit precision.
+    # See recipe in this commit's message.
+    if config.floatX == "float64":
+        test_points = [
+            ([0, 0, 0, 0], -8.363848461389765),
+            ([2.1, 2.1, 2.1, 2.1], -51.32812812107032),
+            ([-1.0, 0.5, 1.0, -0.5], -9.561856735240324),
+            ([0.01, -0.01, 1.0, 2.1], -15.573681776928918),
+        ]
+        y_var = pt.vector("y")
+        computed_ljd = function(
+            [y_var],
+            pt.as_tensor_variable(chain_tranf.log_jac_det(y_var)),
+            on_unused_input="ignore",
+        )
+        for y_val, expected in test_points:
+            assert_allclose(computed_ljd(floatX(np.array(y_val))), expected, rtol=1e-12, atol=1e-12)
 
 
 class TestElementWiseLogp:
