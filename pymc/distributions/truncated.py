@@ -14,7 +14,6 @@
 from functools import singledispatch
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor import config, scan
@@ -96,9 +95,7 @@ class TruncatedRV(SymbolicRandomVariable):
         dist = change_dist_size(dist, new_size=size)
 
         rv_inputs = [
-            inp
-            if not isinstance(inp.type, RandomType)
-            else pytensor.shared(np.random.default_rng())
+            inp if not isinstance(inp.type, RandomType) else pt.random.shared_rng(seed=None)
             for inp in dist.owner.inputs
         ]
         graph_inputs = [*rv_inputs, lower, upper]
@@ -144,8 +141,26 @@ class TruncatedRV(SymbolicRandomVariable):
         # while any(reject_draws):
         #    truncated_rv[reject_draws] = draw(rv)[reject_draws]
         #    reject_draws = (truncated_rv < lower) | (truncated_rv > upper)
-        def loop_fn(truncated_rv, reject_draws, lower, upper, *rv_inputs):
-            new_truncated_rv = dist.owner.op.make_node(*rv_inputs).default_output()
+
+        # We need to split the rv_inputs on whether they are rng or not, as rng must be updated inside the scan
+        # TODO: This will be simplified by https://github.com/pymc-devs/pytensor/pull/1968
+        is_rng_arg = tuple(isinstance(arg.type, RandomType) for arg in rv_inputs_)
+        len_rng = sum(is_rng_arg)
+
+        def loop_fn(truncated_rv, reject_draws, *truncated_args):
+            rngs = truncated_args[:len_rng]
+            lower, upper, *other_args = truncated_args[len_rng:]
+
+            step_rv_inputs = []
+            rngs_iter = iter(rngs)
+            other_args_iter = iter(other_args)
+            for is_rng in is_rng_arg:
+                if is_rng:
+                    step_rv_inputs.append(next(rngs_iter))
+                else:
+                    step_rv_inputs.append(next(other_args_iter))
+
+            new_truncated_rv = dist.owner.op.make_node(*step_rv_inputs).default_output()
             # Avoid scalar boolean indexing
             if truncated_rv.type.ndim == 0:
                 truncated_rv = new_truncated_rv
@@ -156,21 +171,29 @@ class TruncatedRV(SymbolicRandomVariable):
                 )
             reject_draws = pt.or_((truncated_rv < lower), (truncated_rv > upper))
 
+            rng_updates = collect_default_updates(new_truncated_rv, must_be_shared=False)
+            next_rngs = [rng_updates[rng] for rng in rngs]
+
             return (
-                (truncated_rv, reject_draws),
-                collect_default_updates(new_truncated_rv),
+                (truncated_rv, reject_draws, *next_rngs),
                 until(~pt.any(reject_draws)),
             )
 
-        (truncated_rv_, reject_draws_), updates = scan(
+        truncated_rv_, reject_draws_, *final_rngs = scan(
             loop_fn,
             outputs_info=[
                 pt.zeros_like(rv_),
                 pt.ones_like(rv_, dtype=bool),
+                *(arg for is_rng, arg in zip(is_rng_arg, rv_inputs_) if is_rng),
             ],
-            non_sequences=[lower_, upper_, *rv_inputs_],
+            non_sequences=[
+                lower_,
+                upper_,
+                *(arg for is_rng, arg in zip(is_rng_arg, rv_inputs_) if not is_rng),
+            ],
             n_steps=max_n_steps,
             strict=True,
+            return_updates=False,
         )
 
         truncated_rv_ = truncated_rv_[-1]
@@ -179,17 +202,10 @@ class TruncatedRV(SymbolicRandomVariable):
             truncated_rv_, convergence_
         )
 
-        # Sort updates of each RNG so that they show in the same order as the input RNGs
-        def sort_updates(update):
-            rng, next_rng = update
-            return graph_inputs.index(rng)
-
-        next_rngs = [next_rng for rng, next_rng in sorted(updates.items(), key=sort_updates)]
-
         return TruncatedRV(
             base_rv_op=dist.owner.op,
             inputs=graph_inputs_,
-            outputs=[truncated_rv_, *next_rngs],
+            outputs=[truncated_rv_, *final_rngs],
             ndim_supp=0,
             max_n_steps=max_n_steps,
         )(*graph_inputs)
