@@ -444,6 +444,27 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
         assert data["mu"].shape == ()
 
 
+def test_sample_posterior_predictive_after_set_data():
+    y = np.array([1.0, 2.0, 3.0])
+    with pm.Model(coords={"obs_id": [0, 1, 2]}) as model:
+        x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
+        beta = pm.Normal("beta", 0, 10.0)
+        pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y, dims="obs_id")
+        approx = pm.fit(
+            10,
+            method="advi",
+            progressbar=False,
+        )
+        trace = approx.sample(500)
+
+    with model:
+        x_test = [5, 6, 9, 12, 15]
+        pm.set_data(new_data={"x": x_test}, coords={"obs_id": list(range(len(x_test)))})
+        y_test = pm.sample_posterior_predictive(trace, predictions=True, progressbar=False)
+
+    assert y_test.predictions["obs"].shape == (1, 500, 5)
+
+
 def test_multiple_minibatch_variables():
     """Regression test for bug reported in
     https://discourse.pymc.io/t/verifying-that-minibatch-is-actually-randomly-sampling/14308
