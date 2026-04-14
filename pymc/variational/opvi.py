@@ -1229,7 +1229,10 @@ class Approximation(WithMemoization):
             else:
                 rest.__init_group__(unseen_free_RVs)
                 self.groups.append(rest)
-        self.model = model
+
+    @property
+    def model(self):
+        return modelcontext(self.groups[0].model if self.groups else None)
 
     @property
     def has_logq(self):
@@ -1503,14 +1506,8 @@ class Approximation(WithMemoization):
 
         This node still needs :func:`set_size_and_deterministic` to be evaluated.
         """
-
-        def vars_names(vs):
-            return {self.model.rvs_to_values[v].name for v in vs}
-
-        for vars_, random, ordering in zip(
-            self.collect("group"), self.symbolic_randoms, self.collect("ordering")
-        ):
-            if name in vars_names(vars_):
+        for random, ordering in zip(self.symbolic_randoms, self.collect("ordering")):
+            if name in ordering:
                 name_, slc, shape, dtype = ordering[name]
                 found = random[..., slc].reshape((random.shape[0], *shape)).astype(dtype)
                 found.name = name + "_vi_random_slice"
@@ -1522,7 +1519,7 @@ class Approximation(WithMemoization):
     @node_property
     def sample_dict_fn(self):
         s = pt.iscalar()
-        names = [self.model.rvs_to_values[v].name for v in self.model.free_RVs]
+        names = [name for ordering in self.collect("ordering") for name in ordering]
         sampled = [self.rslice(name) for name in names]
         sampled = self.set_size_and_deterministic(sampled, s, 0)
         sample_fn = compile([s], sampled)
