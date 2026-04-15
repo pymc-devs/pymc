@@ -16,9 +16,10 @@ import re
 
 from collections.abc import Callable, Sequence
 
-from pytensor import Variable, clone_replace
 from pytensor import tensor as pt
+from pytensor.graph.basic import Variable
 from pytensor.graph.features import ReplaceValidate
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import GraphRewriter
 from pytensor.graph.traversal import io_toposort
 from pytensor.scan.op import Scan
@@ -31,6 +32,7 @@ from pytensor.tensor.utils import safe_signature
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
+    _call_rv_op,
     _support_point,
     support_point,
 )
@@ -188,7 +190,8 @@ class _CustomDist(Distribution):
             return support_point(rv, size, *dist_params)
 
         rv_op = rv_type()
-        return rv_op(*dist_params, **kwargs)
+        _, rv = _call_rv_op(rv_op, *dist_params, **kwargs)
+        return rv
 
 
 class CustomSymbolicDistRV(SymbolicRandomVariable):

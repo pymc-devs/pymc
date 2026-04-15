@@ -32,12 +32,12 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz import InferenceData, dict_to_dataset
-from arviz.data.base import make_attrs
+from arviz_base import dict_to_dataset, make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
+from xarray import DataTree
 
 import pymc as pm
 
@@ -390,17 +390,17 @@ def _sample_external_nuts(
         coords, dims = coords_and_dims_for_inferencedata(model)
         constant_data = dict_to_dataset(
             find_constants(model),
-            library=pm,
+            inference_library=pm,
             coords=coords,
             dims=dims,
-            default_dims=[],
+            sample_dims=[],
         )
         observed_data = dict_to_dataset(
             find_observations(model),
-            library=pm,
+            inference_library=pm,
             coords=coords,
             dims=dims,
-            default_dims=[],
+            sample_dims=[],
         )
         attrs = make_attrs(
             {
@@ -411,7 +411,7 @@ def _sample_external_nuts(
         )
         for k, v in attrs.items():
             idata.posterior.attrs[k] = v
-        idata.add_groups(
+        idata.update(
             {"constant_data": constant_data, "observed_data": observed_data},
             coords=coords,
             dims=dims,
@@ -475,7 +475,7 @@ def sample(
     blas_cores: int | None | Literal["auto"] = "auto",
     compile_kwargs: dict | None = None,
     **kwargs,
-) -> InferenceData: ...
+) -> DataTree: ...
 
 
 @overload
@@ -542,7 +542,7 @@ def sample(
     model: Model | None = None,
     compile_kwargs: dict | None = None,
     **kwargs,
-) -> InferenceData | MultiTrace | ZarrTrace:
+) -> DataTree | MultiTrace | ZarrTrace:
     r"""Draw samples from the posterior using the given step methods.
 
     Multiple step methods are supported via compound step methods.
@@ -1059,7 +1059,7 @@ def _sample_return(
     idata_kwargs: dict[str, Any],
     model: Model,
     quiet: bool = False,
-) -> InferenceData | MultiTrace | ZarrTrace:
+) -> DataTree | MultiTrace | ZarrTrace:
     """Pick/slice chains, run diagnostics and convert to the desired return type.
 
     Final step of `pm.sampler`.
@@ -1093,6 +1093,13 @@ def _sample_return(
             idata = traces.to_inferencedata(save_warmup=not discard_tuned_samples)
             log_likelihood = idata_kwargs.pop("log_likelihood", False)
             if log_likelihood:
+                warnings.warn(
+                    "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
+                    ":func:`pymc.compute_log_likelihood` instead.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+
                 from pymc.stats.log_density import compute_log_likelihood
 
                 idata = compute_log_likelihood(
@@ -1727,7 +1734,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         std_apoint = approx.std.eval()
         cov = std_apoint**2
         mean = approx.mean.get_value()
@@ -1751,7 +1760,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "advi_map":
@@ -1769,7 +1780,9 @@ def init_nuts(
         approx_sample = approx.sample(
             draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
         )
-        initial_points = [approx_sample[i] for i in range(chains)]
+        initial_points = [
+            {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
+        ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "map":

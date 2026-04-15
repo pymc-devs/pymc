@@ -84,20 +84,16 @@ def augment_system(ode_func, n_states, n_theta):
     """
     # Present state of the system
     t_y = pt.vector("y", dtype="float64", shape=(n_states,))
-    t_y.tag.test_value = np.ones((n_states,), dtype="float64")
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
     t_p = pt.vector("p", dtype="float64")
-    t_p.tag.test_value = np.ones((n_states + n_theta,), dtype="float64")
     # Time.  Allow for non-autonomous systems of ODEs to be analyzed
     t_t = pt.scalar("t", dtype="float64")
-    t_t.tag.test_value = 2.459
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the initial condition
     # Entry i,j is partial of y[i] wrt to p[j]
     dydp_vec = pt.vector("dydp", dtype="float64")
-    dydp_vec.tag.test_value = make_sens_ic(n_states, n_theta, "float64")
 
     dydp = dydp_vec.reshape((n_states, n_states + n_theta))
 

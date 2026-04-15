@@ -12,7 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 import pytest
 import scipy.special
@@ -120,14 +119,12 @@ def test_multinomial_check_parameters():
 
 
 class TestSplineWrapper:
-    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
         verify_grad(spline, [0.5])
 
-    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_hessian(self):
         x = np.linspace(0, 1, 100)
         y = x * x
@@ -139,7 +136,6 @@ class TestSplineWrapper:
 
 
 class TestI0e:
-    @pytensor.config.change_flags(compute_test_value="ignore")
     def test_grad(self):
         verify_grad(i0e, [0.5])
         verify_grad(i0e, [-2.0])

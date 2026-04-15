@@ -19,13 +19,12 @@ from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
-import arviz as az
 import jax
-import jax.numpy as jnp
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
+import xarray as xr
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
@@ -33,7 +32,6 @@ from pytensor.graph import graph_inputs
 import pymc as pm
 
 from pymc import ImputationWarning
-from pymc.distributions.multivariate import PosDefMatrix
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
@@ -44,26 +42,8 @@ from pymc.sampling.jax import (
     sample_numpyro_nuts,
 )
 
-MCMC = pytest.importorskip("numpyro.infer.MCMC")
-
-
-def test_jax_PosDefMatrix():
-    x = pt.tensor(name="x", shape=(2, 2), dtype="float32")
-    matrix_pos_def = PosDefMatrix()
-    x_is_pos_def = matrix_pos_def(x)
-    f = pytensor.function(inputs=[x], outputs=[x_is_pos_def], mode="JAX")
-
-    test_cases = [
-        (jnp.eye(2), True),
-        (jnp.zeros(shape=(2, 2)), False),
-        (jnp.array([[1, -1.5], [0, 1.2]], dtype="float32"), True),
-        (-1 * jnp.array([[1, -1.5], [0, 1.2]], dtype="float32"), False),
-        (jnp.array([[1, -1.5], [0, -1.2]], dtype="float32"), False),
-    ]
-
-    for input, expected in test_cases:
-        actual = f(input)[0]
-        assert jnp.array_equal(a1=actual, a2=expected)
+MCMC = pytest.importorskip("numpyro.infer").MCMC
+pytest.importorskip("blackjax")
 
 
 @pytest.mark.parametrize(
@@ -234,10 +214,6 @@ def test_replace_shared_variables():
     shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]
     assert not shared_variables
 
-    x.default_update = x + 1
-    with pytest.raises(ValueError, match="shared variables with default_update"):
-        _replace_shared_variables([x])
-
     shared_rng = pytensor.shared(np.random.default_rng(), name="shared_rng")
     x = pytensor.tensor.random.normal(rng=shared_rng)
     with pytest.raises(ValueError, match="Graph contains shared RandomType variables"):
@@ -290,11 +266,11 @@ def model_test_idata_kwargs() -> pm.Model:
 @pytest.mark.parametrize("postprocessing_backend", [None, "cpu"])
 def test_idata_kwargs(
     model_test_idata_kwargs: pm.Model,
-    sampler: Callable[..., az.InferenceData],
+    sampler: Callable[..., xr.DataTree],
     idata_kwargs: dict[str, Any],
     postprocessing_backend: str | None,
 ):
-    idata: az.InferenceData | None = None
+    idata: xr.DataTree | None = None
     with model_test_idata_kwargs:
         idata = sampler(
             tune=50,
@@ -454,7 +430,7 @@ def test_numpyro_nuts_kwargs_are_used(mocked: mock.MagicMock):
 )
 def test_idata_contains_stats(sampler_name: str):
     """Tests whether sampler statistics were written to sample_stats
-    group of InferenceData"""
+    group of idata"""
     if sampler_name == "sample_blackjax_nuts":
         sampler = sample_blackjax_nuts
     elif sampler_name == "sample_numpyro_nuts":

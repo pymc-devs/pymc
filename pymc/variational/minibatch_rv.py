@@ -16,8 +16,9 @@ from typing import Any, cast
 
 import pytensor.tensor as pt
 
-from pytensor import Variable, config
+from pytensor import config
 from pytensor.graph import Apply, Op
+from pytensor.graph.basic import Variable
 from pytensor.tensor import NoneConst, TensorVariable, as_tensor_variable
 
 from pymc.logprob.abstract import MeasurableOp, _logprob

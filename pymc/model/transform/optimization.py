@@ -13,9 +13,9 @@
 #   limitations under the License.
 from collections.abc import Sequence
 
-from pytensor import clone_replace
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph
+from pytensor.graph.replace import clone_replace
 
 from pymc import Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph

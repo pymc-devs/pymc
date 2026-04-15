@@ -15,11 +15,11 @@
 import numpy as np
 import pytensor
 
-from arviz import InferenceData
 from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor.variable import TensorVariable
+from xarray import DataTree
 
 import pymc as pm
 
@@ -69,7 +69,6 @@ class MeanFieldGroup(Group):
     def std(self):
         return rho2sigma(self.rho)
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -130,7 +129,6 @@ class FullRankGroup(Group):
     short_name = "full_rank"
     alias_names = frozenset(["fr"])
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         if not self._check_user_params():
@@ -201,7 +199,6 @@ class EmpiricalGroup(Group):
     __param_spec__ = {"histogram": ("s", "d")}
     short_name = "empirical"
 
-    @pytensor.config.change_flags(compute_test_value="off")
     def __init_group__(self, group):
         super().__init_group__(group)
         self._check_trace()
@@ -234,9 +231,9 @@ class EmpiricalGroup(Group):
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
-        if isinstance(trace, InferenceData):
+        if isinstance(trace, DataTree):
             raise NotImplementedError(
-                "The `Empirical` approximation does not yet support `InferenceData` inputs."
+                "The `Empirical` approximation does not yet support `DataTree` inputs."
                 " Pass `pm.sample(return_inferencedata=False)` to get a `MultiTrace` to use with `Empirical`."
                 " Please help us to refactor: https://github.com/pymc-devs/pymc/issues/5884"
             )
@@ -257,12 +254,14 @@ class EmpiricalGroup(Group):
                 pass
         else:
             size = tuple(np.atleast_1d(size))
-        return pt.random.integers(
+        _, draws = pt.random.integers(
             size=size,
             low=0,
             high=self.histogram.shape[0],
-            rng=pytensor.shared(np.random.default_rng()),
+            rng=pt.random.shared_rng(seed=None),
+            return_next_rng=True,
         )
+        return draws
 
     def _new_initial(self, size, deterministic, more_replacements=None):
         pytensor_condition_is_here = isinstance(deterministic, Variable)

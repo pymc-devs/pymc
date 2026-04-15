@@ -166,7 +166,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -186,7 +187,7 @@ jobs:
     strategy:
       matrix:
         linker: [cvm, numba]
-        python-version: ["3.11"]
+        python-version: ["3.12"]
         test-subset:
           - tests/variational/test_approximations.py tests/variational/test_callbacks.py tests/variational/test_inference.py tests/variational/test_opvi.py tests/test_initial_point.py
           - tests/model/test_core.py tests/sampling/test_mcmc.py
@@ -215,7 +216,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -272,7 +274,8 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -323,7 +326,8 @@ jobs:
           cache-environment: true
       - name: Install pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests
@@ -369,7 +373,8 @@ jobs:
           cache-environment: true
       - name: Install-pymc
         run: |
-          pip install -e .
+          pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3" --no-deps
+          pip install -e . --no-deps
           python --version
           micromamba list
       - name: Run tests

@@ -15,7 +15,6 @@ import itertools
 import warnings
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, equal_computations
@@ -62,7 +61,7 @@ class _BaseMixtureRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, weights, *components, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        mix_indexes_rng = pytensor.shared(np.random.default_rng())
+        mix_indexes_rng = pt.random.shared_rng(seed=None)
 
         single_component = len(components) == 1
         ndim_supp = components[0].owner.op.ndim_supp
@@ -121,8 +120,8 @@ class _BaseMixtureRV(SymbolicRandomVariable):
 
         # Draw mixture indexes and append (stack + ndim_supp) broadcastable dimensions to the right
         mix_indexes_rng_next, mix_indexes = pt.random.categorical(
-            weights_broadcasted, rng=mix_indexes_rng
-        ).owner.outputs
+            weights_broadcasted, rng=mix_indexes_rng, return_next_rng=True
+        )
         mix_indexes_padded = pt.shape_padright(mix_indexes, ndim_supp + 1)
 
         # Index components and squeeze mixture dimension

@@ -5,7 +5,7 @@ channels:
 - nodefaults
 dependencies:
 # Base dependencies
-- arviz>=0.13.0,<1.0
+- arviz>=1.0.0,<2.0
 - blas
 - cachetools>=4.2.1,<7
 - cloudpickle
@@ -13,7 +13,6 @@ dependencies:
 - numba
 - nutpie >= 0.15.1
 # Jaxlib version must not be greater than jax version!
-- blackjax>=1.2.2
 - jax>=0.4.28
 - jaxlib>=0.4.28
 - libblas=*=*mkl
@@ -37,6 +36,9 @@ dependencies:
 - pytest>=3.0
 - mypy=1.19.1
 - types-cachetools
+# blackjax now does not pull in fastprogress by default
+- fastprogress>=1.0.0
+- blackjax>=1.5
 - pip:
   - numdifftools>=0.9.40
   - mcbackend>=0.4.0

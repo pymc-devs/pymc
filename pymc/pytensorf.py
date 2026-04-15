@@ -35,6 +35,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -42,7 +43,7 @@ from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.random.var import RandomGeneratorSharedVariable
+from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
@@ -364,7 +365,6 @@ def jacobian_diag(f, x):
     )
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian(f, vars=None, negate_output=True):
     res = jacobian(gradient(f, vars), vars)
     if negate_output:
@@ -378,7 +378,6 @@ def hessian(f, vars=None, negate_output=True):
     return res
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag1(f, v):
     g = gradient1(f, v)
     idx = pt.arange(g.shape[0], dtype="int32")
@@ -389,7 +388,6 @@ def hessian_diag1(f, v):
     return pytensor.map(hess_ii, idx, return_updates=False)
 
 
-@pytensor.config.change_flags(compute_test_value="ignore")
 def hessian_diag(f, vars=None, negate_output=True):
     if vars is None:
         vars = cont_inputs(f)
@@ -580,9 +578,6 @@ def join_nonshared_inputs(
         joined_values = np.concatenate([point[var.name].ravel() for var in inputs])
         joined_inputs = pytensor.shared(joined_values, "joined_inputs")
 
-    if pytensor.config.compute_test_value != "off":
-        joined_inputs.tag.test_value = raveled_inputs.tag.test_value
-
     replace: dict[Variable, Variable] = {}
     last_idx = 0
     for var in inputs:
@@ -597,9 +592,7 @@ def join_nonshared_inputs(
     if shared_inputs is not None:
         replace.update(shared_inputs)
 
-    new_outputs = [
-        pytensor.clone_replace(output, replace, rebuild_strict=False) for output in outputs
-    ]
+    new_outputs = [clone_replace(output, replace, rebuild_strict=False) for output in outputs]
     return new_outputs, joined_inputs
 
 
@@ -632,7 +625,7 @@ class CallableTensor:
         input: TensorVariable
         """
         (oldinput,) = explicit_graph_inputs(self.tensor)
-        return pytensor.clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
+        return clone_replace(self.tensor, {oldinput: input}, rebuild_strict=False)
 
 
 def ix_(*args):
@@ -876,16 +869,9 @@ def collect_default_updates(
             and isinstance(inp.type, RandomType)
         )
     ):
-        # Even if an explicit default update is provided, we call it to
-        # issue any warnings about invalid random graphs.
         default_update = find_default_update(clients, input_rng)
-
-        # Respect default update if provided
-        if hasattr(input_rng, "default_update") and input_rng.default_update is not None:
-            rng_updates[input_rng] = input_rng.default_update
-        else:
-            if default_update is not None:
-                rng_updates[input_rng] = default_update
+        if default_update is not None:
+            rng_updates[input_rng] = default_update
 
     return rng_updates
 
@@ -1032,7 +1018,7 @@ class StringConstant(Constant):
     pass
 
 
-@pytensor._as_symbolic.register(str)
+@pytensor.basic._as_symbolic.register(str)
 def as_symbolic_string(x, **kwargs):
     return StringConstant(stringtype, x)
 
@@ -1056,7 +1042,7 @@ def toposort_replace(
 def normalize_rng_param(rng: None | Variable) -> Variable:
     """Validate rng is a valid type or create a new one if None."""
     if rng is None:
-        rng = pytensor.shared(np.random.default_rng())
+        rng = pt.random.shared_rng(seed=None)
     elif not isinstance(rng.type, RandomType):
         raise TypeError(
             "The type of rng should be an instance of either RandomGeneratorType or RandomStateType"

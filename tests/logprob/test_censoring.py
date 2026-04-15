@@ -53,7 +53,6 @@ def test_continuous_rv_clip():
     cens_x_rv = pt.clip(x_rv, -2, 2)
 
     cens_x_vv = cens_x_rv.clone()
-    cens_x_vv.tag.test_value = 0
 
     logprob = pt.sum(logp(cens_x_rv, cens_x_vv))
     assert_no_rvs(logprob)

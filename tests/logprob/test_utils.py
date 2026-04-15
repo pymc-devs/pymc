@@ -42,6 +42,7 @@ from pytensor import function
 from pytensor import tensor as pt
 from pytensor.compile import get_default_mode
 from pytensor.graph.basic import equal_computations
+from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import ancestors, explicit_graph_inputs
 from pytensor.tensor.random.basic import NormalRV
 from pytensor.tensor.random.op import RandomVariable
@@ -193,7 +194,7 @@ class TestReplaceRVsByValues:
             pm.Potential("two_pot", two)
             pm.Potential("one_pot", one)
 
-        before = pytensor.clone_replace(m.free_RVs)
+        before = clone_replace(m.free_RVs)
 
         # This call would change the model free_RVs in place in #5172
         replace_rvs_by_values(
@@ -202,7 +203,7 @@ class TestReplaceRVsByValues:
             rvs_to_transforms=m.rvs_to_transforms,
         )
 
-        after = pytensor.clone_replace(m.free_RVs)
+        after = clone_replace(m.free_RVs)
         assert equal_computations(before, after)
 
     @pytest.mark.parametrize("reversed", (False, True))

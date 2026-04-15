@@ -20,6 +20,8 @@ from pymc.progress_bar.marimo_progress_css import DEFAULT_CSS
 
 def format_time(seconds: float) -> str:
     """Format elapsed time as mm:ss or hh:mm:ss."""
+    if seconds < 1:
+        return f"{seconds:.1f}s"
     minutes, secs = divmod(int(seconds), 60)
     hours, minutes = divmod(minutes, 60)
     if hours > 0:
@@ -41,49 +43,6 @@ def in_marimo_notebook() -> bool:
         return mo.running_in_notebook()
     except (ImportError, AttributeError):
         return False
-
-
-def _mo_write_internal(cell_id: str, value: object) -> None:
-    """Write to marimo cell given cell_id."""
-    from marimo._messaging.cell_output import CellChannel
-    from marimo._messaging.notification_utils import CellNotificationUtils
-    from marimo._messaging.tracebacks import write_traceback
-    from marimo._output import formatting
-
-    output = formatting.try_format(value)
-    if output.traceback is not None:
-        write_traceback(output.traceback)
-    CellNotificationUtils.broadcast_output(
-        channel=CellChannel.OUTPUT,
-        mimetype=output.mimetype,
-        data=output.data,
-        cell_id=cell_id,  # type: ignore[arg-type]
-        status=None,
-    )
-
-
-def _mo_create_replace() -> Callable[[object], None] | None:
-    """Create mo.output.replace with current cell context pinned."""
-    from marimo._output import formatting
-    from marimo._runtime.context import get_context
-    from marimo._runtime.context.types import ContextNotInitializedError
-
-    try:
-        ctx = get_context()
-    except ContextNotInitializedError:
-        return None
-
-    if ctx.execution_context is None:
-        return None
-
-    cell_id = ctx.execution_context.cell_id
-    execution_context = ctx.execution_context
-
-    def replace(value: object) -> None:
-        execution_context.output = [formatting.as_html(value)]
-        _mo_write_internal(cell_id=cell_id, value=value)
-
-    return replace
 
 
 class MarimoProgressBackend:
@@ -112,6 +71,8 @@ class MarimoProgressBackend:
         self._mo_replace: Callable[[object], None] | None = None
         self._task_state: list[dict[str, Any]] = []
         self._start_times: list[float] = []
+        self._last_render_time: float = 0.0
+        self._min_render_interval: float = 0.1
 
     @property
     def is_enabled(self) -> bool:
@@ -122,7 +83,7 @@ class MarimoProgressBackend:
         """Enter the context manager and initialize display."""
         import marimo as mo
 
-        self._mo_replace = _mo_create_replace()
+        self._mo_replace = mo.output.replace
         self._initialize_tasks()
         mo.output.clear()
         self._render()
@@ -183,14 +144,12 @@ class MarimoProgressBackend:
         self._task_state[task_id]["stats"] = stats
 
         if is_last:
-            # Ensure bar is fully filled on completion
-            total = self._task_state[task_id]["total"]
-            completed = self._task_state[task_id]["completed"]
-            remaining = total - completed
-            if remaining > 0:
-                self._task_state[task_id]["completed"] = total
+            self._task_state[task_id]["completed"] = self._task_state[task_id]["total"]
 
-        self._render()
+        now = perf_counter()
+        if is_last or (now - self._last_render_time) >= self._min_render_interval:
+            self._last_render_time = now
+            self._render()
 
     def _render(self) -> None:
         """Render HTML progress display to marimo output."""
@@ -206,24 +165,26 @@ class MarimoProgressBackend:
         """Generate HTML for all progress bars as a table with headers."""
         stat_keys = []
         if self.full_stats and self._task_state and self._task_state[0]["stats"]:
-            stat_keys = list(self._task_state[0]["stats"].keys())
+            stat_keys = [
+                k for k in self._task_state[0]["stats"].keys() if k != self.step_name.lower()
+            ]
 
         header_cells = ["Progress", self.step_name]
 
-        abbreviations = {
-            "divergences": "Div",
-            "diverging": "Div",
-            "step_size": "Step",
-            "tree_size": "Tree",
-            "tree_depth": "Depth",
-            "n_steps": "Steps",
-            "energy_error": "E-err",
-            "max_energy_error": "Max-E",
-            "mean_tree_accept": "Accept",
-            "scaling": "Scale",
+        column_names = {
+            "divergences": "Divergences",
+            "diverging": "Divergences",
+            "step_size": "Step size",
+            "tree_size": "Grad evals",
+            "tree_depth": "Tree depth",
+            "n_steps": "Grad evals",
+            "energy_error": "Energy error",
+            "max_energy_error": "Max energy error",
+            "mean_tree_accept": "Mean tree accept",
+            "scaling": "Scaling",
             "tune": "Tune",
         }
-        header_cells += [abbreviations.get(k, k[:6].capitalize()) for k in stat_keys]
+        header_cells += [column_names.get(k, k.replace("_", " ").capitalize()) for k in stat_keys]
 
         header_cells += ["Speed", "Elapsed"]
 
@@ -300,21 +261,22 @@ class MarimoSimpleProgress:
         self._mo_replace: Callable[[object], None] | None = None
         self._start_time: float = 0.0
         self._task_id = 0
+        self._last_render_time: float = 0.0
+        self._min_render_interval: float = 0.1
 
     def __enter__(self) -> Self:
         """Enter the context manager."""
-        self._mo_replace = _mo_create_replace()
-        self._start_time = perf_counter()
-
         import marimo as mo
 
+        self._mo_replace = mo.output.replace
+        self._start_time = perf_counter()
         mo.output.clear()
         self._render()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         """Exit the context manager with final render."""
-        self._render()
+        self._render(force=True)
 
     def add_task(
         self, description: str, completed: int = 0, total: int | None = None, **kwargs
@@ -369,13 +331,18 @@ class MarimoSimpleProgress:
         if refresh:
             self._render()
 
-    def _render(self) -> None:
+    def _render(self, force: bool = False) -> None:
         """Render HTML progress to marimo output."""
         if self._mo_replace is None:
             return
 
+        now = perf_counter()
+        if not force and (now - self._last_render_time) < self._min_render_interval:
+            return
+
         import marimo as mo
 
+        self._last_render_time = now
         html = self._render_html()
         self._mo_replace(mo.Html(html))
 

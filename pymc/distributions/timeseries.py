@@ -17,7 +17,6 @@ import warnings
 from abc import ABCMeta
 from collections.abc import Callable
 
-import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
@@ -412,7 +411,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, rhos, sigma, init_dist, steps, ar_order, constant_term, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
         size = normalize_size_param(size)
 
         # Init dist should have shape (*size, ar_order)
@@ -447,7 +446,7 @@ class AutoRegressiveRV(SymbolicRandomVariable):
                 mu = reversed_rhos[-1] + pt.sum(prev_xs * reversed_rhos[:-1], axis=0)
             else:
                 mu = pt.sum(prev_xs * reversed_rhos, axis=0)
-            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            next_rng, new_x = Normal.dist(mu=mu, sigma=sigma, rng=rng, return_next_rng=True)
             return new_x, next_rng
 
         # We transpose inputs as scan iterates over first dimension
@@ -700,7 +699,7 @@ class GARCH11RV(SymbolicRandomVariable):
         alpha_1 = pt.as_tensor(alpha_1)
         beta_1 = pt.as_tensor(beta_1)
         initial_vol = pt.as_tensor(initial_vol)
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
         size = normalize_size_param(size)
 
         if rv_size_is_none(size):
@@ -717,7 +716,7 @@ class GARCH11RV(SymbolicRandomVariable):
             new_sigma = pt.sqrt(
                 omega + alpha_1 * pt.square(prev_y) + beta_1 * pt.square(prev_sigma)
             )
-            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng).owner.outputs
+            next_rng, new_y = Normal.dist(mu=0, sigma=new_sigma, rng=rng, return_next_rng=True)
             return new_y, new_sigma, next_rng
 
         y_t, _, noise_next_rng = pytensor.scan(
@@ -855,7 +854,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
     @classmethod
     def rv_op(cls, init_dist, steps, sde_pars, dt, sde_fn, size=None):
         # We don't allow passing `rng` because we don't fully control the rng of the components!
-        noise_rng = pytensor.shared(np.random.default_rng())
+        noise_rng = pt.random.shared_rng(seed=None)
 
         # Init dist should have shape (*size,)
         if size is not None:
@@ -870,7 +869,7 @@ class EulerMaruyamaRV(SymbolicRandomVariable):
             f, g = sde_fn(prev_y, *prev_sde_pars)
             mu = prev_y + dt * f
             sigma = pt.sqrt(dt) * g
-            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng).owner.outputs
+            next_rng, next_y = Normal.dist(mu=mu, sigma=sigma, rng=rng, return_next_rng=True)
             return next_y, next_rng
 
         y_t, noise_next_rng = pytensor.scan(

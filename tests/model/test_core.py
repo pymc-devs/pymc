@@ -229,8 +229,8 @@ class TestNested:
         with pm.Model("scope") as model:
             b = pm.Normal("var")
             trace = pm.sample(100, tune=0)
-        az.to_netcdf(trace, tmp_path / "trace.nc")
-        trace1 = az.from_netcdf(tmp_path / "trace.nc")
+        trace.to_netcdf(tmp_path / "trace.nc")
+        trace1 = az.from_netcdf(str(tmp_path / "trace.nc"))
         assert "scope::var" in trace1.posterior
 
     def test_bad_name(self):
@@ -258,14 +258,6 @@ class TestObserved:
 
         assert x1.type.dtype == X.type.dtype
         assert x2.type.dtype == X.type.dtype
-
-    @pytensor.config.change_flags(compute_test_value="raise")
-    def test_observed_compute_test_value(self):
-        data = np.zeros(100)
-        with pm.Model():
-            obs = pm.Normal("obs", mu=pt.zeros_like(data), sigma=1, observed=data)
-        assert obs.tag.test_value.shape == data.shape
-        assert obs.tag.test_value.dtype == data.dtype
 
 
 def test_duplicate_vars():
@@ -1431,8 +1423,10 @@ class TestImputationMissingData:
             np.testing.assert_array_equal(trace["theta2"][0][~obs2.mask], obs1[~obs2.mask])
 
             pp_idata = pm.sample_posterior_predictive(trace, random_seed=rng)
-            pp_trace = pp_idata.posterior_predictive.stack(sample=["chain", "draw"]).transpose(
-                "sample", ...
+            pp_trace = (
+                pp_idata.posterior_predictive.to_dataset()
+                .stack(sample=["chain", "draw"])
+                .transpose("sample", ...)
             )
             assert set(pp_trace.keys()) == {
                 "theta1",
@@ -1775,13 +1769,11 @@ class TestModelCopy:
         copy_simple_model = copy_method(simple_model)
 
         with simple_model:
-            simple_model_prior_predictive = pm.sample_prior_predictive(samples=1, random_seed=42)
+            simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         with copy_simple_model:
             z = pm.Deterministic("z", copy_simple_model["y"] + 1)
-            copy_simple_model_prior_predictive = pm.sample_prior_predictive(
-                samples=1, random_seed=42
-            )
+            copy_simple_model_prior_predictive = pm.sample_prior_predictive(draws=1, random_seed=42)
 
         assert (
             simple_model_prior_predictive["prior"]["y"].values

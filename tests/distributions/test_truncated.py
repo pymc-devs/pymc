@@ -18,6 +18,7 @@ import pytest
 import scipy
 
 from pytensor.scalar import Identity
+from pytensor.scan.op import Scan
 from pytensor.tensor.random.basic import GeometricRV, NormalRV
 from pytensor.tensor.random.type import RandomType
 
@@ -41,6 +42,7 @@ from pymc.logprob.abstract import _icdf
 from pymc.logprob.basic import logcdf, logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
+from pymc.pytensorf import compile as pymc_compile
 from pymc.testing import assert_support_point_is_expected
 
 
@@ -536,6 +538,20 @@ def test_truncated_multiple_rngs():
     rngs = [inp for inp in x_trunc.owner.inputs if isinstance(inp.type, RandomType)]
     next_rngs = [out for out in x_trunc.owner.outputs if isinstance(out.type, RandomType)]
     assert len(set(rngs)) == len(set(next_rngs)) == 3
+
+    # Verify that all RNG inputs inside the compiled scan are destroyed
+    # (i.e., mutated in-place by a consumer). A regression could turn an
+    # RNG update into a ViewOp or DeepCopy, leaving the original untouched
+    # and causing stuck draws across scan iterations.
+    fn = pymc_compile([], x_trunc)
+    [scan_node] = [n for n in fn.maker.fgraph.apply_nodes if isinstance(n.op, Scan)]
+    scan_fgraph = scan_node.op.fgraph
+    rng_inner_inps = [i for i in scan_node.op.inner_inputs if isinstance(i.type, RandomType)]
+    assert len(rng_inner_inps) == 3
+    for rng_inp in rng_inner_inps:
+        assert scan_fgraph.has_destroyers([rng_inp]), (
+            f"RNG input {rng_inp} is not destroyed — state won't advance between scan iterations"
+        )
 
     draws1 = draw(x_trunc, random_seed=1)
     draws2 = draw(x_trunc, random_seed=1)

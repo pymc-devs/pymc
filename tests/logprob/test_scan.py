@@ -80,7 +80,6 @@ def test_convert_outer_out_to_in_sit_sot():
     rng_state = np.random.default_rng(123)
     rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
-    rng_tt.default_update = rng_tt
 
     #
     # We create a `Scan` representing a time-series model with normally
@@ -196,7 +195,6 @@ def test_convert_outer_out_to_in_mit_sot():
     rng_state = np.random.default_rng(1234)
     rng_tt = pytensor.shared(rng_state, name="rng", borrow=True)
     rng_tt.tag.is_rng = True
-    rng_tt.default_update = rng_tt
 
     #
     # This is a very simple model with only one output, but multiple
@@ -291,18 +289,15 @@ def test_scan_joint_logprob(require_inner_rewrites):
 
     N_tt = pt.iscalar("N")
     N_val = 10
-    N_tt.tag.test_value = N_val
 
     M_tt = pt.iscalar("M")
     M_val = 2
-    M_tt.tag.test_value = M_val
 
     mus_tt = pt.matrix("mus_t")
 
     mus_val = np.stack([np.arange(0.0, 10), np.arange(0.0, -10, -1)], axis=-1).astype(
         pytensor.config.floatX
     )
-    mus_tt.tag.test_value = mus_val
 
     sigmas_tt = pt.ones((N_tt,))
     next_rng, Gamma_rv = pt.random.dirichlet(

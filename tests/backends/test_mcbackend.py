@@ -13,9 +13,9 @@
 #   limitations under the License.
 import logging
 
-import arviz
 import numpy as np
 import pytest
+import xarray as xr
 
 import pymc as pm
 
@@ -320,7 +320,7 @@ class TestMcBackendSampling:
                 chains=3,
                 discard_tuned_samples=False,
             )
-        assert isinstance(idata, arviz.InferenceData)
+        assert isinstance(idata, xr.DataTree)
         assert idata.warmup_posterior.sizes["draw"] == 5
         assert idata.posterior.sizes["draw"] == 7
         pass

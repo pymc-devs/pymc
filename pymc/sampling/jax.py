@@ -14,6 +14,7 @@
 import logging
 import os
 import re
+import warnings
 
 from collections.abc import Callable, Sequence
 from datetime import datetime
@@ -21,13 +22,12 @@ from functools import partial
 from types import ModuleType
 from typing import Any, Literal
 
-import arviz as az
 import jax
 import jax.numpy as jnp
 import numpy as np
 import pytensor.tensor as pt
 
-from arviz.data.base import make_attrs
+from arviz_base import from_dict, make_attrs
 from jax.lax import scan
 from numpy.typing import ArrayLike
 from pytensor.compile import SharedVariable, mode
@@ -38,6 +38,7 @@ from pytensor.link.jax.dispatch import jax_funcify
 from pytensor.raise_op import Assert
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.type import RandomType
+from xarray import DataTree
 
 from pymc import Model, modelcontext
 from pymc.backends.arviz import (
@@ -45,7 +46,6 @@ from pymc.backends.arviz import (
     find_constants,
     find_observations,
 )
-from pymc.distributions.multivariate import PosDefMatrix
 from pymc.initial_point import StartDict
 from pymc.logprob.utils import CheckParameterValue
 from pymc.sampling.mcmc import _init_jitter
@@ -84,33 +84,13 @@ def jax_funcify_Assert(op, **kwargs):
     return assert_fn
 
 
-@jax_funcify.register(PosDefMatrix)
-def jax_funcify_PosDefMatrix(op, **kwargs):
-    def posdefmatrix_fn(value, *inps):
-        no_pos_def = jnp.any(jnp.isnan(jnp.linalg.cholesky(value)))
-        return jnp.invert(no_pos_def)
-
-    return posdefmatrix_fn
-
-
 def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariable]:
-    """Replace shared variables in graph by their constant values.
-
-    Raises
-    ------
-    ValueError
-        If any shared variable contains default_updates
-    """
+    """Replace shared variables in graph by their constant values."""
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
 
     if any(isinstance(var.type, RandomType) for var in shared_variables):
         raise ValueError(
             "Graph contains shared RandomType variables which cannot be safely replaced"
-        )
-
-    if any(var.default_update is not None for var in shared_variables):
-        raise ValueError(
-            "Graph contains shared variables with default_update which cannot be safely replaced."
         )
 
     replacements = {var: pt.constant(var.get_value(borrow=True)) for var in shared_variables}
@@ -526,7 +506,7 @@ def sample_jax_nuts(
     idata_kwargs: dict | None = None,
     compute_convergence_checks: bool = True,
     nuts_sampler: Literal["numpyro", "blackjax"],
-) -> az.InferenceData:
+) -> DataTree:
     """
     Draw samples from the posterior using a jax NUTS method.
 
@@ -575,7 +555,7 @@ def sample_jax_nuts(
     postprocessing_chunks : None
         This argument is deprecated
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`arviz.from_dict`. It also accepts a boolean as
+        Keyword arguments for :func:`arviz_base.from_dict`. It also accepts a boolean as
         value for the ``log_likelihood`` key to indicate that the pointwise log
         likelihood should not be included in the returned object. Values for
         ``observed_data``, ``constant_data``, ``coords``, and ``dims`` are inferred from
@@ -589,14 +569,12 @@ def sample_jax_nuts(
 
     Returns
     -------
-    InferenceData
-        ArviZ ``InferenceData`` object that contains the posterior samples, together
+    DataTree
+        ``DataTree`` object that contains the posterior samples, together
         with their respective sample stats and pointwise log likeihood values (unless
         skipped with ``idata_kwargs``).
     """
     if postprocessing_chunks is not None:
-        import warnings
-
         warnings.warn(
             "postprocessing_chunks is deprecated due to being unstable, "
             "using postprocessing_vectorize='scan' instead",
@@ -604,8 +582,6 @@ def sample_jax_nuts(
         )
 
     if postprocessing_vectorize is not None:
-        import warnings
-
         warnings.warn(
             'postprocessing_vectorize={"scan", "vmap"} will be removed in a future release.',
             FutureWarning,
@@ -674,6 +650,13 @@ def sample_jax_nuts(
         idata_kwargs = idata_kwargs.copy()
 
     if idata_kwargs.pop("log_likelihood", False):
+        warnings.warn(
+            "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
+            ":func:`pymc.compute_log_likelihood` instead.",
+            FutureWarning,
+            stacklevel=3,
+        )
+
         log_likelihood = _get_log_likelihood(
             model,
             raw_mcmc_samples,
@@ -706,20 +689,44 @@ def sample_jax_nuts(
         coords.update(idata_kwargs.pop("coords"))
     if "dims" in idata_kwargs:
         dims.update(idata_kwargs.pop("dims"))
+    sample_dims = ["chain", "draw"]
 
-    # Use 'partial' to set default arguments before passing 'idata_kwargs'
-    to_trace = partial(
-        az.from_dict,
-        log_likelihood=log_likelihood,
-        observed_data=find_observations(model),
-        constant_data=find_constants(model),
-        sample_stats=sample_stats,
+    groups = {
+        "posterior": mcmc_samples,
+        "sample_stats": sample_stats,
+    }
+
+    if log_likelihood is not None:
+        groups["log_likelihood"] = log_likelihood
+
+    observed_data = find_observations(model)
+    if observed_data is not None:
+        groups["observed_data"] = observed_data
+
+    constant_data = find_constants(model)
+    if constant_data is not None:
+        groups["constant_data"] = constant_data
+
+    if not idata_kwargs:
+        warnings.warn(
+            "The arguments to `from_dict` have changed with the release of arviz 1.0. "
+            "Please refer to the arviz documentation for more details",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+    attrs = {"posterior": make_attrs(attrs, inference_library=library)}
+    if "attrs" in idata_kwargs:
+        attrs.update(idata_kwargs.pop("attrs"))
+
+    az_trace = from_dict(
+        data=groups,
         coords=coords,
         dims=dims,
-        attrs=make_attrs(attrs, library=library),
-        posterior_attrs=make_attrs(attrs, library=library),
+        sample_dims=sample_dims,
+        attrs=attrs,
+        **idata_kwargs,
     )
-    az_trace = to_trace(posterior=mcmc_samples, **idata_kwargs)
 
     if compute_convergence_checks:
         warns = run_convergence_checks(az_trace, model)

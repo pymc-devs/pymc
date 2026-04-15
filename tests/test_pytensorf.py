@@ -325,8 +325,8 @@ class TestCompile:
         f = compile([], x)
         assert not np.isclose(f(), f())
 
-        # Check that update was not done inplace
-        assert rng.default_update is None
+        # Check that compile() didn't mutate the shared rng — a plain
+        # pytensor.function over the same graph should still be deterministic.
         f = pytensor.function([], x)
         assert f() == f()
 
@@ -344,19 +344,11 @@ class TestCompile:
         f = compile([], x)
         assert f() != f()
 
-        # An explicit update should override the default_update, like pytensor.function does
-        # For testing purposes, we use an update that leaves the rng unchanged
+        # An explicit update should override the inferred default update, like
+        # pytensor.function does. For testing purposes, we use an update that
+        # leaves the rng unchanged.
         f = compile([], x, updates={rng: rng})
         assert f() == f()
-
-        # If we specify a custom default_update directly it should use that instead.
-        rng.default_update = rng
-        f = compile([], x)
-        assert f() == f()
-
-        # And again, it should be overridden by an explicit update
-        f = compile([], x, updates={rng: x.owner.outputs[0]})
-        assert f() != f()
 
     def test_compile_pymc_updates_inputs(self):
         """Test that compile_pymc does not include rngs updates of variables that are inputs
@@ -446,11 +438,11 @@ class TestCompile:
         assert x3_eval == x2_eval
         assert y3_eval == y2_eval
 
-    @pytest.mark.filterwarnings("error")  # This is part of the test
+    @pytest.mark.filterwarnings("error")
     def test_multiple_updates_same_variable(self):
         rng = pytensor.shared(np.random.default_rng(), name="rng")
-        x = pt.random.normal(0, rng=rng)
-        y = pt.random.normal(1, rng=rng)
+        _, x = pt.random.normal(0, rng=rng, return_next_rng=True)
+        _, y = pt.random.normal(1, rng=rng, return_next_rng=True)
 
         # No warnings if only one variable is used
         assert compile([], [x])
@@ -466,17 +458,11 @@ class TestCompile:
             f = compile([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
         assert f() != f()
 
-        # Same with default update
-        rng.default_update = x.owner.outputs[0]
-        with pytest.warns(UserWarning, match=user_warn_msg):
-            f = compile([], [x, y], updates={rng: y.owner.outputs[0]}, random_seed=456)
-        assert f() != f()
-
-    @pytest.mark.filterwarnings("error")  # This is part of the test
+    @pytest.mark.filterwarnings("error")
     def test_duplicated_client_nodes(self):
         """Test compile_pymc can handle duplicated (mergeable) RV updates."""
         rng = pytensor.shared(np.random.default_rng(1))
-        x = pt.random.normal(rng=rng)
+        _, x = pt.random.normal(rng=rng, return_next_rng=True)
         y = x.owner.clone().default_output()
 
         fn = compile([], [x, y], random_seed=1)

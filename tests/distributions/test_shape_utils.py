@@ -447,33 +447,6 @@ def test_change_rv_size_expand_none_size():
     assert new_x.type.shape == (2,)
 
 
-def test_change_rv_size_default_update():
-    rng = pytensor.shared(np.random.default_rng(0))
-    x = normal(rng=rng)
-
-    # Test that "traditional" default_update is translated to the new rng
-    rng.default_update = x.owner.outputs[0]
-    new_x = change_dist_size(x, new_size=(2,))
-    new_rng = new_x.owner.inputs[0]
-    assert rng.default_update is x.owner.outputs[0]
-    assert new_rng.default_update is new_x.owner.outputs[0]
-
-    # Test that "non-traditional" default_update raises UserWarning
-    next_rng = pytensor.shared(np.random.default_rng(1))
-    rng.default_update = next_rng
-    with pytest.warns(UserWarning, match="could not be replicated in resized variable"):
-        new_x = change_dist_size(x, new_size=(2,))
-    new_rng = new_x.owner.inputs[0]
-    assert rng.default_update is next_rng
-    assert new_rng.default_update is None
-
-    # Test that default_update is not set if it was None before
-    rng.default_update = None
-    new_x = change_dist_size(x, new_size=(2,))
-    new_rng = new_x.owner.inputs[0]
-    assert new_rng.default_update is None
-
-
 def test_change_specify_shape_size_univariate():
     with pytensor.config.change_flags(mode=Mode("py")):
         s1, s2 = pt.iscalars("s1", "s2")
