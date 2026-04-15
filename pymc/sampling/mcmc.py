@@ -32,7 +32,6 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
-from arviz_base import dict_to_dataset, make_attrs
 from pytensor.graph.basic import Variable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
@@ -42,11 +41,7 @@ from xarray import DataTree
 import pymc as pm
 
 from pymc.backends import RunType, TraceOrBackend, init_traces
-from pymc.backends.arviz import (
-    coords_and_dims_for_inferencedata,
-    find_constants,
-    find_observations,
-)
+from pymc.backends.arviz import patch_nutpie_idata
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
 from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
@@ -358,9 +353,11 @@ def _sample_external_nuts(
                 UserWarning,
             )
 
-        if idata_kwargs is not None:
+        idata_kwargs = {} if idata_kwargs is None else {**idata_kwargs}
+        include_transformed = idata_kwargs.pop("include_transformed", False)
+        if idata_kwargs:
             warnings.warn(
-                "`idata_kwargs` are currently ignored by the nutpie sampler",
+                f"`idata_kwargs` keys {sorted(idata_kwargs)} are currently ignored by the nutpie sampler",
                 UserWarning,
             )
 
@@ -386,36 +383,12 @@ def _sample_external_nuts(
             **nuts_sampler_kwargs,
         )
         t_sample = time.time() - t_start
-        # Temporary work-around. Revert once https://github.com/pymc-devs/nutpie/issues/74 is fixed
-        # gather observed and constant data as nutpie.sample() has no access to the PyMC model
-        coords, dims = coords_and_dims_for_inferencedata(model)
-        constant_data = dict_to_dataset(
-            find_constants(model),
-            inference_library=pm,
-            coords=coords,
-            dims=dims,
-            sample_dims=[],
-        )
-        observed_data = dict_to_dataset(
-            find_observations(model),
-            inference_library=pm,
-            coords=coords,
-            dims=dims,
-            sample_dims=[],
-        )
-        attrs = make_attrs(
-            {
-                "sampling_time": t_sample,
-                "tuning_steps": tune,
-            },
-            library=nutpie,
-        )
-        for k, v in attrs.items():
-            idata.posterior.attrs[k] = v
-        idata.update(
-            {"constant_data": constant_data, "observed_data": observed_data},
-            coords=coords,
-            dims=dims,
+        patch_nutpie_idata(
+            idata,
+            model,
+            tune=tune,
+            sampling_time=t_sample,
+            include_transformed=include_transformed,
         )
         return idata
 
