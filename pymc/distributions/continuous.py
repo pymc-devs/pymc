@@ -396,7 +396,32 @@ halfflat = HalfFlatRV()
 
 
 class HalfFlat(PositiveContinuous):
-    """Improper flat prior over the positive reals."""
+    r"""
+    Improper flat prior over the positive reals.
+
+    This is an unnormalized distribution and should be used only as
+    a vague, uninformative prior. It is not a valid probability
+    distribution and cannot be used for posterior predictive sampling.
+
+    The pdf of this distribution is
+
+    .. math::
+
+       f(x) \propto \begin{cases} 1 & \text{if } x > 0 \\ 0 & \text{otherwise} \end{cases}
+
+    ========  ============================
+    Support   :math:`x \in [0, \infty)`
+    Mean      undefined
+    Variance  undefined
+    ========  ============================
+
+    Examples
+    --------
+    .. code-block:: python
+
+        with pm.Model():
+            x = pm.HalfFlat("x")
+    """
 
     rv_op = halfflat
 
