@@ -355,6 +355,7 @@ def _sample_external_nuts(
 
         idata_kwargs = {} if idata_kwargs is None else {**idata_kwargs}
         include_transformed = idata_kwargs.pop("include_transformed", False)
+        log_likelihood = idata_kwargs.pop("log_likelihood", False)
         if idata_kwargs:
             warnings.warn(
                 f"`idata_kwargs` keys {sorted(idata_kwargs)} are currently ignored by the nutpie sampler",
@@ -390,6 +391,23 @@ def _sample_external_nuts(
             sampling_time=t_sample,
             include_transformed=include_transformed,
         )
+        if log_likelihood:
+            warnings.warn(
+                "Passing `log_likelihood` via `idata_kwargs` is deprecated and will be removed "
+                "in future versions. Call `pm.compute_log_likelihood(idata)` instead.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            from pymc.stats.log_density import compute_log_likelihood
+
+            idata = compute_log_likelihood(
+                idata,
+                var_names=None if log_likelihood is True else log_likelihood,
+                extend_inferencedata=True,
+                model=model,
+                sample_dims=["chain", "draw"],
+                progressbar=False,
+            )
         return idata
 
     elif sampler in ("numpyro", "blackjax"):
