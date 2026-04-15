@@ -14,6 +14,7 @@
 
 from pymc.progress_bar.progress import (
     MCMCProgressBarManager,
+    NutpieProgressBarManager,
     ProgressBarManager,
     ProgressBarOptions,
     SMCProgressBarManager,

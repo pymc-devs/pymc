@@ -12,12 +12,17 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import unittest.mock as mock
+
+from types import SimpleNamespace
+
 import numpy as np
 import numpy.testing as npt
 import pytest
 import xarray as xr
 
 from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
+from pymc.progress_bar import NutpieProgressBarManager
 
 pytestmark = pytest.mark.filterwarnings(
     "error",
@@ -138,3 +143,69 @@ def test_sample_var_names(nuts_sampler):
         assert var in idata_2.posterior
 
         xr.testing.assert_allclose(idata_1.posterior[var], idata_2.posterior[var])
+
+
+def test_nutpie_progress_bar_manager_update():
+    pb = NutpieProgressBarManager(chains=2, draws=10, tune=10, progressbar=False)
+    pb._backend = mock.Mock()
+    pb._show_progress = True  # force the update path even without a real backend
+
+    cp0 = SimpleNamespace(
+        finished_draws=5,
+        total_draws=20,
+        divergences=0,
+        step_size=0.5,
+        latest_num_steps=3,
+    )
+    cp1 = SimpleNamespace(
+        finished_draws=4,
+        total_draws=20,
+        divergences=1,
+        step_size=0.4,
+        latest_num_steps=7,
+    )
+    pb.update([cp0, cp1])
+    assert pb._backend.update.call_count == 2
+    first_call = pb._backend.update.call_args_list[0].kwargs
+    assert first_call["task_id"] == 0
+    assert first_call["advance"] == 5
+    assert first_call["stats"]["divergences"] == 0
+    second_call = pb._backend.update.call_args_list[1].kwargs
+    assert second_call["task_id"] == 1
+    assert second_call["advance"] == 4
+    assert second_call["failing"] is True
+
+    # A second update only advances by the delta since the previous call.
+    cp0.finished_draws = 20
+    cp1.finished_draws = 20
+    pb._backend.update.reset_mock()
+    pb.update([cp0, cp1])
+    deltas = [c.kwargs["advance"] for c in pb._backend.update.call_args_list]
+    is_last_flags = [c.kwargs["is_last"] for c in pb._backend.update.call_args_list]
+    assert deltas == [15, 16]
+    assert is_last_flags == [True, True]
+
+
+def test_nutpie_end_to_end():
+    # Released nutpie 0.16.8 references `arviz.InferenceData` which arviz 1.0 removed,
+    # so `import nutpie` raises AttributeError on the current CI matrix. Skip until a
+    # nutpie release compatible with arviz 1.0 ships.
+    try:
+        import nutpie  # noqa: F401
+    except (ImportError, AttributeError):
+        pytest.skip("nutpie unavailable or incompatible with the installed arviz")
+    with Model() as m:
+        HalfNormal("sigma")
+        Normal("mu")
+        Normal("y", mu=0, sigma=1, observed=[1.0, 2.0, 3.0])
+        idata = sample(
+            nuts_sampler="nutpie",
+            tune=20,
+            draws=20,
+            chains=2,
+            progressbar=False,
+            random_seed=1411,
+        )
+    assert {"posterior", "sample_stats", "observed_data"} <= set(idata.children)
+    assert set(idata.posterior.data_vars) == {"mu", "sigma"}
+    assert idata.posterior.sizes == {"chain": 2, "draw": 20}
