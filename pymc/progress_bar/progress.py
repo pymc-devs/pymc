@@ -17,6 +17,8 @@ from abc import ABC, abstractmethod
 from contextlib import nullcontext
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
 
+from rich.progress import TextColumn
+from rich.table import Column
 from rich.theme import Theme
 
 from pymc.progress_bar.marimo_progress import (
@@ -327,6 +329,75 @@ class MCMCProgressBarManager(ProgressBarManager):
             stats=all_step_stats,
             is_last=is_last,
         )
+
+
+class NutpieProgressBarManager(ProgressBarManager):
+    """Progress bar manager for nutpie NUTS sampling.
+
+    Bridges ``nutpie.sample``'s ``progress_callback`` (a callable that receives a
+    list of ``nutpie.ChainProgress`` objects) to PyMC's progress bar backends,
+    so nutpie draws through the same UI as the pymc sampler.
+    """
+
+    step_name: str = "Draw"
+
+    def __init__(
+        self,
+        chains: int,
+        draws: int,
+        tune: int,
+        progressbar: bool | ProgressBarOptions = True,
+        progressbar_theme: Theme | str | None = None,
+    ):
+        super().__init__(
+            n_bars=chains,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
+        )
+
+        progress_columns = [
+            TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
+            TextColumn("{task.fields[step_size]:0.3f}", table_column=Column("Step size", ratio=1)),
+            TextColumn("{task.fields[tree_size]}", table_column=Column("Grad evals", ratio=1)),
+        ]
+        progress_stats = {
+            stat: [0] * chains for stat in ("divergences", "step_size", "tree_size", "draw")
+        }
+
+        self._previous_finished = [0] * chains
+        total_draws = draws + tune
+
+        self._backend = self._create_backend(
+            total=total_draws * chains if self.combined_progress else total_draws,
+            progress_columns=progress_columns,
+            progress_stats=progress_stats,
+        )
+
+    def update(self, chain_progresses) -> None:
+        """Consume a list of ``nutpie.ChainProgress`` objects and advance each bar."""
+        if not self._show_progress:
+            return
+
+        for chain_idx, cp in enumerate(chain_progresses):
+            delta = cp.finished_draws - self._previous_finished[chain_idx]
+            if delta <= 0:
+                continue
+            self._previous_finished[chain_idx] = cp.finished_draws
+            is_last = cp.finished_draws >= cp.total_draws
+            stats = {
+                "divergences": cp.divergences,
+                "step_size": cp.step_size,
+                "tree_size": cp.latest_num_steps,
+                "draw": cp.finished_draws,
+            }
+            task_id = 0 if self.combined_progress else chain_idx
+            self._backend.update(
+                task_id=task_id,
+                advance=delta,
+                failing=cp.divergences > 0,
+                stats=stats,
+                is_last=is_last,
+            )
 
 
 class SMCProgressBarManager(ProgressBarManager):

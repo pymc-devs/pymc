@@ -50,6 +50,7 @@ from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import (
     MCMCProgressBarManager,
+    NutpieProgressBarManager,
     ProgressBarOptions,
     default_progress_theme,
 )
@@ -328,7 +329,8 @@ def _sample_external_nuts(
     initvals: StartDict | Sequence[StartDict | None] | None,
     model: Model,
     var_names: Sequence[str] | None,
-    progressbar: bool,
+    progressbar: bool | ProgressBarOptions,
+    progressbar_theme: Theme | None,
     quiet: bool,
     idata_kwargs: dict | None,
     compute_convergence_checks: bool,
@@ -372,17 +374,28 @@ def _sample_external_nuts(
             var_names=var_names,
             **compile_kwargs,
         )
-        t_start = time.time()
-        idata = nutpie.sample(
-            compiled_model,
+
+        pb_manager = NutpieProgressBarManager(
+            chains=chains,
             draws=draws,
             tune=tune,
-            chains=chains,
-            target_accept=target_accept,
-            seed=_get_seeds_per_chain(random_seed, 1)[0],
-            progress_bar=progressbar,
-            **nuts_sampler_kwargs,
+            progressbar=progressbar,
+            progressbar_theme=progressbar_theme,
         )
+
+        t_start = time.time()
+        with pb_manager:
+            idata = nutpie.sample(
+                compiled_model,
+                draws=draws,
+                tune=tune,
+                chains=chains,
+                target_accept=target_accept,
+                seed=_get_seeds_per_chain(random_seed, 1)[0],
+                progress_bar=False,
+                progress_callback=pb_manager.update,
+                **nuts_sampler_kwargs,
+            )
         t_sample = time.time() - t_start
         patch_nutpie_idata(
             idata,
@@ -422,7 +435,7 @@ def _sample_external_nuts(
             initvals=initvals,
             model=model,
             var_names=var_names,
-            progressbar=progressbar,
+            progressbar=bool(progressbar),
             quiet=quiet,
             nuts_sampler=sampler,
             idata_kwargs=idata_kwargs,
@@ -830,7 +843,8 @@ def sample(
                 initvals=initvals,
                 model=model,
                 var_names=var_names,
-                progressbar=progress_bool,
+                progressbar=progressbar if nuts_sampler == "nutpie" else progress_bool,
+                progressbar_theme=progressbar_theme,
                 quiet=quiet,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
