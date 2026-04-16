@@ -445,9 +445,9 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
 
 
 def test_sample_posterior_predictive_after_set_data():
-    y = np.array([1.0, 2.0, 3.0])
     with pm.Model(coords={"obs_id": [0, 1, 2]}) as model:
         x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
+        y = pm.Data("y", [1.0, 2.0, 3.0], dims="obs_id")
         beta = pm.Normal("beta", 0, 10.0)
         pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y, dims="obs_id")
         approx = pm.fit(
@@ -455,11 +455,22 @@ def test_sample_posterior_predictive_after_set_data():
             method="advi",
             progressbar=False,
         )
+        pm.set_data(
+            new_data={"x": [4.0, 5.0], "y": [4.0, 5.0]},
+            coords={"obs_id": [0, 1]},
+        )
         trace = approx.sample(500)
+
+    assert trace.posterior["beta"].shape == (1, 500)
+    assert trace.constant_data["x"].shape == (2,)
+    assert trace.observed_data["obs"].shape == (2,)
 
     with model:
         x_test = [5, 6, 9, 12, 15]
-        pm.set_data(new_data={"x": x_test}, coords={"obs_id": list(range(len(x_test)))})
+        pm.set_data(
+            new_data={"x": x_test, "y": [0.0] * len(x_test)},
+            coords={"obs_id": list(range(len(x_test)))},
+        )
         y_test = pm.sample_posterior_predictive(trace, predictions=True, progressbar=False)
 
     assert y_test.predictions["obs"].shape == (1, 500, 5)
