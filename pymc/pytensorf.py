@@ -135,7 +135,7 @@ def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVar
     return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
 
 
-_cheap_eval_mode = Mode(linker="py", optimizer="minimum_compile")
+_cheap_eval_mode = Mode(linker="py", optimizer=None)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
