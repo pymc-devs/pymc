@@ -84,7 +84,7 @@ def test_step_args():
         idata = sample(
             nuts_sampler="numpyro",
             target_accept=0.5,
-            nuts={"max_treedepth": 10},
+            nuts={"max_tree_depth": 10},
             random_seed=1411,
             progressbar=False,
         )
