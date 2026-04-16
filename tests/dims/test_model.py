@@ -22,6 +22,7 @@ import pymc as pm
 from pymc import dims as pmd
 from pymc import observe
 from pymc.model.transform.optimization import freeze_dims_and_data
+from tests.test_printing import table_to_text
 
 pytestmark = pytest.mark.filterwarnings("error")
 
@@ -260,3 +261,55 @@ def test_freeze_dims_and_data():
     assert isinstance(frozen_m["x"], XTensorConstant)
     assert frozen_m["x"].type.shape == (5, 3)
     assert frozen_m["y"].type.shape == (5, 3)
+
+
+def test_model_table_dims():
+    coords = {"subject": range(20), "param": ["a", "b"]}
+    with pm.Model(coords=coords) as m:
+        x = pmd.Data("x", np.random.normal(size=(20, 2)), dims=("subject", "param"))
+        y_obs_data = pmd.Data("y_obs_data", np.random.normal(size=(20,)), dims="subject")
+
+        beta = pmd.Normal("beta", mu=0, sigma=1, dims="param")
+        mu = pmd.Deterministic("mu", (x * beta).sum("param"))
+        sigma = pmd.HalfNormal("sigma", sigma=1)
+        zsn = pmd.ZeroSumNormal("zsn", sigma=1.0, core_dims="subject")
+        pmd.Normal("y_obs", mu=mu + zsn, sigma=sigma, observed=y_obs_data)
+        pmd.Potential("beta_penalty", -beta)
+
+    text = table_to_text(m.table())
+    expected = """\
+       Variable  Expression                             Dimensions
+───────────────────────────────────────────────────────────────────────────────
+            x =  Data                                   subject[20] × param[2]
+   y_obs_data =  Data                                   subject[20]
+
+         beta ~  Normal(0, 1)                           param[2]
+        sigma ~  HalfNormal(0, 1)
+          zsn ~  ZeroSumNormal(<constant>, <constant>)  subject[20]
+                                                        Parameter count = 23
+
+           mu =  f(beta, x)                             subject[20]
+
+ beta_penalty =  Potential(f(beta))                     param[2]
+
+        y_obs ~  Normal(f(mu, zsn), sigma)              subject[20]
+"""
+    assert [s.rstrip() for s in text.splitlines()] == expected.splitlines()
+
+
+def test_model_table_xtensor_without_registered_dims():
+    with pm.Model(coords={"subject": range(5)}) as m:
+        beta = pmd.Normal("beta", 0, 1, dims="subject")
+        pm.Deterministic("det", beta * 2)
+
+    assert m.named_vars_to_dims.get("det") is None
+    text = table_to_text(m.table())
+    expected = """\
+ Variable  Expression    Dimensions
+─────────────────────────────────────────────
+   beta ~  Normal(0, 1)  subject[5]
+                         Parameter count = 5
+
+    det =  f(beta)       [5]
+"""
+    assert [s.rstrip() for s in text.splitlines()] == expected.splitlines()
