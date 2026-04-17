@@ -156,7 +156,7 @@ def node_property(f):
         return property(locally_cachedmethod(f))
 
 
-class ObjectiveUpdates(pytensor.OrderedUpdates):
+class ObjectiveUpdates(dict):
     """OrderedUpdates extension for storing loss."""
 
     loss = None
@@ -955,13 +955,23 @@ class Group(WithMemoization):
         size = pt.as_tensor(size)
         shape = self._new_initial_shape(size, dim, more_replacements)
         # apply optimizations if possible
+        rv_op = getattr(pt.random, dist_name)
         if not isinstance(deterministic, Variable):
             if deterministic:
                 return pt.ones(shape, dtype) * dist_map
             else:
-                return getattr(pt.random, dist_name)(size=shape)
+                _, sample = rv_op(
+                    size=shape,
+                    rng=pt.random.shared_rng(seed=None),
+                    return_next_rng=True,
+                )
+                return sample
         else:
-            sample = getattr(pt.random, dist_name)(size=shape)
+            _, sample = rv_op(
+                size=shape,
+                rng=pt.random.shared_rng(seed=None),
+                return_next_rng=True,
+            )
             initial = pt.switch(deterministic, pt.ones(shape, dtype) * dist_map, sample)
             return initial
 
@@ -1559,7 +1569,7 @@ class Approximation(WithMemoization):
 
         trace = NDArray(
             model=self.model,
-            test_point={name: records[0] for name, records in samples.items()},
+            test_point={name: np.asarray(records[0]) for name, records in samples.items()},
         )
         try:
             trace.setup(draws=draws, chain=0)

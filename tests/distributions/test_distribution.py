@@ -142,7 +142,8 @@ class TestSymbolicRandomVariable:
             pass
 
         rng = pytensor.shared(np.random.default_rng())
-        x = TestSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
+        next_rng, flat_x = Flat.dist(rng=rng, return_next_rng=True)
+        x = TestSymbolicRV([rng], [next_rng, flat_x], ndim_supp=0)(rng)[1]
 
         # By default, the SymbolicRandomVariable will not be inlined. Because we did not
         # dispatch a custom logprob function it will raise next
@@ -152,7 +153,8 @@ class TestSymbolicRandomVariable:
         class TestInlinedSymbolicRV(SymbolicRandomVariable):
             inline_logprob = True
 
-        x_inline = TestInlinedSymbolicRV([rng], [Flat.dist(rng=rng)], ndim_supp=0)(rng)
+        next_rng, flat_x = Flat.dist(rng=rng, return_next_rng=True)
+        x_inline = TestInlinedSymbolicRV([rng], [next_rng, flat_x], ndim_supp=0)(rng)[1]
         assert np.isclose(logp(x_inline, 0).eval(), 0)
 
     def test_default_update(self):

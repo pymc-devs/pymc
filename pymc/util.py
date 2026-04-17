@@ -25,8 +25,8 @@ import numpy as np
 import xarray
 
 from cachetools import LRUCache, cachedmethod
-from pytensor import Variable
 from pytensor.compile import SharedVariable
+from pytensor.graph.basic import Variable
 
 from pymc.exceptions import BlockModelAccessError
 

@@ -13,6 +13,7 @@
 #   limitations under the License.
 import numpy as np
 import pytensor.tensor as pt
+import pytest
 
 from pytensor.xtensor import as_xtensor
 
@@ -21,6 +22,8 @@ import pymc.distributions as regular_distributions
 from pymc import Model
 from pymc.dims import Categorical, Dirichlet, MvNormal, ZeroSumNormal
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
+
+pytestmark = pytest.mark.filterwarnings("error")
 
 
 def test_categorical():

@@ -14,8 +14,6 @@
 
 """Common shape operations to broadcast samples from probability distributions for stochastic nodes in PyMC."""
 
-import warnings
-
 from collections.abc import Sequence
 from functools import singledispatch
 from types import EllipsisType
@@ -305,18 +303,12 @@ def change_rv_size(op, rv, new_size, expand) -> TensorVariable:
     # to not unnecessarily pick up a `Cast` in some cases (see #4652).
     new_size = pt.as_tensor(new_size, ndim=1, dtype="int64")
 
-    new_rv = rv_node.op(*dist_params, size=new_size)
-    # Replicate "traditional" rng default_update, if that was set for old_rng
-    default_update = getattr(old_rng, "default_update", None)
-    if default_update is not None:
-        if default_update is rv_node.outputs[0]:
-            new_rv.owner.inputs[0].default_update = new_rv.owner.outputs[0]
-        else:
-            warnings.warn(
-                f"Update expression of {rv} RNG could not be replicated in resized variable",
-                UserWarning,
-            )
-
+    _, new_rv = rv_node.op(
+        *dist_params,
+        size=new_size,
+        rng=pt.random.shared_rng(seed=None),
+        return_next_rng=True,
+    )
     return new_rv
 
 

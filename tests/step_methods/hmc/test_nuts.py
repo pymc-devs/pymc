@@ -129,7 +129,7 @@ class TestNutsCheckTrace:
         with pm.Model():
             a = pm.Normal("a", size=2, initval=floatX(np.zeros(2)))
             a = pt.switch(a > 0, np.inf, a)
-            b = pt.slinalg.solve(floatX(np.eye(2)), a, check_finite=False)
+            b = pt.linalg.solve(floatX(np.eye(2)), a, check_finite=False)
             pm.Normal("c", mu=b, size=2, initval=floatX(np.r_[0.0, 0.0]))
             caplog.clear()
             # The logger name must be specified for DEBUG level capturing to work

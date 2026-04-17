@@ -21,7 +21,7 @@ import warnings
 from abc import ABCMeta
 from collections.abc import Callable, Sequence
 from functools import singledispatch
-from typing import Any, TypeAlias
+from typing import Any, Literal, TypeAlias, overload
 
 import numpy as np
 
@@ -445,6 +445,24 @@ def change_symbolic_rv_size(op: SymbolicRandomVariable, rv, new_size, expand) ->
     return op.rebuild_rv(*params, size=new_size)
 
 
+def _call_rv_op(rv_op, *args, **kwargs) -> tuple[TensorVariable, TensorVariable]:
+    """Call ``rv_op`` and always return a ``(next_rng, rv)`` tuple.
+
+    For ``RandomVariable`` ``Op`` instances we use the ``return_next_rng=True``
+    API to suppress the deprecation warning emitted by PyTensor v3, and we
+    always supply an explicit shared rng (also a deprecation source upstream).
+    For other callables (e.g. ``SymbolicRandomVariable`` builders) we call
+    as-is and extract the next-rng output from the resulting node.
+    """
+    if isinstance(rv_op, RandomVariable):
+        if kwargs.get("rng") is None:
+            kwargs["rng"] = pt.random.shared_rng(seed=None)
+        return rv_op(*args, return_next_rng=True, **kwargs)
+    rv = rv_op(*args, **kwargs)
+    next_rng = rv.owner.outputs[0]
+    return next_rng, rv
+
+
 class Distribution(metaclass=DistributionMeta):
     """Statistical distribution."""
 
@@ -553,14 +571,37 @@ class Distribution(metaclass=DistributionMeta):
         )
         return rv_out
 
+    @overload
+    @classmethod
+    def dist(
+        cls,
+        dist_params,
+        *,
+        shape: Shape | None = ...,
+        return_next_rng: Literal[False] = ...,
+        **kwargs,
+    ) -> TensorVariable: ...
+
+    @overload
+    @classmethod
+    def dist(
+        cls,
+        dist_params,
+        *,
+        shape: Shape | None = ...,
+        return_next_rng: Literal[True],
+        **kwargs,
+    ) -> tuple[TensorVariable, TensorVariable]: ...
+
     @classmethod
     def dist(
         cls,
         dist_params,
         *,
         shape: Shape | None = None,
+        return_next_rng: bool = False,
         **kwargs,
-    ) -> TensorVariable:
+    ) -> TensorVariable | tuple[TensorVariable, TensorVariable]:
         """Create a tensor variable corresponding to the `cls` distribution.
 
         Parameters
@@ -569,6 +610,9 @@ class Distribution(metaclass=DistributionMeta):
             The inputs to the `RandomVariable` `Op`.
         shape : int, tuple, Variable, optional
             A tuple of sizes for each dimension of the new RV.
+        return_next_rng : bool, default False
+            If ``True``, return a ``(next_rng, rv)`` tuple instead of just
+            the random variable. The default is to discard ``next_rng``.
         **kwargs
             Keyword arguments that will be forwarded to the PyTensor RV Op.
             Most prominently: ``size`` or ``dtype``.
@@ -576,7 +620,8 @@ class Distribution(metaclass=DistributionMeta):
         Returns
         -------
         rv : TensorVariable
-            The created random variable tensor.
+            The created random variable tensor. If ``return_next_rng`` is
+            ``True``, returns a ``(next_rng, rv)`` tuple instead.
         """
         if "initval" in kwargs:
             raise TypeError(
@@ -599,10 +644,13 @@ class Distribution(metaclass=DistributionMeta):
         ndim_supp = getattr(cls.rv_op, "ndim_supp", getattr(cls.rv_type, "ndim_supp", None))
         if ndim_supp is None:
             # Initialize Ops and check the ndim_supp that is now required to exist
-            ndim_supp = cls.rv_op(*dist_params, **kwargs).owner.op.ndim_supp
+            ndim_supp = _call_rv_op(cls.rv_op, *dist_params, **kwargs)[1].owner.op.ndim_supp
 
         create_size = find_size(shape=shape, size=size, ndim_supp=ndim_supp)
-        return cls.rv_op(*dist_params, size=create_size, **kwargs)
+        next_rng, rv = _call_rv_op(cls.rv_op, *dist_params, size=create_size, **kwargs)
+        if return_next_rng:
+            return next_rng, rv
+        return rv
 
 
 @node_rewriter([SymbolicRandomVariable])
@@ -820,7 +868,12 @@ def create_partial_observed_rv(
         # Make a clone of the observedRV, with a distinct rng so that observed and
         # unobserved are never treated as equivalent (and mergeable) nodes by pytensor.
         _, size, *inps = observed_rv.owner.inputs
-        observed_rv = observed_rv.owner.op(*inps, size=size)
+        _, observed_rv = observed_rv.owner.op(
+            *inps,
+            size=size,
+            rng=pt.random.shared_rng(seed=None),
+            return_next_rng=True,
+        )
 
     # For all other cases use the more general PartialObservedRV
     else:

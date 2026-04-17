@@ -85,23 +85,12 @@ def jax_funcify_Assert(op, **kwargs):
 
 
 def _replace_shared_variables(graph: list[TensorVariable]) -> list[TensorVariable]:
-    """Replace shared variables in graph by their constant values.
-
-    Raises
-    ------
-    ValueError
-        If any shared variable contains default_updates
-    """
+    """Replace shared variables in graph by their constant values."""
     shared_variables = [var for var in graph_inputs(graph) if isinstance(var, SharedVariable)]
 
     if any(isinstance(var.type, RandomType) for var in shared_variables):
         raise ValueError(
             "Graph contains shared RandomType variables which cannot be safely replaced"
-        )
-
-    if any(var.default_update is not None for var in shared_variables):
-        raise ValueError(
-            "Graph contains shared variables with default_update which cannot be safely replaced."
         )
 
     replacements = {var: pt.constant(var.get_value(borrow=True)) for var in shared_variables}

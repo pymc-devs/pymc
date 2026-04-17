@@ -214,10 +214,6 @@ def test_replace_shared_variables():
     shared_variables = [var for var in graph_inputs(new_x) if isinstance(var, SharedVariable)]
     assert not shared_variables
 
-    x.default_update = x + 1
-    with pytest.raises(ValueError, match="shared variables with default_update"):
-        _replace_shared_variables([x])
-
     shared_rng = pytensor.shared(np.random.default_rng(), name="shared_rng")
     x = pytensor.tensor.random.normal(rng=shared_rng)
     with pytest.raises(ValueError, match="Graph contains shared RandomType variables"):

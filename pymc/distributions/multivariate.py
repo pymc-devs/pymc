@@ -322,8 +322,8 @@ class PrecisionMvNormalRV(SymbolicMVNormalUsedInternally):
         size = normalize_size_param(size)
         cov = pt.linalg.inv(tau)
         next_rng, draws = multivariate_normal(
-            mean, cov, size=size, rng=rng, method=method
-        ).owner.outputs
+            mean, cov, size=size, rng=rng, method=method, return_next_rng=True
+        )
         return cls(
             inputs=[rng, size, mean, tau],
             outputs=[next_rng, draws],
@@ -396,9 +396,14 @@ class MvStudentTRV(SymbolicMVNormalUsedInternally):
             size = implicit_size_from_params(nu, mean, scale, ndims_params=cls.ndims_params)
 
         next_rng, mv_draws = multivariate_normal(
-            mean.zeros_like(), scale, size=size, rng=rng, method=method
-        ).owner.outputs
-        next_rng, chi2_draws = chisquare(nu, size=size, rng=next_rng).owner.outputs
+            mean.zeros_like(),
+            scale,
+            size=size,
+            rng=rng,
+            method=method,
+            return_next_rng=True,
+        )
+        next_rng, chi2_draws = chisquare(nu, size=size, rng=next_rng, return_next_rng=True)
         draws = mean + (mv_draws / pt.sqrt(chi2_draws / nu)[..., None])
 
         return cls(
@@ -698,8 +703,8 @@ class DirichletMultinomialRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(n, a, ndims_params=cls.ndims_params)
 
-        next_rng, p = dirichlet(a, size=size, rng=rng).owner.outputs
-        final_rng, rv = multinomial(n, p, size=size, rng=next_rng).owner.outputs
+        next_rng, p = dirichlet(a, size=size, rng=rng, return_next_rng=True)
+        final_rng, rv = multinomial(n, p, size=size, rng=next_rng, return_next_rng=True)
 
         return cls(
             inputs=[rng, size, n, a],
@@ -1486,7 +1491,9 @@ class LKJCorrRV(SymbolicRandomVariable):
 
         beta0 = eta - 1.0 + n / 2.0
 
-        next_rng, y0 = pt.random.beta(alpha=beta0, beta=beta0, size=size, rng=rng).owner.outputs
+        next_rng, y0 = pt.random.beta(
+            alpha=beta0, beta=beta0, size=size, rng=rng, return_next_rng=True
+        )
 
         r12 = 2.0 * y0 - 1.0
 
@@ -1498,12 +1505,20 @@ class LKJCorrRV(SymbolicRandomVariable):
             beta_next = beta - 0.5
 
             middle_rng, y = pt.random.beta(
-                alpha=mp1 / 2.0, beta=beta, size=size, rng=prev_rng
-            ).owner.outputs
+                alpha=mp1 / 2.0,
+                beta=beta,
+                size=size,
+                rng=prev_rng,
+                return_next_rng=True,
+            )
 
             final_rng, z = pt.random.normal(
-                loc=0, scale=1, size=(*size, mp1), rng=middle_rng
-            ).owner.outputs
+                loc=0,
+                scale=1,
+                size=(*size, mp1),
+                rng=middle_rng,
+                return_next_rng=True,
+            )
 
             ein_sig_z = "i, i->" if z.ndim == 1 else "...ij, ...ij->...i"
 
@@ -1856,8 +1871,8 @@ class KroneckerNormalRV(SymbolicMVNormalUsedInternally):
         cov = reduce(pt.linalg.kron, covs)
         cov = cov + sigma**2 * pt.eye(cov.shape[-2])
         next_rng, draws = multivariate_normal(
-            mean=mu, cov=cov, size=size, rng=rng, method=method
-        ).owner.outputs
+            mean=mu, cov=cov, size=size, rng=rng, method=method, return_next_rng=True
+        )
 
         covs_sig = ",".join(f"(a{i},b{i})" for i in range(len(covs)))
         extended_signature = f"[rng],[size],(m),(),{covs_sig}->[rng],(m)"
@@ -2582,7 +2597,9 @@ class ZeroSumNormalRV(SymbolicRandomVariable):
             size = sigma.shape[:-n_zerosum_axes]
 
         shape = tuple(size) + tuple(support_shape)
-        next_rng, normal_dist = pm.Normal.dist(sigma=sigma, shape=shape, rng=rng).owner.outputs
+        next_rng, normal_dist = pm.Normal.dist(
+            sigma=sigma, shape=shape, rng=rng, return_next_rng=True
+        )
 
         # Zerosum-normaling is achieved by subtracting the mean along the given n_zerosum_axes
         zerosum_rv = normal_dist

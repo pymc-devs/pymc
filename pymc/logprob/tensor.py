@@ -274,7 +274,7 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     # Reverse the effects of dimshuffle on the value variable
     # First, drop any augmented dimensions and reinsert any dropped dimensions
     undo_ds: list[int | str] = [i for i, o in enumerate(op.new_order) if o != "x"]
-    dropped_dims = tuple(sorted(set(op.transposition) - set(op.shuffle)))
+    dropped_dims = tuple(op.drop)
     for dropped_dim in dropped_dims:
         undo_ds.insert(dropped_dim, "x")
     value = value.dimshuffle(undo_ds)

@@ -15,7 +15,7 @@ import numpy as np
 import pytensor.tensor as pt
 import pytest
 
-from pytensor.compile.function import function
+from pytensor import function
 
 import pymc as pm
 

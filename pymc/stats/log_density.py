@@ -194,6 +194,17 @@ def compute_log_density(
     input_dataset: Dataset = posterior.to_dataset() if is_datatree else posterior  # type: ignore[assignment]
     free_rv_names = [rv.name for rv in model.free_RVs]
     input_dataset = input_dataset[free_rv_names]  # type: ignore[assignment]
+    # Cast each variable to the dtype expected by the corresponding value var
+    # so that ``trust_input=True`` calls inside ``apply_function_over_dataset``
+    # do not trip the strict type checks of PyTensor v3. ``copy=False`` skips
+    # the copy when the dtype already matches.
+    input_dataset = input_dataset.astype(
+        {
+            umodel.rvs_to_values[rv].name: umodel.rvs_to_values[rv].type.dtype
+            for rv in umodel.free_RVs
+        },
+        copy=False,
+    )
 
     logdens_dataset = apply_function_over_dataset(
         elemwise_logdens_fn,

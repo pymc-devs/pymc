@@ -11,8 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from pytensor import graph_replace
 from pytensor.graph import rewrite_graph
+from pytensor.graph.replace import graph_replace
 from pytensor.printing import debugprint
 from pytensor.xtensor import as_xtensor
 

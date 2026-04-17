@@ -26,10 +26,10 @@ import scipy.stats as st
 from pytensor import tensor as pt
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.blockwise import Blockwise
-from pytensor.tensor.nlinalg import MatrixInverse
+from pytensor.tensor.linalg.decomposition.cholesky import Cholesky
+from pytensor.tensor.linalg.inverse import MatrixInverse
 from pytensor.tensor.random.basic import multivariate_normal
 from pytensor.tensor.random.utils import broadcast_params
-from pytensor.tensor.slinalg import Cholesky
 
 import pymc as pm
 

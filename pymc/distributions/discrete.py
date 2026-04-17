@@ -405,7 +405,7 @@ class DiscreteWeibullRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(q, beta, ndims_params=cls.ndims_params)
 
-        next_rng, p = uniform(size=size, rng=rng).owner.outputs
+        next_rng, p = uniform(size=size, rng=rng, return_next_rng=True)
         draws = pt.ceil(pt.power(pt.log(1 - p) / pt.log(q), 1.0 / beta)) - 1
         draws = draws.astype("int64")
 

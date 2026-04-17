@@ -24,6 +24,8 @@ from pymc.dims import Censored, Normal
 from pymc.model.core import Model
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 @pytest.mark.parametrize("lower", [None, -1])
 @pytest.mark.parametrize("upper", [None, 1])
