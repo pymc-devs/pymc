@@ -448,7 +448,7 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
         assert data["mu"].shape == ()
 
 
-def test_sample_posterior_predictive_after_set_data():
+def test_sample_posterior_after_minibatch():
     with pm.Model(coords={"obs_id": [0, 1, 2]}) as model:
         x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
         y = pm.Data("y", [1.0, 2.0, 3.0], dims="obs_id")
