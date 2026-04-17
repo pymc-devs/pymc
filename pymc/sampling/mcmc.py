@@ -1731,9 +1731,10 @@ def init_nuts(
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )
-        approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
-        )
+        with model:
+            approx_sample = approx.sample(
+                draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            )
         initial_points = [
             {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
         ]
@@ -1757,9 +1758,10 @@ def init_nuts(
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )
-        approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
-        )
+        with model:
+            approx_sample = approx.sample(
+                draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            )
         initial_points = [
             {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
         ]
@@ -1777,9 +1779,10 @@ def init_nuts(
             obj_optimizer=pm.adagrad_window,
             compile_kwargs=compile_kwargs,
         )
-        approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
-        )
+        with model:
+            approx_sample = approx.sample(
+                draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            )
         initial_points = [
             {k: np.asarray(v) for k, v in approx_sample[i].items()} for i in range(chains)
         ]

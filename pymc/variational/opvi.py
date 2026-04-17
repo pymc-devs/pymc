@@ -1564,8 +1564,10 @@ class Approximation(WithMemoization):
             for i in range(draws)
         )
 
+        model = modelcontext(None)
+
         trace = NDArray(
-            model=self.model,
+            model=model,
             test_point={name: np.asarray(records[0]) for name, records in samples.items()},
         )
         try:
@@ -1579,7 +1581,7 @@ class Approximation(WithMemoization):
         if not return_inferencedata:
             return multi_trace
         else:
-            return pm.to_inference_data(multi_trace, model=self.model, **kwargs)
+            return pm.to_inference_data(multi_trace, model=model, **kwargs)
 
     @property
     def ndim(self):

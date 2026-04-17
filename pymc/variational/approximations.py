@@ -329,7 +329,8 @@ def sample_approx(approx, draws=100, include_transformed=True):
     trace: class:`pymc.backends.base.MultiTrace`
         Samples drawn from variational posterior.
     """
-    return approx.sample(draws=draws, include_transformed=include_transformed)
+    with approx.model:
+        return approx.sample(draws=draws, include_transformed=include_transformed)
 
 
 # single group shortcuts exported to user

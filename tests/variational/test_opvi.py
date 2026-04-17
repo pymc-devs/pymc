@@ -208,24 +208,27 @@ def three_var_approx_single_group_mf(three_var_model):
     return MeanField(model=three_var_model)
 
 
-def test_pickle_approx(three_var_approx):
+def test_pickle_approx(three_var_model, three_var_approx):
     import cloudpickle
 
     dump = cloudpickle.dumps(three_var_approx)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    with three_var_model:
+        assert new.sample(1)
 
 
-def test_pickle_single_group(three_var_approx_single_group_mf):
+def test_pickle_single_group(three_var_model, three_var_approx_single_group_mf):
     import cloudpickle
 
     dump = cloudpickle.dumps(three_var_approx_single_group_mf)
     new = cloudpickle.loads(dump)
-    assert new.sample(1)
+    with three_var_model:
+        assert new.sample(1)
 
 
-def test_sample_simple(three_var_approx):
-    trace = three_var_approx.sample(100, return_inferencedata=False)
+def test_sample_simple(three_var_model, three_var_approx):
+    with three_var_model:
+        trace = three_var_approx.sample(100, return_inferencedata=False)
     assert set(trace.varnames) == {"one", "one_log__", "three", "two"}
     assert len(trace) == 100
     assert trace[0]["one"].shape == (10, 2)

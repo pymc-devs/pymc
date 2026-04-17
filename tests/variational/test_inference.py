@@ -14,6 +14,7 @@
 
 import io
 import operator
+import warnings
 
 import cloudpickle
 import numpy as np
@@ -24,6 +25,7 @@ import pytest
 import pymc as pm
 import pymc.variational.opvi as opvi
 
+from pymc.model.transform.basic import remove_minibatched_nodes
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
@@ -174,8 +176,9 @@ def fit_kwargs(inference, use_minibatch):
     return _select[(type(inference), key)]
 
 
-def test_fit_oo(inference, fit_kwargs, simple_model_data):
-    trace = inference.fit(**fit_kwargs).sample(10000)
+def test_fit_oo(inference, fit_kwargs, simple_model, simple_model_data):
+    with simple_model:
+        trace = inference.fit(**fit_kwargs).sample(10000)
     mu_post = simple_model_data["mu_post"]
     d = simple_model_data["d"]
     np.testing.assert_allclose(np.mean(trace.posterior["mu"]), mu_post, rtol=0.05)
@@ -202,7 +205,8 @@ def test_fit_start(inference_spec, simple_model):
         inference = inference_spec(**kw)
 
     try:
-        trace = inference.fit(n=0).sample(10000)
+        with simple_model:
+            trace = inference.fit(n=0).sample(10000)
     except NotImplementedInference as e:
         pytest.skip(str(e))
 
@@ -448,24 +452,26 @@ def test_sample_posterior_predictive_after_set_data():
     with pm.Model(coords={"obs_id": [0, 1, 2]}) as model:
         x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
         y = pm.Data("y", [1.0, 2.0, 3.0], dims="obs_id")
+        x_mini, y_mini = pm.Minibatch(x, y, batch_size=2)
         beta = pm.Normal("beta", 0, 10.0)
-        pm.Normal("obs", beta * x, np.sqrt(1e-2), observed=y, dims="obs_id")
+        y_hat = pm.Deterministic("y_hat", beta * x_mini, dims="obs_id")
+        pm.Normal("obs", y_hat, np.sqrt(1e-2), observed=y_mini, total_size=3, dims="obs_id")
         approx = pm.fit(
             10,
             method="advi",
             progressbar=False,
         )
-        pm.set_data(
-            new_data={"x": [4.0, 5.0], "y": [4.0, 5.0]},
-            coords={"obs_id": [0, 1]},
-        )
+
+    model_post = remove_minibatched_nodes(model)
+    with model_post:
         trace = approx.sample(500)
 
     assert trace.posterior["beta"].shape == (1, 500)
-    assert trace.constant_data["x"].shape == (2,)
-    assert trace.observed_data["obs"].shape == (2,)
+    assert trace.constant_data["x"].shape == (3,)
+    assert trace.observed_data["obs"].shape == (3,)
 
-    with model:
+    with model_post, warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "Numba will use object mode", UserWarning)
         x_test = [5, 6, 9, 12, 15]
         pm.set_data(
             new_data={"x": x_test, "y": [0.0] * len(x_test)},
