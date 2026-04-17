@@ -371,7 +371,8 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             dist_props["extra_dims"] = (*(extra_dims.keys()), *dist_props["extra_dims"])
             new_dist_op = type(dist.owner.op)(**dist_props)
             _old_rng, *params_and_dim_lengths = dist.owner.inputs
-            new_rng = None  # We don't propagate the old RNG, because we don't want the new and old dists to be correlated
+            # We don't propagate the old RNG, because we don't want the new and old dists to be correlated
+            new_rng = pt.random.shared_rng(seed=None)
             return new_dist_op(new_rng, *extra_dims.values(), *params_and_dim_lengths)
         case Transpose():
             return expand_dist_dims(dist.owner.inputs[0], extra_dims=extra_dims).transpose(
