@@ -39,6 +39,8 @@ from pymc.dims import (
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 def test_flat():
     coords = {"a": range(3)}
