@@ -51,6 +51,7 @@ from pymc.distributions.continuous import (
     VonMises,
     Wald,
     Weibull,
+    ZeroOneInflatedBeta,
 )
 from pymc.distributions.custom import CustomDist, DensityDist
 from pymc.distributions.discrete import (
@@ -204,5 +205,6 @@ __all__ = [
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
+    "ZeroOneInflatedBeta"
     "ZeroSumNormal",
 ]
