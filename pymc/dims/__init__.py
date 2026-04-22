@@ -15,21 +15,14 @@
 
 def __init__():
     """Make PyMC aware of the xtensor functionality."""
-    import warnings
+    import pytensor.xtensor
 
     from pytensor.compile import optdb
+    from pytensor.xtensor.vectorization import XRV
 
     from pymc.initial_point import initial_point_rewrites_db
     from pymc.logprob.abstract import MeasurableOp
     from pymc.logprob.rewriting import logprob_rewrites_db
-
-    # Filter PyTensor xtensor warning
-    # TODO: Remove this catch_warnings logic once xtensor stops warning on init
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", UserWarning)
-        import pytensor.xtensor
-
-        from pytensor.xtensor.vectorization import XRV
 
     # Make PyMC aware of xtensor functionality
     MeasurableOp.register(XRV)
