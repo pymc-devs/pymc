@@ -16,6 +16,7 @@ API
    api/data
    api/ode
    api/logprob
+   api/stats
    api/tuning
    api/math
    api/pytensorf
@@ -46,7 +47,7 @@ library, a general purpose library for
 * Functions from the ``arviz.plots`` module are available through ``pymc.plots.<function>``,
   but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:plot_api>`.
 
-* Functions from the ``arviz.stats`` module are available through ``pymc.<function>`` or ``pymc.stats.<function>``,
+* Functions from the ``arviz.stats`` module are available through ``pymc.stats.<function>``,
   but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:stats_api>`.
 
 ArviZ is a dependency of PyMC and so, in addition to the locations described above,
