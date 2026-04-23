@@ -2036,6 +2036,26 @@ class Model(WithMemoization, metaclass=ContextMeta):
             dpi=dpi,
         )
 
+    def table(
+        self,
+        *,
+        split_groups: bool = True,
+        truncate_deterministic: int | None = None,
+        parameter_count: bool = True,
+    ):
+        """Create a rich table summarizing the model's variables and their expressions.
+
+        See :func:`pymc.model_table` for details.
+        """
+        from pymc.printing import model_table
+
+        return model_table(
+            self,
+            split_groups=split_groups,
+            truncate_deterministic=truncate_deterministic,
+            parameter_count=parameter_count,
+        )
+
 
 class BlockModelAccess(Model):
     """Can be used to prevent user access to Model contexts."""
