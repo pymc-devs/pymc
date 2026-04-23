@@ -420,7 +420,7 @@ def _dims_expression(model: Model, var: Variable) -> str:
         return " × ".join(f"{dim}[{dim_size}]" for dim, dim_size in dim_sizes.items())
     if not isinstance(var.type, HasShape):
         return ""
-    shape_values = list(pt.as_tensor(var.shape).eval(mode=_cheap_eval_mode))
+    shape_values = list(pt.as_tensor(var.shape).eval(mode=_cheap_eval_mode))  # type: ignore[attr-defined]
     return f"[{', '.join(map(str, shape_values))}]" if shape_values else ""
 
 
