@@ -18,20 +18,17 @@ import urllib.request
 
 from collections.abc import Sequence
 from copy import copy
-from typing import Union, cast
 
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
-import xarray as xr
 
 from pytensor.compile.builders import OpFromGraph
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
 from pytensor.tensor.random.basic import IntegersRV
-from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.tensor.variable import TensorVariable
 
 from pymc.exceptions import ShapeError
 from pymc.pytensorf import convert_data, rvs_in_graph
@@ -163,76 +160,17 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     return mb_tensors if len(variables) else mb_tensors[0]
 
 
-def determine_coords(
-    model,
-    value: pd.DataFrame | pd.Series | xr.DataArray,
-    dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
-    """Determine coordinate values from data or the model (via ``dims``)."""
-    if coords is None:
-        coords = {}
-
-    dim_name = None
-    # If value is a df or a series, we interpret the index as coords:
-    if hasattr(value, "index"):
-        if dims is not None:
-            dim_name = dims[0]
-        if dim_name is None and value.index.name is not None:
-            dim_name = value.index.name
-        if dim_name is not None:
-            coords[dim_name] = value.index
-
-    # If value is a df, we also interpret the columns as coords:
-    if hasattr(value, "columns"):
-        if dims is not None:
-            dim_name = dims[1]
-        if dim_name is None and value.columns.name is not None:
-            dim_name = value.columns.name
-        if dim_name is not None:
-            coords[dim_name] = value.columns
-
-    if isinstance(value, xr.DataArray):
-        if dims is not None:
-            for dim in dims:
-                dim_name = dim
-                # str is applied because dim entries may be None
-                coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
-
-    if isinstance(value, np.ndarray) and dims is not None:
-        if len(dims) != value.ndim:
-            raise ShapeError(
-                "Invalid data shape. The rank of the dataset must match the length of `dims`.",
-                actual=value.shape,
-                expected=value.ndim,
-            )
-        for size, dim in zip(value.shape, dims):
-            coord = model.coords.get(dim, None)
-            if coord is None and dim is not None:
-                coords[dim] = range(size)
-
-    if dims is None:
-        # TODO: Also determine dim names from the index
-        new_dims: Sequence[str] | Sequence[None] = [None] * np.ndim(value)
-    else:
-        new_dims = dims
-    return coords, new_dims
-
-
 def Data(
     name: str,
     value,
     *,
     dims: Sequence[str] | None = None,
-    coords: dict[str, Sequence | np.ndarray] | None = None,
-    infer_dims_and_coords=False,
-    model: Union["Model", None] = None,
+    model: "Model | None" = None,
     **kwargs,
-) -> SharedVariable | TensorConstant:
+) -> SharedVariable:
     """Create a data container that registers a data variable with the model.
 
-    Depending on the ``mutable`` setting (default: True), the variable
-    is registered as a :class:`~pytensor.compile.sharedvalue.SharedVariable`,
+    The variable is registered as a :class:`~pytensor.compile.sharedvalue.SharedVariable`,
     enabling it to be altered in value and shape, but NOT in dimensionality using
     :func:`pymc.set_data`.
 
@@ -250,23 +188,19 @@ def Data(
     ----------
     name : str
         The name for this variable.
-    value : array_like or pandas.Series, pandas.Dataframe
-        A value to associate with this variable.
-    dims : str, tuple of str or tuple of None, optional
-        Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when ``value`` is a pandas Series or DataFrame. The
-        ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
-        documentation for more information about dimensions and coordinates:
-        :ref:`arviz:quickstart`.
-        If this parameter is not specified, the random variables will not have dimension
-        names.
-    coords : dict, optional
-        Coordinate values to set for new dimensions introduced by this ``Data`` variable.
-    export_index_as_coords : bool
-        Deprecated, previous version of "infer_dims_and_coords"
-    infer_dims_and_coords : bool, default=False
-        If True, the ``Data`` container will try to infer what the coordinates
-        and dimension names should be if there is an index in ``value``.
+    value : array-like, DataFrame, or Series
+        A value to associate with this variable. Accepts numpy arrays, lists,
+        scipy sparse matrices, xarray DataArrays, and any DataFrame or Series
+        supported by `narwhals <https://narwhals-dev.github.io/narwhals/>`_
+        (pandas, polars, dask, pyarrow, modin, cudf, ibis, ...). The value is
+        converted to a numpy array.
+    dims : str or tuple of str, optional
+        Dimension names of the data variable. See ArviZ documentation for more
+        information about dimensions and coordinates: :ref:`arviz:quickstart`.
+        If not specified, the data variable will not have dimension names.
+    model : pymc.Model, optional
+        Model to which to add the data variable. If not specified, the data
+        variable will be added to the model on the context stack.
     **kwargs : dict, optional
         Extra arguments passed to :func:`pytensor.shared`.
 
@@ -293,13 +227,6 @@ def Data(
     """
     from pymc.model.core import modelcontext
 
-    if coords is None:
-        coords = {}
-
-    if isinstance(value, list):
-        value = np.array(value)
-
-    # Add data container to the named variables of the model.
     try:
         model = modelcontext(model)
     except TypeError:
@@ -309,14 +236,18 @@ def Data(
         )
     name = model.name_for(name)
 
-    # Transform `value` it to something digestible for PyTensor.
     if isgenerator(value):
         raise NotImplementedError(
             "Generator type data is no longer supported with pm.Data.",
             # It messes up InferenceData and can't be the input to a SharedVariable.
         )
-    else:
-        arr = convert_data(value)
+
+    if isinstance(value, list | tuple):
+        # Promote here so the inferred dtype (e.g. int64 for an index list) survives
+        # `convert_data`, instead of being floatX'd by the "no dtype" fallback.
+        value = np.asarray(value)
+
+    arr = convert_data(value)
 
     if isinstance(arr, np.ma.MaskedArray):
         raise NotImplementedError(
@@ -335,25 +266,12 @@ def Data(
             expected=x.ndim,
         )
 
-    new_dims: Sequence[str] | Sequence[None] | None
-    if infer_dims_and_coords:
-        coords, new_dims = determine_coords(model, value, dims)
-    else:
-        new_dims = dims
-
-    if new_dims:
+    if dims:
         xshape = x.shape
-        # Register new dimension lengths
-        for d, dname in enumerate(new_dims):
+        for d, dname in enumerate(dims):
             if dname not in model.dim_lengths and dname is not None:
-                model.add_coord(
-                    name=dname,
-                    # Note: Coordinate values can't be taken from
-                    # the value, because it could be N-dimensional.
-                    values=coords.get(dname, None),
-                    length=xshape[d],
-                )
+                model.add_coord(name=dname, values=None, length=xshape[d])
 
-    model.register_data_var(x, dims=new_dims)
+    model.register_data_var(x, dims=dims)
 
     return x
