@@ -37,6 +37,7 @@ from pymc.sampling.mcmc import assign_step_methods
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import (
     NUTS,
+    STEP_METHODS,
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
     CompoundStep,
@@ -846,11 +847,11 @@ class TestAssignStepMethods:
     @pytest.fixture
     def step_methods(self):
         """Make sure we reset the STEP_METHODS after the test is done."""
-        methods_copy = pm.STEP_METHODS.copy()
-        yield pm.STEP_METHODS
-        pm.STEP_METHODS.clear()
+        methods_copy = STEP_METHODS.copy()
+        yield STEP_METHODS
+        STEP_METHODS.clear()
         for method in methods_copy:
-            pm.STEP_METHODS.append(method)
+            STEP_METHODS.append(method)
 
     def test_modify_step_methods(self, step_methods):
         """Test step methods can be changed"""

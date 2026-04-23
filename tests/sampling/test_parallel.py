@@ -30,6 +30,7 @@ import pymc as pm
 import pymc.sampling.parallel as ps
 
 from pymc.pytensorf import floatX
+from pymc.step_methods import CompoundStep
 
 
 def test_context():
@@ -136,7 +137,7 @@ def test_abort(mp_start_method):
         step1 = pm.NUTS([model.rvs_to_values[a]])
         step2 = pm.Metropolis([model.rvs_to_values[b]])
 
-    step = pm.CompoundStep([step1, step2])
+    step = CompoundStep([step1, step2])
 
     # on Windows we cannot fork
     if platform.system() == "Windows" and mp_start_method == "fork":
@@ -177,7 +178,7 @@ def test_explicit_sample(mp_start_method):
         step1 = pm.NUTS([model.rvs_to_values[a]])
         step2 = pm.Metropolis([model.rvs_to_values[b]])
 
-    step = pm.CompoundStep([step1, step2])
+    step = CompoundStep([step1, step2])
 
     # on Windows we cannot fork
     if platform.system() == "Windows" and mp_start_method == "fork":
@@ -218,7 +219,7 @@ def test_iterator():
         step1 = pm.NUTS([model.rvs_to_values[a]])
         step2 = pm.Metropolis([model.rvs_to_values[b]])
 
-    step = pm.CompoundStep([step1, step2])
+    step = CompoundStep([step1, step2])
 
     start = {"a": floatX(np.array([1.0])), "b_log__": floatX(np.array(2.0))}
     sampler = ps.ParallelSampler(

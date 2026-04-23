@@ -21,6 +21,7 @@ import pymc as pm
 
 from pymc.backends import init_traces
 from pymc.pytensorf import make_shared_replacements
+from pymc.step_methods import CompoundStep
 from pymc.step_methods.arraystep import ArrayStepShared
 
 try:
@@ -240,7 +241,7 @@ class TestChainRecordAdapter:
                 backend=mcb.NumPyBackend(),
                 chains=1,
                 expected_length=N,
-                step=pm.CompoundStep([stepA, stepB]),
+                step=CompoundStep([stepA, stepB]),
                 initial_point=pmodel.initial_point(),
                 model=pmodel,
             )

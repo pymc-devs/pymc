@@ -66,7 +66,7 @@ from pymc.stats.convergence import (
     log_warnings,
     run_convergence_checks,
 )
-from pymc.step_methods import NUTS, CompoundStep
+from pymc.step_methods import NUTS, STEP_METHODS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
@@ -196,7 +196,7 @@ def instantiate_steppers(
     if unused_args:
         s = "s" if len(unused_args) > 1 else ""
         example_arg = sorted(unused_args)[0]
-        example_step = (list(selected_steps.keys()) or pm.STEP_METHODS)[0]
+        example_step = (list(selected_steps.keys()) or STEP_METHODS)[0]
         example_step_name = getattr(example_step, "name")
         raise ValueError(
             f"Invalid key{s} found in step_kwargs: {unused_args}. "
@@ -276,7 +276,7 @@ def assign_step_methods(
 
     # Use competence classmethods to select step methods for remaining
     # variables
-    methods_list: list[type[BlockedStep]] = list(methods or pm.STEP_METHODS)
+    methods_list: list[type[BlockedStep]] = list(methods or STEP_METHODS)
     selected_steps: dict[type[BlockedStep], list] = {}
     model_logp = model.logp()
 
@@ -860,7 +860,7 @@ def sample(
             msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
             _log.warning(msg)
 
-    provided_steps, selected_steps = assign_step_methods(model, step, methods=pm.STEP_METHODS)
+    provided_steps, selected_steps = assign_step_methods(model, step, methods=STEP_METHODS)
     exclusive_nuts = (
         # User provided an instantiated NUTS step, and nothing else is needed
         (not selected_steps and len(provided_steps) == 1 and isinstance(provided_steps[0], NUTS))
