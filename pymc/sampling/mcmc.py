@@ -782,12 +782,6 @@ def sample(
         raise ValueError(
             "Setting random_seed = -1 is not allowed. Pass `None` to not specify a seed."
         )
-    elif isinstance(random_seed, tuple | list):
-        warnings.warn(
-            "A list or tuple of random_seed no longer specifies the specific random_seed of each chain. "
-            "Use a single seed instead.",
-            UserWarning,
-        )
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
