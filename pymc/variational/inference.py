@@ -24,6 +24,7 @@ from rich.progress import Progress, TextColumn, track
 import pymc as pm
 
 from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.pytensorf import resolve_backend_compile_kwargs
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
 from pymc.variational.operators import KL, KSD
@@ -80,7 +81,7 @@ class Inference:
             pass
         return score
 
-    def run_profiling(self, n=1000, score=None, **kwargs):
+    def run_profiling(self, n=1000, score=None, *, backend=None, **kwargs):
         score = self._maybe_score(score)
         if "fn_kwargs" in kwargs:
             warnings.warn(
@@ -88,8 +89,9 @@ class Inference:
             )
             compile_kwargs = kwargs.pop("fn_kwargs")
         else:
-            compile_kwargs = kwargs.pop("compile_kwargs", {})
+            compile_kwargs = kwargs.pop("compile_kwargs", None)
 
+        compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
         compile_kwargs["profile"] = True
         step_func = self.objective.step_function(
             score=score, compile_kwargs=compile_kwargs, **kwargs
@@ -108,6 +110,8 @@ class Inference:
         callbacks=None,
         progressbar=True,
         progressbar_theme=default_progress_theme,
+        *,
+        backend=None,
         **kwargs,
     ):
         """Perform Operator Variational Inference.
@@ -124,6 +128,8 @@ class Inference:
             whether to show progressbar or not
         progressbar_theme : Theme
             Custom theme for the progress bar
+        backend : str, optional
+            Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
 
         Other Parameters
         ----------------
@@ -144,7 +150,8 @@ class Inference:
         total_grad_norm_constraint: `float`
             Bounds gradient norm, prevents exploding gradient problem
         compile_kwargs: `dict`
-            Add kwargs to pytensor.function (e.g. `{'profile': True}`)
+            Add kwargs to pytensor.function (e.g. `{'profile': True}`).
+            ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
         more_replacements: `dict`
             Apply custom replacements before calculating gradients
 
@@ -155,6 +162,9 @@ class Inference:
         if callbacks is None:
             callbacks = []
         score = self._maybe_score(score)
+        kwargs["compile_kwargs"] = resolve_backend_compile_kwargs(
+            backend, kwargs.get("compile_kwargs")
+        )
         step_func = self.objective.step_function(score=score, **kwargs)
 
         if score:
@@ -686,6 +696,8 @@ def fit(
     start=None,
     start_sigma=None,
     inf_kwargs=None,
+    *,
+    backend=None,
     **kwargs,
 ):
     r"""Handy shortcut for using inference methods in functional way.
@@ -711,6 +723,8 @@ def fit(
         starting point for inference
     start_sigma: `dict[str, np.ndarray]`
         starting standard deviation for inference, only available for method 'advi'
+    backend: str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
 
     Other Parameters
     ----------------
@@ -739,7 +753,8 @@ def fit(
     total_grad_norm_constraint: `float`
         Bounds gradient norm, prevents exploding gradient problem
     compile_kwargs: `dict`
-        Add kwargs to pytensor.function (e.g. `{'profile': True}`)
+        Add kwargs to pytensor.function (e.g. `{'profile': True}`).
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
     more_replacements: `dict`
         Apply custom replacements before calculating gradients
 
@@ -772,4 +787,4 @@ def fit(
         inference = method
     else:
         raise TypeError(f"method should be one of {set(_select.keys())} or Inference instance")
-    return inference.fit(n, **kwargs)
+    return inference.fit(n, backend=backend, **kwargs)

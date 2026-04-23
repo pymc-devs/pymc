@@ -28,6 +28,7 @@ from pymc.backends.arviz import dict_to_dataset, to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
+from pymc.pytensorf import resolve_backend_compile_kwargs
 from pymc.sampling.mcmc import setup_cores_blas_cores
 from pymc.sampling.parallel import _cpu_count, _initialize_multiprocessing_context
 from pymc.smc.kernels import IMH
@@ -53,6 +54,7 @@ def sample_smc(
     idata_kwargs=None,
     progressbar=True,
     progressbar_theme: Theme | None = default_progress_theme,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
     mp_ctx=None,
     **kernel_kwargs,
@@ -101,8 +103,11 @@ def sample_smc(
         Whether or not to display a progress bar in the command line.
     progressbar_theme : Theme, optional
         Custom theme for progress bar. Defaults to the standard PyMC progress bar theme.
+    backend: str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs: dict, optional
-        Keyword arguments to pass to pytensor.function
+        Keyword arguments to pass to pytensor.function.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
     mp_ctx : multiprocessing.context or str, optional
         Multiprocessing context for parallel chains. Can be a context object or a string
         ("fork", "spawn", or "forkserver"). If None, defaults to "fork" on macOS ARM and
@@ -174,10 +179,7 @@ def sample_smc(
     else:
         cores = min(chains, cores)
 
-    if compile_kwargs is None:
-        compile_kwargs = {}
-
-    kernel_kwargs["compile_kwargs"] = compile_kwargs
+    kernel_kwargs["compile_kwargs"] = resolve_backend_compile_kwargs(backend, compile_kwargs)
 
     random_seed = _get_seeds_per_chain(random_state=random_seed, chains=chains)
 

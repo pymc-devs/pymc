@@ -63,6 +63,7 @@ from pymc.pytensorf import (
     gradient,
     hessian,
     join_nonshared_inputs,
+    resolve_backend_compile_kwargs,
     rewrite_pregrad,
 )
 from pymc.util import (
@@ -1668,6 +1669,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         n=1000,
         point=None,
         profile=True,
+        backend=None,
         **compile_fn_kwargs,
     ) -> ProfileStats:
         """Compile and profile a PyTensor function which returns ``outs`` and takes values of model vars as a dict as an argument.
@@ -1680,6 +1682,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         point : Point
             Point to pass to the function
         profile : True or ProfileStats
+        backend : str, optional
+            Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
         compile_fn_kwargs
             Compilation kwargs for :func:`pymc.model.core.Model.compile_fn`
 
@@ -1689,6 +1693,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Use .summary() to print stats.
         """
         compile_fn_kwargs.setdefault("on_unused_input", "ignore")
+        compile_fn_kwargs = resolve_backend_compile_kwargs(backend, compile_fn_kwargs)
         f = self.compile_fn(
             outs,
             inputs=self.value_vars,

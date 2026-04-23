@@ -58,6 +58,7 @@ from pymc.progress_bar import (
     ProgressBarOptions,
     default_progress_theme,
 )
+from pymc.pytensorf import resolve_backend_compile_kwargs
 from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -540,6 +541,7 @@ def sample(
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
     model: Model | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
     **kwargs,
 ) -> DataTree | MultiTrace | ZarrTrace:
@@ -658,9 +660,12 @@ def sample(
         See multiprocessing documentation for details.
     model : Model (optional if in ``with`` context)
         Model to sample from. The model needs to have free random variables.
+    backend: str, optional.
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
+        May require installing extra dependencies.
     compile_kwargs: dict, optional
         Dictionary with keyword argument to pass to the functions compiled by the step methods.
-
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -814,6 +819,8 @@ def sample(
             and issubclass(next(iter(selected_steps)), NUTS)
         )
     )
+
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
 
     if nuts_sampler != "pymc":
         if not exclusive_nuts:

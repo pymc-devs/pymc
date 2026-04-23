@@ -25,7 +25,8 @@ from pymc.sampling.forward import sample_prior_predictive
 pytestmark = pytest.mark.filterwarnings("error")
 
 
-def test_compute_deterministics():
+@pytest.mark.parametrize("via", ["compile_kwargs", "backend"])
+def test_compute_deterministics(via):
     with Model(coords={"group": (0, 2, 4)}) as m:
         mu_raw = Normal("mu_raw", 0, 1, dims="group")
         mu = Deterministic("mu", mu_raw.cumsum(), dims="group")
@@ -47,13 +48,18 @@ def test_compute_deterministics():
     assert_allclose(all_dets["sigma"], np.exp(dataset["sigma_raw"]))
 
     # Test custom arguments
+    mode_kwargs = (
+        {"compile_kwargs": {"mode": "FAST_COMPILE"}}
+        if via == "compile_kwargs"
+        else {"backend": "FAST_COMPILE"}
+    )
     extended_with_mu = compute_deterministics(
         dataset,
         var_names=["mu"],
         merge_dataset=True,
         model=m,
-        compile_kwargs={"mode": "FAST_COMPILE"},
         progressbar=False,
+        **mode_kwargs,
     )
     assert set(extended_with_mu.data_vars.variables) == {"mu_raw", "sigma_raw", "mu"}
     assert extended_with_mu["mu"].dims == ("chain", "draw", "group")

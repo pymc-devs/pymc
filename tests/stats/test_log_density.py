@@ -18,6 +18,7 @@ import pytest
 import scipy.stats as st
 
 from arviz_base import from_dict
+from pytensor.compile import get_mode
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
@@ -177,22 +178,31 @@ class TestComputeLogLikelihood:
             st.norm(0, 1).logpdf(idata.posterior["x"].values),
         )
 
-    def test_compilation_kwargs(self):
+    @pytest.mark.parametrize("via", ["compile_kwargs", "backend"])
+    def test_compilation_kwargs(self, via):
         with Model() as m:
             x = Normal("x")
             Deterministic("d", 2 * x)
             Normal("y", x, observed=[0, 1, 2])
 
             idata = from_dict({"posterior": {"x": np.arange(100).reshape(4, 25)}})
+            prior_kwargs = (
+                {"compile_kwargs": {"mode": "JAX"}}
+                if via == "compile_kwargs"
+                else {"backend": "JAX"}
+            )
+            lik_kwargs = (
+                {"compile_kwargs": {"mode": "NUMBA"}}
+                if via == "compile_kwargs"
+                else {"backend": "NUMBA"}
+            )
             with (
                 # apply_function_over_dataset fails with patched `compile_pymc`
                 patch("pymc.stats.log_density.apply_function_over_dataset"),
                 patch("pymc.model.core.compile") as patched_compile,
             ):
-                compute_log_prior(idata, compile_kwargs={"mode": "JAX"}, extend_inferencedata=False)
-                compute_log_likelihood(
-                    idata, compile_kwargs={"mode": "NUMBA"}, extend_inferencedata=False
-                )
+                compute_log_prior(idata, extend_inferencedata=False, **prior_kwargs)
+                compute_log_likelihood(idata, extend_inferencedata=False, **lik_kwargs)
         assert len(patched_compile.call_args_list) == 2
-        assert patched_compile.call_args_list[0].kwargs["mode"] == "JAX"
-        assert patched_compile.call_args_list[1].kwargs["mode"] == "NUMBA"
+        assert get_mode(patched_compile.call_args_list[0].kwargs["mode"]) == get_mode("JAX")
+        assert get_mode(patched_compile.call_args_list[1].kwargs["mode"]) == get_mode("NUMBA")
