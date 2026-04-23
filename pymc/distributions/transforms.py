@@ -35,6 +35,7 @@ __all__ = [
     "Chain",
     "CholeskyCorrTransform",
     "CholeskyCovPacked",
+    "CholeskyCovTransform",
     "Interval",
     "Transform",
     "ZeroSumTransform",
@@ -443,6 +444,95 @@ class CholeskyCovPacked(Transform):
 
     def log_jac_det(self, value, *inputs):
         return pt.sum(value[..., self.diag_idxs], axis=-1)
+
+
+class CholeskyCovTransform(Transform):
+    r"""Map an unconstrained real vector to a symmetric positive-definite (SPD) matrix.
+
+    Constrained space: ``(n, n)`` SPD matrix ``X``.
+    Unconstrained space: ``(n*(n+1)/2,)`` flat real vector packed in row-major
+    lower-triangular order.
+
+    The transform composes two steps:
+
+    1. Reshape the flat vector into a lower-triangular matrix ``L``, exponentiating
+       the diagonal entries (so ``L_kk > 0``).
+    2. Form ``X = L @ L.T``, the SPD matrix.
+
+    The lower-triangular ``L`` produced inside ``backward`` is tagged with
+    ``lower_triangular = True`` so PyTensor's ``cholesky_ldotlt`` rewrite eliminates
+    any subsequent ``cholesky(L @ L.T)`` calls (e.g. inside a Cholesky-based
+    ``Wishart.logp``), avoiding a redundant decomposition at runtime.
+
+    The Jacobian of the composite map (free reals :math:`\to L \to L L^\top`) is
+
+    .. math::
+
+        |J| = \prod_k L_{kk} \cdot 2^n \cdot \prod_k L_{kk}^{n-k+1}
+            = 2^n \cdot \prod_k L_{kk}^{n-k+2}.
+
+    With :math:`y_{kk} = \log L_{kk}` the diagonal entries of the unconstrained
+    vector, the log-Jacobian is
+
+    .. math::
+
+        \log |J| = n \log 2 + \sum_{k=1}^{n} (n - k + 2)\, y_{kk}.
+
+    Examples
+    --------
+
+    .. code-block:: python
+
+        import numpy as np
+        import pytensor.tensor as pt
+        from pymc.distributions.transforms import CholeskyCovTransform
+
+        tr = CholeskyCovTransform(n=3)
+        unconstrained = pt.as_tensor(np.array([0.0, 0.5, 0.0, 0.2, -0.1, 0.0]))
+        Sigma = tr.backward(unconstrained)
+        # Sigma is a (3, 3) SPD matrix.
+    """
+
+    name = "cholesky-cov"
+
+    def __init__(self, n):
+        """Create a CholeskyCovTransform.
+
+        Parameters
+        ----------
+        n : int or TensorLike
+            Side length of the SPD matrix.
+        """
+        self.n = n
+        self.diag_idxs = pt.arange(1, n + 1).cumsum() - 1
+        self.tril_idxs = pt.tril_indices(n)
+
+    def backward(self, value, *inputs):
+        value = pt.as_tensor_variable(value)
+        # Exponentiate the diagonal entries so L has positive diagonal.
+        value_pos = value[..., self.diag_idxs].set(pt.exp(value[..., self.diag_idxs]))
+        # Scatter into a (..., n, n) lower-triangular matrix L.
+        n = self.n
+        L_shape = (*value.shape[:-1], n, n)
+        L = pt.zeros(L_shape, dtype=value.dtype)
+        L = L[..., self.tril_idxs[0], self.tril_idxs[1]].set(value_pos)
+        # Tag L as lower-triangular so cholesky(L @ L.mT) → L is rewritten away.
+        L.tag.lower_triangular = True
+        return L @ L.mT
+
+    def forward(self, value, *inputs):
+        value = pt.as_tensor_variable(value)
+        L = pt.linalg.cholesky(value)
+        flat = L[..., self.tril_idxs[0], self.tril_idxs[1]]
+        # log the diagonal entries to make them unconstrained.
+        return flat[..., self.diag_idxs].set(pt.log(flat[..., self.diag_idxs]))
+
+    def log_jac_det(self, value, *inputs):
+        value = pt.as_tensor_variable(value)
+        n = self.n
+        log_diag = value[..., self.diag_idxs]
+        coeffs = pt.arange(n + 1, 1, -1).astype(value.dtype)
+        return n * pt.log(2.0) + pt.sum(coeffs * log_diag, axis=-1)
 
 
 Chain = ChainedTransform

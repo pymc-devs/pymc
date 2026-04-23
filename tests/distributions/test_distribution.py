@@ -115,11 +115,6 @@ def test_all_distributions_have_support_points():
         dist_module.timeseries.EulerMaruyama,
     }
 
-    # Distributions that have been refactored but don't yet have support_points
-    not_implemented |= {
-        dist_module.multivariate.Wishart,
-    }
-
     unexpected_implemented = not_implemented - missing_support_points
     if unexpected_implemented:
         raise Exception(

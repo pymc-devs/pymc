@@ -1078,14 +1078,8 @@ class BaseTestDistributionRandom:
     random_state = None
 
     def test_distribution(self):
-        import pytest
-
         self.validate_tests_list()
-        if self.pymc_dist == pm.Wishart:
-            with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
-                self._instantiate_pymc_rv()
-        else:
-            self._instantiate_pymc_rv()
+        self._instantiate_pymc_rv()
         if self.reference_dist is not None:
             self.reference_dist_draws = self.reference_dist()(
                 size=self.size, **self.reference_dist_params
@@ -1095,11 +1089,7 @@ class BaseTestDistributionRandom:
                 raise ValueError(
                     "Custom check cannot start with `test_` or else it will be executed twice."
                 )
-            if self.pymc_dist == pm.Wishart and check_name.startswith("check_rv_size"):
-                with pytest.warns(UserWarning, match="can currently not be used for MCMC sampling"):
-                    getattr(self, check_name)()
-            else:
-                getattr(self, check_name)()
+            getattr(self, check_name)()
 
     def get_random_state(self, reset=False):
         if self.random_state is None or reset:
