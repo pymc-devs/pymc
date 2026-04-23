@@ -14,12 +14,17 @@
 
 __all__ = [
     "ImplicitFreezeWarning",
+    "BlockModelAccessError",
+    "DtypeError",
     "ImputationWarning",
     "IncorrectArgumentsError",
+    "NotConstantValueError",
     "SamplingError",
     "ShapeError",
     "ShapeWarning",
     "TraceDirectoryError",
+    "TruncationError",
+    "UndefinedMomentException",
 ]
 
 

@@ -31,7 +31,7 @@ from pytensor.graph import graph_inputs
 
 import pymc as pm
 
-from pymc import ImputationWarning
+from pymc.exceptions import ImputationWarning
 from pymc.sampling.jax import (
     _get_batched_jittered_initial_points,
     _get_log_likelihood,

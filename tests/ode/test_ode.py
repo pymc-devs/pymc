@@ -196,27 +196,29 @@ class TestErrors:
 
     def test_too_many_params(self):
         with pytest.raises(
-            pm.ShapeError,
+            pm.exceptions.ShapeError,
             match="Length of theta is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)",
         ):
             self.ode_model(theta=[1, 1], y0=[0])
 
     def test_too_many_y0(self):
         with pytest.raises(
-            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)"
+            pm.exceptions.ShapeError,
+            match="Length of y0 is wrong. \\(actual \\(2,\\) != expected \\(1,\\)\\)",
         ):
             self.ode_model(theta=[1], y0=[0, 0])
 
     def test_too_few_params(self):
         with pytest.raises(
-            pm.ShapeError,
+            pm.exceptions.ShapeError,
             match="Length of theta is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)",
         ):
             self.ode_model(theta=[], y0=[1])
 
     def test_too_few_y0(self):
         with pytest.raises(
-            pm.ShapeError, match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)"
+            pm.exceptions.ShapeError,
+            match="Length of y0 is wrong. \\(actual \\(0,\\) != expected \\(1,\\)\\)",
         ):
             self.ode_model(theta=[1], y0=[])
 
