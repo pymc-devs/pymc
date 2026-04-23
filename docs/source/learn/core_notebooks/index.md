@@ -12,6 +12,7 @@ pymc_pytensor
 dims_module
 GLM_linear
 Gaussian_Processes
+rosetta_stone_pymc_stan
 :::
 
 :::{note}
