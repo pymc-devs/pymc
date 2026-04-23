@@ -679,7 +679,7 @@ def sample(
         in the returned ``idata.sample_stats`` group.
         This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
         should only be set to ``True`` if you intend to use the "warning" objects right away.
-        Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
+        Defaults to ``False`` such that the ``"warning"`` stat is dropped automatically,
         making the ``InferenceData`` compatible with saving.
     return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a

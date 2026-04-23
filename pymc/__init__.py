@@ -70,7 +70,6 @@ from pymc.sampling import *
 from pymc.smc import *
 from pymc.step_methods import *
 from pymc.tuning import *
-from pymc.util import drop_warning_stat
 from pymc.variational import *
 
 __version__ = _version.get_versions()["version"]
