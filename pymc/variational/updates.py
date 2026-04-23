@@ -337,7 +337,7 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     True
     """
     if loss_or_grads is None and params is None:
-        return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
+        return partial(pm.variational.updates.momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     updates = sgd(loss_or_grads, params, learning_rate)

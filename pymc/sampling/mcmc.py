@@ -1777,9 +1777,11 @@ def init_nuts(
 
     cb = []
     if "advi" in init:
+        from pymc.variational.callbacks import CheckParametersConvergence
+
         cb = [
-            pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
-            pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
+            CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
+            CheckParametersConvergence(tolerance=1e-2, diff="relative"),
         ]
 
     logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
@@ -1883,7 +1885,7 @@ def init_nuts(
         pm.fit(
             random_seed=random_seed_list[0],
             n=n_init,
-            method=pm.KLqp(approx),
+            method=pm.variational.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar and not quiet,
             obj_optimizer=pm.adagrad_window,

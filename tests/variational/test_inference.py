@@ -364,7 +364,7 @@ def test_clear_cache():
         assert all(len(c) == 0 for c in inference.approx._cache.values())
         new_a = cloudpickle.loads(cloudpickle.dumps(inference.approx))
         assert not hasattr(new_a, "_cache")
-        inference_new = pm.KLqp(new_a)
+        inference_new = pm.variational.KLqp(new_a)
         inference_new.fit(n=10)
         assert any(len(c) != 0 for c in inference_new.approx._cache.values())
         inference_new.approx._cache.clear()
