@@ -48,6 +48,7 @@ from pymc.step_methods.arraystep import (
 )
 from pymc.step_methods.compound import Competence, StepMethodState
 from pymc.step_methods.state import dataclass_state
+from pymc.vartypes import discrete_types
 
 __all__ = [
     "BinaryGibbsMetropolis",
@@ -222,7 +223,7 @@ class Metropolis(ArrayStepShared):
 
         # Determine type of variables
         self.discrete = np.concatenate(
-            [[v.dtype in pm.discrete_types] * (initial_point[v.name].size or 1) for v in vars]
+            [[v.dtype in discrete_types] * (initial_point[v.name].size or 1) for v in vars]
         )
         self.any_discrete = self.discrete.any()
         self.all_discrete = self.discrete.all()
@@ -472,7 +473,7 @@ class BinaryMetropolis(ArrayStep):
 
         vars = get_value_vars_from_user_vars(vars, model)
 
-        if not all(v.dtype in pm.discrete_types for v in vars):
+        if not all(v.dtype in discrete_types for v in vars):
             raise ValueError("All variables must be Bernoulli for BinaryMetropolis")
 
         if compile_kwargs is None:
@@ -603,7 +604,7 @@ class BinaryGibbsMetropolis(ArrayStep):
             self.shuffle_dims = False
             self.order = order
 
-        if not all(v.dtype in pm.discrete_types for v in vars):
+        if not all(v.dtype in discrete_types for v in vars):
             raise ValueError("All variables must be binary for BinaryGibbsMetropolis")
 
         if compile_kwargs is None:
@@ -1003,7 +1004,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
     @staticmethod
     def competence(var, has_grad):
-        if var.dtype in pm.discrete_types:
+        if var.dtype in discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
 
@@ -1213,7 +1214,7 @@ class DEMetropolisZ(ArrayStepShared):
 
     @staticmethod
     def competence(var, has_grad):
-        if var.dtype in pm.discrete_types:
+        if var.dtype in discrete_types:
             return Competence.INCOMPATIBLE
         return Competence.COMPATIBLE
 
