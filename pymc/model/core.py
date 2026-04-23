@@ -448,6 +448,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def _validate_name(name):
         if name.endswith(":"):
             raise KeyError("name should not end with `:`")
+        if "/" in name:
+            raise ValueError(f"Variable name '{name}' cannot contain '/'.")
         return name
 
     def __init__(
