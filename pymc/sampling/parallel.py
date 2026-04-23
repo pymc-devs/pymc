@@ -19,6 +19,7 @@ import multiprocessing.sharedctypes
 import platform
 import time
 import traceback
+import warnings
 
 from collections import namedtuple
 from collections.abc import Sequence
@@ -28,6 +29,8 @@ from typing import cast
 import cloudpickle
 import numpy as np
 
+from pytensor.compile import get_mode
+from pytensor.link.jax.linker import JAXLinker
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
@@ -78,8 +81,14 @@ def rebuild_exc(exc, tb):
 
 
 def _initialize_multiprocessing_context(
-    mp_ctx: str | multiprocessing.context.BaseContext | None, quiet: bool = False
+    mp_ctx: str | multiprocessing.context.BaseContext | None,
+    *,
+    mode=None,
+    quiet: bool = False,
 ) -> multiprocessing.context.BaseContext:
+    user_specified = mp_ctx is not None
+    jax_mode = mode is not None and isinstance(get_mode(mode).linker, JAXLinker)
+
     if mp_ctx is None or isinstance(mp_ctx, str):
         # Closes issue https://github.com/pymc-devs/pymc/issues/3849
         # Related issue https://github.com/pymc-devs/pymc/issues/5339
@@ -95,6 +104,21 @@ def _initialize_multiprocessing_context(
                 mp_ctx = "forkserver"
 
         mp_ctx = multiprocessing.get_context(mp_ctx)
+
+    if jax_mode and mp_ctx.get_start_method() == "fork":
+        if user_specified:
+            warnings.warn(
+                "Using a JAX backend with multiprocessing start method 'fork' is unsafe "
+                "and may deadlock. Consider passing `mp_ctx='forkserver'` or `mp_ctx='spawn'`.",
+                UserWarning,
+                stacklevel=2,
+            )
+        else:
+            # JAX is not fork-safe: pick a non-fork default when user didn't specify.
+            new_method = (
+                "forkserver" if "forkserver" in multiprocessing.get_all_start_methods() else "spawn"
+            )
+            mp_ctx = multiprocessing.get_context(new_method)
 
     return mp_ctx
 
