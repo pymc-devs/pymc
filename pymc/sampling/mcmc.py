@@ -827,7 +827,10 @@ def sample(
     if chains is None:
         chains = max(2, cores)
 
-    mp_ctx = _initialize_multiprocessing_context(mp_ctx, quiet=quiet)
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
+    mp_ctx = _initialize_multiprocessing_context(
+        mp_ctx, mode=compile_kwargs.get("mode"), quiet=quiet
+    )
     joined_blas_limiter, cores, num_blas_cores_per_worker = setup_cores_blas_cores(
         blas_cores, chains, cores, mp_ctx
     )
@@ -869,8 +872,6 @@ def sample(
             and issubclass(next(iter(selected_steps)), NUTS)
         )
     )
-
-    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
 
     if nuts_sampler is None:
         # Try to use nutpie by default if no setting is clearly at odds.

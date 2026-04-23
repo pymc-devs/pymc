@@ -179,7 +179,8 @@ def sample_smc(
     else:
         cores = min(chains, cores)
 
-    kernel_kwargs["compile_kwargs"] = resolve_backend_compile_kwargs(backend, compile_kwargs)
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
+    kernel_kwargs["compile_kwargs"] = compile_kwargs
 
     random_seed = _get_seeds_per_chain(random_state=random_seed, chains=chains)
 
@@ -187,7 +188,7 @@ def sample_smc(
 
     logger.info("Initializing SMC sampler...")
 
-    mp_ctx = _initialize_multiprocessing_context(mp_ctx)
+    mp_ctx = _initialize_multiprocessing_context(mp_ctx, mode=compile_kwargs.get("mode"))
     joined_blas_limiter, cores, num_blas_cores_per_worker = setup_cores_blas_cores(
         blas_cores, chains, cores, mp_ctx
     )

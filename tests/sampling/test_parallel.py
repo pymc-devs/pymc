@@ -41,6 +41,42 @@ def test_context():
             pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
 
 
+class TestMpCtxJaxSwitch:
+    def test_switches_default_away_from_fork_under_jax(self):
+        if ps._initialize_multiprocessing_context(None).get_start_method() != "fork":
+            pytest.skip("platform default is not fork")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            ctx = ps._initialize_multiprocessing_context(None, mode="JAX")
+        assert ctx.get_start_method() != "fork"
+        assert not any("JAX backend" in str(x.message) for x in w)
+
+    def test_warns_when_user_explicitly_picks_fork_under_jax(self):
+        if "fork" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork start method not available on this platform")
+        with pytest.warns(UserWarning, match="JAX backend"):
+            ctx = ps._initialize_multiprocessing_context("fork", mode="JAX")
+        assert ctx.get_start_method() == "fork"
+
+    def test_leaves_non_jax_default_alone(self):
+        expected = ps._initialize_multiprocessing_context(None).get_start_method()
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            ctx = ps._initialize_multiprocessing_context(None, mode="NUMBA")
+        assert ctx.get_start_method() == expected
+        assert not any("JAX backend" in str(x.message) for x in w)
+
+    @pytest.mark.parametrize("explicit", ["spawn", "forkserver"])
+    def test_no_warn_when_user_picks_safe_method(self, explicit):
+        if explicit not in multiprocessing.get_all_start_methods():
+            pytest.skip(f"{explicit} start method not available on this platform")
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            ctx = ps._initialize_multiprocessing_context(explicit, mode="JAX")
+        assert ctx.get_start_method() == explicit
+        assert not any("JAX backend" in str(x.message) for x in w)
+
+
 class NoUnpickle:
     def __getstate__(self):
         return self.__dict__.copy()
