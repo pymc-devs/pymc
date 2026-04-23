@@ -236,9 +236,7 @@ def logprob_switch_non_overlapping(op, values, cond, pos_branch, neg_branch, **k
         _logprob_helper(neg_branch, value, **kwargs),
     )
 
-    return CheckParameterValue("switch non-overlapping scales > 0")(
-        logp_expr, scales_are_positive
-    )
+    return CheckParameterValue("switch non-overlapping scales > 0")(logp_expr, scales_are_positive)
 
 
 measurable_ir_rewrites_db.register(
