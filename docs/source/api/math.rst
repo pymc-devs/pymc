@@ -19,8 +19,6 @@ Functions exposed in pymc namespace
    invlogit
    probit
    invprobit
-   logaddexp
-   logsumexp
 
 
 Functions exposed in pymc.math

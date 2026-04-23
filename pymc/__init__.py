@@ -57,9 +57,7 @@ from pymc.math import (
     expand_packed_triangular,
     invlogit,
     invprobit,
-    logaddexp,
     logit,
-    logsumexp,
     probit,
 )
 from pymc.model.core import *
