@@ -33,15 +33,11 @@ from pymc.logprob.transforms import (
 
 __all__ = [
     "Chain",
-    "Chain",
     "CholeskyCorrTransform",
-    "CholeskyCovPacked",
     "CholeskyCovPacked",
     "Interval",
     "Transform",
     "ZeroSumTransform",
-    "ZeroSumTransform",
-    "circular",
     "circular",
     "log",
     "log_exp_m1",
