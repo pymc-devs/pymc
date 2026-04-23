@@ -14,6 +14,7 @@
 import itertools
 
 from dataclasses import asdict
+from importlib.metadata import version
 
 import numpy as np
 import pytest
@@ -27,6 +28,16 @@ from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
 from pymc.step_methods.state import equal_dataclass_values
 from tests.helpers import equal_sampling_states
+
+# PyMC's `ZarrTrace` still uses zarr 2 module-level APIs (`zarr.TempStore`,
+# `zarr.MemoryStore`) and the removed `synchronizer` kwarg. When a dependency
+# (e.g., installed nutpie) pulls in zarr>=3, the whole suite fails on import /
+# attribute access. xfail the module in that case until the port lands.
+pytestmark = pytest.mark.xfail(
+    int(version("zarr").split(".", 1)[0]) >= 3,
+    reason="PyMC's ZarrTrace is not yet ported to zarr 3",
+    strict=False,
+)
 
 
 @pytest.fixture(scope="module")
