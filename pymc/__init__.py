@@ -49,7 +49,6 @@ __set_compiler_flags()
 
 from pymc import _version, exceptions, gp, math, ode, plots, sampling, stats
 from pymc.backends import *
-from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
 from pymc.func_utils import find_constrained_prior
