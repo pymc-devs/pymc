@@ -37,6 +37,7 @@ from pymc.pytensorf import (
     compile,
     floatX,
     join_nonshared_inputs,
+    make_shared_replacements,
     replace_rng_nodes,
 )
 from pymc.step_methods.arraystep import (
@@ -257,7 +258,7 @@ class Metropolis(ArrayStepShared):
         # TODO: This is not being used when compiling the logp function!
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_point, vars, model)
+        shared = make_shared_replacements(initial_point, vars, model)
         self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
@@ -958,7 +959,7 @@ class DEMetropolis(PopulationArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_point, vars, model)
+        shared = make_shared_replacements(initial_point, vars, model)
         self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
@@ -1140,7 +1141,7 @@ class DEMetropolisZ(ArrayStepShared):
 
         self.mode = mode
 
-        shared = pm.make_shared_replacements(initial_point, vars, model)
+        shared = make_shared_replacements(initial_point, vars, model)
         self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 

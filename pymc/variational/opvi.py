@@ -76,6 +76,7 @@ from pymc.pytensorf import (
     compile,
     constant_fold,
     find_rng_nodes,
+    floatX,
     reseed_rngs,
 )
 from pymc.util import (
@@ -1100,7 +1101,7 @@ class Group(WithMemoization):
             )
         )
         t = self.symbolic_single_sample(t)
-        return pm.floatX(t)
+        return floatX(t)
 
     @node_property
     def symbolic_logq_not_scaled(self):
@@ -1271,7 +1272,7 @@ class Approximation(WithMemoization):
             ]
         )
         t = pt.switch(self._scale_cost_to_minibatch, t, pt.constant(1, dtype=t.dtype))
-        return pm.floatX(t)
+        return floatX(t)
 
     @node_property
     def symbolic_logq(self):

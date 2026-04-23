@@ -569,7 +569,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
-        i = pytensor.shared(pm.floatX(0))
+        i = pytensor.shared(pm.pytensorf.floatX(0))
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
         accu = pytensor.shared(np.zeros((*value.shape, n_win), dtype=value.dtype))

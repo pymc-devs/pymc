@@ -44,6 +44,7 @@ from pymc.pytensorf import (
     extract_obs_data,
     hessian,
     hessian_diag,
+    make_shared_replacements,
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
@@ -87,14 +88,14 @@ def test_pd_as_tensor_variable_multiindex() -> None:
 
 class TestBroadcasting:
     def test_make_shared_replacements(self):
-        """Check if pm.make_shared_replacements preserves broadcasting."""
+        """Check if make_shared_replacements preserves broadcasting."""
 
         with pm.Model() as test_model:
             test1 = pm.Normal("test1", mu=0.0, sigma=1.0, size=(1, 10))
             test2 = pm.Normal("test2", mu=0.0, sigma=1.0, size=(10, 1))
 
         # Replace test1 with a shared variable, keep test 2 the same
-        replacement = pm.make_shared_replacements(
+        replacement = make_shared_replacements(
             test_model.initial_point(), [test_model.test2], test_model
         )
         assert (

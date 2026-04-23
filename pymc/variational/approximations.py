@@ -21,10 +21,9 @@ from pytensor.graph.replace import graph_replace
 from pytensor.tensor.variable import TensorVariable
 from xarray import DataTree
 
-import pymc as pm
-
 from pymc.blocking import DictToArrayBijection
 from pymc.distributions.dist_math import rho2sigma
+from pymc.pytensorf import floatX
 from pymc.util import makeiter
 from pymc.variational import opvi
 from pymc.variational.opvi import (
@@ -94,8 +93,8 @@ class MeanFieldGroup(Group):
         rho = rho1
 
         return {
-            "mu": pytensor.shared(pm.floatX(start), "mu"),
-            "rho": pytensor.shared(pm.floatX(rho), "rho"),
+            "mu": pytensor.shared(floatX(start), "mu"),
+            "rho": pytensor.shared(floatX(rho), "rho"),
         }
 
     @node_property
@@ -219,7 +218,7 @@ class EmpiricalGroup(Group):
                 start = self._prepare_start(start)
                 # Initialize particles
                 histogram = np.tile(start, (size, 1))
-                histogram += pm.floatX(np.random.normal(0, jitter, histogram.shape))
+                histogram += floatX(np.random.normal(0, jitter, histogram.shape))
         else:
             histogram = np.empty((len(trace) * len(trace.chains), self.ddim))
             i = 0
@@ -227,7 +226,7 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
-        return {"histogram": pytensor.shared(pm.floatX(histogram), "histogram")}
+        return {"histogram": pytensor.shared(floatX(histogram), "histogram")}
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
@@ -298,7 +297,7 @@ class EmpiricalGroup(Group):
     @node_property
     def cov(self):
         x = self.histogram - self.mean
-        return x.T.dot(x) / pm.floatX(self.histogram.shape[0])
+        return x.T.dot(x) / floatX(self.histogram.shape[0])
 
     @node_property
     def std(self):

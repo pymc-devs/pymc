@@ -26,6 +26,7 @@ import pymc as pm
 import pymc.variational.opvi as opvi
 
 from pymc.model.transform.basic import remove_minibatched_nodes
+from pymc.pytensorf import floatX
 from pymc.variational.inference import ADVI, ASVGD, SVGD, FullRankADVI
 from pymc.variational.opvi import NotImplementedInference
 from tests import models
@@ -35,8 +36,8 @@ pytestmark = pytest.mark.usefixtures("strict_float32", "seeded_test", "fail_on_w
 
 @pytest.mark.parametrize("score", [True, False])
 def test_fit_with_nans(score):
-    X_mean = pm.floatX(np.linspace(0, 10, 10))
-    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    X_mean = floatX(np.linspace(0, 10, 10))
+    y = floatX(np.random.normal(X_mean * 4, 0.05))
     with pm.Model():
         inp = pm.Normal("X", X_mean, size=X_mean.shape)
         coef = pm.Normal("b", 4.0)
@@ -336,8 +337,8 @@ def test_remove_scan_op():
 
 
 def test_var_replacement():
-    X_mean = pm.floatX(np.linspace(0, 10, 10))
-    y = pm.floatX(np.random.normal(X_mean * 4, 0.05))
+    X_mean = floatX(np.linspace(0, 10, 10))
+    y = floatX(np.random.normal(X_mean * 4, 0.05))
     inp_size = pytensor.shared(np.array(10, dtype="int64"), name="inp_size")
     with pm.Model():
         inp = pm.Normal("X", X_mean, size=(inp_size,))
@@ -348,7 +349,7 @@ def test_var_replacement():
         assert advi.sample_node(mean).eval().shape == (10,)
 
         inp_size.set_value(11)
-        x_new = pm.floatX(np.linspace(0, 10, 11))
+        x_new = floatX(np.linspace(0, 10, 11))
         assert advi.sample_node(mean, more_replacements={inp: x_new}).eval().shape == (11,)
 
 

@@ -18,6 +18,7 @@ import pytest
 
 import pymc as pm
 
+from pymc.pytensorf import floatX
 from pymc.variational.approximations import Empirical, MeanField
 from tests import models
 
@@ -116,7 +117,7 @@ def test_scale_cost_to_minibatch_works(aux_total_size):
 
         np.testing.assert_allclose(
             elbo_via_total_size_unscaled.eval(),
-            elbo_via_total_size_scaled.eval() * pm.floatX(1 / beta),
+            elbo_via_total_size_scaled.eval() * floatX(1 / beta),
             rtol=0.02,
             atol=1e-1,
         )

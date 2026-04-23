@@ -17,8 +17,7 @@ import pytensor
 
 from pytensor.graph.basic import Variable
 
-import pymc as pm
-
+from pymc.pytensorf import floatX
 from pymc.variational import opvi
 from pymc.variational.opvi import (
     NotImplementedInference,
@@ -57,7 +56,7 @@ class KL(Operator):
 
     def __init__(self, approx, beta=1.0):
         super().__init__(approx)
-        self.beta = pm.floatX(beta)
+        self.beta = floatX(beta)
 
     def apply(self, f):
         return -self.datalogp_norm + self.beta * (self.logq_norm - self.varlogp_norm)
@@ -95,7 +94,7 @@ class KSDObjective(ObjectiveFunction):
             params = self.obj_params + kwargs["more_obj_params"]
         else:
             params = self.test_params + kwargs["more_tf_params"]
-            grad *= pm.floatX(-1)
+            grad *= floatX(-1)
         grads = pytensor.grad(None, params, known_grads={z: grad})
         return self.approx.set_size_and_deterministic(
             grads, nmc, 0, kwargs.get("more_replacements")
@@ -151,4 +150,4 @@ class KSD(Operator):
             use_histogram=self.approx.all_histograms,
             temperature=self.temperature,
         )
-        return pm.floatX(-1) * stein.grad
+        return floatX(-1) * stein.grad
