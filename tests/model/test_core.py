@@ -241,6 +241,11 @@ class TestNested:
             with pm.Model("scope::") as model:
                 b = pm.Normal("v")
 
+    def test_variable_name_with_slash(self):
+        with pm.Model():
+            with pytest.raises(ValueError, match="cannot contain '/' "):
+                pm.Normal("a/b")
+
 
 class TestObserved:
     def test_observed_rv_fail(self):
