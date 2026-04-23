@@ -876,6 +876,23 @@ def collect_default_updates(
     return rng_updates
 
 
+def resolve_backend_compile_kwargs(backend: str | None, compile_kwargs: dict | None) -> dict:
+    """Materialize a `backend` shortcut as `compile_kwargs['mode']`.
+
+    Returns a new dict so the caller's input is never mutated. Raises if both
+    `backend` and `compile_kwargs['mode']` are provided.
+    """
+    compile_kwargs = {} if compile_kwargs is None else compile_kwargs.copy()
+    if backend is not None:
+        if "mode" in compile_kwargs:
+            raise ValueError("Can only define one of `backend` or `compile_kwargs['mode']`")
+        # Users associate "c" with pytensor's default C+VM backend.
+        if backend == "c":
+            backend = "cvm"
+        compile_kwargs["mode"] = get_mode(backend)
+    return compile_kwargs
+
+
 def compile(
     inputs,
     outputs,

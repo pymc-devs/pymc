@@ -21,6 +21,7 @@ from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
 )
 from pymc.model import Model, modelcontext
+from pymc.pytensorf import resolve_backend_compile_kwargs
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
 
@@ -35,6 +36,7 @@ def compute_log_likelihood(
     model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
+    backend: str | None = None,
     compile_kwargs: dict[str, Any] | None = None,
 ):
     """Compute elemwise log_likelihood of model given InferenceData with posterior group.
@@ -51,8 +53,11 @@ def compute_log_likelihood(
     model : Model, optional
     sample_dims : sequence of str, default ("chain", "draw")
     progressbar : bool, default True
+    backend : str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs : dict[str, Any] | None
-        Extra compilation arguments to supply to :py:func:`~pymc.stats.compute_log_density`
+        Extra compilation arguments to supply to :py:func:`~pymc.stats.compute_log_density`.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -67,6 +72,7 @@ def compute_log_likelihood(
         kind="likelihood",
         sample_dims=sample_dims,
         progressbar=progressbar,
+        backend=backend,
         compile_kwargs=compile_kwargs,
     )
 
@@ -79,6 +85,7 @@ def compute_log_prior(
     model: Model | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
+    backend: str | None = None,
     compile_kwargs=None,
 ):
     """Compute elemwise log_prior of model given InferenceData with posterior group.
@@ -95,8 +102,11 @@ def compute_log_prior(
     model : Model, optional
     sample_dims : sequence of str, default ("chain", "draw")
     progressbar : bool, default True
+    backend : str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs : dict[str, Any] | None
-        Extra compilation arguments to supply to :py:func:`~pymc.stats.compute_log_density`
+        Extra compilation arguments to supply to :py:func:`~pymc.stats.compute_log_density`.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -111,6 +121,7 @@ def compute_log_prior(
         kind="prior",
         sample_dims=sample_dims,
         progressbar=progressbar,
+        backend=backend,
         compile_kwargs=compile_kwargs,
     )
 
@@ -124,6 +135,7 @@ def compute_log_density(
     kind: Literal["likelihood", "prior"] = "likelihood",
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
+    backend: str | None = None,
     compile_kwargs=None,
 ) -> DataTree | Dataset:
     """
@@ -145,8 +157,11 @@ def compute_log_density(
         parameter determines the group that gets added to the returned `~arviz.InferenceData` object.
     sample_dims : sequence of str, default ("chain", "draw")
     progressbar : bool, default True
+    backend : str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs : dict[str, Any] | None
-        Extra compilation arguments to supply to :py:func:`pymc.model.core.Model.compile_fn`
+        Extra compilation arguments to supply to :py:func:`pymc.model.core.Model.compile_fn`.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -157,8 +172,7 @@ def compute_log_density(
     posterior = idata["posterior"]
 
     model = modelcontext(model)
-    if compile_kwargs is None:
-        compile_kwargs = {}
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
 
     if kind not in ("likelihood", "prior"):
         raise ValueError("kind must be either 'likelihood' or 'prior'")

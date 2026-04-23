@@ -49,7 +49,7 @@ from pymc.distributions.shape_utils import change_dist_size
 from pymc.exceptions import ImplicitFreezeWarning
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import create_simple_progress, default_progress_theme
-from pymc.pytensorf import compile, rvs_in_graph
+from pymc.pytensorf import compile, resolve_backend_compile_kwargs, rvs_in_graph
 from pymc.util import (
     RandomState,
     _get_seeds_per_chain,
@@ -389,6 +389,8 @@ def draw(
     vars: Variable | Sequence[Variable],
     draws: int = 1,
     random_seed: RandomState = None,
+    *,
+    backend: str | None = None,
     **kwargs,
 ) -> np.ndarray | list[np.ndarray]:
     """Draw samples for one variable or a list of variables.
@@ -401,6 +403,8 @@ def draw(
         Number of samples needed to draw.
     random_seed : int, RandomState or numpy_Generator, optional
         Seed for the random number generator.
+    backend : str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     **kwargs : dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile`.
 
@@ -436,6 +440,7 @@ def draw(
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
+    kwargs = resolve_backend_compile_kwargs(backend, kwargs)
     draw_fn = compile(inputs=[], outputs=vars, random_seed=random_seed, **kwargs)
 
     if draws == 1:
@@ -475,6 +480,7 @@ def sample_prior_predictive(
     random_seed: RandomState = None,
     return_inferencedata: Literal[True] = True,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> xarray.DataTree: ...
 @overload
@@ -485,6 +491,7 @@ def sample_prior_predictive(
     random_seed: RandomState = None,
     return_inferencedata: Literal[False] = False,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> dict[str, np.ndarray]: ...
 def sample_prior_predictive(
@@ -494,6 +501,7 @@ def sample_prior_predictive(
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> xarray.DataTree | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
@@ -514,8 +522,11 @@ def sample_prior_predictive(
         Defaults to True.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
+    backend: str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs: dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile`.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -549,8 +560,7 @@ def sample_prior_predictive(
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
-    if compile_kwargs is None:
-        compile_kwargs = {}
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
     compile_kwargs.setdefault("allow_input_downcast", True)
     compile_kwargs.setdefault("accept_inplace", True)
 
@@ -599,6 +609,7 @@ def sample_posterior_predictive(
     extend_inferencedata: bool = False,
     predictions: bool = False,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> xarray.DataTree: ...
 @overload
@@ -617,6 +628,7 @@ def sample_posterior_predictive(
     extend_inferencedata: bool = False,
     predictions: bool = False,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> dict[str, np.ndarray]: ...
 def sample_posterior_predictive(
@@ -634,6 +646,7 @@ def sample_posterior_predictive(
     extend_inferencedata: bool = False,
     predictions: bool = False,
     idata_kwargs: dict | None = None,
+    backend: str | None = None,
     compile_kwargs: dict | None = None,
 ) -> xarray.DataTree | dict[str, np.ndarray]:
     """Generate forward samples for `var_names`, conditioned on the posterior samples of variables found in the `trace`.
@@ -704,8 +717,11 @@ def sample_posterior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
+    backend: str, optional
+        Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs: dict, optional
         Keyword arguments for :func:`pymc.pytensorf.compile`.
+        ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
 
     Returns
     -------
@@ -1199,8 +1215,7 @@ def sample_posterior_predictive(
     if random_seed is not None:
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
-    if compile_kwargs is None:
-        compile_kwargs = {}
+    compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
     compile_kwargs.setdefault("allow_input_downcast", True)
     compile_kwargs.setdefault("accept_inplace", True)
 

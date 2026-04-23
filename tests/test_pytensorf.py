@@ -25,6 +25,7 @@ from pytensor import scan, shared
 from pytensor.compile import UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
+from pytensor.link.vm import VMLinker
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -46,6 +47,7 @@ from pymc.pytensorf import (
     replace_rng_nodes,
     replace_vars_in_graphs,
     reseed_rngs,
+    resolve_backend_compile_kwargs,
 )
 from pymc.vartypes import int_types
 
@@ -566,6 +568,31 @@ class TestCompile:
         assert collect_default_updates([x]) == {rng: next_rng}
         assert collect_default_updates([y]) == {rng: next_rng}
         assert collect_default_updates([x, y]) == {rng: next_rng}
+
+
+class TestResolveBackendCompileKwargs:
+    def test_backend_materializes_as_mode(self):
+        out = resolve_backend_compile_kwargs("numba", None)
+        assert isinstance(out["mode"], pytensor.compile.Mode)
+
+    def test_passthrough_when_backend_none(self):
+        assert resolve_backend_compile_kwargs(None, None) == {}
+        assert resolve_backend_compile_kwargs(None, {"profile": True}) == {"profile": True}
+
+    def test_does_not_mutate_caller(self):
+        original = {"profile": True}
+        resolve_backend_compile_kwargs("numba", original)
+        assert original == {"profile": True}
+
+    def test_raises_when_backend_conflicts_with_mode(self):
+        with pytest.raises(ValueError, match="Can only define one of"):
+            resolve_backend_compile_kwargs("numba", {"mode": "FAST_RUN"})
+
+    def test_backend_c_aliases_cvm(self):
+        out = resolve_backend_compile_kwargs("c", None)
+        linker = out["mode"].linker
+        assert isinstance(linker, VMLinker)
+        assert linker.use_cloop is True
 
 
 def test_replace_rng_nodes():
