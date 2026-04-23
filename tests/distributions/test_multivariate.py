@@ -24,8 +24,9 @@ import scipy.special as sp
 import scipy.stats as st
 
 from pytensor import tensor as pt
+from pytensor.compile.mode import get_mode
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.blockwise import Blockwise
+from pytensor.tensor.blockwise import Blockwise, BlockwiseWithCoreShape
 from pytensor.tensor.linalg.decomposition.cholesky import Cholesky
 from pytensor.tensor.linalg.inverse import MatrixInverse
 from pytensor.tensor.random.basic import multivariate_normal
@@ -548,13 +549,12 @@ class TestMatchesScipy:
 
     @pytest.mark.parametrize("n", [2, 3])
     def test_wishart(self, n):
-        with pytest.warns(UserWarning, match="Wishart distribution can currently not be used"):
-            check_logp(
-                pm.Wishart,
-                PdMatrix(n),
-                {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
-                lambda value, nu, V: st.wishart.logpdf(value, int(nu), V),
-            )
+        check_logp(
+            pm.Wishart,
+            PdMatrix(n),
+            {"nu": Domain([0, 3, 4, np.inf], "int64"), "V": PdMatrix(n)},
+            lambda value, nu, V: st.wishart.logpdf(value, int(nu), V),
+        )
 
     @pytest.mark.parametrize("x_tri,eta,n,lp", LKJ_CASES)
     def test_lkjcorr(self, x_tri, eta, n, lp):
@@ -1995,32 +1995,100 @@ class TestStickBreakingWeights_1D_alpha(BaseTestDistributionRandom):
 
 
 class TestWishart(BaseTestDistributionRandom):
-    def wishart_rng_fn(self, size, nu, V, rng):
-        return st.wishart.rvs(int(nu), V, size=size, random_state=rng)
-
     pymc_dist = pm.Wishart
 
-    V = np.eye(3)
-    pymc_dist_params = {"nu": 4, "V": V}
-    reference_dist_params = {"nu": 4, "V": V}
-    expected_rv_op_params = {"nu": 4, "V": V}
+    V = np.eye(3) + 0.1 * np.ones((3, 3))
+    scale_chol = np.linalg.cholesky(V)
+    pymc_dist_params = {"nu": 4, "scale_chol": scale_chol}
+    expected_rv_op_params = {"nu": 4, "scale_chol": scale_chol}
     sizes_to_check = [None, 1, (4, 5)]
     sizes_expected = [
         (3, 3),
         (1, 3, 3),
         (4, 5, 3, 3),
     ]
-    reference_dist = lambda self: ft.partial(self.wishart_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_rv_size",
         "check_pymc_params_match_rv_op",
-        "check_pymc_draws_match_reference",
+        "check_random_matches_moments",
+        "check_random_matches_scipy",
         "check_rv_size_batched_params",
+        "check_param_validation",
     ]
 
+    def check_random_matches_moments(self):
+        """Verify the sampler produces draws with the right first two moments.
+
+        For ``X ~ Wishart(nu, V)`` the closed forms are
+        ``E[X_ij] = nu * V_ij`` and
+        ``Var(X_ij) = nu * (V_ij^2 + V_ii V_jj)``.
+        Neither depends on the Bartlett internals, so passing this gives
+        independent confirmation that the sampler is correct.
+        """
+        nu = 5
+        rng = np.random.default_rng(20240409)
+        # Non-trivial SPD scale to exercise off-diagonal entries.
+        A = rng.normal(size=(3, 3))
+        V = A @ A.T + 3 * np.eye(3)
+
+        n_draws = 20_000
+        draws = pm.draw(pm.Wishart.dist(nu=nu, V=V, size=n_draws), random_seed=20240409)
+        assert draws.shape == (n_draws, 3, 3)
+
+        # Closed-form moments.
+        expected_mean = nu * V
+        expected_entry_var = nu * (V**2 + np.outer(np.diag(V), np.diag(V)))
+
+        # First moment z-score: compare the sample mean's deviation from the
+        # expected value to its analytical standard error. With n_draws=20k,
+        # ~5 stderrs is overwhelmingly conservative for 9 independent entries.
+        se_mean = np.sqrt(expected_entry_var / n_draws)
+        z_mean = (draws.mean(axis=0) - expected_mean) / se_mean
+        npt.assert_array_less(np.abs(z_mean), 5.0)
+
+        # Second moment, same scheme. The SE of the sample variance scales
+        # like sqrt(2/n_draws) times the entry variance for near-Gaussian
+        # marginals — the Wishart entries are not Gaussian, so we use a
+        # somewhat looser bound here.
+        se_var = expected_entry_var * np.sqrt(2.0 / n_draws)
+        z_var = (draws.var(axis=0) - expected_entry_var) / se_var
+        npt.assert_array_less(np.abs(z_var), 6.0)
+
+    def check_random_matches_scipy(self):
+        """Entry-wise 2-sample KS against ``scipy.stats.wishart``.
+
+        Complements ``check_random_matches_moments`` (which checks closed-form
+        first and second moments) by comparing the full marginal distribution
+        of each unique entry against scipy's reference sampler.
+        """
+        nu = 6
+        rng = np.random.default_rng(20240410)
+        A = rng.normal(size=(3, 3))
+        V = A @ A.T + 3 * np.eye(3)
+
+        n_draws = 1_000
+        draws = pm.draw(pm.Wishart.dist(nu=nu, V=V, size=n_draws), random_seed=20240410)
+        ref = st.wishart(df=nu, scale=V).rvs(size=n_draws, random_state=20240411)
+
+        # Compare each unique entry (upper triangle including diagonal).
+        p = V.shape[-1]
+        iu = np.triu_indices(p)
+        p_values = [st.ks_2samp(draws[:, i, j], ref[:, i, j]).pvalue for i, j in zip(*iu)]
+        # Bonferroni-corrected threshold across the p(p+1)/2 entries.
+        assert min(p_values) > 0.001 / len(p_values)
+
+    def check_param_validation(self):
+        """``V`` and ``scale_chol`` are mutually exclusive."""
+        with pytest.raises(ValueError, match="exactly one of"):
+            pm.Wishart.dist(nu=5, V=np.eye(3), scale_chol=np.eye(3))
+        with pytest.raises(ValueError, match="exactly one of"):
+            pm.Wishart.dist(nu=5)
+
     def check_rv_size_batched_params(self):
+        # The Bartlett-based SymbolicRV supports batched scale matrices natively.
         for size in (None, (2,), (1, 2), (4, 3, 2)):
-            x = pm.Wishart.dist(nu=4, V=np.stack([np.eye(3), np.eye(3)]), size=size)
+            L = np.linalg.cholesky(np.stack([np.eye(3), np.eye(3)]))
+            x = pm.Wishart.dist(nu=4, scale_chol=L, size=size)
 
             if size is None:
                 expected_shape = (2, 3, 3)
@@ -2028,11 +2096,17 @@ class TestWishart(BaseTestDistributionRandom):
                 expected_shape = (*size, 3, 3)
 
             assert tuple(x.shape.eval()) == expected_shape
+            assert x.eval().shape == expected_shape
 
-            # RNG does not currently support batched parameters, whet it does this test
-            # should be updated to check that draws also have the expected shape
-            with pytest.raises(ValueError):
-                x.eval()
+
+class TestWishartV(BaseTestDistributionRandom):
+    pymc_dist = pm.Wishart
+
+    V = np.eye(3) + 0.1 * np.ones((3, 3))
+    L_V = np.linalg.cholesky(V)
+    pymc_dist_params = {"nu": 4, "V": V}
+    expected_rv_op_params = {"nu": 4, "scale_chol": L_V}
+    checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
 class TestMatrixNormal(BaseTestDistributionRandom):
@@ -2396,6 +2470,53 @@ def test_mvnormal_no_cholesky_in_model_logp():
 
     logp_dlogp = m.logp_dlogp_function(ravel_inputs=True)
     assert not contains_cholesky_op(logp_dlogp._pytensor_function.maker.fgraph)
+
+
+def test_wishart_no_cholesky_in_model_logp():
+    """The Cholesky-based Wishart logp must not retain a Cholesky op for free RVs.
+
+    The default ``CholeskyCovTransform`` produces ``L @ L.T`` with ``L`` tagged as
+    lower-triangular, so PyTensor's ``cholesky_ldotlt`` rewrite folds the apparent
+    ``cholesky(L @ L.T)`` round trip in ``Wishart.logp`` back to ``L``. This test
+    locks in that property; if it fails the architecture has degraded and a custom
+    ``_logprob`` dispatcher is needed instead.
+    """
+    n = 3
+    with pm.Model() as m:
+        pm.Wishart("Sigma", nu=5, V=np.eye(n))
+
+    def fgraph_of(fn):
+        # PointFunc exposes the compiled pytensor function as `.f`,
+        # while ValueGradFunction (from logp_dlogp_function) uses `_pytensor_function`.
+        compiled = getattr(fn, "f", None) or fn._pytensor_function
+        return compiled.maker.fgraph
+
+    def contains_cholesky_op(fn):
+        return any(
+            isinstance(node.op, Cholesky)
+            or (
+                isinstance(node.op, Blockwise | BlockwiseWithCoreShape)
+                and isinstance(node.op.core_op, Cholesky)
+            )
+            for node in fgraph_of(fn).apply_nodes
+        )
+
+    # Negative control: when ``cholesky_ldotlt`` is excluded from the compilation
+    # mode (and only that rewrite), the optimized logp graph still contains a
+    # Cholesky op. This proves the test is sensitive to the rewrite firing.
+    no_rewrite_mode = get_mode().excluding("cholesky_ldotlt")
+    assert contains_cholesky_op(m.compile_logp(mode=no_rewrite_mode))
+
+    # The actual lock for logp.
+    assert not contains_cholesky_op(m.compile_logp())
+
+    # For dlogp / logp_dlogp the negative control via ``excluding`` does not
+    # work: PyTensor runs ``rewrite_pregrad`` (which includes cholesky_ldotlt)
+    # before the gradient is taken, so the rewrite still fires regardless of
+    # the final compilation mode. We just assert the optimized graphs stay
+    # Cholesky-free.
+    assert not contains_cholesky_op(m.compile_dlogp())
+    assert not contains_cholesky_op(m.logp_dlogp_function(ravel_inputs=True))
 
 
 def test_mvnormal_blockwise_solve_opt():

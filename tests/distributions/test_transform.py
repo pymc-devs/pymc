@@ -790,3 +790,81 @@ class TestLJKCholeskyCorrTransform:
         # Check for positive semi-definiteness
         eigenvalues = np.linalg.eigvalsh(corr)
         assert np.all(eigenvalues >= -1e-6)
+
+
+class TestCholeskyCovTransform:
+    def _get_test_values(self):
+        # L = [[1, 0, 0], [0.5, 1.5, 0], [-0.3, 0.2, 0.8]]; Sigma = L @ L.T
+        x_unconstrained = np.array(
+            [0.0, 0.5, np.log(1.5), -0.3, 0.2, np.log(0.8)], dtype=config.floatX
+        )
+        L = np.array([[1.0, 0.0, 0.0], [0.5, 1.5, 0.0], [-0.3, 0.2, 0.8]], dtype=config.floatX)
+        x_constrained = (L @ L.T).astype(config.floatX)
+        return x_unconstrained, x_constrained
+
+    def test_forward(self):
+        transform = tr.CholeskyCovTransform(n=3)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        np.testing.assert_allclose(
+            transform.forward(x_constrained).eval(),
+            x_unconstrained,
+            atol=1e-6,
+        )
+
+    def test_backward(self):
+        transform = tr.CholeskyCovTransform(n=3)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        np.testing.assert_allclose(
+            transform.backward(x_unconstrained).eval(),
+            x_constrained,
+            atol=1e-6,
+        )
+
+    def test_transform_round_trip(self):
+        transform = tr.CholeskyCovTransform(n=3)
+        x_unconstrained, x_constrained = self._get_test_values()
+
+        constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
+        unconstrained_reconstructed = transform.forward(transform.backward(x_unconstrained)).eval()
+
+        np.testing.assert_allclose(x_unconstrained, unconstrained_reconstructed, atol=1e-6)
+        np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
+
+    def test_log_jac_det(self):
+        transform = tr.CholeskyCovTransform(n=3)
+        x_unconstrained, _ = self._get_test_values()
+
+        computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
+
+        # Autodiff: form the SPD output, take its lower-triangular packing
+        # (the constrained-space free coordinates), and compute the determinant
+        # of the Jacobian w.r.t. the unconstrained vector.
+        x = pt.tensor("x", shape=(6,))
+        Sigma = transform.backward(x)
+        tril_idx = pt.tril_indices(3)
+        constrained_free = Sigma[tril_idx[0], tril_idx[1]]
+        jac = pt.jacobian(constrained_free, x, vectorize=True)
+        _, autodiff_log_jac_det = pt.linalg.slogdet(jac)
+
+        np.testing.assert_allclose(
+            autodiff_log_jac_det.eval({x: x_unconstrained}),
+            computed_log_jac_det,
+            atol=1e-6,
+        )
+
+    @pytest.mark.parametrize("n", [3, 5, 10])
+    def test_backward_produces_valid_spd_matrix(self, n):
+        rng = np.random.default_rng()
+        n_samples = 5
+        n_packed = n * (n + 1) // 2
+
+        transform = tr.CholeskyCovTransform(n=n)
+        x_unconstrained = rng.normal(size=(n_samples, n_packed))
+
+        Sigma = transform.backward(x_unconstrained).eval()
+
+        np.testing.assert_allclose(Sigma, np.swapaxes(Sigma, -1, -2), atol=1e-6)
+        eigenvalues = np.linalg.eigvalsh(Sigma)
+        assert np.all(eigenvalues > 0)

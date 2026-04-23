@@ -35,7 +35,7 @@ from pytensor.tensor import (
 )
 from pytensor.tensor.elemwise import DimShuffle
 from pytensor.tensor.exceptions import NotScalarConstantError
-from pytensor.tensor.linalg import det, eigh, solve_triangular, trace
+from pytensor.tensor.linalg import eigh, solve_triangular
 from pytensor.tensor.linalg import inv as matrix_inverse
 from pytensor.tensor.random import chisquare
 from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
@@ -43,12 +43,11 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     normalize_size_param,
 )
-from scipy import stats
 
 import pymc as pm
 
 from pymc.distributions import transforms
-from pymc.distributions.continuous import BoundedContinuous, ChiSquared, Normal
+from pymc.distributions.continuous import BoundedContinuous
 from pymc.distributions.dist_math import (
     betaln,
     check_parameters,
@@ -74,6 +73,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import (
     CholeskyCorrTransform,
+    CholeskyCovTransform,
     ZeroSumTransform,
     _default_transform,
 )
@@ -910,200 +910,230 @@ def matrix_pos_def(X, tol=1e-8):
     return pt.all(~pt.isnan(diag)) & pt.all(diag > tol)
 
 
-class WishartRV(RandomVariable):
+class WishartRV(SymbolicRandomVariable):
     name = "wishart"
-    signature = "(),(p,p)->(p,p)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),(p,p)->[rng],(p,p)"
     _print_name = ("Wishart", "\\operatorname{Wishart}")
 
+    def update(self, node):
+        return {node.inputs[0]: node.outputs[0]}
+
     @classmethod
-    def rng_fn(cls, rng, nu, V, size):
-        scipy_size = size if size else 1  # Default size for Scipy's wishart.rvs is 1
-        # Scipy doesn't accept batch nu or V
-        nu = _squeeze_to_ndim(nu, 0)
-        V = _squeeze_to_ndim(V, 2)
-        result = stats.wishart.rvs(int(nu), V, size=scipy_size, random_state=rng)
-        if size == (1,):
-            return result[np.newaxis, ...]
+    def rv_op(cls, nu, scale_chol, *, size=None, rng=None):
+        nu = pt.as_tensor_variable(nu, dtype="int64")
+        scale_chol = pt.as_tensor_variable(scale_chol)
+        if scale_chol.type.ndim < 2:
+            raise ValueError("Wishart `scale_chol` must have at least 2 dimensions")
+
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        p = scale_chol.shape[-1]
+
+        # Effective batch shape for the inner chi-squared / normal samples.
+        # ``scale_chol`` keeps its original shape; the matmul ``scale_chol @ A``
+        # broadcasts naturally. When the user does not pass an explicit ``size``,
+        # the batch shape is inferred from broadcasting ``nu`` (ndim_supp 0) and
+        # ``scale_chol`` (ndim_supp 2).
+        if rv_size_is_none(size):
+            batch_shape = tuple(implicit_size_from_params(nu, scale_chol, ndims_params=[0, 2]))
         else:
-            return result
+            batch_shape = tuple(size)
 
+        # Bartlett decomposition: A is a (..., p, p) lower-triangular matrix
+        # with ``sqrt(chi^2_{nu - k})`` on the k-th diagonal entry and standard
+        # normals strictly below. Then ``L_X = scale_chol @ A`` is the Cholesky
+        # factor of a ``Wishart(nu, scale_chol scale_chol^T)`` draw, and the
+        # SPD draw is ``L_X L_X^T``. ``nu`` may itself be batched, so we expand
+        # a trailing axis for the per-diagonal subtraction.
+        chi_dofs = nu[..., None] - pt.arange(p, dtype="int64")  # (..., p)
+        next_rng, chi_sq = pt.random.chisquare(
+            df=chi_dofs,
+            size=(*batch_shape, p),
+            rng=rng,
+            return_next_rng=True,
+        )
+        chi_diag = pt.sqrt(chi_sq)  # (..., p)
 
-wishart = WishartRV()
+        n_offdiag = (p * (p - 1)) // 2
+        next_rng, offdiag = pt.random.normal(
+            loc=0.0,
+            scale=1.0,
+            size=(*batch_shape, n_offdiag),
+            rng=next_rng,
+            return_next_rng=True,
+        )
+
+        A = pt.zeros((*batch_shape, p, p), dtype=scale_chol.dtype)
+        diag_idx = pt.arange(p)
+        A = A[..., diag_idx, diag_idx].set(chi_diag)
+        tril_idx = pt.tril_indices(p, k=-1)
+        A = A[..., tril_idx[0], tril_idx[1]].set(offdiag)
+
+        L_X = scale_chol @ A
+        X = L_X @ L_X.mT
+
+        return cls(
+            inputs=[rng, size, nu, scale_chol],
+            outputs=[next_rng, X],
+        )(rng, size, nu, scale_chol)
 
 
 class Wishart(Continuous):
     r"""
     Wishart distribution.
 
-    The Wishart distribution is the probability distribution of the
-    maximum-likelihood estimator (MLE) of the precision matrix of a
-    multivariate normal distribution.  If V=1, the distribution is
-    identical to the chi-square distribution with nu degrees of
-    freedom.
+    The Wishart distribution is the probability distribution over symmetric
+    positive-definite (SPD) matrices that arises as the distribution of the sum
+    of outer products of i.i.d. multivariate normal vectors. If
+    :math:`x_i \sim \mathcal{N}(0, V)` are i.i.d. for :math:`i = 1, \dots, \nu`,
+    then :math:`X = \sum_i x_i x_i^\top \sim \mathrm{Wishart}_p(\nu, V)`.
 
     .. math::
 
-       f(X \mid nu, T) =
-           \frac{{\mid T \mid}^{nu/2}{\mid X \mid}^{(nu-k-1)/2}}{2^{nu k/2}
-           \Gamma_p(nu/2)} \exp\left\{ -\frac{1}{2} Tr(TX) \right\}
+       f(X \mid \nu, V) =
+           \frac{|X|^{(\nu-p-1)/2}}{2^{\nu p / 2} |V|^{\nu / 2} \Gamma_p(\nu / 2)}
+           \exp\left\{ -\frac{1}{2} \operatorname{tr}(V^{-1} X) \right\}
 
-    where :math:`k` is the rank of :math:`X`.
+    where :math:`p` is the rank of :math:`X`.
 
     ========  =========================================
-    Support   :math:`X(p x p)` positive definite matrix
-    Mean      :math:`nu V`
-    Variance  :math:`nu (v_{ij}^2 + v_{ii} v_{jj})`
+    Support   :math:`X\,(p \times p)` positive definite matrix
+    Mean      :math:`\nu V`
+    Variance  :math:`\nu (V_{ij}^2 + V_{ii} V_{jj})`
     ========  =========================================
 
     Parameters
     ----------
     nu : tensor_like of int
-        Degrees of freedom, > 0.
-    V : tensor_like of float
-        p x p positive definite matrix.
+        Degrees of freedom, must satisfy ``nu > p - 1``.
+    V : tensor_like of float, optional
+        ``(p, p)`` SPD scale matrix. Mutually exclusive with ``scale_chol``.
+    scale_chol : tensor_like of float, optional
+        ``(p, p)`` lower-triangular Cholesky factor of the scale matrix
+        (``V = scale_chol @ scale_chol.T``). Provide this when you already have the
+        decomposition to avoid a redundant Cholesky inside ``logp``. Mutually
+        exclusive with ``V``.
 
     Notes
     -----
-    This distribution is unusable in a PyMC model. You should instead
-    use LKJCholeskyCov or LKJCorr.
+    The default unconstraining transform is :class:`CholeskyCovTransform`, which
+    parameterizes ``X = L @ L.T`` from a free real vector with ``log L_kk`` on the
+    diagonal.
     """
 
-    rv_op = wishart
+    rv_type = WishartRV
+    rv_op = WishartRV.rv_op
 
     @classmethod
-    def dist(cls, nu, V, *args, **kwargs):
+    def _resolve_scale(cls, V, scale_chol):
+        if (V is None) == (scale_chol is None):
+            raise ValueError("Wishart requires exactly one of `V` or `scale_chol`.")
+        if scale_chol is not None:
+            return pt.as_tensor_variable(scale_chol)
+        return pt.linalg.cholesky(pt.as_tensor_variable(V))
+
+    @classmethod
+    def dist(cls, nu, V=None, *args, scale_chol=None, **kwargs):
         nu = pt.as_tensor_variable(nu, dtype=int)
-        V = pt.as_tensor_variable(V)
+        scale_chol = cls._resolve_scale(V, scale_chol)
+        return super().dist([nu, scale_chol], *args, **kwargs)
 
-        warnings.warn(
-            "The Wishart distribution can currently not be used "
-            "for MCMC sampling. The probability of sampling a "
-            "symmetric matrix is basically zero. Instead, please "
-            "use LKJCholeskyCov or LKJCorr. For more information "
-            "on the issues surrounding the Wishart see here: "
-            "https://github.com/pymc-devs/pymc/issues/538.",
-            UserWarning,
-        )
+    def support_point(rv, size, nu, scale_chol):
+        # Mean of Wishart(nu, V) is nu * V = nu * (L_V @ L_V.T). Always in the
+        # SPD support for valid nu > p - 1, so it's a safe initial point.
+        V = scale_chol @ scale_chol.mT
+        support_point = nu.astype(V.dtype) * V
+        if not rv_size_is_none(size):
+            p = scale_chol.shape[-1]
+            support_point = pt.full(pt.concatenate([size, [p, p]]), support_point)
+        return support_point
 
-        # mean = nu * V
-        # p = V.shape[0]
-        # mode = pt.switch(pt.ge(nu, p + 1), (nu - p - 1) * V, np.nan)
-        return super().dist([nu, V], *args, **kwargs)
-
-    def logp(X, nu, V):
+    def logp(X, nu, scale_chol):
         """
-        Calculate logp of Wishart distribution at specified value.
+        Log-density of the Wishart distribution at the SPD value ``X``.
 
-        Parameters
-        ----------
-        X: numeric
-            Value for which log-probability is calculated.
-
-        Returns
-        -------
-        TensorVariable
+        Implemented in Cholesky form: when the value comes from the unconstraining
+        ``CholeskyCovTransform``, ``cholesky(L @ L.T)`` rewrites to ``L`` and no
+        decomposition runs at runtime.
         """
-        p = V.shape[0]
+        p = X.shape[-1]
 
-        IVI = det(V)
-        IXI = det(X)
+        L_X = pt.linalg.cholesky(X)
+        log_det_X = 2 * pt.sum(pt.log(pt.diagonal(L_X, axis1=-2, axis2=-1)), axis=-1)
+        log_det_V = 2 * pt.sum(pt.log(pt.diagonal(scale_chol, axis1=-2, axis2=-1)), axis=-1)
+        # tr(V^{-1} X) = ||L_V^{-1} L_X||_F^2  via a triangular solve.
+        M = solve_triangular(scale_chol, L_X, lower=True)
+        tr_term = pt.sum(M**2, axis=(-2, -1))
 
         return check_parameters(
             (
-                (nu - p - 1) * pt.log(IXI)
-                - trace(matrix_inverse(V).dot(X))
+                (nu - p - 1) * log_det_X
+                - tr_term
                 - nu * p * pt.log(2)
-                - nu * pt.log(IVI)
+                - nu * log_det_V
                 - 2 * multigammaln(nu / 2.0, p)
             )
             / 2,
-            matrix_pos_def(X),
-            pt.eq(X, X.T),
             nu > (p - 1),
+            msg="nu > p - 1",
         )
+
+
+@_default_transform.register(WishartRV)
+def wishart_default_transform(op, rv):
+    _, _, _, scale_chol = rv.owner.inputs
+    n = scale_chol.shape[-1]
+    return CholeskyCovTransform(n=n)
 
 
 def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initval=None):
     r"""
-    Bartlett decomposition of the Wishart distribution.
+    Bartlett-decomposed Wishart prior. **Deprecated**: use :class:`Wishart` directly.
 
-    As the Wishart distribution requires the matrix to be symmetric positive
-    semi-definite, it is impossible for MCMC to ever propose acceptable matrices.
-
-    Instead, we can use the Barlett decomposition which samples a lower
-    diagonal matrix. Specifically:
-
-    .. math::
-        \text{If} L \sim \begin{pmatrix}
-        \sqrt{c_1} & 0 & 0 \\
-        z_{21} & \sqrt{c_2} & 0 \\
-        z_{31} & z_{32} & \sqrt{c_3}
-        \end{pmatrix}
-
-        \text{with} c_i \sim \chi^2(n-i+1) \text{ and } n_{ij} \sim \mathcal{N}(0, 1), \text{then} \\
-        L \times A \times A.T \times L.T \sim \text{Wishart}(L \times L.T, \nu)
-
-    See http://en.wikipedia.org/wiki/Wishart_distribution#Bartlett_decomposition
-    for more information.
+    This used to be the only MCMC-usable Wishart in PyMC, since the legacy
+    :class:`Wishart` had no unconstraining transform. The new :class:`Wishart`
+    is parameterized through its Cholesky factor with a default
+    :class:`CholeskyCovTransform`, so this helper is no longer needed and is
+    a thin shim around it for backward compatibility.
 
     Parameters
     ----------
     S : ndarray
-        p x p positive definite matrix
-        Or:
-        p x p lower-triangular matrix that is the Cholesky factor
-        of the covariance matrix.
+        ``(p, p)`` positive-definite scale matrix, or its lower-triangular
+        Cholesky factor when ``is_cholesky=True``.
     nu : tensor_like of int
-        Degrees of freedom, > dim(S).
-    is_cholesky : bool, default=False
-        Input matrix S is already Cholesky decomposed as S.T * S
-    return_cholesky : bool, default=False
-        Only return the Cholesky decomposed matrix.
-    initval : ndarray
-        p x p positive definite matrix used to initialize
-
-    Notes
-    -----
-    This is not a standard Distribution class but follows a similar
-    interface. Besides the Wishart distribution, it will add RVs
-    name_c and name_z to your model which make up the matrix.
-
-    This distribution is usually a bad idea to use as a prior for multivariate
-    normal. You should instead use LKJCholeskyCov or LKJCorr.
+        Degrees of freedom, > ``dim(S) - 1``.
+    is_cholesky : bool, default False
+        If True, ``S`` is interpreted as the Cholesky factor of the scale matrix
+        (mapped to :class:`Wishart`'s ``scale_chol`` argument).
+    return_cholesky : bool, default False
+        If True, return the Cholesky factor of the Wishart draw rather than the
+        SPD matrix itself.
     """
-    L = S if is_cholesky else scipy.linalg.cholesky(S)
-    diag_idx = np.diag_indices_from(S)
-    tril_idx = np.tril_indices_from(S, k=-1)
-    n_diag = len(diag_idx[0])
-    n_tril = len(tril_idx[0])
-
-    if initval is not None:
-        # Inverse transform
-        initval = np.dot(np.dot(np.linalg.inv(L), initval), np.linalg.inv(L.T))
-        initval = scipy.linalg.cholesky(initval, lower=True)
-        diag_testval = initval[diag_idx] ** 2
-        tril_testval = initval[tril_idx]
-    else:
-        diag_testval = None
-        tril_testval = None
-
-    c = pt.sqrt(
-        ChiSquared(f"{name}_c", nu - np.arange(2, 2 + n_diag), shape=n_diag, initval=diag_testval)
+    warnings.warn(
+        "WishartBartlett is deprecated and will be removed in a future release. "
+        "Use pm.Wishart directly. For `is_cholesky=True`, pass `scale_chol=S`. "
+        "For `return_cholesky=True`, wrap pm.Wishart in pt.linalg.cholesky as a "
+        "Deterministic.",
+        FutureWarning,
+        stacklevel=2,
     )
-    pm._log.info(f"Added new variable {name}_c to model diagonal of Wishart.")
-    z = Normal(f"{name}_z", 0.0, 1.0, shape=n_tril, initval=tril_testval)
-    pm._log.info(f"Added new variable {name}_z to model off-diagonals of Wishart.")
-    # Construct A matrix
-    A = pt.zeros(S.shape, dtype=np.float32)
-    A = pt.set_subtensor(A[diag_idx], c)
-    A = pt.set_subtensor(A[tril_idx], z)
-
-    # L * A * A.T * L.T ~ Wishart(L*L.T, nu)
+    if initval is not None:
+        # The legacy implementation seeded two internal RVs (diagonal `_c` and
+        # off-diagonal `_z` Bartlett components), so the old `initval` has no
+        # faithful translation to the new SPD-valued Wishart. Forcing the user
+        # to pass an initval on `pm.Wishart` directly is safer than silently
+        # re-interpreting the value.
+        raise NotImplementedError(
+            "`initval` is no longer supported in the WishartBartlett shim. "
+            "Pass `initval` (as an SPD matrix) to `pm.Wishart` directly."
+        )
+    scale_kwargs = {"scale_chol": S} if is_cholesky else {"V": S}
     if return_cholesky:
-        return pm.Deterministic(name, pt.dot(L, A))
-    else:
-        return pm.Deterministic(name, pt.dot(pt.dot(pt.dot(L, A), A.T), L.T))
+        wishart_rv = Wishart(f"_{name}_wishart", nu=nu, **scale_kwargs)
+        return pm.Deterministic(name, pt.linalg.cholesky(wishart_rv))
+    return Wishart(name, nu=nu, **scale_kwargs)
 
 
 def _lkj_normalizing_constant(eta, n):
