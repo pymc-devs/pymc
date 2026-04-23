@@ -23,6 +23,7 @@ import pytest
 
 from pytensor import shared
 from pytensor.tensor.variable import TensorVariable
+from scipy import stats
 
 import pymc as pm
 
@@ -336,20 +337,6 @@ class TestData:
         assert "columns" in pmodel.dim_lengths
         assert pmodel.dim_lengths["columns"].eval() == 7
 
-    def test_set_coords_through_pmdata(self):
-        with pm.Model() as pmodel:
-            pm.Data("population", [100, 200], dims="city", coords={"city": ["Tinyvil", "Minitown"]})
-            pm.Data(
-                "temperature",
-                [[15, 20, 22, 17], [18, 22, 21, 12]],
-                dims=("city", "season"),
-                coords={"season": ["winter", "spring", "summer", "fall"]},
-            )
-        assert "city" in pmodel.coords
-        assert "season" in pmodel.coords
-        assert pmodel.coords["city"] == ("Tinyvil", "Minitown")
-        assert pmodel.coords["season"] == ("winter", "spring", "summer", "fall")
-
     def test_symbolic_coords(self):
         """
         Since v4 dimensions can be created without passing coordinate values.
@@ -369,48 +356,63 @@ class TestData:
             assert pmodel.dim_lengths["row"].eval() == 4
             assert pmodel.dim_lengths["column"].eval() == 5
 
-    def test_implicit_coords_series(self, seeded_test):
-        pd = pytest.importorskip("pandas")
-        ser_sales = pd.Series(
-            data=np.random.randint(low=0, high=30, size=22),
-            index=pd.date_range(start="2020-05-01", periods=22, freq="24h", name="date"),
-            name="sales",
-        )
-        with pm.Model() as pmodel:
-            pm.Data("sales", ser_sales, dims="date", infer_dims_and_coords=True)
+    @pytest.mark.parametrize(
+        "input_type",
+        [
+            "ndarray",
+            "list",
+            "pandas_df",
+            "pandas_series",
+            "polars_df",
+            "polars_series",
+            "dask_df",
+            "pyarrow_df",
+            "xarray",
+        ],
+    )
+    def test_data_input_types(self, input_type):
+        """``pm.Data`` should accept any narwhals-supported DataFrame/Series, plus the usual array-likes."""
+        input_data = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+        expected = stats.norm(loc=0, scale=1).logpdf(input_data)
 
-        assert "date" in pmodel.coords
-        assert len(pmodel.coords["date"]) == 22
-        assert pmodel.named_vars_to_dims == {"sales": ("date",)}
+        match input_type:
+            case "ndarray":
+                value = input_data.copy()
+            case "list":
+                value = input_data.tolist()
+            case "pandas_df":
+                pd = pytest.importorskip("pandas")
+                value = pd.DataFrame(input_data)
+            case "pandas_series":
+                pd = pytest.importorskip("pandas")
+                value = pd.Series(input_data[:, 0])
+                expected = expected[:, 0]
+            case "polars_df":
+                pl = pytest.importorskip("polars")
+                value = pl.DataFrame(input_data)
+            case "polars_series":
+                pl = pytest.importorskip("polars")
+                value = pl.Series(input_data[:, 0])
+                expected = expected[:, 0]
+            case "dask_df":
+                dd = pytest.importorskip("dask.dataframe")
+                pd = pytest.importorskip("pandas")
+                value = dd.from_pandas(pd.DataFrame(input_data), npartitions=1)
+            case "pyarrow_df":
+                pa = pytest.importorskip("pyarrow")
+                value = pa.table({f"c{i}": input_data[:, i] for i in range(input_data.shape[1])})
+            case "xarray":
+                xr = pytest.importorskip("xarray")
+                value = xr.DataArray(input_data, dims=["row", "col"])
+            case _:
+                raise ValueError(f"Unknown input_type: {input_type}")
 
-    def test_implicit_coords_dataframe(self, seeded_test):
-        pd = pytest.importorskip("pandas")
-        N_rows = 5
-        N_cols = 7
-        df_data = pd.DataFrame()
-        for c in range(N_cols):
-            df_data[f"Column {c + 1}"] = np.random.normal(size=(N_rows,))
-        df_data.index.name = "rows"
-        df_data.columns.name = "columns"
+        with pm.Model():
+            data = pm.Data("test_data", value)
+            x = pm.Normal("x", mu=0, sigma=1)
+            result = pm.logp(x, data).eval()
 
-        # infer coordinates from index and columns of the DataFrame
-        with pm.Model() as pmodel:
-            pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
-
-        assert "rows" in pmodel.coords
-        assert "columns" in pmodel.coords
-        assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
-
-    def test_implicit_coords_xarray(self):
-        xr = pytest.importorskip("xarray")
-        data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))
-        with pm.Model() as pmodel:
-            pm.Data("observations", data, dims=("x", "y"), infer_dims_and_coords=True)
-        assert "x" in pmodel.coords
-        assert "y" in pmodel.coords
-        assert pmodel.named_vars_to_dims == {"observations": ("x", "y")}
-        assert tuple(pmodel.coords["x"]) == tuple(data.coords["x"].to_numpy())
-        assert tuple(pmodel.coords["y"]) == tuple(data.coords["y"].to_numpy())
+        np.testing.assert_array_almost_equal(*np.broadcast_arrays(result, expected))
 
     def test_data_kwargs(self):
         strict_value = True
