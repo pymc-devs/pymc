@@ -15,6 +15,7 @@ Discrete
    DiscreteWeibull
    Geometric
    HyperGeometric
+   MeasureValuedPolyaUrn
    NegativeBinomial
    OrderedLogistic
    OrderedProbit
