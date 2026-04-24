@@ -29,6 +29,7 @@ from pytensor.tensor.random.basic import (
     poisson,
     uniform,
 )
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 from scipy import stats
 
@@ -60,6 +61,7 @@ __all__ = [
     "DiscreteWeibull",
     "Geometric",
     "HyperGeometric",
+    "MeasureValuedPolyaUrn",
     "NegativeBinomial",
     "OrderedLogistic",
     "OrderedProbit",
@@ -1416,3 +1418,128 @@ class OrderedProbit:
         )
         p = pt.exp(log_p)
         return p
+
+def _mvpu_logp(observations, initial_measure, reinforcement_matrix):
+    """Internal vectorized log-probability function for the Measure-Valued Pólya Urn."""
+    observations = pt.cast(observations, "int64")
+    triggered_reinforcements = reinforcement_matrix[observations]
+    cum_reinforcements = pt.cumsum(triggered_reinforcements, axis=0)
+
+    K = initial_measure.shape[0]
+    shifted_cum_reinforcements = pt.concatenate(
+        [pt.zeros((1, K)), cum_reinforcements[:-1]],
+        axis=0,
+    )
+
+    urn_states = initial_measure + shifted_cum_reinforcements
+    total_mass = pt.sum(urn_states, axis=1, keepdims=True)
+    predictive_probs = urn_states / total_mass
+
+    N = observations.shape[0]
+    seq_indices = pt.arange(N)
+    observed_probs = predictive_probs[seq_indices, observations]
+
+    return pt.sum(pt.log(observed_probs))
+
+
+class MeasureValuedPolyaUrnRV(RandomVariable):
+    name = "measure_valued_polya_urn"
+    signature = "(k),(k,k),()->(n)"
+    dtype = "int64"
+    _print_name = ("MeasureValuedPolyaUrn", "\\operatorname{MeasureValuedPolyaUrn}")
+
+    def _supp_shape_from_params(self, dist_params, param_shapes=None):
+        # Support shape is the sequence length n_steps, passed as the third scalar param.
+        return [dist_params[2]]
+
+    @classmethod
+    def rng_fn(cls, rng, initial_measure, reinforcement_matrix, n_steps, size=None):
+        N = int(np.asarray(n_steps).flat[0])
+        initial_measure = np.asarray(initial_measure, dtype=float)
+        reinforcement_matrix = np.asarray(reinforcement_matrix, dtype=float)
+        K = initial_measure.shape[-1]
+
+        if size is None or np.asarray(size).size == 0:
+            urn = initial_measure.reshape(K).copy()
+            rm = reinforcement_matrix.reshape(K, K)
+            seq = np.zeros(N, dtype=int)
+            for i in range(N):
+                probs = urn / urn.sum()
+                obs = rng.choice(K, p=probs)
+                seq[i] = obs
+                urn += rm[obs]
+            return seq
+
+        batch_shape = tuple(int(s) for s in np.asarray(size).flat)
+        im = np.broadcast_to(initial_measure, (*batch_shape, K)).reshape(-1, K).copy()
+        rm_arr = np.broadcast_to(reinforcement_matrix, (*batch_shape, K, K)).reshape(-1, K, K)
+        n_batch = im.shape[0]
+        result = np.zeros((n_batch, N), dtype=int)
+        for b in range(n_batch):
+            urn = im[b].copy()
+            for i in range(N):
+                probs = urn / urn.sum()
+                obs = rng.choice(K, p=probs)
+                result[b, i] = obs
+                urn += rm_arr[b, obs]
+        return result.reshape(*batch_shape, N)
+
+
+mvpu_rv = MeasureValuedPolyaUrnRV()
+
+
+class MeasureValuedPolyaUrn(Discrete):
+    R"""Measure-Valued Pólya Urn Sequence Distribution.
+
+    Models a sequence of categorical observations where each observation
+    dynamically updates the underlying probability measure via a stochastic
+    reinforcement kernel. At each step, a category is drawn proportionally
+    to the current urn state, then the urn is updated by adding the
+    corresponding row of the reinforcement matrix.
+
+    The log-probability of a sequence :math:`x_1, \ldots, x_N` is
+
+    .. math::
+
+       \log p(x_1, \ldots, x_N \mid m_0, R) =
+           \sum_{t=1}^{N} \log \frac{(m_{t-1})_{x_t}}{\sum_k (m_{t-1})_k}
+
+    where :math:`m_t = m_{t-1} + R_{x_t}` is the urn state after step :math:`t`.
+
+    ========  ============================================================
+    Support   sequences :math:`x \in \{0, \ldots, K-1\}^N`
+    ========  ============================================================
+
+    Parameters
+    ----------
+    initial_measure : tensor_like of float
+        Initial urn weights, shape (K,). All entries must be positive.
+    reinforcement_matrix : tensor_like of float
+        Reinforcement increments per category, shape (K, K). All entries
+        must be non-negative.
+    n_steps : int
+        Length of the sequence to draw (N > 0).
+    """
+
+    rv_op = mvpu_rv
+
+    @classmethod
+    def dist(cls, initial_measure, reinforcement_matrix, n_steps, **kwargs):
+        initial_measure = pt.as_tensor_variable(initial_measure)
+        reinforcement_matrix = pt.as_tensor_variable(reinforcement_matrix)
+        n_steps = pt.as_tensor_variable(n_steps, dtype=int)
+        return super().dist([initial_measure, reinforcement_matrix, n_steps], **kwargs)
+
+    def support_point(rv, size, initial_measure, reinforcement_matrix, n_steps):
+        if rv_size_is_none(size):
+            return pt.zeros((n_steps,), dtype=rv.dtype)
+        return pt.zeros((*size, n_steps), dtype=rv.dtype)
+
+    def logp(value, initial_measure, reinforcement_matrix, n_steps):
+        log_prob = _mvpu_logp(value, initial_measure, reinforcement_matrix)
+        return check_parameters(
+            log_prob,
+            pt.all(initial_measure > 0),
+            pt.all(reinforcement_matrix >= 0),
+            msg="initial_measure > 0, reinforcement_matrix >= 0",
+        )
