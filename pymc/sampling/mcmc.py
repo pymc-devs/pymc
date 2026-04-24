@@ -1057,6 +1057,14 @@ def _sample_return(
 
     Final step of `pm.sampler`.
     """
+    if "log_likelihood" in idata_kwargs:
+        warnings.warn(
+            "Passing `log_likelihood` via `idata_kwargs` is deprecated and will be removed "
+            "in future versions. Call `pm.compute_log_likelihood(idata)` instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+
     if isinstance(traces, ZarrTrace):
         # Split warmup from posterior samples
         traces.split_warmup_groups()
@@ -1084,15 +1092,8 @@ def _sample_return(
 
         if compute_convergence_checks or return_inferencedata:
             idata = traces.to_inferencedata(save_warmup=not discard_tuned_samples)
-            log_likelihood = idata_kwargs.pop("log_likelihood", False)
+            log_likelihood = idata_kwargs.get("log_likelihood", False)
             if log_likelihood:
-                warnings.warn(
-                    "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
-                    ":func:`pymc.compute_log_likelihood` instead.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
-
                 from pymc.stats.log_density import compute_log_likelihood
 
                 idata = compute_log_likelihood(
@@ -1103,6 +1104,7 @@ def _sample_return(
                     sample_dims=["chain", "draw"],
                     progressbar=False,
                 )
+
             if compute_convergence_checks:
                 warns = run_convergence_checks(idata, model)
                 for warn in warns:

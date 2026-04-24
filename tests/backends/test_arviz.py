@@ -340,9 +340,13 @@ class TestDataPyMC:
             x = pm.Normal("x", 1, 1)
             with pytest.warns(ImputationWarning):
                 y = pm.Normal("y", x, 1, observed=data)
-            inference_data = pm.sample(
-                100, chains=2, return_inferencedata=True, idata_kwargs={"log_likelihood": True}
-            )
+            with pytest.warns(FutureWarning, match="Passing `log_likelihood` via `idata_kwargs`"):
+                inference_data = pm.sample(
+                    100,
+                    chains=2,
+                    return_inferencedata=True,
+                    idata_kwargs={"log_likelihood": True},
+                )
 
         # make sure that data is really missing
         assert "y_unobserved" in model.named_vars
@@ -369,13 +373,14 @@ class TestDataPyMC:
             chol, *_ = pm.LKJCholeskyCov("chol_cov", n=2, eta=1, sd_dist=sd_dist)
             with pytest.warns(ImputationWarning):
                 y = pm.MvNormal("y", mu=mu, chol=chol, observed=data)
-            inference_data = pm.sample(
-                tune=10,
-                draws=10,
-                chains=2,
-                step=pm.Metropolis(),
-                idata_kwargs={"log_likelihood": True},
-            )
+            with pytest.warns(FutureWarning, match="Passing `log_likelihood` via `idata_kwargs`"):
+                inference_data = pm.sample(
+                    tune=10,
+                    draws=10,
+                    chains=2,
+                    step=pm.Metropolis(),
+                    idata_kwargs={"log_likelihood": True},
+                )
 
         # make sure that data is really missing
         assert isinstance(y.owner.inputs[0].owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
@@ -396,12 +401,13 @@ class TestDataPyMC:
             x = pm.Normal("x", 1, 1)
             pm.Normal("y1", x, 1, observed=y1_data)
             pm.Normal("y2", x, 1, observed=y2_data)
-            inference_data = pm.sample(
-                100,
-                chains=2,
-                return_inferencedata=True,
-                idata_kwargs={"log_likelihood": log_likelihood},
-            )
+            with pytest.warns(FutureWarning, match="Passing `log_likelihood` via `idata_kwargs`"):
+                inference_data = pm.sample(
+                    100,
+                    chains=2,
+                    return_inferencedata=True,
+                    idata_kwargs={"log_likelihood": log_likelihood},
+                )
         test_dict = {
             "posterior": ["x"],
             "observed_data": ["y1", "y2"],
@@ -425,9 +431,13 @@ class TestDataPyMC:
         with pm.Model():
             p = pm.Uniform("p", 0, 1)
             pm.Binomial("w", p=p, n=2, observed=[1])
-            inference_data = pm.sample(
-                500, chains=2, return_inferencedata=True, idata_kwargs={"log_likelihood": True}
-            )
+            with pytest.warns(FutureWarning, match="Passing `log_likelihood` via `idata_kwargs`"):
+                inference_data = pm.sample(
+                    500,
+                    chains=2,
+                    return_inferencedata=True,
+                    idata_kwargs={"log_likelihood": True},
+                )
 
         assert inference_data
         assert inference_data.log_likelihood["w"].shape == (2, 500, 1)
@@ -606,7 +616,10 @@ class TestDataPyMC:
             p = pm.Beta("p", 1, 1, size=(3,))
             p = p / p.sum()
             pm.Multinomial("y", 20, p, dims=("experiment", "direction"), observed=data)
-            with warnings.catch_warnings():
+            with (
+                warnings.catch_warnings(),
+                pytest.warns(FutureWarning, match="Passing `log_likelihood` via `idata_kwargs`"),
+            ):
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 idata = pm.sample(
                     draws=50,
