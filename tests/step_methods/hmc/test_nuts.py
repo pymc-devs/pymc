@@ -115,14 +115,16 @@ class TestNutsCheckTrace:
         with pm.Model():
             pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
-                pm.sample(chains=1, random_seed=1)
+                # Testing PyMC NUTS pipeline
+                pm.sample(chains=1, random_seed=1, nuts_sampler="pymc")
             error.match("Initial evaluation")
 
     def test_bad_init_parallel(self):
         with pm.Model():
             pm.HalfNormal("a", sigma=1, initval=-1, default_transform=None)
             with pytest.raises(SamplingError) as error:
-                pm.sample(cores=2, random_seed=1)
+                # Testing PyMC NUTS pipeline
+                pm.sample(cores=2, random_seed=1, nuts_sampler="pymc")
             error.match("Initial evaluation")
 
     def test_emits_energy_warnings(self, caplog):
@@ -134,7 +136,8 @@ class TestNutsCheckTrace:
             caplog.clear()
             # The logger name must be specified for DEBUG level capturing to work
             with caplog.at_level(logging.DEBUG, logger="pymc"):
-                idata = pm.sample(20, tune=5, chains=2, random_seed=526)
+                # Testing PyMC NUTS behavior
+                idata = pm.sample(20, tune=5, chains=2, random_seed=526, nuts_sampler="pymc")
             assert any("Energy change" in w.msg for w in caplog.records)
 
     def test_sampler_stats(self):

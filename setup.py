@@ -53,6 +53,10 @@ with open(REQUIREMENTS_FILE) as f:
 
 test_reqs = ["pytest", "pytest-cov"]
 
+extras_require = {
+    "nutpie": ["nutpie>=0.16.8"],
+}
+
 if __name__ == "__main__":
     setup(
         name="pymc",
@@ -72,5 +76,6 @@ if __name__ == "__main__":
         classifiers=classifiers,
         python_requires=">=3.12",
         install_requires=install_reqs,
+        extras_require=extras_require,
         tests_require=test_reqs,
     )

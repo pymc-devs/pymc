@@ -13,15 +13,29 @@
 #   limitations under the License.
 
 import unittest.mock as mock
+import warnings
 
+from contextlib import nullcontext
 from types import SimpleNamespace
 
 import numpy as np
 import numpy.testing as npt
+import pytensor.tensor as pt
 import pytest
 import xarray as xr
 
-from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
+from pymc import (
+    NUTS,
+    Data,
+    Deterministic,
+    HalfNormal,
+    Metropolis,
+    Model,
+    Normal,
+    Potential,
+    sample,
+)
+from pymc.exceptions import SamplingError
 from pymc.progress_bar import NutpieProgressBarManager
 
 pytestmark = pytest.mark.filterwarnings(
@@ -31,10 +45,8 @@ pytestmark = pytest.mark.filterwarnings(
 )
 
 
-# temporarily skip nutpie
-@pytest.mark.parametrize("nuts_sampler", ["pymc", "blackjax", "numpyro"])
-# @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
-def test_external_nuts_sampler(recwarn, nuts_sampler):
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+def test_external_nuts_sampler(nuts_sampler):
     if nuts_sampler != "pymc":
         pytest.importorskip(nuts_sampler)
 
@@ -145,6 +157,52 @@ def test_sample_var_names(nuts_sampler):
         xr.testing.assert_allclose(idata_1.posterior[var], idata_2.posterior[var])
 
 
+@pytest.mark.parametrize(
+    "initvals",
+    [
+        None,
+        {"x1": 10000.0, "x2": 0.0},
+        {"x1": 10000.0},
+        {"x1_log__": np.log(10000.0)},
+    ],
+    ids=["negative_control", "full_constrained", "partial_constrained", "unconstrained_partial"],
+)
+@pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
+def test_initvals(nuts_sampler, initvals):
+    if nuts_sampler != "pymc":
+        pytest.importorskip(nuts_sampler)
+
+    # `x1` has a log transform; we pin it to 10000. Three guards check the value
+    # is mapped through the transform correctly:
+    #   - the `x1 - x2 > 1000` constraint excludes log(10000) ≈ 9.2 (wrong:
+    #     `x1_log__` value taken as constrained), and excludes default init
+    #     (x1 ≈ 79.8 ± jitter < 1000),
+    #   - the `x1 < 1e6` upper bound excludes exp(10000) (wrong: dict value
+    #     taken as if it were already on the transformed/unconstrained space).
+    with Model():
+        x1 = HalfNormal("x1", 100)
+        x2 = Normal("x2", 0, 1)
+        Potential("c", pt.where(x1 - x2 > 1000, 0.0, -np.inf))
+
+        with pytest.raises((SamplingError, RuntimeError)) if initvals is None else nullcontext():
+            idata = sample(
+                nuts_sampler=nuts_sampler,
+                tune=1,
+                draws=3,
+                chains=2,
+                progressbar=False,
+                random_seed=0,
+                compute_convergence_checks=False,
+                initvals=initvals,
+            )
+        if initvals is None:
+            return
+
+    assert idata.posterior.chain.size == 2
+    assert ((idata.posterior["x1"] - idata.posterior["x2"]) > 1000).all()
+    assert (idata.posterior["x1"] < 1e6).all()
+
+
 def test_nutpie_progress_bar_manager_update():
     pb = NutpieProgressBarManager(chains=2, draws=10, tune=10, progressbar=False)
     pb._backend = mock.Mock()
@@ -187,13 +245,6 @@ def test_nutpie_progress_bar_manager_update():
 
 
 def test_nutpie_end_to_end():
-    # Released nutpie 0.16.8 references `arviz.InferenceData` which arviz 1.0 removed,
-    # so `import nutpie` raises AttributeError on the current CI matrix. Skip until a
-    # nutpie release compatible with arviz 1.0 ships.
-    try:
-        import nutpie  # noqa: F401
-    except (ImportError, AttributeError):
-        pytest.skip("nutpie unavailable or incompatible with the installed arviz")
     with Model() as m:
         HalfNormal("sigma")
         Normal("mu")
@@ -209,3 +260,158 @@ def test_nutpie_end_to_end():
     assert {"posterior", "sample_stats", "observed_data"} <= set(idata.children)
     assert set(idata.posterior.data_vars) == {"mu", "sigma"}
     assert idata.posterior.sizes == {"chain": 2, "draw": 20}
+
+
+@pytest.fixture
+def patched_sampler():
+    """Pretend nutpie is installed and intercept any dispatch to it."""
+    with (
+        mock.patch("pymc.sampling.mcmc.NUTPIE_INSTALLED", True),
+        mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_ext,
+    ):
+        yield mock_ext
+
+
+class TestExternalSamplerKwargCompat:
+    """Validate how `pm.sample` handles kwargs that external samplers don't fully honor."""
+
+    with Model() as _model:
+        Normal("x")
+
+    _BASE_KWARGS = {
+        "tune": 2,
+        "draws": 2,
+        "chains": 1,
+        "progressbar": False,
+        "compile_kwargs": {"mode": "NUMBA"},
+    }
+
+    @pytest.mark.parametrize(
+        "extra",
+        [
+            {"return_inferencedata": False},
+            {"trace": object()},
+            {"callback": lambda **kw: None},
+        ],
+        ids=["return_inferencedata_false", "custom_trace", "callback"],
+    )
+    def test_explicit_nutpie_raises_on_incompatible(self, patched_sampler, extra):
+        pytest.importorskip("nutpie")
+
+        # Filter the separate FutureWarning for return_inferencedata=False; we only
+        # care that pm.sample raises the external-sampler ValueError.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*return_inferencedata=False.*", FutureWarning)
+            with self._model:
+                with pytest.raises(ValueError, match="`nuts_sampler='nutpie'`"):
+                    sample(nuts_sampler="nutpie", **self._BASE_KWARGS, **extra)
+        patched_sampler.assert_not_called()
+
+    def test_explicit_nutpie_raises_on_non_nuts_step(self, patched_sampler):
+        pytest.importorskip("nutpie")
+        with self._model:
+            step = Metropolis()
+            with pytest.raises(ValueError, match="not assigned to another step sampler"):
+                sample(nuts_sampler="nutpie", step=step, **self._BASE_KWARGS)
+        patched_sampler.assert_not_called()
+
+    def test_explicit_nutpie_warns_on_non_default_init(self, patched_sampler):
+        pytest.importorskip("nutpie")
+        with self._model:
+            with pytest.warns(UserWarning, match="`init='advi'` is ignored"):
+                sample(nuts_sampler="nutpie", init="advi", **self._BASE_KWARGS)
+        patched_sampler.assert_called_once()
+
+    def test_explicit_nutpie_warns_on_provided_nuts_step(self, patched_sampler):
+        pytest.importorskip("nutpie")
+        with self._model:
+            step = NUTS()
+            with pytest.warns(UserWarning, match="NUTS `step` is ignored"):
+                sample(nuts_sampler="nutpie", step=step, **self._BASE_KWARGS)
+        patched_sampler.assert_called_once()
+
+    def test_explicit_nutpie_raises_on_per_chain_initvals(self):
+        pytest.importorskip("nutpie")
+        with self._model, pytest.raises(NotImplementedError, match="per-chain"):
+            sample(
+                nuts_sampler="nutpie",
+                initvals=[{"x": 0.0}, {"x": 1.0}],
+                tune=1,
+                draws=1,
+                chains=2,
+                progressbar=False,
+            )
+
+
+class TestNutpieAutoSelection:
+    """Validate when `pm.sample` auto-selects nutpie based on env/compile mode."""
+
+    with Model() as _model:
+        Normal("x")
+
+    _BASE_KWARGS = {
+        "tune": 10,
+        "draws": 10,
+        "chains": 1,
+        "progressbar": False,
+    }
+
+    @pytest.mark.parametrize("mode", ["NUMBA", "JAX"])
+    @pytest.mark.parametrize("via", ["compile_kwargs", "backend"])
+    def test_auto_selects_nutpie_when_installed(self, patched_sampler, mode, via):
+        extra = {"compile_kwargs": {"mode": mode}} if via == "compile_kwargs" else {"backend": mode}
+        with self._model:
+            sample(**self._BASE_KWARGS, **extra)
+        assert patched_sampler.call_args.kwargs["sampler"] == "nutpie"
+
+    def test_falls_back_to_pymc_when_nutpie_missing(self):
+        with (
+            mock.patch("pymc.sampling.mcmc.NUTPIE_INSTALLED", False),
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_ext,
+        ):
+            with self._model:
+                sample(**self._BASE_KWARGS)
+        mock_ext.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "arg_name,arg",
+        [
+            ("return_inferencedata", False),
+            ("trace", object()),
+            ("callback", lambda **kw: None),
+            ("init", "advi"),
+            ("step", Metropolis),
+            # Non numba/jax backends
+            ("backend", "c"),
+            ("compile_kwargs", {"mode": "FAST_COMPILE"}),
+            # Per-chain initvals
+            ("initvals", [{"x": 0.0}, {"x": 1.0}]),
+        ],
+    )
+    def test_falls_back_to_pymc_for_disqualifying_kwargs(self, patched_sampler, arg_name, arg):
+        # Each of these kwargs disqualifies nutpie auto-selection; pm.sample should
+        # route to the pymc sampler (external stub never called) instead of raising.
+        # Numba is the default linker, so we don't need to set `compile_kwargs` to
+        # qualify for nutpie auto-pick — that means each entry can stand alone here.
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", ".*return_inferencedata=False.*", FutureWarning)
+            with self._model:
+                try:
+                    sample(**self._BASE_KWARGS, **{arg_name: arg})
+                except Exception:
+                    # The pymc path may error on the stand-in objects (dummy trace, etc.);
+                    # we only care that nutpie wasn't dispatched.
+                    pass
+        patched_sampler.assert_not_called()
+
+    def test_falls_back_to_pymc_for_configured_nuts_step(self, patched_sampler):
+        # A pre-built NUTS instance with a non-default argument (here a custom
+        # mass-matrix potential) carries user state that nutpie cannot consume.
+        # Auto-selection must fall back to the pymc sampler rather than silently
+        # dropping the configuration.
+        from pymc.step_methods.hmc.quadpotential import QuadPotentialDiag
+
+        with self._model:
+            step = NUTS(potential=QuadPotentialDiag(np.ones(1)))
+            sample(step=step, **self._BASE_KWARGS)
+        patched_sampler.assert_not_called()

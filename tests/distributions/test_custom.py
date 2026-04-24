@@ -151,7 +151,9 @@ class TestCustomDist:
             assert isinstance(y_dist.owner.op, CustomDistRV)
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-                sample(draws=5, tune=1, mp_ctx="spawn")
+                # nutpie can't handle RNG in deterministics
+                # https://github.com/pymc-devs/nutpie/issues/4
+                sample(draws=5, tune=1, mp_ctx="spawn", nuts_sampler="pymc")
 
         cloudpickle.loads(cloudpickle.dumps(y))
         cloudpickle.loads(cloudpickle.dumps(y_dist))

@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import contextlib
+import importlib.util
 import logging
 import multiprocessing
 import pickle
@@ -32,7 +33,10 @@ from typing import (
 import numpy as np
 import pytensor.gradient as tg
 
+from pytensor.compile.mode import get_mode
 from pytensor.graph.basic import Variable
+from pytensor.link.jax.linker import JAXLinker
+from pytensor.link.numba.linker import NumbaLinker
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
@@ -80,6 +84,9 @@ try:
     from zarr.storage import MemoryStore
 except ImportError:
     MemoryStore = type("MemoryStore", (), {})
+
+NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
+
 
 sys.setrecursionlimit(10000)
 
@@ -324,7 +331,7 @@ def _sample_external_nuts(
     draws: int,
     tune: int,
     chains: int,
-    target_accept: float,
+    cores: int | None,
     random_seed: RandomState | None,
     initvals: StartDict | Sequence[StartDict | None] | None,
     model: Model,
@@ -332,30 +339,56 @@ def _sample_external_nuts(
     progressbar: bool | ProgressBarOptions,
     progressbar_theme: Theme | None,
     quiet: bool,
-    idata_kwargs: dict | None,
     compute_convergence_checks: bool,
-    nuts_sampler_kwargs: dict | None,
+    discard_tuned_samples: bool,
+    nuts_kwargs: dict,
+    compile_kwargs: dict,
+    idata_kwargs: dict | None,
     **kwargs,
 ):
-    if nuts_sampler_kwargs is None:
-        nuts_sampler_kwargs = {}
+    # Shallow copy dicts so we can safely matute them below
+    nuts_kwargs = nuts_kwargs.copy()
+    compile_kwargs = compile_kwargs.copy()
+    idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
+
+    if "backend" in nuts_kwargs:
+        warnings.warn(
+            "`backend` should be passed as a top-level argument to `pm.sample`, "
+            "not nested in the NUTS step kwargs.",
+            FutureWarning,
+        )
+        compile_kwargs["mode"] = get_mode(nuts_kwargs.pop("backend"))
+
+    if "gradient_backend" in nuts_kwargs:
+        warnings.warn(
+            "`gradient_backend` should be passed via `compile_kwargs` to `pm.sample`, "
+            "not nested in the NUTS step kwargs.",
+            FutureWarning,
+        )
+        compile_kwargs["gradient_backend"] = nuts_kwargs.pop("gradient_backend")
 
     if sampler == "nutpie":
-        try:
-            import nutpie
-        except ImportError as err:
+        if not NUTPIE_INSTALLED:
             raise ImportError(
                 "nutpie not found. Install it with conda install -c conda-forge nutpie"
-            ) from err
+            )
+        import nutpie
 
-        if initvals is not None:
-            warnings.warn(
-                "`initvals` are currently not passed to nutpie sampler. "
-                "Use `init_mean` kwarg following nutpie specification instead.",
-                UserWarning,
+        if isinstance(initvals, dict):
+            compile_kwargs.setdefault("initial_points", initvals)
+        elif initvals is not None:
+            raise NotImplementedError(
+                "nutpie does not support per-chain `initvals`. "
+                "Pass a single dict, or use `nuts_sampler='pymc'`."
             )
 
-        idata_kwargs = {} if idata_kwargs is None else {**idata_kwargs}
+        # nuts-rs asserts `early_end < num_tune`, which panics when `tune == 0`.
+        if tune == 0:
+            tune = 1
+
+        if "max_treedepth" in nuts_kwargs:
+            nuts_kwargs["maxdepth"] = nuts_kwargs.pop("max_treedepth")
+
         include_transformed = idata_kwargs.pop("include_transformed", False)
         log_likelihood = idata_kwargs.pop("log_likelihood", False)
         if idata_kwargs:
@@ -364,11 +397,8 @@ def _sample_external_nuts(
                 UserWarning,
             )
 
-        compile_kwargs = {}
-        nuts_sampler_kwargs = nuts_sampler_kwargs.copy()
-        for kwarg in ("backend", "gradient_backend"):
-            if kwarg in nuts_sampler_kwargs:
-                compile_kwargs[kwarg] = nuts_sampler_kwargs.pop(kwarg)
+        linker = get_mode(compile_kwargs.pop("mode", None)).linker
+        compile_kwargs.setdefault("backend", "jax" if isinstance(linker, JAXLinker) else "numba")
         compiled_model = nutpie.compile_pymc_model(
             model,
             var_names=var_names,
@@ -390,11 +420,12 @@ def _sample_external_nuts(
                 draws=draws,
                 tune=tune,
                 chains=chains,
-                target_accept=target_accept,
-                seed=_get_seeds_per_chain(random_seed, 1)[0],
+                cores=cores,
+                seed=int(random_seed[0]),
+                save_warmup=not discard_tuned_samples,
                 progress_bar=False,
                 progress_callback=pb_manager.update,
-                **nuts_sampler_kwargs,
+                **nuts_kwargs,
             )
         t_sample = time.time() - t_start
         patch_nutpie_idata(
@@ -426,21 +457,25 @@ def _sample_external_nuts(
     elif sampler in ("numpyro", "blackjax"):
         import pymc.sampling.jax as pymc_jax
 
+        jax_nuts_kwargs = dict(nuts_kwargs)
+        jax_target_accept = jax_nuts_kwargs.pop("target_accept", 0.8)
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             tune=tune,
             chains=chains,
-            target_accept=target_accept,
-            random_seed=random_seed,
+            target_accept=jax_target_accept,
+            # jax samplers take a single master seed; `random_seed` here is the
+            # per-chain list produced by `pm.sample`, so use the first entry.
+            random_seed=int(random_seed[0]),
             initvals=initvals,
             model=model,
             var_names=var_names,
             progressbar=bool(progressbar),
             quiet=quiet,
             nuts_sampler=sampler,
+            nuts_kwargs=jax_nuts_kwargs,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
-            **nuts_sampler_kwargs,
         )
         return idata
 
@@ -463,7 +498,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -496,7 +531,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -529,7 +564,7 @@ def sample(
     quiet: bool = False,
     step=None,
     var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] = "pymc",
+    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -599,10 +634,11 @@ def sample(
         method will be used, if appropriate to the model.
     var_names : list of str, optional
         Names of variables to be stored in the trace. Defaults to all free variables and deterministics.
-    nuts_sampler : str
+    nuts_sampler : str, optional
         Which NUTS implementation to run. One of ["pymc", "nutpie", "blackjax", "numpyro"].
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
+        If ``None`` (default), "nutpie" is used if installed and can be compiled to the desired backend.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -651,8 +687,8 @@ def sample(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     nuts_sampler_kwargs : dict, optional
-        Keyword arguments for the sampling library that implements nuts.
-        Only used when an external sampler is specified via the `nuts_sampler` kwarg.
+        Deprecated. Pass NUTS keyword arguments via ``nuts={...}`` instead
+        (e.g. ``pm.sample(..., nuts={"target_accept": 0.9})``).
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -747,8 +783,18 @@ def sample(
             FutureWarning,
             stacklevel=2,
         )
-    if nuts_sampler_kwargs is None:
-        nuts_sampler_kwargs = {}
+    if nuts_sampler_kwargs is not None:
+        warnings.warn(
+            "`nuts_sampler_kwargs` is deprecated. Pass NUTS keyword arguments via the "
+            "`nuts={...}` argument to `pm.sample`.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        if "nuts" in kwargs:
+            raise ValueError(
+                "Cannot pass both `nuts_sampler_kwargs` and `nuts=`. Use `nuts=` only."
+            )
+        kwargs["nuts"] = nuts_sampler_kwargs
     if "target_accept" in kwargs:
         if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
@@ -826,20 +872,67 @@ def sample(
 
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
 
-    if nuts_sampler != "pymc":
-        if not exclusive_nuts:
-            raise ValueError(
-                "Model can not be sampled with NUTS alone. It either has discrete variables or a non-differentiable log-probability."
-            )
+    if nuts_sampler is None:
+        # Try to use nutpie by default if no setting is clearly at odds.
+        # Requires all model variables, numba or jax preference,
+        # and must not conflict with pymc sample-only arguments.
+        can_use_nutpie = (
+            exclusive_nuts
+            and not provided_steps
+            and NUTPIE_INSTALLED
+            and init == "auto"
+            and return_inferencedata
+            and trace is None
+            and callback is None
+            and (initvals is None or isinstance(initvals, dict))
+            and isinstance(get_mode(compile_kwargs.get("mode")).linker, NumbaLinker | JAXLinker)
+        )
+        nuts_sampler = "nutpie" if can_use_nutpie else "pymc"
+    elif nuts_sampler != "pymc" and not exclusive_nuts:
+        raise ValueError(
+            f"`nuts_sampler={nuts_sampler!r}` requires all variables to be differentiable "
+            "and not assigned to another step sampler."
+        )
 
+    if nuts_sampler != "pymc":
+        if provided_steps:
+            warnings.warn(
+                f"The provided NUTS `step` is ignored by `nuts_sampler={nuts_sampler!r}`; "
+                "pass `nuts_sampler='pymc'` to use it.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if not return_inferencedata:
+            raise ValueError(
+                f"`return_inferencedata=False` is not supported with `nuts_sampler={nuts_sampler!r}`. "
+                "External NUTS samplers can only return `InferenceData`."
+            )
+        if trace is not None:
+            raise ValueError(
+                f"A custom `trace` backend is not supported with `nuts_sampler={nuts_sampler!r}`. "
+                "Trace backends (e.g. `ZarrTrace`) only work with `nuts_sampler='pymc'`."
+            )
+        if callback is not None:
+            raise ValueError(
+                f"`callback` is not supported with `nuts_sampler={nuts_sampler!r}`. "
+                "External NUTS samplers don't invoke per-draw callbacks."
+            )
+        if init != "auto":
+            warnings.warn(
+                f"`init={init!r}` is ignored by `nuts_sampler={nuts_sampler!r}`; "
+                "the external sampler uses its own initialization.",
+                UserWarning,
+                stacklevel=2,
+            )
+        nuts_kwargs = kwargs.pop("nuts", {})
         with joined_blas_limiter():
             return _sample_external_nuts(
                 sampler=nuts_sampler,
                 draws=draws,
                 tune=tune,
                 chains=chains,
-                target_accept=kwargs.pop("nuts", {}).get("target_accept", 0.8),
-                random_seed=random_seed,
+                cores=cores,
+                random_seed=random_seed_list,
                 initvals=initvals,
                 model=model,
                 var_names=var_names,
@@ -848,7 +941,9 @@ def sample(
                 quiet=quiet,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
-                nuts_sampler_kwargs=nuts_sampler_kwargs,
+                discard_tuned_samples=discard_tuned_samples,
+                nuts_kwargs=nuts_kwargs,
+                compile_kwargs=compile_kwargs,
                 **kwargs,
             )
 
