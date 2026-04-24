@@ -823,7 +823,7 @@ class TestSamplePPC:
 
         base_test_dict = {
             "posterior": ["mu", "~a"],
-            "sample_stats": ["diverging", "lp"],
+            "sample_stats": ["diverging"],
             "observed_data": ["a"],
         }
         test_dict = {"~posterior_predictive": [], "~predictions": [], **base_test_dict}

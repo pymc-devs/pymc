@@ -683,8 +683,14 @@ def test_init_jitter(initval, jitter_max_retries, expectation):
 
 
 def test_step_args():
+    # pymc-NUTS names it `acceptance_rate`, nutpie names it `mean_tree_accept`.
+    def accept(idata):
+        stats = idata.sample_stats
+        return stats.acceptance_rate if "acceptance_rate" in stats else stats.mean_tree_accept
+
     with pm.Model() as model:
         a = pm.Normal("a")
+        idata_default = pm.sample(random_seed=1410)
         idata0 = pm.sample(target_accept=0.5, random_seed=1410)
         idata1 = pm.sample(nuts={"target_accept": 0.5}, random_seed=1410 * 2)
         idata2 = pm.sample(target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410)
@@ -692,9 +698,12 @@ def test_step_args():
         with pytest.raises(ValueError, match="`target_accept` was defined twice."):
             pm.sample(target_accept=0.5, nuts={"target_accept": 0.95}, random_seed=1410)
 
-    npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
-    npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
-    npt.assert_almost_equal(idata2.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    # Negative control: default target_accept (0.8) must land far from 0.5, so the
+    # positive assertions below can only pass when `target_accept=0.5` was honored.
+    assert accept(idata_default).mean() > 0.6
+    npt.assert_almost_equal(accept(idata0).mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(accept(idata1).mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(accept(idata2).mean(), 0.5, decimal=1)
 
     with pm.Model() as model:
         a = pm.Normal("a")
@@ -708,8 +717,8 @@ def test_step_args():
                 nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
             )
 
-    npt.assert_almost_equal(idata0.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
-    npt.assert_almost_equal(idata1.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(accept(idata0).mean(), 0.5, decimal=1)
+    npt.assert_almost_equal(accept(idata1).mean(), 0.5, decimal=1)
     npt.assert_allclose(idata1.sample_stats.scaling, 0)
 
 
@@ -718,7 +727,8 @@ def test_init_nuts(caplog):
         a = pm.Normal("a")
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
-            pm.sample(10, tune=10)
+            # `init_nuts` is a pymc-sampler-only code path.
+            pm.sample(10, tune=10, nuts_sampler="pymc")
         assert "Initializing NUTS" in caplog.text
 
 
@@ -927,7 +937,8 @@ class TestShared:
             pm.Normal("obs", b * x_shared, np.sqrt(1e-2), observed=y, shape=x_shared.shape)
             prior_trace0 = pm.sample_prior_predictive(1000)
 
-            idata = pm.sample(1000, tune=1000, chains=1)
+            # Nutpie fails with unnamed shared variables
+            idata = pm.sample(1000, tune=1000, chains=1, nuts_sampler="pymc")
             pp_trace0 = pm.sample_posterior_predictive(idata)
 
             x_shared.set_value(x_pred)

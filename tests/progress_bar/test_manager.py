@@ -56,6 +56,8 @@ def test_mcmc_split_bar_starts_at_zero_ends_at_total():
                 cores=1,
                 progressbar=True,
                 compute_convergence_checks=False,
+                # Test is patching the progress bar used for pymc nuts_sampler
+                nuts_sampler="pymc",
             )
 
     manager = captured["manager"]
@@ -86,6 +88,8 @@ def test_mcmc_combined_bar_ends_at_total():
                 cores=1,
                 progressbar="combined+stats",
                 compute_convergence_checks=False,
+                # Test is patching the progress bar used for pymc nuts_sampler
+                nuts_sampler="pymc",
             )
 
     manager = captured["manager"]

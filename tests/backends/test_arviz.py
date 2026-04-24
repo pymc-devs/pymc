@@ -39,6 +39,7 @@ pytestmark = pytest.mark.filterwarnings(
     # Related to https://github.com/arviz-devs/arviz/issues/2327
     "ignore:datetime.datetime.utcnow():DeprecationWarning",
     r"ignore::numba.NumbaPerformanceWarning",
+    r"ignore:This process .* is multi-threaded:DeprecationWarning",
 )
 
 
@@ -240,7 +241,7 @@ class TestDataPyMC:
             idata.update(pm.sample_posterior_predictive(thinned_idata))
         test_dict = {
             "posterior": ["mu", "tau", "eta", "theta"],
-            "sample_stats": ["diverging", "lp", "~log_likelihood"],
+            "sample_stats": ["diverging", "~log_likelihood"],
             "posterior_predictive": ["obs"],
             "observed_data": ["obs"],
         }
@@ -412,7 +413,7 @@ class TestDataPyMC:
             "posterior": ["x"],
             "observed_data": ["y1", "y2"],
             "log_likelihood": ["y1", "y2"],
-            "sample_stats": ["diverging", "lp", "~log_likelihood"],
+            "sample_stats": ["diverging", "~log_likelihood"],
         }
         if not log_likelihood:
             test_dict.pop("log_likelihood")
@@ -630,7 +631,7 @@ class TestDataPyMC:
                 )
         test_dict = {
             "posterior": ["p"],
-            "sample_stats": ["lp"],
+            "sample_stats": ["diverging"],
             "log_likelihood": ["y"],
             "observed_data": ["y"],
         }
