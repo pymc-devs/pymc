@@ -94,6 +94,16 @@ def orderedprobit_logpdf(value, eta, cutpoints):
     return np.where(np.all(ps >= 0), np.log(p), -np.inf)
 
 
+def mvpu_logp_reference(observations, initial_measure, reinforcement_matrix):
+    urn = initial_measure.astype(float).copy()
+    logp = 0.0
+    for obs in observations:
+        probs = urn / urn.sum()
+        logp += np.log(probs[obs])
+        urn += reinforcement_matrix[obs]
+    return logp
+
+
 class TestMatchesScipy:
     def test_discrete_unif(self):
         check_logp(
@@ -495,6 +505,71 @@ class TestMatchesScipy:
         )
 
 
+class TestMeasureValuedPolyaUrn:
+    @staticmethod
+    def _eval_logp(obs, init, R):
+        dist = pm.MeasureValuedPolyaUrn.dist(
+            initial_measure=init.astype(float),
+            reinforcement_matrix=R.astype(float),
+            n_steps=len(obs),
+        )
+        return float(pm.logp(dist, obs).eval())
+
+    @pytest.mark.parametrize(
+        "obs, init, R, analytic",
+        [
+            (
+                np.array([0]),
+                np.array([3.0, 1.0]),
+                np.eye(2),
+                np.log(0.75),
+            ),
+            (
+                np.array([0, 0, 1]),
+                np.array([1.0, 1.0]),
+                np.array([[2.0, 0.0], [0.0, 2.0]]),
+                None,
+            ),
+            (
+                np.array([0, 0, 0, 0]),
+                np.ones(4),
+                np.eye(4),
+                np.log(1 / 4) + np.log(2 / 5) + np.log(3 / 6) + np.log(4 / 7),
+            ),
+            (
+                np.array([0, 1, 2, 1, 0]),
+                np.array([1.0, 1.0, 1.0]),
+                np.array([[0.5, 0.2, 0.3], [0.1, 0.7, 0.2], [0.3, 0.3, 0.4]]),
+                None,
+            ),
+        ],
+    )
+    def test_logp_matches_reference(self, obs, init, R, analytic):
+        got = self._eval_logp(obs, init, R)
+        expected = mvpu_logp_reference(obs, init, R)
+        np.testing.assert_allclose(got, expected, rtol=1e-6)
+        if analytic is not None:
+            np.testing.assert_allclose(got, analytic, rtol=1e-6)
+
+    def test_logp_invalid_initial_measure(self):
+        dist = pm.MeasureValuedPolyaUrn.dist(
+            initial_measure=np.array([-1.0, 1.0]),
+            reinforcement_matrix=np.eye(2),
+            n_steps=2,
+        )
+        with pytest.raises(ParameterValueError):
+            pm.logp(dist, np.array([0, 1])).eval()
+
+    def test_logp_invalid_reinforcement_matrix(self):
+        dist = pm.MeasureValuedPolyaUrn.dist(
+            initial_measure=np.array([1.0, 1.0]),
+            reinforcement_matrix=np.array([[1.0, -0.5], [0.0, 1.0]]),
+            n_steps=2,
+        )
+        with pytest.raises(ParameterValueError):
+            pm.logp(dist, np.array([0, 1])).eval()
+
+
 # TODO: Is this test working as expected / still relevant?
 @pytest.mark.parametrize("shape", [(), (1,), (3, 1), (3, 2)], ids=str)
 def test_orderedlogistic_dimensions(shape):
@@ -691,6 +766,25 @@ class TestMoments:
         with pm.Model() as model:
             pm.Categorical("x", p=p, size=size)
         assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "initial_measure, reinforcement_matrix, n_steps, expected",
+        [
+            (np.ones(3), np.eye(3), 5, np.zeros(5, dtype=int)),
+            (np.ones(3), np.eye(3), 10, np.zeros(10, dtype=int)),
+        ],
+    )
+    def test_measure_valued_polya_urn_support_point(
+        self, initial_measure, reinforcement_matrix, n_steps, expected
+    ):
+        with pm.Model() as model:
+            pm.MeasureValuedPolyaUrn(
+                "x",
+                initial_measure=initial_measure,
+                reinforcement_matrix=reinforcement_matrix,
+                n_steps=n_steps,
+            )
+        assert_support_point_is_expected(model, expected, check_finite_logp=False)
 
 
 class TestDiscreteWeibull(BaseTestDistributionRandom):
@@ -982,3 +1076,58 @@ class TestOrderedProbit:
                     "op", cutpoints=np.array([-2, 0, 2]), eta=0, sigma=1, observed=[0, np.nan, 1]
                 )
         assert len(m.deterministics) == 2  # One from the auto-imputation, the other from compute_p
+
+
+class TestMeasureValuedPolyaUrnRandom(BaseTestDistributionRandom):
+    def seeded_mvpu_rng_fn(self):
+        rng = self.get_random_state()
+
+        def _rng(size, initial_measure, reinforcement_matrix, n_steps):
+            N = int(np.asarray(n_steps).flat[0])
+            K = initial_measure.shape[-1]
+
+            if size is None:
+                urn = initial_measure.reshape(K).astype(float).copy()
+                rm = reinforcement_matrix.reshape(K, K)
+                seq = np.zeros(N, dtype=int)
+                for i in range(N):
+                    probs = urn / urn.sum()
+                    seq[i] = rng.choice(K, p=probs)
+                    urn += rm[seq[i]]
+                return seq
+
+            batch_shape = (size,) if isinstance(size, (int, np.integer)) else tuple(size)
+            n_batch = int(np.prod(batch_shape))
+            result = np.zeros((n_batch, N), dtype=int)
+            for b in range(n_batch):
+                urn = initial_measure.reshape(K).astype(float).copy()
+                rm = reinforcement_matrix.reshape(K, K)
+                for i in range(N):
+                    probs = urn / urn.sum()
+                    result[b, i] = rng.choice(K, p=probs)
+                    urn += rm[result[b, i]]
+            return result.reshape(*batch_shape, N)
+
+        return _rng
+
+    pymc_dist = pm.MeasureValuedPolyaUrn
+    pymc_dist_params = {
+        "initial_measure": np.array([1.0, 1.0, 1.0]),
+        "reinforcement_matrix": np.eye(3),
+        "n_steps": 5,
+    }
+    expected_rv_op_params = {
+        "initial_measure": np.array([1.0, 1.0, 1.0]),
+        "reinforcement_matrix": np.eye(3),
+        "n_steps": 5,
+    }
+    reference_dist_params = pymc_dist_params
+    reference_dist = seeded_mvpu_rng_fn
+    sizes_to_check = [None, (3,)]
+    sizes_expected = [(5,), (3, 5)]
+    checks_to_run = [
+        "check_pymc_params_match_rv_op",
+        "check_pymc_draws_match_reference",
+        "check_rv_size",
+    ]
+
