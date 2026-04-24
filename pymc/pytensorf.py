@@ -16,8 +16,8 @@ import warnings
 from collections.abc import Iterable, Sequence
 from typing import cast
 
+import narwhals as nw
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 import scipy.sparse as sps
@@ -82,44 +82,41 @@ def convert_observed_data(data) -> np.ndarray | Variable:
 
 
 def convert_data(data) -> np.ndarray | Variable:
+    """Convert user-provided data to a numpy array, masked array, sparse matrix, or pytensor Variable.
+
+    Anything that is not already an ndarray, sparse matrix, or pytensor Variable is routed
+    through narwhals, which transparently handles every supported DataFrame/Series backend
+    (pandas, polars, dask, pyarrow, modin, cudf, ibis, ...). NaN and null entries are folded
+    into a single mask.
+    """
     ret: np.ndarray | Variable
-    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
-        # typically, but not limited to pandas objects
-        vals = data.to_numpy()
-        null_data = data.isnull()
-        if hasattr(null_data, "to_numpy"):
-            # pandas Series
-            mask = null_data.to_numpy()
-        else:
-            # pandas Index
-            mask = null_data
-        if mask.any():
-            # there are missing values
-            ret = np.ma.MaskedArray(vals, mask)
-        else:
-            ret = vals
-    elif isinstance(data, np.ndarray):
-        if isinstance(data, np.ma.MaskedArray):
-            if not data.mask.any():
-                # empty mask
-                ret = data.filled()
-            else:
-                # already masked and rightly so
-                ret = data
-        else:
-            # already a ndarray, but not masked
-            mask = np.isnan(data)
-            if np.any(mask):
-                ret = np.ma.MaskedArray(data, mask)
-            else:
-                # no masking required
-                ret = data
-    elif isinstance(data, Variable):
+    if isinstance(data, Variable):
         ret = data
     elif sps.issparse(data):
         ret = data
-    else:
+    elif isinstance(data, np.ma.MaskedArray):
+        ret = data if data.mask.any() else data.filled()
+    elif isinstance(data, np.ndarray):
+        mask = np.isnan(data) if np.issubdtype(data.dtype, np.floating) else None
+        ret = np.ma.MaskedArray(data, mask) if mask is not None and mask.any() else data
+    elif isinstance(data, list | tuple):
         ret = np.asarray(data)
+    else:
+        # Try narwhals: this covers every DataFrame/Series backend it supports.
+        nw_data = nw.from_native(data, allow_series=True, pass_through=True)
+        if nw_data is not data:
+            if isinstance(nw_data, nw.LazyFrame):
+                nw_data = nw_data.collect()
+            # Some backends (e.g. polars) distinguish NaN from null; treat both as missing.
+            if isinstance(nw_data, nw.Series):
+                mask = nw_data.fill_nan(None).is_null().to_numpy()
+            else:
+                mask = nw_data.select(nw.all().fill_nan(None).is_null()).to_numpy()
+            vals = nw_data.to_numpy()
+            ret = np.ma.MaskedArray(vals, mask) if mask.any() else vals
+        else:
+            # Fallback for anything np.asarray can handle: xarray, numpy scalars, etc.
+            ret = np.asarray(data)
 
     # Data without dtype info is converted to float arrays by default.
     # This is the most common case for simple examples.
@@ -129,10 +126,23 @@ def convert_data(data) -> np.ndarray | Variable:
     return smarttypeX(ret)
 
 
-@_as_tensor_variable.register(pd.Series)
-@_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+@_as_tensor_variable.register(object)
+def _narwhals_to_tensor_variable(x, *args, **kwargs) -> TensorVariable:
+    """Catch-all final dispatch for ``pt.as_tensor_variable``.
+
+    This allows any narwhals-supported DataFrame/Series (pandas, polars, dask, pyarrow, modin, cudf, ibis, ...) to
+    be registered via pm.Data, without PyMC itself having to have any special logic for these packages.
+
+    Registered on ``object`` so it only fires as a least-specific fallback — concrete handlers (ndarray, Variable,
+    etc.) take priority. Unrecognized types re-raise the original ``NotImplementedError`` so pytensor's error surface
+    is preserved.
+    """
+    nw_x = nw.from_native(x, allow_series=True, pass_through=True)
+    if nw_x is x:
+        raise NotImplementedError(f"Cannot convert {x!r} to a tensor variable.")
+    if isinstance(nw_x, nw.LazyFrame):
+        nw_x = nw_x.collect()
+    return pt.as_tensor_variable(nw_x.to_numpy(), *args, **kwargs)
 
 
 _cheap_eval_mode = Mode(linker="py", optimizer=None)

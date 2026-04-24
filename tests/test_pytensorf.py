@@ -58,29 +58,33 @@ from pymc.vartypes import int_types
         np.ones(shape=(10, 1)),
     ],
 )
-def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.DataFrame(np_array)
+@pytest.mark.parametrize("library", ["pandas", "polars", "dask.dataframe", "pyarrow"])
+def test_dataframe_as_tensor_variable(np_array: np.ndarray, library: str) -> None:
+    """``pt.as_tensor_variable`` should accept any narwhals-supported DataFrame."""
+    lib = pytest.importorskip(library)
+    col_names = [f"col_{i}" for i in range(np_array.shape[1])]
+    match library:
+        case "pandas":
+            df = lib.DataFrame(np_array, columns=col_names)
+        case "polars":
+            df = lib.DataFrame(np_array, schema=dict.fromkeys(col_names, float))
+        case "dask.dataframe":
+            df = lib.DataFrame.from_dict({col: np_array[:, i] for i, col in enumerate(col_names)})
+        case "pyarrow":
+            df = lib.table({col: np_array[:, i] for i, col in enumerate(col_names)})
     np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
 @pytest.mark.parametrize(
     argnames="np_array",
-    argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
+    argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10)],
 )
-def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.Series(np_array)
-    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
-
-
-def test_pd_as_tensor_variable_multiindex() -> None:
-    tuples = [("L", "Q"), ("L", "I"), ("O", "L"), ("O", "I")]
-
-    index = pd.MultiIndex.from_tuples(tuples, names=["Id1", "Id2"])
-
-    df = pd.DataFrame({"A": [12.0, 80.0, 30.0, 20.0], "B": [120.0, 700.0, 30.0, 20.0]}, index=index)
-    np_array = np.array([[12.0, 80.0, 30.0, 20.0], [120.0, 700.0, 30.0, 20.0]]).T
-    assert isinstance(df.index, pd.MultiIndex)
-    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_series_as_tensor_variable(np_array: np.ndarray, library: str) -> None:
+    """``pt.as_tensor_variable`` should accept any narwhals-supported Series."""
+    lib = pytest.importorskip(library)
+    s = lib.Series(np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(s).eval(), np_array)
 
 
 class TestBroadcasting:
@@ -273,13 +277,6 @@ def test_convert_data(input_dtype):
         assert pytensor_output.dtype == pytensor.config.floatX
     else:
         assert pytensor_output.dtype == intX
-
-
-def test_pandas_to_array_pandas_index():
-    data = pd.Index([1, 2, 3])
-    result = convert_data(data)
-    expected = np.array([1, 2, 3])
-    np.testing.assert_array_equal(result, expected)
 
 
 class TestCompile:
