@@ -1419,6 +1419,7 @@ class OrderedProbit:
         p = pt.exp(log_p)
         return p
 
+
 def _mvpu_logp(observations, initial_measure, reinforcement_matrix):
     """Internal vectorized log-probability function for the Measure-Valued Pólya Urn."""
     observations = pt.cast(observations, "int64")

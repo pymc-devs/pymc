@@ -1096,7 +1096,7 @@ class TestMeasureValuedPolyaUrnRandom(BaseTestDistributionRandom):
                     urn += rm[seq[i]]
                 return seq
 
-            batch_shape = (size,) if isinstance(size, (int, np.integer)) else tuple(size)
+            batch_shape = (size,) if isinstance(size, int | np.integer) else tuple(size)
             n_batch = int(np.prod(batch_shape))
             result = np.zeros((n_batch, N), dtype=int)
             for b in range(n_batch):
@@ -1130,4 +1130,3 @@ class TestMeasureValuedPolyaUrnRandom(BaseTestDistributionRandom):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
-
