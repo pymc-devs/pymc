@@ -69,26 +69,86 @@ from pymc.util import RandomGenerator, get_value_vars_from_user_vars
 
 
 class Proposal:
+    """
+    Base class for Metropolis-Hastings proposal distributions.
+
+    Parameters
+    ----------
+    s : float or array-like
+        Scale, variance, or other defining parameter for the proposal.
+    """
+
     def __init__(self, s):
         self.s = s
 
 
 class NormalProposal(Proposal):
+    """
+    Normal distribution proposal for Metropolis-Hastings.
+
+    Generates random walk increments using a Gaussian distribution
+    centered at zero with standard deviation `s`.
+
+    Parameters
+    ----------
+    s : float or array-like
+        Standard deviation(s) of the normal proposal distribution.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).normal(scale=self.s)
 
 
 class UniformProposal(Proposal):
+    """
+    Uniform distribution proposal for Metropolis-Hastings.
+
+    Generates random walk increments sampled from a uniform distribution
+    within the range `[-s, s]`.
+
+    Parameters
+    ----------
+    s : array-like
+        The half-width(s) of the uniform proposal interval.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).uniform(low=-self.s, high=self.s, size=len(self.s))
 
 
 class CauchyProposal(Proposal):
+    """
+    Cauchy distribution proposal for Metropolis-Hastings.
+
+    Generates increments from a standard Cauchy distribution scaled by `s`.
+    Due to its heavy tails, this proposal is often used to perform
+    larger jumps than the Normal proposal, which can help in escaping
+    local optima or exploring multimodal distributions.
+
+    Parameters
+    ----------
+    s : float or array-like
+        Scale parameter of the Cauchy proposal distribution.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).standard_cauchy(size=np.size(self.s)) * self.s
 
 
 class LaplaceProposal(Proposal):
+    """
+    Laplace (double exponential) distribution proposal for Metropolis-Hastings.
+
+    Generates increments from a Laplace distribution scaled by `s`.
+    Implemented as the difference of two standard exponential distributions.
+    It has a sharper peak and heavier tails compared to a Normal distribution.
+
+    Parameters
+    ----------
+    s : float or array-like
+        Scale parameter of the Laplace proposal distribution.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
         size = np.size(self.s)
         r = rng or nr
@@ -96,11 +156,43 @@ class LaplaceProposal(Proposal):
 
 
 class PoissonProposal(Proposal):
+    """
+    Poisson distribution proposal for Metropolis-Hastings.
+
+    Generates zero-mean discrete increments by sampling from a Poisson
+    distribution with rate `s` and then subtracting `s`.
+
+    Parameters
+    ----------
+    s : float or array-like
+        Rate (lambda) parameter of the underlying Poisson distribution.
+        It defines both the variance and the shift applied to center the proposals.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
         return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
 
 
 class MultivariateNormalProposal(Proposal):
+    """
+    Multivariate Normal proposal distribution for Metropolis-Hastings.
+
+    Uses a covariance matrix to generate multivariate proposals.
+    Internally, it utilizes the Cholesky decomposition of the covariance
+    matrix to efficiently transform uncorrelated standard normal random
+    variables into correlated proposals.
+
+    Parameters
+    ----------
+    s : ndarray
+        Symmetric, positive-definite covariance matrix for the proposal distribution.
+
+    Raises
+    ------
+    ValueError
+        If the provided covariance matrix `s` is not square (symmetric).
+    """
+
     def __init__(self, s):
         n, m = s.shape
         if n != m:
