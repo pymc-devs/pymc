@@ -14,6 +14,95 @@ Check out the `PyMC overview <https://docs.pymc.io/en/latest/learn/core_notebook
 one of `the many examples <https://www.pymc.io/projects/examples/en/latest/gallery.html>`__!
 For questions on PyMC, head on over to our `PyMC Discourse <https://discourse.pymc.io/>`__ forum.
 
+PyMC Fork: Measure-Valued Pólya Urn (MVPU) Implementation
+===========================================================
+
+**Author:** Alexander Glushkov |
+**Status:** Feature proposed upstream (`discussion <https://github.com/pymc-devs/pymc/discussions/8191>`__)
+
+This is a modified fork of `PyMC <https://github.com/pymc-devs/pymc>`__.
+I have extended the library's Bayesian nonparametric capabilities by engineering
+and integrating a native **Measure-Valued Pólya Urn (MVPU)** sequence distribution.
+
+Engineering Highlights
+----------------------
+
+While PyMC supports localized nonparametrics (e.g., standard Dirichlet Processes
+via stick-breaking), it lacked native support for dependent, non-local spatial,
+temporal, or semantic priors. To solve this, I implemented the MVPU:
+
+-  **PyTensor vectorization:** Completely avoided performance-crushing
+   ``pytensor.scan`` loops by vectorizing the recursive transition kernel using
+   advanced tensor indexing and ``pt.cumsum``.
+-  **NUTS compatibility:** Achieved full compatibility with gradient-based
+   samplers (HMC / NUTS) by computing an analytic log-probability, avoiding
+   any discrete latent variables.
+-  **Scale identifiability:** Diagnosed and resolved unidentifiable posterior
+   geometry by anchoring the initial measure and transition matrix with
+   ``pm.Dirichlet`` priors.
+-  **Rigorous testing:** Authored pure-NumPy reference functions to validate
+   PyTensor graph outputs, passing strict ``check_pymc_draws_match_reference``
+   statistical alignment tests.
+
+File Manifest
+-------------
+
+To review the core contributions without navigating the entire PyMC codebase:
+
+1. **PyTensor op and API wrapper:** ``pymc/distributions/discrete.py``
+   (``MeasureValuedPolyaUrnRV`` and ``MeasureValuedPolyaUrn`` classes,
+   appended at the bottom of the file).
+2. **Unit tests:** ``tests/distributions/test_discrete.py`` — confirms shape
+   inference and statistical alignment with pure-NumPy reference functions.
+3. **Demonstration:** ``examples/mvpu_spatial_dependence.ipynb`` — complete
+   end-to-end tutorial of the distribution.
+
+Demonstration: Breaking the Recommendation Filter Bubble
+---------------------------------------------------------
+
+See the `demonstration notebook <examples/mvpu_spatial_dependence.ipynb>`__
+included in this repository.
+
+Standard Pólya urns suffer from strict locality — observing a category only
+reinforces that exact category, simulating a recommendation "filter bubble."
+By using the MVPU's stochastic transition kernel R, PyMC can infer the hidden
+semantic similarity between music genres from short cold-start user sequences.
+
+Operating on 150 independent 10-song user sessions, the No-U-Turn Sampler
+successfully recovered the structural sparsity of the transition matrix with
+no divergences (R̂ = 1.00). The MVPU posterior outperformed the standard
+Pólya urn baseline by **+158.5 nats**.
+
+Quick Usage Example
+-------------------
+
+.. code-block:: python
+
+   import pymc as pm
+   import pytensor.tensor as pt
+   import numpy as np
+
+   K = 3  # number of categories (e.g. genres)
+
+   # sequences: list of M observed integer arrays, each of length N
+   with pm.Model() as model:
+       initial_measure = pm.Dirichlet("initial_measure", a=np.ones(K))
+       reinf_matrix    = pm.Dirichlet("reinf_matrix",    a=np.ones((K, K)))
+
+       logp_total = pt.sum(pt.stack([
+           pm.logp(
+               pm.MeasureValuedPolyaUrn.dist(
+                   initial_measure=initial_measure,
+                   reinforcement_matrix=reinf_matrix,
+                   n_steps=len(seq)),
+               seq)
+           for seq in sequences
+       ]))
+       pm.Potential("likelihood", logp_total)
+
+       trace = pm.sample(draws=1000, tune=1000, target_accept=0.9)
+
+
 Features
 ========
 
