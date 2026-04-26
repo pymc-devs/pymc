@@ -23,7 +23,6 @@ import pandas as pd
 
 DP_ROOT = pathlib.Path(__file__).absolute().parent.parent
 FAILING = """
-pymc/__init__.py
 pymc/distributions/continuous.py
 pymc/distributions/dist_math.py
 pymc/distributions/distribution.py
