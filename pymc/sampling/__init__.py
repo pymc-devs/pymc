@@ -14,6 +14,9 @@
 
 """MCMC samplers."""
 
+from pymc.sampling import forward, mcmc
 from pymc.sampling.deterministic import compute_deterministics
 from pymc.sampling.forward import *
 from pymc.sampling.mcmc import *
+
+__all__ = ("compute_deterministics", *forward.__all__, *mcmc.__all__)
