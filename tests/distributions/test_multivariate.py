@@ -2183,7 +2183,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
         with pm.Model() as model:
             sd_dist = pm.HalfCauchy.dist(beta=2.5, size=D)
             packedL = pm.LKJCholeskyCov("packedL", eta=2, n=D, sd_dist=sd_dist, compute_corr=False)
-            L = pm.expand_packed_triangular(D, packedL, lower=True)
+            L = pm.math.expand_packed_triangular(D, packedL, lower=True)
             Sigma = pm.Deterministic("Sigma", L.dot(L.T))  # D x D covariance
             mu = pm.MatrixNormal(
                 "mu", mu=mu_0, rowcov=(1 / lambd) * Sigma, colcov=np.eye(K), shape=(D, K)

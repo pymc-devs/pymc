@@ -53,13 +53,6 @@ from pymc.data import *
 from pymc.distributions import *
 from pymc.func_utils import find_constrained_prior
 from pymc.logprob import *
-from pymc.math import (
-    expand_packed_triangular,
-    invlogit,
-    invprobit,
-    logit,
-    probit,
-)
 from pymc.model.core import *
 from pymc.model.transform.conditioning import do, observe
 from pymc.model_graph import model_to_graphviz, model_to_mermaid, model_to_networkx

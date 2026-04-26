@@ -33,7 +33,7 @@ Models are defined using a context manager (``with`` statement). The model is sp
         beta = pm.Normal('beta', 0, sigma=1)
 
         # Linear combination of parameters
-        theta = pm.invlogit(alpha + beta * dose)
+        theta = pm.math.invlogit(alpha + beta * dose)
 
         # Model likelihood
         deaths = pm.Binomial('deaths', n=n, p=theta, observed=y)
