@@ -942,7 +942,7 @@ class TestSetUpdateCoords:
             pmodel.add_coord("nomnom", [1, 2])
 
             # No name collisions
-            with pytest.raises(ValueError, match="same name as"):
+            with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
                 pmodel.add_named_variable(rv, dims="nomnom")
 
             # This should work (regression test against #6335)
@@ -1806,3 +1806,32 @@ class TestModelCopy:
             match="Detected variables likely created by GP objects. Further use of these old GP objects should be avoided as it may reintroduce variables from the old model. See issue: https://github.com/pymc-devs/pymc/issues/6883",
         ):
             copy_method(gaussian_process_model)
+
+
+class TestCoordVariableCollision:
+    def test_variable_name_conflicts_with_existing_coord(self):
+        with pm.Model(coords={"a": [0, 1]}):
+            with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
+                pm.Data("a", [5, 10])
+
+            with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
+                pm.Normal("a", dims="a")
+
+            with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
+                pm.Deterministic("a", pt.ones(2))
+
+            with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
+                pm.Potential("a", pt.ones(2))
+
+    def test_add_coord_conflicts_with_existing_variable_name(self):
+        with pm.Model() as m:
+            pm.Data("a", [5, 10])
+
+            with pytest.raises(ValueError, match="conflicts with an existing model variable name"):
+                m.add_coord("a", [0, 1])
+
+    def test_register_rv_with_dim_matching_name(self):
+        with pytest.raises(ValueError, match="conflicts with an existing dimension name"):
+            with pm.Model() as pmodel:
+                var = pt.as_tensor([1, 2, 3])
+                pmodel.register_rv(var, name="time", dims=("time",))

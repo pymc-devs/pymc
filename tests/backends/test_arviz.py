@@ -15,7 +15,6 @@ import re
 import warnings
 
 import numpy as np
-import pytensor.tensor as pt
 import pytest
 import xarray
 
@@ -702,12 +701,6 @@ class TestDataPyMC:
                 },
             )
             assert isinstance(converter.coords["city"], pd.MultiIndex)
-
-    def test_variable_dimension_name_collision(self):
-        with pytest.raises(ValueError, match="same name as its dimension"):
-            with pm.Model() as pmodel:
-                var = pt.as_tensor([1, 2, 3])
-                pmodel.register_rv(var, name="time", dims=("time",))
 
     def test_include_transformed(self):
         with pm.Model():

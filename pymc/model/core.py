@@ -963,6 +963,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 "Dimensions can not be named `draw`, `chain` or `__sample__`, "
                 "as those are reserved for use in `InferenceData`."
             )
+        if self.named_vars.tree_contains(name):
+            raise ValueError(
+                f"Dimension name '{name}' conflicts with an existing model variable name."
+            )
         if values is None and length is None:
             raise ValueError(
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
@@ -1466,6 +1470,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             raise ValueError("Variable is unnamed.")
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
+        if var.name in self.coords:
+            raise ValueError(
+                f"Variable name '{var.name}' conflicts with an existing dimension name."
+            )
 
         if dims is not None:
             if isinstance(dims, str):
@@ -1473,8 +1481,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             for dim in dims:
                 if dim not in self.coords and dim is not None:
                     raise ValueError(f"Dimension {dim} is not specified in `coords`.")
-            if any(var.name == dim for dim in dims if dim is not None):
-                raise ValueError(f"Variable `{var.name}` has the same name as its dimension label.")
             # This check implicitly states that only vars with .ndim attribute can have dims
             if var.ndim != len(dims):
                 raise ValueError(
