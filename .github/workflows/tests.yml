@@ -95,6 +95,7 @@ jobs:
             tests/sampling/test_mcmc.py
             tests/sampling/test_parallel.py
             tests/test_printing.py
+            tests/test_print_value.py
 
           - |
             tests/distributions/test_timeseries.py
