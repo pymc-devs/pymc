@@ -11,7 +11,8 @@ dependencies:
 - cloudpickle
 - zarr>=2.5.0,<3
 - numba
-- nutpie >= 0.15.1
+# nutpie is installed from git in the CI workflow (see tests.yml) so we can track
+# the arviz 1.0 -compatible branch until an upstream release ships.
 # Jaxlib version must not be greater than jax version!
 - jax>=0.4.28
 - jaxlib>=0.4.28
