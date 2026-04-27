@@ -83,11 +83,12 @@ class TestDataPyMC:
                 sigma=eight_schools_params["sigma"],
                 observed=eight_schools_params["y"],
             )
-            trace = pm.sample(
-                draws,
-                chains=chains,
-                return_inferencedata=False,
-            )
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                trace = pm.sample(
+                    draws,
+                    chains=chains,
+                    return_inferencedata=False,
+                )
 
         return self.Data(model, trace)
 
@@ -276,15 +277,16 @@ class TestDataPyMC:
                 "likelihood", mu=city_temperature, sigma=0.5, observed=data, dims=data_dims
             )
 
-            trace = pm.sample(
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-                cores=1,
-                chains=1,
-                tune=20,
-                draws=30,
-                step=pm.Metropolis(),
-            )
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                trace = pm.sample(
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                    cores=1,
+                    chains=1,
+                    tune=20,
+                    draws=30,
+                    step=pm.Metropolis(),
+                )
             if use_context:
                 with warnings.catch_warnings():
                     warnings.filterwarnings("ignore", "More chains .* than draws.*", UserWarning)
@@ -313,7 +315,8 @@ class TestDataPyMC:
             x = pm.Data("x", x_data, dims=("dim1", "dim2"))
             beta = pm.Normal("beta", 0, 1, dims="dim1")
             _ = pm.Normal("obs", x * beta, 1, observed=y, dims=("dim1", "dim2"))
-            trace = pm.sample(100, tune=100, return_inferencedata=False)
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                trace = pm.sample(100, tune=100, return_inferencedata=False)
             idata1 = to_inference_data(trace)
             idata2 = to_inference_data(trace, coords={"dim1": new_dim1}, dims={"beta": ["dim2"]})
 
@@ -446,7 +449,8 @@ class TestDataPyMC:
             beta_sigma = pm.Data("beta_sigma", 1)
             beta = pm.Normal("beta", 0, beta_sigma)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
-            trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                trace = pm.sample(100, chains=2, tune=100, return_inferencedata=False)
             if use_context:
                 inference_data = to_inference_data(trace=trace, log_likelihood=True)
 
@@ -493,7 +497,8 @@ class TestDataPyMC:
             y = pm.Data("y", [1.0, 2.0, 3.0])
             beta = pm.Normal("beta", 0, 1)
             obs = pm.Normal("obs", x * beta, 1, observed=y)
-            trace = pm.sample(100, tune=100, return_inferencedata=False)
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                trace = pm.sample(100, tune=100, return_inferencedata=False)
             inference_data = to_inference_data(trace)
 
         test_dict = {"posterior": ["beta"], "observed_data": ["obs"], "constant_data": ["x"]}
@@ -656,14 +661,15 @@ class TestDataPyMC:
             # The model tracks coord values as (immutable) tuples
             assert isinstance(pmodel.coords["city"], tuple)
             pm.Normal("x", dims="city")
-            mtrace = pm.sample(
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-                step=pm.Metropolis(),
-                cores=1,
-                tune=7,
-                draws=15,
-            )
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                mtrace = pm.sample(
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                    step=pm.Metropolis(),
+                    cores=1,
+                    tune=7,
+                    draws=15,
+                )
             # The converter must convert coord values them to numpy arrays
             # because tuples as coordinate values causes problems with xarray.
             converter = DataTreeConverter(trace=mtrace)
@@ -772,7 +778,10 @@ class TestPyMCWarmupHandling:
         with pm.Model():
             pm.Uniform("u1")
             pm.Normal("n1")
-            with warnings.catch_warnings():
+            with (
+                warnings.catch_warnings(),
+                pytest.warns(FutureWarning, match="return_inferencedata=False"),
+            ):
                 warnings.filterwarnings("ignore", "Tuning samples will be included.*", UserWarning)
                 trace = pm.sample(
                     tune=100,
