@@ -730,15 +730,6 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
-    if "start" in kwargs:
-        if initvals is not None:
-            raise ValueError("Passing both `start` and `initvals` is not supported.")
-        warnings.warn(
-            "The `start` kwarg was renamed to `initvals` and can now do more. Please check the docstring.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        initvals = kwargs.pop("start")
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
     if "target_accept" in kwargs:
