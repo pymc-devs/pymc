@@ -19,6 +19,12 @@ import xarray as xr
 
 from pymc import Data, Deterministic, HalfNormal, Model, Normal, sample
 
+pytestmark = pytest.mark.filterwarnings(
+    "error",
+    "ignore:There are not enough devices to run parallel chains:UserWarning",
+    "ignore:os.fork\\(\\) was called:RuntimeWarning",
+)
+
 
 # temporarily skip nutpie
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "blackjax", "numpyro"])
@@ -51,21 +57,6 @@ def test_external_nuts_sampler(recwarn, nuts_sampler):
         reference_kwargs["nuts_sampler"] = "pymc"
         idata_reference = sample(**reference_kwargs)
 
-    warns = {
-        (warn.category, warn.message.args[0])
-        for warn in recwarn
-        if warn.category not in (FutureWarning, DeprecationWarning, RuntimeWarning)
-    }
-    expected = set()
-    if nuts_sampler == "nutpie":
-        expected.add(
-            (
-                UserWarning,
-                "`initvals` are currently not passed to nutpie sampler. "
-                "Use `init_mean` kwarg following nutpie specification instead.",
-            )
-        )
-    assert warns == expected
     assert "y" in idata1.constant_data
     assert "z" in idata1.constant_data
     assert "L" in idata1.observed_data

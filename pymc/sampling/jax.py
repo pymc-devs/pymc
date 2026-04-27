@@ -169,7 +169,15 @@ def _postprocess_samples(
         def process_fn(x):
             return jax.vmap(jax.vmap(jax_fn))(*_device_put(x, postprocessing_backend))
 
-        return jax.jit(process_fn, donate_argnums=0 if donate_samples else None)(raw_mcmc_samples)
+        with warnings.catch_warnings():
+            warnings.filterwarnings(
+                "ignore",
+                message="Some donated buffers were not usable",
+                category=UserWarning,
+            )
+            return jax.jit(process_fn, donate_argnums=0 if donate_samples else None)(
+                raw_mcmc_samples
+            )
 
     else:
         raise ValueError(f"Unrecognized postprocessing_vectorize: {postprocessing_vectorize}")
