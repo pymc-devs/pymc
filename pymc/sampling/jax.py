@@ -707,7 +707,7 @@ def sample_jax_nuts(
     if constant_data is not None:
         groups["constant_data"] = constant_data
 
-    if not idata_kwargs:
+    if idata_kwargs:
         warnings.warn(
             "The arguments to `from_dict` have changed with the release of arviz 1.0. "
             "Please refer to the arviz documentation for more details",
