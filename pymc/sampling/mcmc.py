@@ -730,6 +730,14 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
+    if return_inferencedata is False:
+        warnings.warn(
+            "`return_inferencedata=False` is deprecated and will be removed in a future "
+            "release. Use the default `return_inferencedata=True` and work with the "
+            "returned `InferenceData` object.",
+            FutureWarning,
+            stacklevel=2,
+        )
     if nuts_sampler_kwargs is None:
         nuts_sampler_kwargs = {}
     if "target_accept" in kwargs:

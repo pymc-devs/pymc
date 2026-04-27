@@ -78,26 +78,27 @@ class TestSample:
     def test_random_seed(self, chains, seeds, cores, init):
         with pm.Model():
             x = pm.Normal("x", 0, 10, initval="prior")
-            tr1 = pm.sample(
-                chains=chains,
-                random_seed=seeds,
-                cores=cores,
-                init=init,
-                tune=0,
-                draws=10,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
-            tr2 = pm.sample(
-                chains=chains,
-                random_seed=seeds,
-                cores=cores,
-                init=init,
-                tune=0,
-                draws=10,
-                return_inferencedata=False,
-                compute_convergence_checks=False,
-            )
+            with pytest.warns(FutureWarning, match="return_inferencedata=False"):
+                tr1 = pm.sample(
+                    chains=chains,
+                    random_seed=seeds,
+                    cores=cores,
+                    init=init,
+                    tune=0,
+                    draws=10,
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
+                tr2 = pm.sample(
+                    chains=chains,
+                    random_seed=seeds,
+                    cores=cores,
+                    init=init,
+                    tune=0,
+                    draws=10,
+                    return_inferencedata=False,
+                    compute_convergence_checks=False,
+                )
 
         allequal = np.all(tr1["x"] == tr2["x"])
         if seeds is None:
@@ -128,7 +129,10 @@ class TestSample:
             "return_inferencedata": False,
         }
         with self.model:
-            with warnings.catch_warnings():
+            with (
+                warnings.catch_warnings(),
+                pytest.warns(FutureWarning, match="return_inferencedata=False"),
+            ):
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 np.random.seed(1)
                 idata11 = pm.sample(chains=1, **kwargs)
@@ -254,7 +258,10 @@ class TestSample:
                 raise KeyboardInterrupt()
 
         with self.model:
-            with warnings.catch_warnings():
+            with (
+                warnings.catch_warnings(),
+                pytest.warns(FutureWarning, match="return_inferencedata=False"),
+            ):
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(
                     10,
@@ -307,7 +314,10 @@ class TestSample:
                 bounds_fn=lambda *inputs: (inputs[-2], inputs[-1])
             )
             y = pm.Uniform("y", lower=0, upper=x, transform=transform, default_transform=None)
-            with warnings.catch_warnings():
+            with (
+                warnings.catch_warnings(),
+                pytest.warns(FutureWarning, match="return_inferencedata=False"),
+            ):
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 trace = pm.sample(tune=10, draws=50, return_inferencedata=False, random_seed=336)
 
@@ -340,7 +350,10 @@ class TestSampleReturn:
             pm.Normal("n")
 
             # Get a MultiTrace with warmup
-            with pytest.warns(UserWarning, match="will be included"):
+            with (
+                pytest.warns(UserWarning, match="will be included"),
+                pytest.warns(FutureWarning, match="return_inferencedata=False"),
+            ):
                 mtrace = pm.sample(
                     draws=100,
                     tune=50,
