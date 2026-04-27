@@ -35,5 +35,5 @@ dependencies:
 - watermark
 - sphinx-remove-toctrees
 - pip:
-  - pytensor @ git+https://github.com/pymc-devs/pytensor.git@v3
+  - pytensor @ git+https://github.com/pymc-devs/pytensor.git@main
   - numdifftools>=0.9.40
