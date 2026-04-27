@@ -328,6 +328,9 @@ jobs:
         run: |
           pip install "pytensor @ git+https://github.com/pymc-devs/pytensor.git@main" --no-deps
           pip install -e . --no-deps
+          # Track nutpie main so we exercise unreleased changes. Expected to be
+          # red until nutpie main drops its `arviz.InferenceData` references.
+          pip install "nutpie @ git+https://github.com/pymc-devs/nutpie@main"
           python --version
           micromamba list
       - name: Run tests
