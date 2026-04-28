@@ -13,9 +13,9 @@
 #   limitations under the License.
 
 __all__ = [
-    "ImplicitFreezeWarning",
     "BlockModelAccessError",
     "DtypeError",
+    "ImplicitFreezeWarning",
     "ImputationWarning",
     "IncorrectArgumentsError",
     "NotConstantValueError",
