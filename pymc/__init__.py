@@ -47,6 +47,7 @@ def __set_compiler_flags():
 __set_compiler_flags()
 
 from pymc import _version, exceptions, gp, math, ode, plots, sampling, stats
+from pymc._deprecations import resolve as _resolve_deprecated_root_attribute
 from pymc.backends import *
 from pymc.data import *
 from pymc.distributions import *
@@ -62,5 +63,10 @@ from pymc.stats import compute_log_likelihood
 from pymc.step_methods import *
 from pymc.tuning import *
 from pymc.variational import *
+
+
+def __getattr__(name: str):
+    return _resolve_deprecated_root_attribute(name)
+
 
 __version__ = _version.get_versions()["version"]
