@@ -965,8 +965,11 @@ class Wishart(Continuous):
 
     Notes
     -----
-    This distribution is unusable in a PyMC model. You should instead
-    use LKJCholeskyCov or LKJCorr.
+    This distribution is not recommended as a prior distribution for MCMC
+    sampling. Most samplers operate in unconstrained space and proposals
+    rarely satisfy the symmetric positive definite constraint, causing
+    sampling to fail or perform poorly. Consider using LKJCholeskyCov or
+    LKJCorr instead.
     """
 
     rv_op = wishart
@@ -975,16 +978,6 @@ class Wishart(Continuous):
     def dist(cls, nu, V, *args, **kwargs):
         nu = pt.as_tensor_variable(nu, dtype=int)
         V = pt.as_tensor_variable(V)
-
-        warnings.warn(
-            "The Wishart distribution can currently not be used "
-            "for MCMC sampling. The probability of sampling a "
-            "symmetric matrix is basically zero. Instead, please "
-            "use LKJCholeskyCov or LKJCorr. For more information "
-            "on the issues surrounding the Wishart see here: "
-            "https://github.com/pymc-devs/pymc/issues/538.",
-            UserWarning,
-        )
 
         # mean = nu * V
         # p = V.shape[0]
