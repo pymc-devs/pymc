@@ -1202,13 +1202,6 @@ def _sample_return(
             idata = traces.to_inferencedata(save_warmup=not discard_tuned_samples)
             log_likelihood = idata_kwargs.get("log_likelihood", False)
             if log_likelihood:
-                warnings.warn(
-                    "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
-                    ":func:`pymc.compute_log_likelihood` instead.",
-                    FutureWarning,
-                    stacklevel=2,
-                )
-
                 from pymc.stats.log_density import compute_log_likelihood
 
                 idata = compute_log_likelihood(
