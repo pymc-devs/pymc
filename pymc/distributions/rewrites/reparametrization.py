@@ -325,7 +325,7 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
 @node_rewriter([GeometricRV])
 def geometric_reparametrization(fgraph, node):
     rng, size, p = node.inputs
-    return ceil(log(UniformRV(zeros_like(p), ones_like(p), rng=rng, size=size)) / log(1 - p))
+    return ceil(log(UniformRV()(zeros_like(p), ones_like(p), rng=rng, size=size)) / log(1 - p))
 
 
 @register_random_reparametrization
