@@ -620,7 +620,7 @@ def sample(
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     trace : backend, optional
-        A backend instance or None.
+        A backend instance or None. Ignored when ``nuts_sampler`` is not ``"pymc"``.
         If ``None``, a ``MultiTrace`` object with underlying ``NDArray`` trace objects
         is used. If ``trace`` is a :class:`~pymc.backends.zarr.ZarrTrace` instance,
         the drawn samples will be written onto the desired storage while sampling is
@@ -628,10 +628,6 @@ def sample(
         of their execution will write the partial results onto the storage. If the
         storage persist on disk, these results should be available even after a server
         crash. See :class:`~pymc.backends.zarr.ZarrTrace` for more information.
-        
-        The ``ZarrTrace`` backend is only supported when using PyMC's internal samplers.
-        When specifying external samplers such as ``nuts_sampler="numpyro"``, the
-        ``trace`` argument is ignored and ``ZarrTrace`` is not used.
     discard_tuned_samples : bool
         Whether to discard posterior samples of the tune interval.
     compute_convergence_checks : bool, default=True
