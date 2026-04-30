@@ -27,6 +27,7 @@ from pytensor.scan.utils import until
 from pytensor.tensor.basic import eye, ones_like, switch, zeros_like
 from pytensor.tensor.extra_ops import broadcast_arrays
 from pytensor.tensor.math import and_, argmax, ceil, cos, exp, log, sqrt
+from pymc.distributions.continuous import KumaraswamyRV
 from pytensor.tensor.random.basic import (
     BernoulliRV,
     BetaRV,
@@ -325,6 +326,14 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
 def geometric_reparametrization(fgraph, node):
     rng, size, p = node.inputs
     return ceil(log(UniformRV(zeros_like(p), ones_like(p), rng=rng, size=size)) / log(1 - p))
+
+
+@register_random_reparametrization
+@node_rewriter([KumaraswamyRV])
+def kumaraswamy_reparametrization(fgraph, node):
+    rng, size, a, b = node.inputs
+    u = UniformRV()(zeros_like(a), ones_like(b), rng=rng, size=size)
+    return (1 - (1 - u) ** (1 / b)) ** (1 / a)
 
 
 @register_random_reparametrization
