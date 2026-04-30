@@ -139,38 +139,66 @@ def scale_reparametrization(fgraph, node):
 @node_rewriter([GammaRV])
 def gamma_reparametrization(fgraph, node):
     rng, size, shape, scale = node.inputs
-    return gamma_reparametrization_impl(rng, size, shape, scale)
+    value, _ = gamma_reparametrization_impl(rng, size, shape, scale)
+    return value
 
 
 @register_random_reparametrization
 @node_rewriter([InvGammaRV])
 def inv_gamma_reparametrization(fgraph, node):
     rng, size, shape, scale = node.inputs
-    return 1 / gamma_reparametrization_impl(rng, size, shape, 1 / scale)
+    value, _ = gamma_reparametrization_impl(rng, size, shape, 1 / scale)
+    return 1 / value
 
 
-def gamma_reparametrization_impl(rng, size, shape, scale):
-    # We'll implement the Marsaglia-Tsang boosted algorithm to sample
-    # https://dl.acm.org/doi/epdf/10.1145/358407.358414
-    # We follow the algorithm from section 3 without squeezing.
-    # The squeeze algorithm from section 4 is more efficient if we can avoid
-    # computing all branches of the if-else clauses, which is not possible
-    # when using pytensor switches.
-    # For context, shape is equal to alpha in all of the following math.
-    # Sampling for alpha >= 1 is done with a rejection algorithm that finishes in constant time.
-    # For alpha < 1, we need to boost the samples using:
-    # Gamma(alpha, 1) = Gamma(alpha + 1, 1) * Uniform(0, 1) ** (1/alpha)
-    # But this can cause numerical issues, so we'll use log samples from the boosting process:
-    # log(Gamma(alpha, 1)) = log(Gamma(alpha + 1, 1)) + log(Uniform(0, 1)) / alpha
-    # We can note that log(Uniform(0, 1)) = -Exponential(1)
-    # and we have to guard agains the case where the exponential sample is equal to 0.
-    assert size == (), (
-        "Gamma reparametrization requires that you first apply the local_rv_size_lift "
-        "rewrite in order to have size equal to an empty tuple."
+def _gamma_grad_implicit(alpha, sample, n_terms=128):
+    """Symbolic ∂x/∂α at fixed sample for x ~ Gamma(α, scale=1).
+
+    Implicit-function theorem on F(α, x) = u (the regularized lower
+    incomplete gamma): ∂x/∂α = -∂P(α, x)/∂α / p(x; α).
+    Uses the power-series expansion of γ(α, x). The series always
+    converges but slows when x ≫ α; n_terms = 128 covers typical
+    Gamma samples for α, x in roughly [0.01, 100].
+    """
+    log_x = log(sample)
+    psi = pt.digamma(alpha)
+    return _gamma_grad_series(alpha, sample, log_x, psi, n_terms)
+
+
+def _gamma_grad_series(alpha, x, log_x, psi, n_terms):
+    # γ(α, x) = x^α e^(-x) · S(α, x),   S = Σ T_k,    T_k = x^k / (α)_(k+1)
+    # ∂S/∂α  = -Σ h_k T_k,              h_k = Σ_{j=0..k} 1/(α + j)
+    # g = x · [S · (ψ(α) - log x) + Σ h_k T_k]
+    T0 = pt.cast(1.0, pytensor.config.floatX) / alpha
+
+    def step(k, T_prev, h_prev, S_prev, H_prev, alpha, x):
+        T_next = T_prev * x / (alpha + k)
+        h_next = h_prev + 1.0 / (alpha + k)
+        S_next = S_prev + T_next
+        H_next = H_prev + h_next * T_next
+        return T_next, h_next, S_next, H_next
+
+    _, _, S_seq, H_seq = scan(
+        step,
+        sequences=[pt.arange(1, n_terms, dtype=pytensor.config.floatX)],
+        outputs_info=[T0, T0, T0, T0 * T0],
+        non_sequences=[alpha, x],
+        return_updates=False,
     )
+    # TODO: For x ≫ α the series converges slowly; XLA's `random_gamma_grad`
+    #  switches to the upper-incomplete-gamma continued fraction at x > α:
+    #    Γ(α, x) = e^(-x) x^α · CF,
+    #    CF = 1 / (x+1-α − 1·(1-α)/(x+3-α − 2·(2-α)/(x+5-α − …)))
+    #  Differentiate via a parallel modified-Lentz recurrence carrying
+    #  (A_n, B_n, ∂A_n/∂α, ∂B_n/∂α). Then
+    #    g = -∂P/∂α / p
+    #      = (Q/p) · (log x − ψ(α)) + (1/CF) · (Q/p) · ∂CF/∂α
+    #  converges geometrically at rate ≈ α/x once x > α + 1.
+    return x * (S_seq[-1] * (psi - log_x) + H_seq[-1])
 
-    shape, scale = broadcast_arrays(shape, scale)
 
+def _gamma_marsaglia_tsang(rng, shape, scale):
+    """Forward-only Marsaglia-Tsang sampler. Returns (sample, next_rng)."""
     must_boost = pt.lt(shape, 1)
     alpha_orig = shape
     alpha = pt.switch(must_boost, shape + 1, shape)
@@ -204,7 +232,7 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
         output = switch(indicators, V, output)
         return (output, chosen, next_rng), until(pt.all(chosen))
 
-    Vs, _, next_rng = scan(
+    Vs, _, post_rng = scan(
         rejection_step,
         outputs_info=[zeros_like(alpha), zeros_like(alpha, dtype="bool"), rng],
         non_sequences=[c, d, alpha],
@@ -213,16 +241,80 @@ def gamma_reparametrization_impl(rng, size, shape, scale):
     )
     V = Vs[-1]
 
-    log_boosting_dist = -ExponentialRV()(
+    final_rng, log_boosting_dist_pos = ExponentialRV()(
         ones_like(alpha),
-        rng=next_rng,
-    )
+        rng=post_rng,
+    ).owner.outputs
+    log_boosting_dist = -log_boosting_dist_pos
     log_boost = pt.switch(
         must_boost & pt.neq(log_boosting_dist, 0),
         log_boosting_dist / alpha_orig,
         0,
     )
-    return exp(log(d) + log(V) + log_boost + log(scale))
+    sample = exp(log(d) + log(V) + log_boost + log(scale))
+    return sample, final_rng
+
+
+def _gamma_lop(inputs, outputs, output_grads):
+    """Custom L_op for the Gamma sampler — implicit reparam, no autodiff through scan."""
+    _, shape, scale = inputs
+    sample = outputs[0]
+    g_sample = output_grads[0]
+    x_unit = sample / scale
+    g_shape = g_sample * scale * _gamma_grad_implicit(shape, x_unit)
+    g_scale = g_sample * sample / scale
+    return [DisconnectedType()(), g_shape, g_scale]
+
+
+def gamma_reparametrization_impl(rng, size, shape, scale):
+    """Marsaglia-Tsang Gamma sampler with implicit-reparameterization backward.
+
+    The forward pass keeps the rejection-sampling scan (with `until`); the
+    backward pass uses ∂x/∂α = -∂P(α,x)/∂α / p(x;α) so we never differentiate
+    through the scan. Wrapped in an `OpFromGraph` whose `lop_overrides` hooks
+    in the analytical gradient.
+
+    Returns
+    -------
+    sample : TensorVariable
+    next_rng : TensorVariable
+    """
+    # https://dl.acm.org/doi/epdf/10.1145/358407.358414
+    # We follow the algorithm from section 3 without squeezing.
+    # The squeeze algorithm from section 4 is more efficient if we can avoid
+    # computing all branches of the if-else clauses, which is not possible
+    # when using pytensor switches.
+    # For context, shape is equal to alpha in all of the following math.
+    # Sampling for alpha >= 1 is done with a rejection algorithm that finishes in constant time.
+    # For alpha < 1, we boost via Gamma(alpha, 1) = Gamma(alpha + 1, 1) * Uniform()^(1/alpha)
+    # in log-space to avoid underflow.
+    assert getattr(size, "data", size) is None, (
+        "Gamma reparametrization requires that you first apply the local_rv_size_lift "
+        "rewrite so that size is None (broadcast pushed into the parameters)."
+    )
+
+    shape = pt.cast(shape, pytensor.config.floatX)
+    scale = pt.cast(scale, pytensor.config.floatX)
+    shape, scale = broadcast_arrays(shape, scale)
+
+    inner_rng = rng.type()
+    inner_shape = shape.type()
+    inner_scale = scale.type()
+    inner_sample, inner_next_rng = _gamma_marsaglia_tsang(inner_rng, inner_shape, inner_scale)
+
+    gamma_op = OpFromGraph(
+        [inner_rng, inner_shape, inner_scale],
+        [inner_sample, inner_next_rng],
+        lop_overrides=_gamma_lop,
+        connection_pattern=[
+            [False, True],
+            [True, False],
+            [True, False],
+        ],
+        on_unused_input="ignore",
+    )
+    sample, final_rng = gamma_op(rng, shape, scale)
+    return sample, final_rng
 
 
 @register_random_reparametrization
