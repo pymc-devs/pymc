@@ -12,8 +12,11 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor
 
 from pytensor import tensor as pt
+from pytensor.compile.builders import OpFromGraph
+from pytensor.gradient import DisconnectedType
 from pytensor.graph.rewriting.basic import (
     NodeRewriter,
     node_rewriter,
@@ -377,23 +380,115 @@ def uniform_reparametrization(fgraph, node):
     return low + (high - low) * UniformRV(zeros_like(low), ones_like(high), rng=rng, size=size)
 
 
-@register_random_reparametrization
-@node_rewriter([WaldRV])
-def wald_reparametrization(fgraph, node):
-    rng, size, mean, scale = node.inputs
-    nu = NormalRV(zeros_like(mean), ones_like(scale), rng=rng, size=size)
-    u = UniformRV(zeros_like(mean), ones_like(scale), rng=rng, size=size)
+def _wald_michael_schucany_haas(rng, size, mean, scale):
+    """Forward-only Michael-Schucany-Haas sampler. Returns (sample, next_rng)."""
+    next_rng_n, nu = NormalRV()(
+        zeros_like(mean), ones_like(scale), rng=rng, size=size
+    ).owner.outputs
+    final_rng, u = UniformRV()(
+        zeros_like(mean), ones_like(scale), rng=next_rng_n, size=size
+    ).owner.outputs
     y = nu**2
     x = (
         mean
         + mean**2 * y / 2 / scale
         - mean / 2 / scale * sqrt(4 * mean * scale * y + mean**2 * y**2)
     )
-    return switch(
-        u <= mean / (mean + x),
-        x,
-        mean**2 / x,
+    sample = switch(u <= mean / (mean + x), x, mean**2 / x)
+    return sample, final_rng
+
+
+def _wald_grad_implicit(mean, scale, sample):
+    """Symbolic (∂x/∂μ, ∂x/∂λ) at fixed sample for Wald(μ=mean, λ=scale).
+
+    Closed-form via implicit reparameterization on the CDF
+        F(x; μ, λ) = Φ(A) + e^(2λ/μ) Φ(B),
+        A = √(λ/x)·(x/μ - 1),  B = -√(λ/x)·(x/μ + 1),
+    so ∂x/∂θ = -∂F/∂θ / p(x; μ, λ).
+    """
+    mu = mean
+    lam = scale
+    x = sample
+
+    sqrt_lambda_x = sqrt(lam * x)
+    sqrt_lambda_over_x = sqrt(lam / x)
+
+    A = sqrt_lambda_x / mu - sqrt_lambda_over_x
+    B = -sqrt_lambda_x / mu - sqrt_lambda_over_x
+
+    inv_sqrt_2pi = pt.cast(1.0 / np.sqrt(2.0 * np.pi), pytensor.config.floatX)
+    sqrt_2 = pt.cast(np.sqrt(2.0), pytensor.config.floatX)
+    phi_A = inv_sqrt_2pi * exp(-A * A / 2)
+    phi_B = inv_sqrt_2pi * exp(-B * B / 2)
+    Phi_B = 0.5 * (1 + pt.erf(B / sqrt_2))
+
+    e_2_lam_over_mu = exp(2 * lam / mu)
+
+    dF_dmu = (
+        -phi_A * sqrt_lambda_x / mu**2
+        - (2 * lam / mu**2) * e_2_lam_over_mu * Phi_B
+        + e_2_lam_over_mu * phi_B * sqrt_lambda_x / mu**2
     )
+
+    dF_dlam = (
+        phi_A * (x - mu) / (2 * mu * sqrt_lambda_x)
+        + (2 / mu) * e_2_lam_over_mu * Phi_B
+        - e_2_lam_over_mu * phi_B * (x + mu) / (2 * mu * sqrt_lambda_x)
+    )
+
+    p = sqrt(lam / (2 * np.pi * x**3)) * exp(-lam * (x - mu) ** 2 / (2 * mu**2 * x))
+
+    return -dF_dmu / p, -dF_dlam / p
+
+
+def _wald_lop(inputs, outputs, output_grads):
+    """Custom L_op for Wald — implicit reparam, no autodiff through the conditional."""
+    _, _, mean, scale = inputs
+    sample = outputs[0]
+    g_sample = output_grads[0]
+    g_mu, g_lam = _wald_grad_implicit(mean, scale, sample)
+    return [
+        DisconnectedType()(),
+        DisconnectedType()(),
+        g_sample * g_mu,
+        g_sample * g_lam,
+    ]
+
+
+@register_random_reparametrization
+@node_rewriter([WaldRV])
+def wald_reparametrization(fgraph, node):
+    """Michael-Schucany-Haas Wald sampler with implicit-reparam backward.
+
+    The forward pass keeps the original conditional `switch(u ≤ μ/(μ+x), x, μ²/x)`,
+    which is discontinuous in μ. The backward pass swaps autodiff for the analytical
+    implicit-reparameterization gradient (closed-form via the Wald CDF), avoiding
+    the bias that pathwise-through-`switch` would produce.
+    """
+    rng, size, mean, scale = node.inputs
+
+    inner_rng = rng.type()
+    inner_size = size.type()
+    inner_mean = mean.type()
+    inner_scale = scale.type()
+    inner_sample, inner_next_rng = _wald_michael_schucany_haas(
+        inner_rng, inner_size, inner_mean, inner_scale
+    )
+
+    wald_op = OpFromGraph(
+        [inner_rng, inner_size, inner_mean, inner_scale],
+        [inner_sample, inner_next_rng],
+        lop_overrides=_wald_lop,
+        connection_pattern=[
+            [False, True],
+            [False, False],
+            [True, False],
+            [True, False],
+        ],
+        on_unused_input="ignore",
+    )
+    sample, _ = wald_op(rng, size, mean, scale)
+    return sample
 
 
 @register_random_reparametrization
