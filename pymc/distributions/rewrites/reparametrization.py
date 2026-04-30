@@ -79,7 +79,7 @@ def register_random_reparametrization(
 def bernoulli_reparametrization(fgraph, node):
     rng, size, p = node.inputs
     return switch(
-        UniformRV(0.0, 1.0, rng=rng, size=size) <= p,
+        UniformRV()(zeros_like(p), ones_like(p), rng=rng, size=size) <= p,
         1,
         0,
     )
@@ -90,9 +90,10 @@ def bernoulli_reparametrization(fgraph, node):
 def beta_reparametrization(fgraph, node):
     rng, size, alpha, beta = node.inputs
     alpha, beta = broadcast_arrays(alpha, beta)
-    next_rng, gamma_a = gamma_reparametrization_impl(rng, size, alpha, 1).owner.outputs
+    gamma_a, next_rng = gamma_reparametrization_impl(rng, size, alpha, 1)
+    gamma_b, _ = gamma_reparametrization_impl(next_rng, size, beta, 1)
     log_gamma_a = log(gamma_a)
-    log_gamma_b = log(gamma_reparametrization_impl(next_rng, size, beta, 1))
+    log_gamma_b = log(gamma_b)
     # Compute gamma_a / (gamma_a + gamma_b) without losing precision.
     log_max = pt.max(pt.stack([log_gamma_a, log_gamma_b], axis=0), axis=0)
     gamma_a_scaled = exp(log_gamma_a - log_max)
@@ -104,7 +105,13 @@ def beta_reparametrization(fgraph, node):
 @node_rewriter([CategoricalRV])
 def categorical_reparametrization(fgraph, node):
     rng, size, p = node.inputs
-    return argmax(log(p) + GumbelRV(loc=zeros_like(p), scale=1.0, rng=rng, size=size))
+    if getattr(size, "data", size) is None:
+        gumbel_shape = p.shape
+    else:
+        gumbel_shape = pt.concatenate([size, p.shape[-1:]])
+    gumbel_zeros = pt.zeros(gumbel_shape)
+    g = GumbelRV()(gumbel_zeros, ones_like(gumbel_zeros), rng=rng)
+    return argmax(log(p) + g, axis=-1)
 
 
 @register_random_reparametrization
@@ -128,8 +135,8 @@ def loc_scale_reparametrization(fgraph, node):
 @node_rewriter([DirichletRV])
 def dirichlet_reparametrization(fgraph, node):
     rng, size, alpha = node.inputs
-    log_gamma_samples = log(gamma_reparametrization_impl(rng, size, alpha, 1))
-    return softmax(log_gamma_samples, -1)
+    gamma_samples, _ = gamma_reparametrization_impl(rng, size, alpha, 1)
+    return softmax(log(gamma_samples), -1)
 
 
 @register_random_reparametrization
@@ -340,33 +347,37 @@ def kumaraswamy_reparametrization(fgraph, node):
 @node_rewriter([LogNormalRV])
 def log_normal_reparametrization(fgraph, node):
     rng, size, mean, sigma = node.inputs
-    return exp(mean + sigma * NormalRV(zeros_like(mean), ones_like(sigma), rng=rng, size=size))
+    return exp(mean + sigma * NormalRV()(zeros_like(mean), ones_like(sigma), rng=rng, size=size))
 
 
 @register_random_reparametrization
 @node_rewriter([MvNormalRV])
 def mv_normal_reparametrization(fgraph, node):
     rng, size, mean, cov = node.inputs
-    zero_mean = zeros_like(mean)
-    return mean + cholesky(cov) @ MvNormalRV(
-        zero_mean, eye(zero_mean.shape[-1]), size=size, rng=rng
-    )
+    k = mean.shape[-1]
+    if getattr(size, "data", size) is None:
+        z_shape = mean.shape
+    else:
+        z_shape = pt.concatenate([size, [k]])
+    z = NormalRV()(pt.zeros(z_shape), pt.ones(z_shape), rng=rng)
+    L = cholesky(cov)
+    return mean + pt.einsum("...ij,...j->...i", L, z)
 
 
 @register_random_reparametrization
 @node_rewriter([ParetoRV])
 def pareto_reparametrization(fgraph, node):
     rng, size, b, scale = node.inputs
-    return scale / UniformRV(zeros_like(b), ones_like(scale), rng=rng, size=size) ** (1 / b)
+    return scale / UniformRV()(zeros_like(b), ones_like(scale), rng=rng, size=size) ** (1 / b)
 
 
 @register_random_reparametrization
 @node_rewriter([StudentTRV])
 def student_t_reparametrization(fgraph, node):
     rng, size, df, loc, scale = node.inputs
-    u1 = UniformRV(zeros_like(loc), ones_like(scale), rng=rng, size=size)
-    u2 = UniformRV(zeros_like(loc), ones_like(scale), rng=rng, size=size)
-    return loc + scale * (sqrt(df * (u1 ** (2 / df) - 1)) * cos(2 * np.pi * u2))
+    next_rng, u1 = UniformRV()(zeros_like(loc), ones_like(scale), rng=rng, size=size).owner.outputs
+    u2 = UniformRV()(zeros_like(loc), ones_like(scale), rng=next_rng, size=size)
+    return loc + scale * (sqrt(df * (u1 ** (-2 / df) - 1)) * cos(2 * np.pi * u2))
 
 
 @register_random_reparametrization
@@ -374,9 +385,9 @@ def student_t_reparametrization(fgraph, node):
 def triangular_reparametrization(fgraph, node):
     rng, size, left, mode, right = node.inputs
     c = (mode - left) / (right - left)
-    u = UniformRV(zeros_like(c), ones_like(c), rng=rng, size=size)
+    u = UniformRV()(zeros_like(c), ones_like(c), rng=rng, size=size)
     return left + (right - left) * switch(
-        u < c**2,
+        u < c,
         sqrt(u * c),
         1 - sqrt((1 - u) * (1 - c)),
     )
@@ -386,7 +397,7 @@ def triangular_reparametrization(fgraph, node):
 @node_rewriter([UniformRV])
 def uniform_reparametrization(fgraph, node):
     rng, size, low, high = node.inputs
-    return low + (high - low) * UniformRV(zeros_like(low), ones_like(high), rng=rng, size=size)
+    return low + (high - low) * UniformRV()(zeros_like(low), ones_like(high), rng=rng, size=size)
 
 
 def _wald_michael_schucany_haas(rng, size, mean, scale):
@@ -504,4 +515,5 @@ def wald_reparametrization(fgraph, node):
 @node_rewriter([WeibullRV])
 def weibull_reparametrization(fgraph, node):
     rng, size, shape = node.inputs
-    return -(log(UniformRV(zeros_like(shape), ones_like(shape), rng=rng, size=size)) ** (1 / shape))
+    u = UniformRV()(zeros_like(shape), ones_like(shape), rng=rng, size=size)
+    return (-log(u)) ** (1 / shape)
