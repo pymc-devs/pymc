@@ -97,8 +97,13 @@ _RELOCATED: dict[str, str] = {
 # ``arviz_plots`` / ``arviz_stats`` functions that used to leak into the root.
 _FALLBACK_SUBMODULES: tuple[str, ...] = ("pymc.plots", "pymc.stats")
 
+_already_warned: set[str] = set()
+
 
 def _warn(name: str, new_path: str) -> None:
+    if name in _already_warned:
+        return
+    _already_warned.add(name)
     warnings.warn(
         f"`pymc.{name}` was moved out of the root namespace and will be removed in "
         f"the first PyMC release of 2027. Use `{new_path}` instead.",
