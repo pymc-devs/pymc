@@ -156,3 +156,13 @@ def test_sampling_state_rng(step):
     values2 = step.rng.random(100)
     assert np.array_equal(values1, values2, equal_nan=True)
     assert equal_sampling_states(step.sampling_state, final_state)
+
+
+def test_dataclass_state_eq():
+    """Regression test for #8132 - DataClassState subclasses should be == comparable."""
+    s1 = State1(a=1, b=2.0, c="c", d=np.array([1.0, 2.0]), e=[1, 2], f={"a": 1})
+    s2 = State1(a=1, b=2.0, c="c", d=np.array([1.0, 2.0]), e=[1, 2], f={"a": 1})
+    s3 = State1(a=1, b=2.0, c="c", d=np.array([9.0, 9.0]), e=[1, 2], f={"a": 1})
+
+    assert s1 == s2
+    assert s1 != s3
