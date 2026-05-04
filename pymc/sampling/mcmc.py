@@ -411,7 +411,6 @@ def _sample_external_nuts(
         pb_manager = NutpieProgressBarManager(
             chains=chains,
             draws=draws,
-            tune=tune,
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
@@ -430,6 +429,7 @@ def _sample_external_nuts(
                 progress_callback=pb_manager.update,
                 **nuts_kwargs,
             )
+            pb_manager.finalize(idata)
         t_sample = time.time() - t_start
         patch_nutpie_idata(
             idata,
