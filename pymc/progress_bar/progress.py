@@ -65,6 +65,7 @@ class ProgressBackend(Protocol):
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
+        total: int | None = None,
     ) -> None: ...
 
 
@@ -147,7 +148,7 @@ class ProgressBarManager(ABC):
 
     def _create_backend(
         self,
-        total: int | float,
+        total: int | float | None,
         progress_columns: list,
         progress_stats: dict[str, list[Any]],
     ) -> ProgressBackend:
@@ -329,6 +330,7 @@ class MCMCProgressBarManager(ProgressBarManager):
             failing=failing,
             stats=all_step_stats,
             is_last=is_last,
+            total=self.total_draws,
         )
 
 
@@ -346,7 +348,6 @@ class NutpieProgressBarManager(ProgressBarManager):
         self,
         chains: int,
         draws: int,
-        tune: int,
         progressbar: bool | ProgressBarOptions = True,
         progressbar_theme: Theme | str | None = None,
     ):
@@ -355,6 +356,8 @@ class NutpieProgressBarManager(ProgressBarManager):
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
+        # Used to compute delta draws between calls
+        self._previous_finished = [0] * chains
 
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
@@ -364,12 +367,8 @@ class NutpieProgressBarManager(ProgressBarManager):
         progress_stats = {
             stat: [0] * chains for stat in ("divergences", "step_size", "tree_size", "draw")
         }
-
-        self._previous_finished = [0] * chains
-        total_draws = draws + tune
-
         self._backend = self._create_backend(
-            total=total_draws * chains if self.combined_progress else total_draws,
+            total=None,  # Will be set on first callback
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
@@ -394,13 +393,14 @@ class NutpieProgressBarManager(ProgressBarManager):
                 stats["divergences"] += len(cp.divergent_draws)
                 stats["tree_size"] = max(stats["tree_size"], cp.latest_num_steps)
                 stats["draw"] += cp_finished_draws
-            bar_total = cp.total_draws * len(chain_progresses)
+            bar_total: int = cp.total_draws * len(chain_progresses)
             self._backend.update(
                 task_id=0,
                 advance=delta,
                 failing=stats["divergences"] > 0,
                 stats=stats,
                 is_last=stats["draw"] >= bar_total,
+                total=bar_total,
             )
         else:
             for chain_idx, cp in enumerate(chain_progresses):
@@ -419,6 +419,7 @@ class NutpieProgressBarManager(ProgressBarManager):
                     failing=bool(cp.divergent_draws),
                     stats=stats,
                     is_last=cp_finished_draws >= cp.total_draws,
+                    total=cp.total_draws,
                 )
 
 

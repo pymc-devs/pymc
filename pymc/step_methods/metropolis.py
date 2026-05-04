@@ -488,6 +488,7 @@ class BinaryMetropolis(ArrayStep):
         q0 = apoint.data
 
         # Convert adaptive_scale_factor to a jump probability
+        # TODO: No reason to compute this in every step
         p_jump = 1.0 - 0.5**self.scaling
 
         rand_array = self.rng.random(q0.shape)
