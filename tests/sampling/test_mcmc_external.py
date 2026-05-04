@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import logging
 import unittest.mock as mock
 import warnings
 
@@ -421,3 +422,37 @@ class TestNutpieAutoSelection:
             step = NUTS(potential=QuadPotentialDiag(np.ones(1)))
             sample(step=step, **self._BASE_KWARGS)
         patched_sampler.assert_not_called()
+
+
+class TestExternalSamplerLogging:
+    """`pm.sample` should announce which external NUTS backend is running."""
+
+    _BASE_KWARGS = {
+        "tune": 1,
+        "draws": 1,
+        "chains": 1,
+        "progressbar": False,
+        "compute_convergence_checks": False,
+        "random_seed": 42,
+    }
+
+    @pytest.mark.parametrize("nuts_sampler", ["nutpie", "blackjax", "numpyro"])
+    def test_logs_external_sampler_name(self, caplog, nuts_sampler):
+        pytest.importorskip(nuts_sampler)
+        with Model():
+            Normal("x", 0, 1)
+            HalfNormal("y", 1)
+            with caplog.at_level(logging.INFO, logger="pymc"):
+                sample(nuts_sampler=nuts_sampler, **self._BASE_KWARGS)
+
+        assert any(r.message == f"NUTS[{nuts_sampler}]: [x, y]" for r in caplog.records)
+
+    def test_quiet_suppresses_external_log(self, caplog):
+        pytest.importorskip("nutpie")
+        with Model():
+            Normal("x", 0, 1)
+            with caplog.at_level(logging.DEBUG, logger="pymc"):
+                sample(nuts_sampler="nutpie", quiet=True, **self._BASE_KWARGS)
+
+        pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
+        assert pymc_logs == []
