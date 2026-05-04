@@ -367,6 +367,9 @@ def _sample_external_nuts(
         )
         compile_kwargs["gradient_backend"] = nuts_kwargs.pop("gradient_backend")
 
+    if not quiet:
+        _log.info(f"NUTS[{sampler}]: {model.free_RVs}")
+
     if sampler == "nutpie":
         if not NUTPIE_INSTALLED:
             raise ImportError(
