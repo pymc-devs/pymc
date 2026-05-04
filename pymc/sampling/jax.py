@@ -659,8 +659,8 @@ def sample_jax_nuts(
 
     if idata_kwargs.pop("log_likelihood", False):
         warnings.warn(
-            "Passing `log_likelihood` via `idata_kwargs` is deprecated and will be removed "
-            "in future versions. Call `pm.compute_log_likelihood(idata)` instead.",
+            "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
+            ":func:`pymc.compute_log_likelihood` instead.",
             FutureWarning,
             stacklevel=3,
         )

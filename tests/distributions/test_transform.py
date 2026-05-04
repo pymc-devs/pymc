@@ -331,7 +331,7 @@ def test_chain_jacob_det():
 class TestElementWiseLogp:
     def build_model(self, distfam, params, size, transform, initval=None):
         if initval is not None:
-            initval = pm.floatX(initval)
+            initval = floatX(initval)
         with pm.Model() as m:
             distfam("x", size=size, transform=transform, initval=initval, **params)
         return m
@@ -409,7 +409,7 @@ class TestElementWiseLogp:
         [
             (0.0, 1.0, 2),
             (0.5, 5.5, (2, 3)),
-            (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3)),
+            (floatX(np.zeros(3)), floatX(np.ones(3)), (4, 3)),
         ],
     )
     def test_uniform(self, lower, upper, size):
@@ -527,7 +527,7 @@ class TestElementWiseLogp:
 
     @pytest.mark.parametrize(
         "lower,upper,size",
-        [(0.0, 1.0, (2,)), (pm.floatX(np.zeros(3)), pm.floatX(np.ones(3)), (4, 3))],
+        [(0.0, 1.0, (2,)), (floatX(np.zeros(3)), floatX(np.ones(3)), (4, 3))],
     )
     def test_uniform_ordered(self, lower, upper, size):
         def transform_params(*inputs):

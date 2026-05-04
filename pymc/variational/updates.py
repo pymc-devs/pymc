@@ -337,7 +337,7 @@ def momentum(loss_or_grads=None, params=None, learning_rate=1e-3, momentum=0.9):
     True
     """
     if loss_or_grads is None and params is None:
-        return partial(pm.updates.momentum, **_get_call_kwargs(locals()))
+        return partial(pm.variational.updates.momentum, **_get_call_kwargs(locals()))
     elif loss_or_grads is None or params is None:
         raise ValueError("Please provide both `loss_or_grads` and `params` to get updates")
     updates = sgd(loss_or_grads, params, learning_rate)
@@ -569,7 +569,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
     grads = get_or_compute_grads(loss_or_grads, params)
     updates = OrderedDict()
     for param, grad in zip(params, grads):
-        i = pytensor.shared(pm.floatX(0))
+        i = pytensor.shared(pm.pytensorf.floatX(0))
         i_int = i.astype("int32")
         value = param.get_value(borrow=True)
         accu = pytensor.shared(np.zeros((*value.shape, n_win), dtype=value.dtype))

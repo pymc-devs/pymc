@@ -1369,7 +1369,7 @@ class LKJCholeskyCov:
 
     The unpacked Cholesky covariance matrix is automatically computed and returned when
     you specify `compute_corr=True` in `pm.LKJCholeskyCov` (see example below).
-    Otherwise, you can use `pm.expand_packed_triangular(packed_cov, lower=True)`
+    Otherwise, you can use `pm.math.expand_packed_triangular(packed_cov, lower=True)`
     to convert the packed Cholesky matrix to a regular two-dimensional array.
 
     Examples
@@ -1388,7 +1388,7 @@ class LKJCholeskyCov:
             # packed_chol = pm.LKJCholeskyCov(
                 'chol_cov', eta=4, n=10, sd_dist=sd_dist, compute_corr=False
             )
-            # chol = pm.expand_packed_triangular(10, packed_chol, lower=True)
+            # chol = pm.math.expand_packed_triangular(10, packed_chol, lower=True)
 
             # Define a new MvNormal with the given covariance
             vals = pm.MvNormal('vals', mu=np.zeros(10), chol=chol, shape=10)
@@ -1473,7 +1473,7 @@ class LKJCholeskyCov:
 
     @classmethod
     def helper_deterministics(cls, n, packed_chol):
-        chol = pm.expand_packed_triangular(n, packed_chol, lower=True)
+        chol = pm.math.expand_packed_triangular(n, packed_chol, lower=True)
         # compute covariance matrix
         cov = pt.dot(chol, chol.T)
         # extract standard deviations and rho

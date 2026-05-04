@@ -20,6 +20,8 @@ import xarray as xr
 import pymc as pm
 
 from pymc.backends import init_traces
+from pymc.pytensorf import make_shared_replacements
+from pymc.step_methods import CompoundStep
 from pymc.step_methods.arraystep import ArrayStepShared
 
 try:
@@ -184,7 +186,7 @@ class TestChainRecordAdapter:
             b = pm.Uniform("b")
             c = pm.Deterministic("c", a + b)
             ip = pmodel.initial_point()
-            shared = pm.make_shared_replacements(ip, [a, b], pmodel)
+            shared = make_shared_replacements(ip, [a, b], pmodel)
             run, traces = init_traces(
                 backend=mcb.NumPyBackend(),
                 chains=1,
@@ -231,15 +233,15 @@ class TestChainRecordAdapter:
             b = pm.Uniform("b")
             c = pm.Deterministic("c", a + b)
             ip = pmodel.initial_point()
-            shared_a = pm.make_shared_replacements(ip, [a], pmodel)
-            shared_b = pm.make_shared_replacements(ip, [b], pmodel)
+            shared_a = make_shared_replacements(ip, [a], pmodel)
+            shared_b = make_shared_replacements(ip, [b], pmodel)
             stepA = ToyStepper([a], shared_a)
             stepB = ToyStepperWithOtherStats([b], shared_b)
             run, traces = init_traces(
                 backend=mcb.NumPyBackend(),
                 chains=1,
                 expected_length=N,
-                step=pm.CompoundStep([stepA, stepB]),
+                step=CompoundStep([stepA, stepB]),
                 initial_point=pmodel.initial_point(),
                 model=pmodel,
             )

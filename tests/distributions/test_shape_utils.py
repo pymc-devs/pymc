@@ -27,7 +27,6 @@ from pytensor.tensor.shape import SpecifyShape
 
 import pymc as pm
 
-from pymc import ShapeError
 from pymc.distributions.shape_utils import (
     change_dist_size,
     convert_dims,
@@ -39,6 +38,7 @@ from pymc.distributions.shape_utils import (
     implicit_size_from_params,
     rv_size_is_none,
 )
+from pymc.exceptions import ShapeError
 from pymc.model import Model
 from pymc.pytensorf import constant_fold
 

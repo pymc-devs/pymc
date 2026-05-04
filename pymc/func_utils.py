@@ -159,8 +159,8 @@ def find_constrained_prior(
     dist = distribution.dist(**params_to_optim)
 
     try:
-        logcdf_lower = pm.logcdf(dist, pm.floatX(lower))
-        logcdf_upper = pm.logcdf(dist, pm.floatX(upper))
+        logcdf_lower = pm.logcdf(dist, pm.pytensorf.floatX(lower))
+        logcdf_upper = pm.logcdf(dist, pm.pytensorf.floatX(upper))
     except AttributeError:
         raise AttributeError(
             f"You cannot use `find_constrained_prior` with {distribution} -- it doesn't have a logcdf "
@@ -177,9 +177,9 @@ def find_constrained_prior(
     jac: str | Callable
     constraint_jac: str | Callable
     try:
-        pytensor_jac = pm.gradient(target, [dist_params])
+        pytensor_jac = pm.pytensorf.gradient(target, [dist_params])
         jac = pm.pytensorf.compile([dist_params], pytensor_jac, allow_input_downcast=True)
-        pytensor_constraint_jac = pm.gradient(constraint, [dist_params])
+        pytensor_constraint_jac = pm.pytensorf.gradient(constraint, [dist_params])
         constraint_jac = pm.pytensorf.compile(
             [dist_params], pytensor_constraint_jac, allow_input_downcast=True
         )

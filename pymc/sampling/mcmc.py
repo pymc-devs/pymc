@@ -66,7 +66,7 @@ from pymc.stats.convergence import (
     log_warnings,
     run_convergence_checks,
 )
-from pymc.step_methods import NUTS, CompoundStep
+from pymc.step_methods import NUTS, STEP_METHODS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
@@ -196,7 +196,7 @@ def instantiate_steppers(
     if unused_args:
         s = "s" if len(unused_args) > 1 else ""
         example_arg = sorted(unused_args)[0]
-        example_step = (list(selected_steps.keys()) or pm.STEP_METHODS)[0]
+        example_step = (list(selected_steps.keys()) or STEP_METHODS)[0]
         example_step_name = getattr(example_step, "name")
         raise ValueError(
             f"Invalid key{s} found in step_kwargs: {unused_args}. "
@@ -276,7 +276,7 @@ def assign_step_methods(
 
     # Use competence classmethods to select step methods for remaining
     # variables
-    methods_list: list[type[BlockedStep]] = list(methods or pm.STEP_METHODS)
+    methods_list: list[type[BlockedStep]] = list(methods or STEP_METHODS)
     selected_steps: dict[type[BlockedStep], list] = {}
     model_logp = model.logp()
 
@@ -679,7 +679,7 @@ def sample(
         in the returned ``idata.sample_stats`` group.
         This leads to the ``idata`` not supporting ``.to_netcdf()`` or ``.to_zarr()`` and
         should only be set to ``True`` if you intend to use the "warning" objects right away.
-        Defaults to ``False`` such that ``pm.drop_warning_stat`` is applied automatically,
+        Defaults to ``False`` such that the ``"warning"`` stat is dropped automatically,
         making the ``InferenceData`` compatible with saving.
     return_inferencedata : bool
         Whether to return the trace as an :class:`arviz:arviz.InferenceData` (True) object or a
@@ -860,7 +860,7 @@ def sample(
             msg = f"Only {draws} samples per chain. Reliable r-hat and ESS diagnostics require longer chains for accurate estimate."
             _log.warning(msg)
 
-    provided_steps, selected_steps = assign_step_methods(model, step, methods=pm.STEP_METHODS)
+    provided_steps, selected_steps = assign_step_methods(model, step, methods=STEP_METHODS)
     exclusive_nuts = (
         # User provided an instantiated NUTS step, and nothing else is needed
         (not selected_steps and len(provided_steps) == 1 and isinstance(provided_steps[0], NUTS))
@@ -1770,9 +1770,11 @@ def init_nuts(
 
     cb = []
     if "advi" in init:
+        from pymc.variational.callbacks import CheckParametersConvergence
+
         cb = [
-            pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
-            pm.callbacks.CheckParametersConvergence(tolerance=1e-2, diff="relative"),
+            CheckParametersConvergence(tolerance=1e-2, diff="absolute"),
+            CheckParametersConvergence(tolerance=1e-2, diff="relative"),
         ]
 
     logp_dlogp_func = model.logp_dlogp_function(ravel_inputs=True, **compile_kwargs)
@@ -1876,7 +1878,7 @@ def init_nuts(
         pm.fit(
             random_seed=random_seed_list[0],
             n=n_init,
-            method=pm.KLqp(approx),
+            method=pm.variational.KLqp(approx),
             callbacks=cb,
             progressbar=progressbar and not quiet,
             obj_optimizer=pm.adagrad_window,

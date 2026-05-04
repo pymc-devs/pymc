@@ -6,8 +6,12 @@ Other utils
 .. autosummary::
    :toctree: generated/
 
-   compute_log_likelihood
-   compute_log_prior
    find_constrained_prior
+
+.. currentmodule:: pymc.blocking
+
+.. autosummary::
+   :toctree: generated/
+
    DictToArrayBijection
    model_table

@@ -482,7 +482,7 @@ def datagen():
 def integers():
     i = 0
     while True:
-        yield pm.floatX(i)
+        yield floatX(i)
         i += 1
 
 

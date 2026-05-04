@@ -140,7 +140,7 @@ class TestStatsMetadata:
         with pm.Model():
             s1 = pm.NUTS(pm.Normal("n"))
             s2 = pm.Metropolis(pm.Bernoulli("b", 0.5))
-            cs = pm.CompoundStep([s1, s2])
+            cs = CompoundStep([s1, s2])
         # Make sure that sampler initialization does not modify the
         # class-level default values of the attributes.
         assert pm.NUTS.stats_dtypes == []

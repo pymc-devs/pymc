@@ -33,7 +33,6 @@ from pymc import (
     Mixture,
     StudentT,
     Truncated,
-    model_table,
 )
 from pymc.distributions import (
     Dirichlet,
@@ -48,6 +47,7 @@ from pymc.distributions import (
 )
 from pymc.math import dot
 from pymc.model import Deterministic, Model, Potential
+from pymc.printing import model_table
 from pymc.pytensorf import floatX
 
 

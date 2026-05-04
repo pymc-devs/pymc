@@ -58,6 +58,7 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
+from pymc.pytensorf import floatX, inputvars
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
 
@@ -255,8 +256,8 @@ class TestObserved:
                 Normal("n", observed=x)
 
     def test_observed_type(self):
-        X_ = pm.floatX(np.random.randn(100, 5))
-        X = pm.floatX(pytensor.shared(X_))
+        X_ = floatX(np.random.randn(100, 5))
+        X = floatX(pytensor.shared(X_))
         with pm.Model():
             x1 = pm.Normal("x1", observed=X_)
             x2 = pm.Normal("x2", observed=X)
@@ -449,13 +450,13 @@ class TestPytensorRelatedLogpBugs:
         # values https://github.com/pymc-devs/pytensor/issues/270
 
         # Known issue 1: https://github.com/pymc-devs/pymc/issues/4389
-        data = pm.floatX(np.zeros(10))
+        data = floatX(np.zeros(10))
         with pm.Model() as m:
             p = pm.Beta("p", 1, 1)
             obs = pm.Bernoulli("obs", p=p, observed=data)
 
         npt.assert_allclose(
-            m.compile_logp(obs)({"p_logodds__": pm.floatX(np.array(0.0))}),
+            m.compile_logp(obs)({"p_logodds__": floatX(np.array(0.0))}),
             np.log(0.5) * 10,
         )
 
@@ -576,7 +577,7 @@ def test_model_value_vars():
 
     value_vars = model.value_vars
     assert len(value_vars) == 2
-    assert set(value_vars) == set(pm.inputvars(model.logp()))
+    assert set(value_vars) == set(inputvars(model.logp()))
 
 
 def test_model_var_maps():

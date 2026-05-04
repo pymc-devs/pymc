@@ -42,3 +42,19 @@ STEP_METHODS: list[type[BlockedStep]] = [
     Slice,
     CategoricalGibbsMetropolis,
 ]
+
+# Names intentionally excluded from the root pymc namespace: BlockedStep (base
+# class), CompoundStep (internal combinator), STEP_METHODS (internal registry),
+# and the *Proposal classes (Metropolis implementation detail). They remain
+# accessible via pymc.step_methods.<name>.
+__all__ = (
+    "NUTS",
+    "BinaryGibbsMetropolis",
+    "BinaryMetropolis",
+    "CategoricalGibbsMetropolis",
+    "DEMetropolis",
+    "DEMetropolisZ",
+    "HamiltonianMC",
+    "Metropolis",
+    "Slice",
+)

@@ -13,13 +13,18 @@
 #   limitations under the License.
 
 __all__ = [
+    "BlockModelAccessError",
+    "DtypeError",
     "ImplicitFreezeWarning",
     "ImputationWarning",
     "IncorrectArgumentsError",
+    "NotConstantValueError",
     "SamplingError",
     "ShapeError",
     "ShapeWarning",
     "TraceDirectoryError",
+    "TruncationError",
+    "UndefinedMomentException",
 ]
 
 

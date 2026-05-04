@@ -525,7 +525,7 @@ Moreover, if we are limiting to the problem that we can solved most confidently 
 ## Inference
 
 ### MCMC
-The ability for model instance to generate conditional logp and dlogp function enable one of the unique feature of PyMC - {class}`~pymc.CompoundStep` method.
+The ability for model instance to generate conditional logp and dlogp function enable one of the unique feature of PyMC - {class}`~pymc.step_methods.CompoundStep` method.
 On a conceptual level it is a Metropolis-within-Gibbs sampler.
 Users can specify different sampler for different RVs.
 Alternatively, it is implemented as yet another interceptor:

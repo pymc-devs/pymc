@@ -20,6 +20,7 @@ import pymc as pm
 
 from pymc.progress_bar import MCMCProgressBarManager, SMCProgressBarManager
 from pymc.smc.kernels import IMH
+from pymc.step_methods import CompoundStep
 
 NUTS_DUMMY_STATS = [{"divergences": 0, "step_size": 0.5, "tree_size": 7}]
 
@@ -163,9 +164,9 @@ def test_progressbar_nested_compound():
         c = pm.Poisson("c", mu=11)
         d = pm.Dirichlet("d", a=[c, b])
 
-        step = pm.CompoundStep(
+        step = CompoundStep(
             [
-                pm.CompoundStep([pm.Metropolis(a), pm.Metropolis(b), pm.Metropolis(c)]),
+                CompoundStep([pm.Metropolis(a), pm.Metropolis(b), pm.Metropolis(c)]),
                 pm.NUTS([d]),
             ]
         )

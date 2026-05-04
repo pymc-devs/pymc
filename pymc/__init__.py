@@ -22,8 +22,7 @@ _log = logging.getLogger(__name__)
 if not logging.root.handlers:
     _log.setLevel(logging.INFO)
     if len(_log.handlers) == 0:
-        handler = logging.StreamHandler()
-        _log.addHandler(handler)
+        _log.addHandler(logging.StreamHandler())
 
 
 def __set_compiler_flags():
@@ -47,36 +46,27 @@ def __set_compiler_flags():
 
 __set_compiler_flags()
 
-from pymc import _version, gp, math, ode, sampling
+from pymc import _version, exceptions, gp, math, ode, plots, sampling, stats
+from pymc._deprecations import resolve as _resolve_deprecated_root_attribute
 from pymc.backends import *
-from pymc.blocking import *
 from pymc.data import *
 from pymc.distributions import *
-from pymc.exceptions import *
 from pymc.func_utils import find_constrained_prior
 from pymc.logprob import *
-from pymc.math import (
-    expand_packed_triangular,
-    invlogit,
-    invprobit,
-    logaddexp,
-    logit,
-    logsumexp,
-    probit,
-)
 from pymc.model.core import *
 from pymc.model.transform.conditioning import do, observe
 from pymc.model_graph import model_to_graphviz, model_to_mermaid, model_to_networkx
-from pymc.plots import *
-from pymc.printing import *
-from pymc.pytensorf import *
+from pymc.pytensorf import compile
 from pymc.sampling import *
 from pymc.smc import *
-from pymc.stats import *
+from pymc.stats import compute_log_likelihood
 from pymc.step_methods import *
 from pymc.tuning import *
-from pymc.util import drop_warning_stat
 from pymc.variational import *
-from pymc.vartypes import *
+
+
+def __getattr__(name: str):
+    return _resolve_deprecated_root_attribute(name)
+
 
 __version__ = _version.get_versions()["version"]

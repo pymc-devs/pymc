@@ -76,6 +76,7 @@ from pymc.pytensorf import (
     compile,
     constant_fold,
     find_rng_nodes,
+    floatX,
     reseed_rngs,
 )
 from pymc.util import (
@@ -86,7 +87,7 @@ from pymc.util import (
     makeiter,
 )
 from pymc.variational.minibatch_rv import MinibatchRandomVariable, get_scaling
-from pymc.variational.updates import adagrad_window
+from pymc.variational.updates import adagrad_window, get_or_compute_grads
 from pymc.vartypes import discrete_types
 
 __all__ = ["Approximation", "Group", "ObjectiveFunction", "Operator", "TestFunction"]
@@ -268,7 +269,7 @@ class ObjectiveFunction:
         tf_target = self(
             tf_n_mc, more_tf_params=more_tf_params, more_replacements=more_replacements
         )
-        grads = pm.updates.get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
+        grads = get_or_compute_grads(tf_target, self.obj_params + more_tf_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
         updates.update(test_optimizer(grads, self.test_params + more_tf_params))
@@ -289,7 +290,7 @@ class ObjectiveFunction:
         obj_target = self(
             obj_n_mc, more_obj_params=more_obj_params, more_replacements=more_replacements
         )
-        grads = pm.updates.get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
+        grads = get_or_compute_grads(obj_target, self.obj_params + more_obj_params)
         if total_grad_norm_constraint is not None:
             grads = pm.total_norm_constraint(grads, total_grad_norm_constraint)
         updates.update(obj_optimizer(grads, self.obj_params + more_obj_params))
@@ -1100,7 +1101,7 @@ class Group(WithMemoization):
             )
         )
         t = self.symbolic_single_sample(t)
-        return pm.floatX(t)
+        return floatX(t)
 
     @node_property
     def symbolic_logq_not_scaled(self):
@@ -1271,7 +1272,7 @@ class Approximation(WithMemoization):
             ]
         )
         t = pt.switch(self._scale_cost_to_minibatch, t, pt.constant(1, dtype=t.dtype))
-        return pm.floatX(t)
+        return floatX(t)
 
     @node_property
     def symbolic_logq(self):
@@ -1605,11 +1606,15 @@ class Approximation(WithMemoization):
 
     @property
     def all_histograms(self):
-        return all(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
+        from pymc.variational.approximations import EmpiricalGroup
+
+        return all(isinstance(g, EmpiricalGroup) for g in self.groups)
 
     @property
     def any_histograms(self):
-        return any(isinstance(g, pm.approximations.EmpiricalGroup) for g in self.groups)
+        from pymc.variational.approximations import EmpiricalGroup
+
+        return any(isinstance(g, EmpiricalGroup) for g in self.groups)
 
     @node_property
     def joint_histogram(self):

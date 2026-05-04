@@ -16,13 +16,13 @@ import numpy as np
 import pytensor
 import pytest
 
-import pymc as pm
+from pymc.variational.callbacks import CheckParametersConvergence, Tracker
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
 @pytest.mark.parametrize("ord", [1, 2, np.inf])
 def test_callbacks_convergence(diff, ord):
-    cb = pm.variational.callbacks.CheckParametersConvergence(every=1, diff=diff, ord=ord)
+    cb = CheckParametersConvergence(every=1, diff=diff, ord=ord)
 
     class _approx:
         params = (pytensor.shared(np.asarray([1, 2, 3])),)
@@ -37,7 +37,7 @@ def test_callbacks_convergence(diff, ord):
 def test_tracker_callback():
     import time
 
-    tracker = pm.callbacks.Tracker(
+    tracker = Tracker(
         ints=lambda *t: t[-1],
         ints2=lambda ap, h, j: j,
         time=time.time,
@@ -49,6 +49,6 @@ def test_tracker_callback():
     assert "ints2" in tracker.hist
     assert len(tracker["ints"]) == len(tracker["ints2"]) == len(tracker["time"]) == 10
     assert tracker["ints"] == tracker["ints2"] == list(range(10))
-    tracker = pm.callbacks.Tracker(bad=lambda t: t)  # bad signature
+    tracker = Tracker(bad=lambda t: t)  # bad signature
     with pytest.raises(TypeError):
         tracker(None, None, 1)

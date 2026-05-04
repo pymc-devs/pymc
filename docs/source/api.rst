@@ -16,6 +16,7 @@ API
    api/data
    api/ode
    api/logprob
+   api/stats
    api/tuning
    api/math
    api/pytensorf
@@ -43,11 +44,11 @@ Plots, stats and diagnostics are delegated to the
 library, a general purpose library for
 "exploratory analysis of Bayesian models".
 
-* Functions from the ``arviz.plots`` module are available through ``pymc.<function>`` or ``pymc.plots.<function>``,
-  but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:plot_api>`.
+* Functions from the ``arviz_plots`` package are available through ``pymc.plots.<function>``,
+  but for their API documentation please refer to the :doc:`arviz_plots documentation <arviz_plots:index>`.
 
-* Functions from the ``arviz.stats`` module are available through ``pymc.<function>`` or ``pymc.stats.<function>``,
-  but for their API documentation please refer to the :ref:`ArviZ documentation <arviz:stats_api>`.
+* Functions from the ``arviz_stats`` package are available through ``pymc.stats.<function>``,
+  but for their API documentation please refer to the :doc:`arviz_stats documentation <arviz_stats:index>`.
 
 ArviZ is a dependency of PyMC and so, in addition to the locations described above,
 importing ArviZ and using ``arviz.<function>`` will also work without any extra installation.

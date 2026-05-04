@@ -11,13 +11,21 @@ Variational Inference
    ASVGD
    SVGD
    FullRankADVI
+   fit
+
+.. currentmodule:: pymc.variational
+
+.. autosummary::
+   :toctree: generated/
+
    ImplicitGradient
    Inference
    KLqp
-   fit
 
 Approximations
 --------------
+
+.. currentmodule:: pymc
 
 .. autosummary::
    :toctree: generated/
@@ -33,8 +41,14 @@ OPVI
 .. autosummary::
    :toctree: generated/
 
-   Approximation
    Group
+
+.. currentmodule:: pymc.variational
+
+.. autosummary::
+   :toctree: generated/
+
+   Approximation
 
 Operators
 ---------
@@ -48,11 +62,16 @@ Operators
 
 Special
 -------
-.. currentmodule:: pymc
+.. currentmodule:: pymc.variational
 .. autosummary::
    :toctree: generated/
 
    Stein
+
+.. currentmodule:: pymc
+.. autosummary::
+   :toctree: generated/
+
    adadelta
    adagrad
    adagrad_window

@@ -29,9 +29,8 @@ from pytensor.tensor.sort import SortOp
 
 import pymc as pm
 
-from pymc import floatX
 from pymc.initial_point import make_initial_point_fn
-from pymc.pytensorf import compile
+from pymc.pytensorf import compile, floatX
 from pymc.smc.kernels import IMH
 
 

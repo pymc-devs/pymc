@@ -29,8 +29,8 @@ from pytensor.tensor import TensorVariable
 
 import pymc as pm
 
-from pymc import ImputationWarning
 from pymc.distributions.discrete import OrderedLogistic, OrderedProbit
+from pymc.exceptions import ImputationWarning
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
