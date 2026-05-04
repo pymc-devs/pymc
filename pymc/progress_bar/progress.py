@@ -340,12 +340,12 @@ class NutpieProgressBarManager(ProgressBarManager):
     """
 
     step_name: str = "Draw"
+    _backend: ProgressBackend | None  # type: ignore[assignment]
 
     def __init__(
         self,
         chains: int,
         draws: int,
-        tune: int,
         progressbar: bool | ProgressBarOptions = True,
         progressbar_theme: Theme | str | None = None,
     ):
@@ -354,27 +354,68 @@ class NutpieProgressBarManager(ProgressBarManager):
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
+        self._chains = chains
+        self._draws = draws
+        self._previous_finished = [0] * chains
+        self._last_stats: list[dict | None] = [None] * chains
+        # Backend and ``_total_draws`` are populated lazily from the first
+        # ``nutpie.ChainProgress`` callback (which exposes ``total_draws``)
+        # or from a ``finalize(trace)`` call.
+        self._backend: ProgressBackend | None = None
+        self._total_draws: int | None = None
+        self._in_context = False
 
+    def __enter__(self) -> Self:
+        self._in_context = True
+        if self._backend is not None:
+            self._backend.__enter__()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._in_context = False
+        if self._backend is None:
+            return None
+        return self._backend.__exit__(exc_type, exc_val, exc_tb)
+
+    @property
+    def tuning_steps(self) -> int | None:
+        """Tune count nutpie used, or ``None`` if not yet known.
+
+        Set once ``_total_draws`` is known — from the first ``ChainProgress``
+        callback (``total_draws`` exposed there is ``tune + draws``) or from
+        the trace's warmup group at finalize time.
+        """
+        if self._total_draws is None:
+            return None
+        return self._total_draws - self._draws
+
+    def _init_backend(self, total_draws: int) -> None:
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
             TextColumn("{task.fields[step_size]:0.3f}", table_column=Column("Step size", ratio=1)),
             TextColumn("{task.fields[tree_size]}", table_column=Column("Grad evals", ratio=1)),
         ]
         progress_stats = {
-            stat: [0] * chains for stat in ("divergences", "step_size", "tree_size", "draw")
+            stat: [0] * self._chains for stat in ("divergences", "step_size", "tree_size", "draw")
         }
-
-        self._previous_finished = [0] * chains
-        total_draws = draws + tune
-
+        self._total_draws = total_draws
         self._backend = self._create_backend(
-            total=total_draws * chains if self.combined_progress else total_draws,
+            total=total_draws * self._chains if self.combined_progress else total_draws,
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
+        if self._in_context:
+            self._backend.__enter__()
 
     def update(self, chain_progresses) -> None:
         """Consume a list of ``nutpie.ChainProgress`` objects and advance each bar."""
+        if not chain_progresses:
+            return
+
+        if self._backend is None:
+            self._init_backend(chain_progresses[0].total_draws)
+        assert self._backend is not None
+
         if not self._show_progress:
             return
 
@@ -384,19 +425,76 @@ class NutpieProgressBarManager(ProgressBarManager):
                 continue
             self._previous_finished[chain_idx] = cp.finished_draws
             is_last = cp.finished_draws >= cp.total_draws
+            # ``cp.total_draws == tune + draws``; everything before that
+            # boundary is warmup, which we exclude.
+            tune = cp.total_draws - self._draws
+            divergences = sum(1 for idx in cp.divergent_draws if idx >= tune)
             stats = {
-                "divergences": cp.divergences,
+                "divergences": divergences,
                 "step_size": cp.step_size,
                 "tree_size": cp.latest_num_steps,
                 "draw": cp.finished_draws,
             }
+            self._last_stats[chain_idx] = stats
             task_id = 0 if self.combined_progress else chain_idx
             self._backend.update(
                 task_id=task_id,
                 advance=delta,
-                failing=cp.divergences > 0,
+                failing=divergences > 0,
                 stats=stats,
                 is_last=is_last,
+            )
+
+    def finalize(self, trace) -> None:
+        """Drive each bar to 100% using final stats from the trace.
+
+        nutpie's ``progress_callback`` fires at fixed wall-clock intervals
+        (``progress_rate`` ms) with no guaranteed final fire, so short-running
+        sampling can complete between callbacks. Call this after
+        ``nutpie.sample`` returns to advance the remaining delta on each bar
+        and stamp authoritative final stats (e.g. total divergences).
+        """
+        # Backend may not have been created yet if no callback fired.
+        if self._backend is None:
+            total = int(trace.posterior.sizes["draw"])
+            if "warmup_posterior" in trace.children:
+                total += int(trace.warmup_posterior.sizes["draw"])
+            self._init_backend(total)
+        assert self._backend is not None
+
+        if not self._show_progress:
+            return
+
+        target = self._total_draws
+        assert target is not None
+
+        # Only count post-warmup divergences.
+        divergences_per_chain = [0] * self._chains
+        if "sample_stats" in trace.children and "diverging" in trace["sample_stats"].data_vars:
+            ds = trace["sample_stats"]
+            for chain_idx in range(self._chains):
+                divergences_per_chain[chain_idx] = int(ds.diverging[chain_idx].sum())
+
+        for chain_idx in range(self._chains):
+            delta = target - self._previous_finished[chain_idx]
+            if delta <= 0:
+                continue
+            self._previous_finished[chain_idx] = target
+            last = self._last_stats[chain_idx] or {
+                "divergences": 0,
+                "step_size": 0.0,
+                "tree_size": 0,
+                "draw": 0,
+            }
+            divergences = divergences_per_chain[chain_idx]
+            stats = {**last, "divergences": divergences, "draw": target}
+            task_id = 0 if self.combined_progress else chain_idx
+            self._backend.update(
+                task_id=task_id,
+                advance=delta,
+                failing=divergences > 0,
+                stats=stats,
+                is_last=True,
             )
 
 
