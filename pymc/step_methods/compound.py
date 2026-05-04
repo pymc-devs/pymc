@@ -126,6 +126,9 @@ class BlockedStep(ABC, WithSamplingState):
     vars: list[Variable] = []
     """Variables that the step method is assigned to."""
 
+    default_tune_steps: int | None = None
+    """Number of default tuning steps this step method needs."""
+
     def __new__(cls, *args, **kwargs):
         blocked = kwargs.get("blocked")
         if blocked is None:

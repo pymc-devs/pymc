@@ -56,7 +56,7 @@ class MarimoProgressBackend:
         self,
         step_name: str,
         n_bars: int,
-        total: int | float,
+        total: int | float | None,
         combined: bool,
         full_stats: bool,
         css_theme: str | None = None,
@@ -112,6 +112,7 @@ class MarimoProgressBackend:
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
+        total: int | None = None,
     ) -> None:
         """Update progress for a specific task.
 
@@ -127,7 +128,14 @@ class MarimoProgressBackend:
             Statistics to display
         is_last : bool
             Whether this is the final update
+        total : int, optional
+            Updated total for the bar. If None, the existing total is kept.
+            Pass an integer when the total wasn't known at construction time
+            (e.g. nutpie's tune count) or changes mid-run.
         """
+        if total is not None:
+            self._task_state[task_id]["total"] = total
+
         self._task_state[task_id]["completed"] += advance
         self._task_state[task_id]["failing"] = failing
         self._task_state[task_id]["stats"] = stats
@@ -199,7 +207,7 @@ class MarimoProgressBackend:
         failing = state["failing"]
         stats = state["stats"]
 
-        pct = (completed / total * 100) if total > 0 else 0
+        pct = (completed / total * 100) if total else 0
         elapsed = perf_counter() - self._start_times[task_id]
 
         action = self.step_name.lower()
@@ -216,9 +224,10 @@ class MarimoProgressBackend:
         elif pct >= 100:
             bar_class += " finished"
 
+        total_str = "?" if total is None else str(total)
         cells = [
             f'<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>',
-            f"<td>{completed}/{total} ({pct:.0f}%)</td>",
+            f"<td>{completed}/{total_str} ({pct:.0f}%)</td>",
         ]
 
         for key in stat_keys:
