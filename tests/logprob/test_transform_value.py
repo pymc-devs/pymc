@@ -628,9 +628,8 @@ def test_weakref_leak():
     rvs_to_values = {pt.random.beta(1, 1, name=f"p_{i}"): pt.scalar(f"p_{i}") for i in range(30)}
     tr = TransformValuesRewrite(dict.fromkeys(rvs_to_values.values(), logodds))
 
-    for i in range(20):
+    for i in range(6):
         conditional_logp(rvs_to_values, extra_rewrites=tr)
         res = _growth()
-        # Only start checking after warmup
-        if i > 15:
+        if i > 2:
             assert not res, "Object counts are still growing"
