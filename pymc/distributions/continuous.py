@@ -246,47 +246,53 @@ def get_tau_sigma(
 
 class Uniform(BoundedContinuous):
     r"""
-    Continuous uniform distribution.
+Continuous uniform distribution.
 
-    The pdf of this distribution is
+The probability density function (pdf) of this distribution is:
 
-    .. math::
+.. math::
 
-       f(x \mid lower, upper) = \frac{1}{upper-lower}
+   f(x \mid lower, upper) = \frac{1}{upper - lower}
 
-    .. plot::
-        :context: close-figs
+.. plot::
+    :context: close-figs
 
-        import matplotlib.pyplot as plt
-        import numpy as np
-        import arviz as az
-        plt.style.use('arviz-darkgrid')
-        x = np.linspace(-3, 3, 500)
-        ls = [0., -2]
-        us = [2., 1]
-        for l, u in zip(ls, us):
-            y = np.zeros(500)
-            y[(x<u) & (x>l)] = 1.0/(u-l)
-            plt.plot(x, y, label='lower = {}, upper = {}'.format(l, u))
-        plt.xlabel('x', fontsize=12)
-        plt.ylabel('f(x)', fontsize=12)
-        plt.ylim(0, 1)
-        plt.legend(loc=1)
-        plt.show()
+    import matplotlib.pyplot as plt
+    import numpy as np
+    import arviz as az
+    plt.style.use('arviz-darkgrid')
+    x = np.linspace(-3, 3, 500)
+    ls = [0., -2]
+    us = [2., 1]
+    for l, u in zip(ls, us):
+        y = np.zeros(500)
+        y[(x < u) & (x > l)] = 1.0 / (u - l)
+        plt.plot(x, y, label=f'lower = {l}, upper = {u}')
+    plt.xlabel('x', fontsize=12)
+    plt.ylabel('f(x)', fontsize=12)
+    plt.ylim(0, 1)
+    plt.legend(loc=1)
+    plt.show()
 
-    ========  =====================================
-    Support   :math:`x \in [lower, upper]`
-    Mean      :math:`\dfrac{lower + upper}{2}`
-    Variance  :math:`\dfrac{(upper - lower)^2}{12}`
-    ========  =====================================
+========  =====================================
+Support   :math:`x \in [lower, upper]`
+Mean      :math:`\dfrac{lower + upper}{2}`
+Variance  :math:`\dfrac{(upper - lower)^2}{12}`
+========  =====================================
 
-    Parameters
-    ----------
-    lower : tensor_like of float, default 0
-        Lower limit.
-    upper : tensor_like of float, default 1
-        Upper limit.
-    """
+Parameters
+----------
+lower : tensor_like of float, optional
+    Lower bound of the distribution. Defaults to 0.
+upper : tensor_like of float, optional
+    Upper bound of the distribution. Defaults to 1.
+
+Returns
+-------
+TensorVariable
+    A random variable representing the Uniform distribution.
+"""
+
 
     rv_op = uniform
     bound_args_indices = (2, 3)  # Lower, Upper
