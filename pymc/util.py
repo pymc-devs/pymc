@@ -18,6 +18,7 @@ import re
 from collections import namedtuple
 from collections.abc import Sequence
 from copy import deepcopy
+from functools import lru_cache, wraps
 from typing import cast
 
 import arviz
@@ -25,7 +26,6 @@ import cloudpickle
 import numpy as np
 import xarray
 
-from cachetools import LRUCache, cachedmethod
 from pytensor import Variable
 from pytensor.compile import SharedVariable
 
@@ -346,16 +346,82 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def locally_cachedmethod(f):
-    from collections import defaultdict
+class _LRUCacheWrapper:
+    """
+    Lightweight callable LRU cache wrapper built on ``functools.lru_cache``.
 
-    def self_cache_fn(f_name):
-        def cf(self):
-            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+    This class adapts the standard-library ``lru_cache`` decorator to behave
+    similarly to ``cachetools.LRUCache``.
 
-        return cf
+    * callable behavior (cached function execution)
+    * ``len(cache)`` returning the current cache size
+    * explicit cache clearing via ``clear()`` / ``cache_clear()``
 
-    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+    Parameters
+    ----------
+    func : callable
+        Function whose results should be memoized.
+    maxsize : int
+        Maximum number of entries retained in the cache. When the limit is
+        exceeded, least-recently-used entries are evicted.
+    """
+
+    def __init__(self, func, maxsize):
+        @lru_cache(maxsize=maxsize)
+        def cached(*args, **kwargs):
+            return func(*args, **kwargs)
+
+        self._cached = cached
+
+    def __call__(self, *args, **kwargs):
+        return self._cached(*args, **kwargs)
+
+    def __len__(self):
+        # emulate cachetools.LRUCache length
+        return self._cached.cache_info().currsize
+
+    def clear(self):
+        self._cached.cache_clear()
+
+    cache_clear = clear
+
+
+def locally_cachedmethod(func, maxsize=128):
+    """
+    Decorator to cache the results of instance methods with a per-instance LRU cache.
+
+    Parameters
+    ----------
+    func : callable
+        The instance method to be cached.
+    maxsize : int, optional
+        Maximum number of results to keep in the cache for this method. When the
+        limit is reached, least-recently-used entries are evicted. Default is 128.
+
+    Returns
+    -------
+    callable
+        A wrapped method that caches results per instance. The cache is stored
+        in ``self._cache[method_name]`` as an ``_LRUCacheWrapper`` object.
+
+    """
+    name = func.__name__
+
+    @wraps(func)
+    def wrapper(self, *args, **kwargs):
+        caches = self.__dict__.setdefault("_cache", {})
+        cached = caches.get(name)
+
+        if cached is None:
+            cached = _LRUCacheWrapper(
+                lambda *a, **k: func(self, *a, **k),
+                maxsize=maxsize,
+            )
+            caches[name] = cached
+
+        return cached(*args, **kwargs)
+
+    return wrapper
 
 
 def check_dist_not_registered(dist, model=None):
