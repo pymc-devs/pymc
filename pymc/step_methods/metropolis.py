@@ -443,12 +443,10 @@ class BinaryMetropolis(ArrayStep):
     """
 
     name = "binary_metropolis"
-
     stats_dtypes_shapes = {
         "accept": (np.float64, []),
         "p_jump": (np.float64, []),
     }
-
     _state_class = BinaryMetropolisState
 
     def __init__(
@@ -488,6 +486,7 @@ class BinaryMetropolis(ArrayStep):
         q0 = apoint.data
 
         # Convert adaptive_scale_factor to a jump probability
+        # TODO: No reason to compute this in every step
         p_jump = 1.0 - 0.5**self.scaling
 
         rand_array = self.rng.random(q0.shape)
@@ -568,9 +567,6 @@ class BinaryGibbsMetropolis(ArrayStep):
     """
 
     name = "binary_gibbs_metropolis"
-
-    stats_dtypes_shapes = {}
-
     _state_class = BinaryGibbsMetropolisState
 
     def __init__(
@@ -683,7 +679,6 @@ class CategoricalGibbsMetropolis(ArrayStep):
     name = "categorical_gibbs_metropolis"
 
     stats_dtypes_shapes = {}
-
     _state_class = CategoricalGibbsMetropolisState
 
     def __init__(
