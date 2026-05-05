@@ -19,13 +19,17 @@ from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
+import numpy as np
+import pytest
+
+# Skip all tests in this module if jax is not installed
+pytest.importorskip("jax")
+
 import arviz as az
 import jax
 import jax.numpy as jnp
-import numpy as np
 import pytensor
 import pytensor.tensor as pt
-import pytest
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import graph_inputs
