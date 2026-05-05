@@ -15,10 +15,12 @@
 
 import numpy as np
 
-from scipy import stats
+from pytensor.utils import lazy_scipy_module
 
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+
+_stats = lazy_scipy_module("stats")
 
 
 @dataclass_state
@@ -89,7 +91,7 @@ class DualAverageAdaptation(WithSamplingState):
         # probabilities. Finding this was mostly trial and error.
         n_bound = min(100, len(accept))
         n_good, n_bad = mean_accept * n_bound, (1 - mean_accept) * n_bound
-        lower, upper = stats.beta(n_good + 1, n_bad + 1).interval(0.95)
+        lower, upper = _stats.beta(n_good + 1, n_bad + 1).interval(0.95)
         if target_accept < lower or target_accept > upper:
             msg = (
                 f"The acceptance probability does not match the target. "

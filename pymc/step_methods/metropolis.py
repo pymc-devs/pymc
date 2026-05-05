@@ -18,13 +18,12 @@ from typing import Any, cast
 import numpy as np
 import numpy.random as nr
 import pytensor
-import scipy.linalg
-import scipy.special
 
 from pytensor import tensor as pt
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import MissingInputError
 from pytensor.tensor.random.basic import BernoulliRV, CategoricalRV
+from pytensor.utils import lazy_scipy_module
 from rich.progress import TextColumn
 from rich.table import Column
 
@@ -49,7 +48,11 @@ from pymc.step_methods.arraystep import (
 )
 from pymc.step_methods.compound import Competence, StepMethodState
 from pymc.step_methods.state import dataclass_state
+from pymc.util import RandomGenerator, get_value_vars_from_user_vars
 from pymc.vartypes import discrete_types
+
+_linalg = lazy_scipy_module("linalg")
+_special = lazy_scipy_module("special")
 
 __all__ = [
     "BinaryGibbsMetropolis",
@@ -64,8 +67,6 @@ __all__ = [
     "NormalProposal",
     "PoissonProposal",
 ]
-
-from pymc.util import RandomGenerator, get_value_vars_from_user_vars
 
 # Available proposal distributions for Metropolis
 
@@ -108,7 +109,7 @@ class MultivariateNormalProposal(Proposal):
         if n != m:
             raise ValueError("Covariance matrix is not symmetric.")
         self.n = n
-        self.chol = scipy.linalg.cholesky(s, lower=True)
+        self.chol = _linalg.cholesky(s, lower=True)
 
     def __call__(self, num_draws=None, rng: np.random.Generator | None = None):
         rng_ = rng or nr
@@ -810,7 +811,7 @@ class CategoricalGibbsMetropolis(ArrayStep):
             if candidate_cat != given_cat:
                 q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
-        probs = scipy.special.softmax(log_probs, axis=0)
+        probs = _special.softmax(log_probs, axis=0)
         prob_curr, probs[given_cat] = probs[given_cat], 0.0
         probs /= 1.0 - prob_curr
         proposed_cat = self.rng.choice(candidates, p=probs)

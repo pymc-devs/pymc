@@ -18,7 +18,6 @@ from functools import partial, reduce
 
 import numpy as np
 import pytensor
-import pytensor.sparse
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply
@@ -606,6 +605,8 @@ def block_diagonal(matrices, sparse=False, format="csr"):
     if len(matrices) == 1:  # graph optimization
         return matrices[0]
     if sparse:
+        import pytensor.sparse
+
         return pytensor.sparse.basic.block_diag(*matrices, format=format)
     else:
         return pt.linalg.block_diag(*matrices)

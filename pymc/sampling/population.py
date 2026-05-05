@@ -26,8 +26,8 @@ import numpy as np
 
 from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
 
+from pymc.backends import _ZarrChainBase
 from pymc.backends.base import BaseTrace
-from pymc.backends.zarr import ZarrChain
 from pymc.initial_point import PointType
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import CustomProgress
@@ -460,7 +460,7 @@ def _iter_population(
                     points[c], stats = updates[c]
                     flushed = strace.record(points[c], stats, in_warmup=i < tune)
                     log_warning_stats(stats)
-                    if flushed and isinstance(strace, ZarrChain):
+                    if flushed and isinstance(strace, _ZarrChainBase):
                         sampling_state = popstep.request_sampling_state(c)
                         strace.store_sampling_state(sampling_state)
                 # yield the state of all chains in parallel

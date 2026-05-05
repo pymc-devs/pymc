@@ -24,18 +24,20 @@ from functools import partial
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
-import scipy.linalg
-import scipy.stats
 
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
+from pytensor.utils import lazy_scipy_module
 
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
 from pymc.pytensorf import floatX
+
+_special = lazy_scipy_module("special")
+_stats = lazy_scipy_module("stats")
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
@@ -274,7 +276,7 @@ class I1e(UnaryScalarOp):
     nfunc_spec = ("scipy.special.i1e", 1, 1)
 
     def impl(self, x):
-        return scipy.special.i1e(x)
+        return _special.i1e(x)
 
 
 i1e_scalar = I1e(upgrade_to_float_no_complex, name="i1e")
@@ -287,7 +289,7 @@ class I0e(UnaryScalarOp):
     nfunc_spec = ("scipy.special.i0e", 1, 1)
 
     def impl(self, x):
-        return scipy.special.i0e(x)
+        return _special.i0e(x)
 
     def grad(self, inp, grads):
         (x,) = inp
@@ -378,7 +380,7 @@ def clipped_beta_rvs(a, b, size=None, random_state=None, dtype="float64"):
         is shifted to ``np.nextafter(1, 0, dtype=dtype)``.
 
     """
-    out = scipy.stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
+    out = _stats.beta.rvs(a, b, size=size, random_state=random_state).astype(dtype)
     lower, upper = _beta_clip_values[dtype]
     return np.maximum(np.minimum(out, upper), lower)
 

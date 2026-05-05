@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from __future__ import annotations
+
 import warnings
 
 from collections.abc import Iterable, Sequence
@@ -20,7 +22,6 @@ import numpy as np
 import pandas as pd
 import pytensor
 import pytensor.tensor as pt
-import scipy.sparse as sps
 
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
@@ -49,10 +50,13 @@ from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
+from pytensor.utils import lazy_scipy_module
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
+
+_sparse = lazy_scipy_module("sparse")
 
 PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
 
@@ -116,7 +120,7 @@ def convert_data(data) -> np.ndarray | Variable:
                 ret = data
     elif isinstance(data, Variable):
         ret = data
-    elif sps.issparse(data):
+    elif _sparse.issparse(data):
         ret = data
     else:
         ret = np.asarray(data)

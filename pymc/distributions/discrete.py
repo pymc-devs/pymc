@@ -30,7 +30,7 @@ from pytensor.tensor.random.basic import (
     uniform,
 )
 from pytensor.tensor.random.utils import normalize_size_param
-from scipy import stats
+from pytensor.utils import lazy_scipy_module
 
 import pymc as pm
 
@@ -50,6 +50,9 @@ from pymc.distributions.distribution import Discrete, SymbolicRandomVariable
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
+from pymc.pytensorf import normalize_rng_param
+
+_stats = lazy_scipy_module("stats")
 
 __all__ = [
     "Bernoulli",
@@ -65,8 +68,6 @@ __all__ = [
     "OrderedProbit",
     "Poisson",
 ]
-
-from pymc.pytensorf import normalize_rng_param
 
 
 class Binomial(Discrete):
@@ -977,7 +978,7 @@ class DiscreteUniformRV(ScipyRandomVariable):
 
     @classmethod
     def rng_fn_scipy(cls, rng, lower, upper, size=None):
-        return stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
+        return _stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
 
 
 discrete_uniform = DiscreteUniformRV()

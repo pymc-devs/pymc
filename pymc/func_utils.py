@@ -19,9 +19,11 @@ import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.gradient import NullTypeGradError
-from scipy import optimize
+from pytensor.utils import lazy_scipy_module
 
 import pymc as pm
+
+_optimize = lazy_scipy_module("optimize")
 
 __all__ = ["find_constrained_prior"]
 
@@ -187,9 +189,9 @@ def find_constrained_prior(
     except (NotImplementedError, NullTypeGradError):
         jac = "2-point"
         constraint_jac = "2-point"
-    cons = optimize.NonlinearConstraint(constraint_fn, lb=mass, ub=mass, jac=constraint_jac)
+    cons = _optimize.NonlinearConstraint(constraint_fn, lb=mass, ub=mass, jac=constraint_jac)
 
-    opt = optimize.minimize(
+    opt = _optimize.minimize(
         target_fn, x0=list(init_guess.values()), jac=jac, constraints=cons, **kwargs
     )
     if not opt.success:

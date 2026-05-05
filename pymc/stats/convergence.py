@@ -18,8 +18,6 @@ import logging
 from collections.abc import Sequence
 from typing import Any
 
-import arviz
-
 from xarray import DataTree
 
 from pymc.util import get_untransformed_name, is_transformed_name
@@ -105,8 +103,10 @@ def run_convergence_checks(idata: DataTree, model) -> list[SamplerWarning]:
         if rv_name in idata["posterior"]:
             varnames.append(rv_name)
 
-    ess = arviz.ess(idata, var_names=varnames)
-    rhat = arviz.rhat(idata, var_names=varnames)
+    import arviz_stats
+
+    ess = arviz_stats.ess(idata, var_names=varnames)
+    rhat = arviz_stats.rhat(idata, var_names=varnames)
 
     rhat_max = max(val.max() for val in rhat.values())
     if rhat_max > 1.01:

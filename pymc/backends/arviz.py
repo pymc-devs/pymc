@@ -28,9 +28,6 @@ from typing import (
 import numpy as np
 import xarray
 
-from arviz_base import dict_to_dataset, make_attrs, rcParams
-from arviz_base.base import requires
-from arviz_base.types import CoordSpec, DimSpec
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -45,7 +42,43 @@ from pymc.pytensorf import PointFunc, extract_obs_data
 from pymc.util import get_default_varnames, get_untransformed_name, is_transformed_name
 
 if TYPE_CHECKING:
+    from arviz_base.types import CoordSpec, DimSpec
+
     from pymc.backends.base import MultiTrace
+
+
+class requires:
+    """Decorator that returns None if all required attributes on the wrapped instance are None."""
+
+    def __init__(self, *props):
+        self.props = props
+
+    def __call__(self, func):
+        def wrapped(cls):
+            for prop in self.props:
+                prop_list = [prop] if isinstance(prop, str) else prop
+                if all(getattr(cls, prop_i) is None for prop_i in prop_list):
+                    return None
+            return func(cls)
+
+        return wrapped
+
+
+# Self-replacing lazy stubs. First call imports arviz_base, rebinds the module-level
+# name to the real implementation, then forwards. Subsequent calls go straight to it.
+def dict_to_dataset(*args, **kwargs):  # noqa: F811
+    global dict_to_dataset
+    from arviz_base import dict_to_dataset
+
+    return dict_to_dataset(*args, **kwargs)
+
+
+def make_attrs(*args, **kwargs):  # noqa: F811
+    global make_attrs
+    from arviz_base import make_attrs
+
+    return make_attrs(*args, **kwargs)
+
 
 ___all__ = [""]
 
@@ -287,14 +320,18 @@ class DataTreeConverter:
         log_likelihood=False,
         log_prior=False,
         predictions=None,
-        coords: CoordSpec | None = None,
-        dims: DimSpec | None = None,
+        coords: "CoordSpec | None" = None,
+        dims: "DimSpec | None" = None,
         sample_dims: list | None = None,
         model=None,
         save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
-        self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        if save_warmup is None:
+            from arviz_base import rcParams
+
+            save_warmup = rcParams["data.save_warmup"]
+        self.save_warmup = save_warmup
         self.include_transformed = include_transformed
         self.trace = trace
 
@@ -603,13 +640,13 @@ def to_inference_data(
     posterior_predictive: Mapping[str, Any] | None = None,
     log_likelihood: bool | Iterable[str] = False,
     log_prior: bool | Iterable[str] = False,
-    coords: CoordSpec | None = None,
-    dims: DimSpec | None = None,
+    coords: "CoordSpec | None" = None,
+    dims: "DimSpec | None" = None,
     sample_dims: list | None = None,
     model: "Model" = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Convert pymc data into an InferenceData object.
 
     All three of them are optional arguments, but at least one of ``trace``,
@@ -650,7 +687,7 @@ def to_inference_data(
 
     Returns
     -------
-    xarray.DataTree
+    DataTree
     """
     if isinstance(trace, DataTree):
         return trace
@@ -676,12 +713,12 @@ def predictions_to_inference_data(
     predictions,
     posterior_trace: Optional["MultiTrace"] = None,
     model: Optional["Model"] = None,
-    coords: CoordSpec | None = None,
-    dims: DimSpec | None = None,
+    coords: "CoordSpec | None" = None,
+    dims: "DimSpec | None" = None,
     sample_dims: list | None = None,
-    idata_orig: xarray.DataTree | None = None,
+    idata_orig: DataTree | None = None,
     inplace: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Translate out-of-sample predictions into ``DataTree``.
 
     Parameters
