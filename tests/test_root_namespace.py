@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import subprocess
+import sys
 import types
 
 import pymc
@@ -83,3 +85,44 @@ def test_root_module_not_polluted():
     )
     assert not unexpected, f"Unexpected names at pymc root: {sorted(unexpected)}. {hint}"
     assert not missing, f"Missing names at pymc root: {sorted(missing)}. {hint}"
+
+
+def test_eager_import_heavy_dependencies():
+    """`import pymc` must not eagerly load heavy optional dependencies.
+
+    These modules are deferred to first use to keep ``import pymc`` fast.
+    Note: ``scipy.sparse`` is intentionally omitted because ``xarray`` pulls it
+    in transitively, which is outside of pymc's control.
+    """
+    expensive_modules = (
+        "arviz_base",
+        "arviz_plots",
+        "arviz_stats",
+        "pytensor.sparse",
+        "scipy.cluster",
+        "scipy.interpolate",
+        "scipy.linalg",
+        "scipy.optimize",
+        "scipy.spatial",
+        "scipy.special",
+        "scipy.stats",
+        "zarr",
+    )
+
+    code = (
+        "import sys\n"
+        "import pymc  # noqa: F401\n"
+        f"loaded = [m for m in {expensive_modules!r} if m in sys.modules]\n"
+        "print(','.join(loaded))\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    loaded = [m for m in result.stdout.strip().split(",") if m]
+    assert not loaded, (
+        f"`import pymc` eagerly loaded heavy modules: {loaded}. "
+        "These should be deferred to first use."
+    )

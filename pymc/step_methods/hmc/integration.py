@@ -16,10 +16,12 @@ from typing import NamedTuple
 
 import numpy as np
 
-from scipy import linalg
+from pytensor.utils import lazy_scipy_module
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.hmc.quadpotential import QuadPotential
+
+_linalg = lazy_scipy_module("linalg")
 
 
 class State(NamedTuple):
@@ -92,7 +94,7 @@ class CpuLeapfrogIntegrator:
         """
         try:
             return self._step(epsilon, state)
-        except linalg.LinAlgError as err:
+        except _linalg.LinAlgError as err:
             msg = "LinAlgError during leapfrog step."
             raise IntegrationError(msg) from err
         except ValueError as err:
@@ -105,7 +107,7 @@ class CpuLeapfrogIntegrator:
                 raise
 
     def _step(self, epsilon, state):
-        axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
+        axpy = _linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
         pot = self._potential
 
         q = state.q

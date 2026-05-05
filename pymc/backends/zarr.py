@@ -17,16 +17,17 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from arviz_base.base import make_attrs
 from pytensor.tensor.variable import TensorVariable
 from xarray import DataTree
 
 import pymc
 
+from pymc.backends import _ZarrChainBase, _ZarrTraceBase
 from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
     find_constants,
     find_observations,
+    make_attrs,
 )
 from pymc.backends.base import BaseTrace
 from pymc.blocking import StatDtype, StatShape
@@ -63,7 +64,7 @@ except ImportError:
 WARMUP_TAG = "warmup_"
 
 
-class ZarrChain(BaseTrace):
+class ZarrChain(_ZarrChainBase, BaseTrace):
     """Interface object to interact with a single chain in a :class:`~.ZarrTrace`.
 
     Parameters
@@ -275,7 +276,7 @@ def get_initial_fill_value_and_codec(
     return fill_value, _dtype, codec
 
 
-class ZarrTrace:
+class ZarrTrace(_ZarrTraceBase):
     """Object that stores and enables access to MCMC draws stored in a :class:`zarr.hierarchy.Group` objects.
 
     This class creates a zarr hierarchy to represent the sampling information which is

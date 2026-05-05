@@ -71,8 +71,7 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from scipy import stats
-from scipy.interpolate import InterpolatedUnivariateSpline
+from pytensor.utils import lazy_scipy_module
 
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
@@ -93,6 +92,9 @@ from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous, Sy
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp
+
+_stats = lazy_scipy_module("stats")
+_interpolate = lazy_scipy_module("interpolate")
 
 __all__ = [
     "AsymmetricLaplace",
@@ -571,7 +573,7 @@ class TruncatedNormalRV(RandomVariable):
     ) -> np.ndarray:
         # Upcast to float64. (Caller will downcast to desired dtype if needed)
         #   (Work-around for https://github.com/scipy/scipy/issues/15928)
-        return stats.truncnorm.rvs(
+        return _stats.truncnorm.rvs(
             a=((lower - mu) / sigma).astype("float64"),
             b=((upper - mu) / sigma).astype("float64"),
             loc=(mu).astype("float64"),
@@ -1943,7 +1945,7 @@ class SkewStudentTRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, a, b, mu, sigma, size=None) -> np.ndarray:
         return np.asarray(
-            stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
+            _stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
         )
 
 
@@ -3145,7 +3147,7 @@ class SkewNormalRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
         return np.asarray(
-            stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+            _stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
         )
 
 
@@ -3481,7 +3483,7 @@ class RiceRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, b, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng))
+        return np.asarray(_stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng))
 
 
 rice = RiceRV()
@@ -3860,7 +3862,7 @@ class Interpolated(BoundedContinuous):
 
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
-        interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
+        interp = _interpolate.InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
 
         Z = interp.integral(x_points[0], x_points[-1])
         cdf_points = interp.antiderivative()(x_points) / Z
@@ -3891,7 +3893,9 @@ class Interpolated(BoundedContinuous):
     def logp(value, x_points, pdf_points, cdf_points):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
         # within a tensor.constant. We use the .data method to retrieve them
-        interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
+        interp = _interpolate.InterpolatedUnivariateSpline(
+            x_points.data, pdf_points.data, k=1, ext="zeros"
+        )
         Z = interp.integral(x_points.data[..., 0], x_points.data[..., -1])
 
         # interp and Z are converted to symbolic variables here
@@ -3918,7 +3922,7 @@ class MoyalRV(RandomVariable):
 
     @classmethod
     def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.moyal.rvs(mu, sigma, size=size, random_state=rng))
+        return np.asarray(_stats.moyal.rvs(mu, sigma, size=size, random_state=rng))
 
 
 moyal = MoyalRV()

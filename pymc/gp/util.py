@@ -20,7 +20,6 @@ import pytensor.tensor as pt
 from pytensor.compile import SharedVariable
 from pytensor.graph import ancestors
 from pytensor.tensor.variable import TensorConstant
-from scipy.cluster.vq import kmeans
 
 from pymc.model.core import modelcontext
 from pymc.pytensorf import compile
@@ -125,6 +124,8 @@ def kmeans_inducing_points(n_inducing, X, **kmeans_kwargs):
 
     if "k_or_guess" in kmeans_kwargs:
         warnings.warn("Use `n_inducing` to set the `k_or_guess` parameter instead.")
+
+    from scipy.cluster.vq import kmeans
 
     Xu, distortion = kmeans(Xw, k_or_guess=n_inducing, **kmeans_kwargs)
     return Xu * scaling

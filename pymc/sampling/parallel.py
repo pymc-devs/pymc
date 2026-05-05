@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from __future__ import annotations
 
 import ctypes
 import logging
@@ -24,7 +25,7 @@ import warnings
 from collections import namedtuple
 from collections.abc import Sequence
 from contextlib import nullcontext
-from typing import cast
+from typing import TYPE_CHECKING
 
 import cloudpickle
 import numpy as np
@@ -34,8 +35,12 @@ from pytensor.link.jax.linker import JAXLinker
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 
-from pymc.backends.zarr import ZarrChain
+from pymc.backends import _ZarrChainBase
 from pymc.blocking import DictToArrayBijection
+
+if TYPE_CHECKING:
+    from pymc.backends.zarr import ZarrChain
+
 from pymc.exceptions import SamplingError
 from pymc.progress_bar import MCMCProgressBarManager, default_progress_theme
 from pymc.util import (
@@ -169,7 +174,7 @@ class _Process:
         if zarr_chains_is_pickled:
             self._zarr_chain = cloudpickle.loads(zarr_chains)[self.chain]
         elif zarr_chains is not None:
-            self._zarr_chain = cast(list[ZarrChain], zarr_chains)[self.chain]
+            self._zarr_chain = zarr_chains[self.chain]  # type: ignore[assignment]
         self._zarr_recording = self._zarr_chain is not None
 
         self._shared_point = shared_point
@@ -493,7 +498,7 @@ class ParallelSampler:
         zarr_chains_pickled = None
         self.zarr_recording = False
         if zarr_chains is not None:
-            assert all(isinstance(zarr_chain, ZarrChain) for zarr_chain in zarr_chains)
+            assert all(isinstance(zarr_chain, _ZarrChainBase) for zarr_chain in zarr_chains)
             self.zarr_recording = True
         if mp_ctx.get_start_method() != "fork":
             step_method_pickled = cloudpickle.dumps(step_method, protocol=-1)

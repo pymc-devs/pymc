@@ -356,18 +356,31 @@ def _default_repr_pretty(obj: Variable | Model, p, cycle):
                 p.text(output_line)
     except AttributeError:
         # the default fallback option (no str_repr method)
+        import IPython.lib.pretty
+
         IPython.lib.pretty._repr_pprint(obj, p, cycle)
 
 
-try:
-    # register our custom pretty printer in ipython shells
-    import IPython
+def _register_ipython_pretty_printers():
+    """Register our pretty printer with IPython if it is already loaded.
 
-    IPython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
-    IPython.lib.pretty.for_type(Model, _default_repr_pretty)
-except (ModuleNotFoundError, AttributeError):
-    # no ipython shell
-    pass
+    Doing this only when IPython is in ``sys.modules`` avoids importing it
+    eagerly via pymc — IPython is heavy and irrelevant outside REPLs, and any
+    REPL that cares will have imported IPython before pymc.
+    """
+    import sys
+
+    ipython = sys.modules.get("IPython")
+    if ipython is None:
+        return
+    try:
+        ipython.lib.pretty.for_type(TensorVariable, _default_repr_pretty)
+        ipython.lib.pretty.for_type(Model, _default_repr_pretty)
+    except AttributeError:
+        pass
+
+
+_register_ipython_pretty_printers()
 
 
 def _format_underscore(variable: str) -> str:

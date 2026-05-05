@@ -24,10 +24,9 @@ from pytensor import shared
 from pytensor.graph.replace import clone_replace
 from pytensor.link.jax import JAXLinker
 from pytensor.tensor.random.type import RandomGeneratorType
+from pytensor.utils import lazy_scipy_module
 from rich.progress import TextColumn
 from rich.table import Column
-from scipy.special import logsumexp
-from scipy.stats import multivariate_normal
 
 from pymc.blocking import DictToArrayBijection
 from pymc.initial_point import make_initial_point_expression
@@ -41,6 +40,9 @@ from pymc.pytensorf import (
 from pymc.sampling.forward import draw
 from pymc.step_methods.metropolis import MultivariateNormalProposal
 from pymc.vartypes import discrete_types
+
+_special = lazy_scipy_module("special")
+_stats = lazy_scipy_module("stats")
 
 SMCStats: TypeAlias = dict[str, int | float]
 SMCSettings: TypeAlias = dict[str, int | float]
@@ -322,8 +324,8 @@ class SMC_KERNEL(ABC):
         while up_beta - low_beta > 1e-6:
             new_beta = (low_beta + up_beta) / 2.0
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
-            log_weights = log_weights_un - logsumexp(log_weights_un)
-            ESS = int(np.exp(-logsumexp(log_weights * 2)))
+            log_weights = log_weights_un - _special.logsumexp(log_weights_un)
+            ESS = int(np.exp(-_special.logsumexp(log_weights * 2)))
             if ESS == rN:
                 break
             elif ESS < rN:
@@ -333,13 +335,13 @@ class SMC_KERNEL(ABC):
         if new_beta >= 1:
             new_beta = 1
             log_weights_un = (new_beta - old_beta) * self.likelihood_logp
-            log_weights = log_weights_un - logsumexp(log_weights_un)
+            log_weights = log_weights_un - _special.logsumexp(log_weights_un)
 
         self.beta = new_beta
         self.weights = np.exp(log_weights)
         # We normalize again to correct for small numerical errors that might build up
         self.weights /= self.weights.sum()
-        self.log_marginal_likelihood += logsumexp(log_weights_un) - np.log(self.draws)
+        self.log_marginal_likelihood += _special.logsumexp(log_weights_un) - np.log(self.draws)
 
     def resample(self):
         """Resample particles based on importance weights."""
@@ -479,7 +481,7 @@ class IMH(SMC_KERNEL):
         if np.isnan(cov).any() or np.isinf(cov).any():
             raise ValueError('Sample covariances not valid! Likely "draws" is too small!')
         mean = np.average(self.tempered_posterior, axis=0)
-        self.proposal_dist = multivariate_normal(mean, cov)
+        self.proposal_dist = _stats.multivariate_normal(mean, cov)
 
     def mutate(self):
         """Independent Metropolis-Hastings perturbation."""

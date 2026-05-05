@@ -57,12 +57,12 @@ from typing import Any, overload
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
-import xarray
 
 from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
 from pytensor.scalar.basic import identity as scalar_identity
 from pytensor.tensor.elemwise import Elemwise
+from xarray import DataArray, Dataset
 
 import pymc as pm
 
@@ -1146,7 +1146,7 @@ class Group(WithMemoization):
         """Return the mean of the latent variables as an unstructured 1-dimensional tensor variable."""
         raise NotImplementedError()
 
-    def var_to_data(self, shared: pt.TensorVariable) -> xarray.Dataset:
+    def var_to_data(self, shared: pt.TensorVariable) -> Dataset:
         """Take a flat 1-dimensional tensor variable and maps it to an xarray data set based on the information in `self.ordering`."""
         # This is somewhat similar to `DictToArrayBijection.rmap`, which doesn't work here since we don't have
         # `RaveledVars` and need to take the information from `self.ordering` instead
@@ -1159,16 +1159,16 @@ class Group(WithMemoization):
             else:
                 coords = None
             values = shared_nda[s].reshape(shape).astype(dtype)
-            result[name] = xarray.DataArray(values, coords=coords, dims=dims, name=name)
-        return xarray.Dataset(result)
+            result[name] = DataArray(values, coords=coords, dims=dims, name=name)
+        return Dataset(result)
 
     @property
-    def mean_data(self) -> xarray.Dataset:
+    def mean_data(self) -> Dataset:
         """Mean of the latent variables as an xarray Dataset."""
         return self.var_to_data(self.mean)
 
     @property
-    def std_data(self) -> xarray.Dataset:
+    def std_data(self) -> Dataset:
         """Standard deviation of the latent variables as an xarray Dataset."""
         return self.var_to_data(self.std)
 

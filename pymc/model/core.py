@@ -28,9 +28,7 @@ from typing import (
 
 import numpy as np
 import pytensor
-import pytensor.sparse as sparse
 import pytensor.tensor as pt
-import scipy.sparse as sps
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
 from pytensor.compile.sharedvalue import SharedVariable
@@ -41,6 +39,7 @@ from pytensor.tensor.math import variadic_add
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor.utils import lazy_scipy_module
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.data import MinibatchOp, is_valid_observed
@@ -77,6 +76,8 @@ from pymc.util import (
     treelist,
 )
 from pymc.vartypes import continuous_types, discrete_types, typefilter
+
+_sparse = lazy_scipy_module("sparse")
 
 __all__ = [
     "Deterministic",
@@ -1355,8 +1356,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
             rv_var = Deterministic(name, joined_rv, self, dims)
 
         else:
-            if sps.issparse(data):
-                data = sparse.basic.as_sparse(data, name=name)
+            if _sparse.issparse(data):
+                import pytensor.sparse as pt_sparse
+
+                data = pt_sparse.basic.as_sparse(data, name=name)
             elif not isinstance(data, Variable):
                 data = pt.as_tensor_variable(data, name=name)
 

@@ -19,13 +19,10 @@ from functools import partial, reduce
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
-import scipy
 
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
 from pytensor.raise_op import Assert
-from pytensor.sparse.basic import DenseFromSparse
-from pytensor.sparse.math import sp_sum
 from pytensor.tensor import (
     TensorConstant,
     TensorVariable,
@@ -43,6 +40,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     normalize_size_param,
 )
+from pytensor.utils import lazy_scipy_module
 
 import pymc as pm
 
@@ -84,6 +82,9 @@ from pymc.logprob.rewriting import (
 from pymc.math import kron_diag, kron_dot
 from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
+
+_sparse = lazy_scipy_module("sparse")
+_linalg = lazy_scipy_module("linalg")
 
 __all__ = [
     "CAR",
@@ -2119,17 +2120,17 @@ class CARRV(RandomVariable):
         #  we will have some expensive dense_from_sparse and sparse_from_dense
         #  operations that we should avoid. See https://github.com/pymc-devs/pytensor/issues/839
         W = _squeeze_to_ndim(W, 2)
-        if not scipy.sparse.issparse(W):
-            W = scipy.sparse.csr_matrix(W)
-        tau = scipy.sparse.csr_matrix(_squeeze_to_ndim(tau, 0))
-        alpha = scipy.sparse.csr_matrix(_squeeze_to_ndim(alpha, 0))
+        if not _sparse.issparse(W):
+            W = _sparse.csr_matrix(W)
+        tau = _sparse.csr_matrix(_squeeze_to_ndim(tau, 0))
+        alpha = _sparse.csr_matrix(_squeeze_to_ndim(alpha, 0))
 
         s = np.asarray(W.sum(axis=0))[0]
-        D = scipy.sparse.diags(s)
+        D = _sparse.diags(s)
 
         Q = tau.multiply(D - alpha.multiply(W))
 
-        perm_array = scipy.sparse.csgraph.reverse_cuthill_mckee(Q, symmetric_mode=True)
+        perm_array = _sparse.csgraph.reverse_cuthill_mckee(Q, symmetric_mode=True)
         inv_perm = np.argsort(perm_array)
 
         Q = Q[perm_array, :][:, perm_array]
@@ -2140,7 +2141,7 @@ class CARRV(RandomVariable):
             Qb = np.vstack((np.pad(Q.diagonal(u), (u, 0), constant_values=(0, 0)), Qb))
             u += 1
 
-        L = scipy.linalg.cholesky_banded(Qb, lower=False)
+        L = _linalg.cholesky_banded(Qb, lower=False)
 
         size = tuple(size or ())
         if size:
@@ -2148,7 +2149,7 @@ class CARRV(RandomVariable):
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
-            samples[idx] = scipy.linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
+            samples[idx] = _linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
         samples = samples[..., inv_perm]
         return samples
 
@@ -2250,6 +2251,9 @@ class CAR(Continuous):
                 W = W.owner.inputs[0]
             else:
                 W = pt.squeeze(W, axis=tuple(range(extra_dims)))
+
+        from pytensor.sparse.basic import DenseFromSparse
+        from pytensor.sparse.math import sp_sum
 
         if W.owner and isinstance(W.owner.op, DenseFromSparse):
             W = W.owner.inputs[0]

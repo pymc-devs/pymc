@@ -22,11 +22,11 @@ from typing import cast
 
 import cloudpickle
 import numpy as np
-import xarray
 
 from cachetools import LRUCache, cachedmethod
 from pytensor.compile import SharedVariable
 from pytensor.graph.basic import Variable
+from xarray import Dataset, DataTree
 
 from pymc.exceptions import BlockModelAccessError
 
@@ -240,18 +240,18 @@ def biwrap(wrapper):
     return enhanced
 
 
-def drop_warning_stat(dt: xarray.DataTree) -> xarray.DataTree:
+def drop_warning_stat(dt: DataTree) -> DataTree:
     """Return a new ``DataTree`` object with the "warning" stat removed from sample stats groups.
 
     This function should be applied to an ``DataTree`` object obtained with
     ``pm.sample(keep_warning_stat=True)`` before trying to ``.to_netcdf()`` or ``.to_zarr()`` it.
     """
-    tree_dict: dict[str, xarray.Dataset | None] = {}
+    tree_dict: dict[str, Dataset | None] = {}
 
     for gname, group in dt.items():
-        if not isinstance(group, xarray.DataTree):
+        if not isinstance(group, DataTree):
             continue
-        ds: xarray.Dataset | None = group.to_dataset()
+        ds: Dataset | None = group.to_dataset()
 
         if "sample_stat" in gname and ds is not None:
             warning_vars = [
@@ -264,17 +264,17 @@ def drop_warning_stat(dt: xarray.DataTree) -> xarray.DataTree:
         if ds is not None:
             tree_dict[gname] = ds
 
-    new_dt = xarray.DataTree.from_dict(tree_dict)
+    new_dt = DataTree.from_dict(tree_dict)
     new_dt.attrs = dt.attrs
     return new_dt
 
 
-def chains_and_samples(data: xarray.Dataset | xarray.DataTree) -> tuple[int, int]:
+def chains_and_samples(data: Dataset | DataTree) -> tuple[int, int]:
     """Extract and return number of chains and samples in xarray or arviz traces."""
-    dataset: xarray.Dataset
-    if isinstance(data, xarray.Dataset):
+    dataset: Dataset
+    if isinstance(data, Dataset):
         dataset = data
-    elif isinstance(data, xarray.DataTree):
+    elif isinstance(data, DataTree):
         dataset = data["posterior"].dataset
     else:
         raise ValueError(

@@ -27,9 +27,9 @@ import pytensor.gradient as tg
 
 from numpy import isfinite
 from pytensor.graph.basic import Variable
+from pytensor.utils import lazy_scipy_module
 from rich.console import Console
 from rich.progress import Progress, TextColumn
-from scipy.optimize import minimize
 
 import pymc as pm
 
@@ -43,6 +43,8 @@ from pymc.util import (
     get_value_vars_from_user_vars,
 )
 from pymc.vartypes import discrete_types, typefilter
+
+_optimize = lazy_scipy_module("optimize")
 
 __all__ = ["find_MAP"]
 
@@ -173,7 +175,7 @@ def find_MAP(
 
     with cost_func.progress:
         try:
-            opt_result = minimize(
+            opt_result = _optimize.minimize(
                 cost_func, x0.data, method=method, jac=compute_gradient, *args, **kwargs
             )
             mx0 = opt_result["x"]  # r -> opt_result

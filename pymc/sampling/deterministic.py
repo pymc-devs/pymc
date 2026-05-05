@@ -13,9 +13,7 @@
 #   limitations under the License.
 from collections.abc import Sequence
 
-import xarray
-
-from xarray import Dataset
+from xarray import Dataset, DataTree, merge
 
 from pymc.backends.arviz import apply_function_over_dataset, coords_and_dims_for_inferencedata
 from pymc.model.core import Model, modelcontext
@@ -104,7 +102,7 @@ def compute_deterministics(
 
     coords, dims = coords_and_dims_for_inferencedata(model)
 
-    is_datatree = isinstance(dataset, xarray.DataTree)
+    is_datatree = isinstance(dataset, DataTree)
     input_dataset = dataset.dataset if is_datatree else dataset
     input_dataset = input_dataset[[rv.name for rv in model.free_RVs]]
 
@@ -120,6 +118,6 @@ def compute_deterministics(
 
     if merge_dataset:
         original_dataset = dataset.to_dataset() if is_datatree else dataset
-        new_dataset = xarray.merge([original_dataset, new_dataset], compat="override")
+        new_dataset = merge([original_dataset, new_dataset], compat="override")
 
     return new_dataset
