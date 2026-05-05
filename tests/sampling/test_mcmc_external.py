@@ -203,21 +203,23 @@ def test_initvals(nuts_sampler, initvals):
 
 
 def test_nutpie_progress_bar_manager_update():
-    pb = NutpieProgressBarManager(chains=2, draws=10, tune=10, progressbar=False)
+    pb = NutpieProgressBarManager(chains=2, draws=10, progressbar=False)
     pb._backend = mock.Mock()
     pb._show_progress = True  # force the update path even without a real backend
 
+    # ``total_draws=20`` with ``draws=10`` ⇒ tune boundary at index 10.
+    # cp1 has a divergence at index 3 (warmup, must not be displayed).
     cp0 = SimpleNamespace(
         finished_draws=5,
         total_draws=20,
-        divergences=0,
+        divergent_draws=[],
         step_size=0.5,
         latest_num_steps=3,
     )
     cp1 = SimpleNamespace(
         finished_draws=4,
         total_draws=20,
-        divergences=1,
+        divergent_draws=[3],
         step_size=0.4,
         latest_num_steps=7,
     )
@@ -230,17 +232,23 @@ def test_nutpie_progress_bar_manager_update():
     second_call = pb._backend.update.call_args_list[1].kwargs
     assert second_call["task_id"] == 1
     assert second_call["advance"] == 4
-    assert second_call["failing"] is True
+    assert second_call["stats"]["divergences"] == 0
+    assert second_call["failing"] is False
 
-    # A second update only advances by the delta since the previous call.
+    # Both chains complete; cp1 gained a new divergence at index 12 (post-warmup).
     cp0.finished_draws = 20
     cp1.finished_draws = 20
+    cp1.divergent_draws = [3, 12]
     pb._backend.update.reset_mock()
     pb.update([cp0, cp1])
     deltas = [c.kwargs["advance"] for c in pb._backend.update.call_args_list]
     is_last_flags = [c.kwargs["is_last"] for c in pb._backend.update.call_args_list]
+    divergences = [c.kwargs["stats"]["divergences"] for c in pb._backend.update.call_args_list]
+    failing = [c.kwargs["failing"] for c in pb._backend.update.call_args_list]
     assert deltas == [15, 16]
     assert is_last_flags == [True, True]
+    assert divergences == [0, 1]
+    assert failing == [False, True]
 
 
 def test_nutpie_end_to_end():
