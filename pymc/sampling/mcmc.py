@@ -370,6 +370,9 @@ def _sample_external_nuts(
     if not quiet:
         _log.info(f"NUTS[{sampler}]: {model.free_RVs}")
 
+    if not 0 < target_accept < 1:
+        raise ValueError(f"target_accept must be a float in (0, 1), got {target_accept!r}.")
+
     if sampler == "nutpie":
         if not NUTPIE_INSTALLED:
             raise ImportError(
