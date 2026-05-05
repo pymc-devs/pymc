@@ -1,0 +1,25 @@
+/* Mobile menu fix: ensure overlay is clickable on iOS */
+
+/* Raise the stacked navigation elements above possible overlays */
+.primary-toggle,
+.secondary-toggle,
+.mobile-menu-container .navbar,
+.mobile-menu-container .navbar-collapse,
+#pst-primary-sidebar-modal,
+#pst-secondary-sidebar-modal {
+  z-index: 1500;
+  pointer-events: auto !important;
+}
+
+/* 
+ * Ensure the modal overlay allows pointer events to reach menu links.
+ * Both `pointer-events: auto` and a high `z-index` are necessary because:
+ * - Some themes/modal implementations use overlays that block pointer events or stack above menu links,
+ *   making them unclickable (especially on iOS).
+ * - This rule ensures that the backdrop does not block interaction with menu links,
+ *   and that the stacking order is correct so links remain accessible.
+ * If the theme/modal implementation changes, review whether this workaround is still needed.
+ */
+.pst-modal-backdrop {
+  pointer-events: auto !important;
+}
