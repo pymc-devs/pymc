@@ -23,16 +23,94 @@ from pymc.logprob.basic import logp
 from pymc.logprob.utils import ParameterValueError
 
 
-def test_switch_non_overlapping_logp_matches_change_of_variables():
+def _cond_x_gt_0(x):
+    return x > 0
+
+
+def _cond_x_ge_0(x):
+    return x >= 0
+
+
+def _cond_0_lt_x(x):
+    return 0 < x
+
+
+def _cond_0_le_x(x):
+    return 0 <= x
+
+
+def _cond_x_lt_0(x):
+    return x < 0
+
+
+def _cond_x_le_0(x):
+    return x <= 0
+
+
+def _cond_0_gt_x(x):
+    return 0 > x
+
+
+def _cond_0_ge_x(x):
+    return 0 >= x
+
+
+@pytest.mark.parametrize(
+    "cond_builder,includes_zero_in_true,true_is_positive_side",
+    [
+        (_cond_x_gt_0, False, True),
+        (_cond_x_ge_0, True, True),
+        (_cond_0_lt_x, False, True),
+        (_cond_0_le_x, True, True),
+        (_cond_x_lt_0, False, False),
+        (_cond_x_le_0, True, False),
+        (_cond_0_gt_x, False, False),
+        (_cond_0_ge_x, True, False),
+    ],
+    ids=[
+        "x_gt_0",
+        "x_ge_0",
+        "0_lt_x",
+        "0_le_x",
+        "x_lt_0",
+        "x_le_0",
+        "0_gt_x",
+        "0_ge_x",
+    ],
+)
+@pytest.mark.parametrize("true_branch_is_scaled", [False, True], ids=["x_true", "scaled_true"])
+def test_switch_non_overlapping_logp_matches_change_of_variables(
+    cond_builder, includes_zero_in_true, true_is_positive_side, true_branch_is_scaled
+):
     scale = pt.scalar("scale")
     x = pm.Normal.dist(mu=0, sigma=1, size=(3,))
-    y = pt.switch(x > 0, x, scale * x)
+
+    cond = cond_builder(x)
+
+    unscaled = x
+    scaled = scale * x
+    true_branch = scaled if true_branch_is_scaled else unscaled
+    false_branch = unscaled if true_branch_is_scaled else scaled
+    y = pt.switch(cond, true_branch, false_branch)
 
     vv = pt.vector("vv")
 
     logp_y = logp(y, vv)
-    inv = pt.switch(pt.gt(vv, 0), vv, vv / scale)
-    expected = logp(x, inv) + pt.switch(pt.gt(vv, 0), 0.0, -pt.log(scale))
+
+    if true_is_positive_side:
+        cond_v = pt.ge(vv, 0) if includes_zero_in_true else pt.gt(vv, 0)
+    else:
+        cond_v = pt.le(vv, 0) if includes_zero_in_true else pt.lt(vv, 0)
+
+    inv_true = vv / scale if true_branch_is_scaled else vv
+    inv_false = vv if true_branch_is_scaled else vv / scale
+    inv = pt.switch(cond_v, inv_true, inv_false)
+
+    jac_true = -pt.log(scale) if true_branch_is_scaled else 0.0
+    jac_false = 0.0 if true_branch_is_scaled else -pt.log(scale)
+    jac = pt.switch(cond_v, jac_true, jac_false)
+
+    expected = logp(x, inv) + jac
 
     logp_y_fn = function([vv, scale], logp_y)
     expected_fn = function([vv, scale], expected)
