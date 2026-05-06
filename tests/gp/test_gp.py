@@ -335,6 +335,21 @@ class TestMarginalVsLatent:
         npt.assert_allclose(latent_rv_logp.eval({"f": y}), numpy_rv_logp.eval(), rtol=1e-4)
         npt.assert_allclose(marginal_rv_logp.eval(), numpy_rv_logp.eval(), rtol=1e-4)
 
+    def testLatentConditionalLargeXnewJitter(self):
+        """Latent.conditional with large Xnew should not raise LinAlgError (issue #8108).
+        The conditional covariance is stabilized with jitter.
+        """
+        X = np.arange(99, 0, -1).reshape(-1, 1)
+        depth_grid = np.linspace(100, 1, 500).reshape(-1, 1)
+        with pm.Model() as model:
+            cov = pm.gp.cov.ExpQuad(input_dim=1, ls=1)
+            gp = pm.gp.Latent(cov_func=cov)
+            f = gp.prior("f", X=X, reparameterize=False)
+            f_grid = gp.conditional("f_grid", Xnew=depth_grid, jitter=1e-4)
+        # Building the model and compiling logp should not raise LinAlgError.
+        # Use the model's initial point so the test works with any prior parameterization.
+        model.compile_logp()(model.initial_point())
+
 
 class TestTP:
     R"""
