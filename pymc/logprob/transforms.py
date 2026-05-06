@@ -230,10 +230,6 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
-MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf, Sigmoid)
-MONOTONICALLY_DECREASING_OPS = (Erfc, Erfcx)
-
-
 @_logcdf.register(MeasurableTransform)
 def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwargs):
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
@@ -255,9 +251,9 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
     else:
         logccdf = _logccdf_helper(measurable_input, backward_value)
 
-    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+    if isinstance(op.scalar_op, Add) or getattr(op.scalar_op, "monotonic_increasing", False):
         pass
-    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+    elif getattr(op.scalar_op, "monotonic_decreasing", False):
         logcdf = logccdf
     # mul is monotonically increasing for scale > 0, and monotonically decreasing otherwise
     elif isinstance(op.scalar_op, Mul):
@@ -295,9 +291,9 @@ def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs)
     if measurable_input.type.dtype.startswith("int"):
         raise NotImplementedError("icdf of transformed discrete variables not implemented")
 
-    if isinstance(op.scalar_op, MONOTONICALLY_INCREASING_OPS):
+    if isinstance(op.scalar_op, Add) or getattr(op.scalar_op, "monotonic_increasing", False):
         pass
-    elif isinstance(op.scalar_op, MONOTONICALLY_DECREASING_OPS):
+    elif getattr(op.scalar_op, "monotonic_decreasing", False):
         value = 1 - value
     elif isinstance(op.scalar_op, Mul):
         [scale] = other_inputs
