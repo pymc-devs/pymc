@@ -166,7 +166,7 @@ class BaseHMC(GradientSharedStep):
         if scaling is None and potential is None:
             mean = floatX(np.zeros(size))
             var = floatX(np.ones(size))
-            potential = QuadPotentialDiagAdapt(size, mean, var, 10, rng=self.rng.spawn(1)[0])
+            potential = QuadPotentialDiagAdapt(size, mean, var, 10, dtype=dtype, rng=self.rng.spawn(1)[0])
 
         if isinstance(scaling, dict):
             point = Point(scaling, model=self._model)
