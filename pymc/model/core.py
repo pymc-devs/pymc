@@ -1833,9 +1833,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         The method will evaluate the `fn` for each variable at a time.
         When an evaluation fails or produces a non-finite value we print:
-         1. The graph of the parameters
-         2. The value of the parameters (if those can be evaluated)
-         3. The output of `fn` (if it can be evaluated)
+
+        1. The graph of the parameters
+        2. The value of the parameters (if those can be evaluated)
+        3. The output of `fn` (if it can be evaluated)
 
         This function should help to quickly narrow down invalid parametrizations.
 
