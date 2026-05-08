@@ -367,14 +367,12 @@ class NutpieProgressBarManager(ProgressBarManager):
 
     def __enter__(self) -> Self:
         self._in_context = True
-        if self._backend is not None:
-            self._backend.__enter__()
+        self._ensure_backend()
+        self._backend.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         self._in_context = False
-        if self._backend is None:
-            return None
         return self._backend.__exit__(exc_type, exc_val, exc_tb)
 
     @property
@@ -389,7 +387,14 @@ class NutpieProgressBarManager(ProgressBarManager):
             return None
         return self._total_draws - self._draws
 
-    def _init_backend(self, total_draws: int) -> None:
+    def _ensure_backend(self) -> None:
+        """Create the backend if it doesn't exist yet.
+
+        Uses ``_draws`` as the initial total. The real total (tune + draws)
+        is set by ``_set_total_draws`` once the first callback fires.
+        """
+        if self._backend is not None:
+            return
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
             TextColumn("{task.fields[step_size]:0.3f}", table_column=Column("Step size", ratio=1)),
@@ -398,23 +403,29 @@ class NutpieProgressBarManager(ProgressBarManager):
         progress_stats = {
             stat: [0] * self._chains for stat in ("divergences", "step_size", "tree_size", "draw")
         }
-        self._total_draws = total_draws
         self._backend = self._create_backend(
-            total=total_draws * self._chains if self.combined_progress else total_draws,
+            total=self._draws * self._chains if self.combined_progress else self._draws,
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
-        if self._in_context:
-            self._backend.__enter__()
+
+    def _set_total_draws(self, total_draws: int) -> None:
+        """Update the total once nutpie reports actual tune + draws."""
+        self._total_draws = total_draws
+        total = total_draws * self._chains if self.combined_progress else total_draws
+        if isinstance(self._backend, RichProgressBackend):
+            self._backend.total = total
+            for task_id in self._backend._tasks:
+                if task_id is not None:
+                    self._backend._progress.update(task_id, total=total)
 
     def update(self, chain_progresses) -> None:
         """Consume a list of ``nutpie.ChainProgress`` objects and advance each bar."""
         if not chain_progresses:
             return
 
-        if self._backend is None:
-            self._init_backend(chain_progresses[0].total_draws)
-        assert self._backend is not None
+        if self._total_draws is None:
+            self._set_total_draws(chain_progresses[0].total_draws)
 
         if not self._show_progress:
             return
@@ -454,13 +465,11 @@ class NutpieProgressBarManager(ProgressBarManager):
         ``nutpie.sample`` returns to advance the remaining delta on each bar
         and stamp authoritative final stats (e.g. total divergences).
         """
-        # Backend may not have been created yet if no callback fired.
-        if self._backend is None:
+        if self._total_draws is None:
             total = int(trace.posterior.sizes["draw"])
             if "warmup_posterior" in trace.children:
                 total += int(trace.warmup_posterior.sizes["draw"])
-            self._init_backend(total)
-        assert self._backend is not None
+            self._set_total_draws(total)
 
         if not self._show_progress:
             return
@@ -496,6 +505,12 @@ class NutpieProgressBarManager(ProgressBarManager):
                 stats=stats,
                 is_last=True,
             )
+
+        # Force a refresh from the main thread so the final state renders
+        # reliably in Jupyter. Background-thread refreshes (Rich auto-refresh
+        # or nutpie callbacks) don't always update ipywidgets.
+        if isinstance(self._backend, RichProgressBackend):
+            self._backend._progress.refresh()
 
 
 class SMCProgressBarManager(ProgressBarManager):

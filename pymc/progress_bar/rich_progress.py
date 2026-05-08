@@ -14,6 +14,7 @@
 
 from collections.abc import Iterable
 from sys import stderr
+from time import monotonic
 from typing import Any, Self
 
 from rich.box import SIMPLE_HEAD
@@ -180,6 +181,7 @@ class RichProgressBackend:
             theme=default_progress_theme if theme is None else theme,
         )
         self._tasks: list[TaskID | None] = []
+        self._last_refresh_time = 0.0
 
     def _create_progress_bar(
         self,
@@ -214,15 +216,18 @@ class RichProgressBackend:
             ),
             *columns,
             console=Console(file=stderr, theme=theme),
+            auto_refresh=False,
             include_headers=True,
         )
 
     def __enter__(self) -> Self:
         self._progress.__enter__()
         self._initialize_tasks()
+        self._progress.refresh()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
+        self._progress.refresh()
         self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
@@ -312,6 +317,11 @@ class RichProgressBackend:
             failing=failing,
             **stats,
         )
+
+        now = monotonic()
+        if now - self._last_refresh_time >= 0.25:
+            self._progress.refresh()
+            self._last_refresh_time = now
 
 
 def RichSimpleProgress(theme: Theme | None):
