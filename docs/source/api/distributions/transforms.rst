@@ -2,7 +2,7 @@
 Transformations
 ***************
 
-.. currentmodule:: pymc.distributions.transforms
+.. module:: pymc.distributions.transforms
 
 While many distributions are defined on constrained spaces (e.g. intervals), MCMC samplers typically perform best when sampling on the unconstrained real line; this is especially true of HMC samplers. PyMC balances this through the use of transforms. A transform instance can be passed to the constructor of a random variable to tell the sampler how to move between the underlying unconstrained space where the samples are actually drawn and the transformed space constituting the support of the random variable. Transforms are not currently implemented for discrete random variables.
 

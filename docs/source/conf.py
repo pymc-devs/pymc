@@ -61,6 +61,7 @@ numpydoc_xref_ignore = {
 }
 # fmt: on
 numpydoc_xref_aliases = {
+    "Variable": ":class:`~pytensor.graph.basic.Variable`",
     "TensorVariable": ":class:`~pytensor.tensor.TensorVariable`",
     "RandomVariable": ":class:`~pytensor.tensor.random.RandomVariable`",
     "ndarray": ":class:`~numpy.ndarray`",

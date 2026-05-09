@@ -584,20 +584,37 @@ class Model(WithMemoization, metaclass=ContextMeta):
         sum: bool = True,
         **compile_kwargs,
     ) -> PointFunc:
-        """Compiled log probability density function.
-
-        The function expects as input a dictionary with the same structure as self.initial_point()
+        """Compiled joint log-probability density of the model or joint log-probability contributions.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
-        sum : bool
-            Whether to sum all logp terms or return elemwise logp for each variable.
-            Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Random variables or potential terms whose contribution to logp is to be included.
+            If None, use all basic (free or observed) variables and potentials defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
+        sum : bool, default True
+            If True, return the sum of the relevant logp terms as a single Variable.
+            If False, return a list of logp terms corresponding to `vars`.
+        **compile_kwargs : dict
+            Extra arguments passed to :meth:`self.compile_fn() <Model.compile_fn>`.
+
+        Returns
+        -------
+        PointFunc
+            The function expects as input a dictionary with the same structure as
+            :meth:`self.initial_point() <Model.initial_point>`.
+
+        See Also
+        --------
+        :py:meth:`logp` :
+            log-probability density as a Variable (in a symbolic form).
+        :py:meth:`compile_dlogp` :
+            gradient of log-probability density as a compiled function.
+        :py:meth:`compile_d2logp` :
+            Hessian of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
         return self.compile_fn(
@@ -612,18 +629,34 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian: bool = True,
         **compile_kwargs,
     ) -> PointFunc:
-        """Compiled log probability density gradient function.
-
-        The function expects as input a dictionary with the same structure as self.initial_point()
-
+        """Compiled gradient of the joint log-probability density of the model.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Compute the gradient with respect to values of these variables.
+            If None, use all continuous free (unobserved) variables defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
+        **compile_kwargs : dict
+            Extra arguments passed to :meth:`self.compile_fn() <Model.compile_fn>`.
+
+        Returns
+        -------
+        PointFunc
+            The function expects as input a dictionary with the same structure as
+            :meth:`self.initial_point() <Model.initial_point>`.
+
+        See Also
+        --------
+        :py:meth:`dlogp` :
+            gradient of log-probability density as a Variable (in a symbolic form).
+        :py:meth:`compile_logp` :
+            log-probability density as a compiled function.
+        :py:meth:`compile_d2logp` :
+            Hessian of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
         return self.compile_fn(
@@ -639,17 +672,36 @@ class Model(WithMemoization, metaclass=ContextMeta):
         negate_output=True,
         **compile_kwargs,
     ) -> PointFunc:
-        """Compiled log probability density hessian function.
-
-        The function expects as input a dictionary with the same structure as self.initial_point()
+        """Compiled Hessian of the joint log-probability density of the model.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Compute the gradient with respect to values of these variables.
+            If None, use all continuous free (unobserved) variables defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
+        negate_output : bool, default True
+            If True, change the sign of the output and return the opposite of the Hessian.
+        **compile_kwargs : dict
+            Extra arguments passed to :meth:`self.compile_fn() <Model.compile_fn>`.
+
+        Returns
+        -------
+        PointFunc
+            The function expects as input a dictionary with the same structure as
+            :meth:`self.initial_point() <Model.initial_point>`.
+
+        See Also
+        --------
+        :py:meth:`d2logp` :
+            Hessian of log-probability density as a Variable (in a symbolic form).
+        :py:meth:`compile_logp` :
+            log-probability density as a compiled function.
+        :py:meth:`compile_dlogp` :
+            gradient of log-probability density as a compiled function.
         """
         compile_kwargs.setdefault("on_unused_input", "ignore")
         return self.compile_fn(
@@ -664,22 +716,46 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian: bool = True,
         sum: bool = True,
     ) -> Variable | list[Variable]:
-        """Elemwise log-probability of the model.
+        """Joint log-probability density of the model or joint log-probability contributions.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
-        sum : bool
-            Whether to sum all logp terms or return elemwise logp for each variable.
-            Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Random variables or potential terms whose contribution to logp is to be included.
+            If None, use all basic (free or observed) variables and potentials defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
+        sum : bool, default True
+            If True, return the sum of the relevant logp terms as a single Variable.
+            If False, return a list of logp terms corresponding to `vars`.
 
         Returns
         -------
-        Logp graph(s)
+        Variable or list of Variable
+
+        See Also
+        --------
+        :py:meth:`compile_logp` :
+            log-probability density as a compiled function.
+        :py:meth:`dlogp` :
+            gradient of log-probability density as a Variable (in a symbolic form).
+        :py:meth:`d2logp` :
+            Hessian of log-probability density as a Variable (in a symbolic form).
+        :py:meth:`logp_dlogp_function` :
+            compile logp and its gradient as a single function.
+        :py:attr:`varlogp` :
+            convenience property for logp of all free (unobserved) RVs.
+        :py:attr:`varlogp_nojac` :
+            convenience property for logp of all free (unobserved) RVs without transformation
+            corrections.
+        :py:attr:`observedlogp` :
+            convenience property for logp of all observed RVs.
+        :py:attr:`potentiallogp`.
+            convenience property for all additional logp terms (potentials).
+        :py:attr:`point_logps` :
+            convenience property for numerical evaluation of local logps at a point.
         """
         varlist: list[TensorVariable]
         if vars is None:
@@ -744,19 +820,30 @@ class Model(WithMemoization, metaclass=ContextMeta):
         vars: Variable | Sequence[Variable] | None = None,
         jacobian: bool = True,
     ) -> Variable:
-        """Gradient of the models log-probability w.r.t. ``vars``.
+        """Gradient of the joint log-probability density of the model.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Compute the gradient with respect to values of these variables.
+            If None, use all continuous free (unobserved) variables defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
 
         Returns
         -------
-        dlogp graph
+        Variable
+
+        See Also
+        --------
+        :py:meth:`compile_dlogp` :
+            gradient of log-probability density as a compiled function.
+        :py:meth:`logp` :
+            log-probability density as a Variable (in a symbolic form).
+        :py:meth:`d2logp` :
+            Hessian of log-probability density as a Variable (in a symbolic form).
         """
         if vars is None:
             value_vars = self.continuous_value_vars
@@ -784,19 +871,32 @@ class Model(WithMemoization, metaclass=ContextMeta):
         jacobian: bool = True,
         negate_output=True,
     ) -> Variable:
-        """Hessian of the models log-probability w.r.t. ``vars``.
+        """Hessian of the joint log-probability density of the model.
 
         Parameters
         ----------
-        vars : list of random variables or potential terms, optional
-            Compute the gradient with respect to those variables. If None, use all
-            free and observed random variables, as well as potential terms in model.
-        jacobian : bool
-            Whether to include jacobian terms in logprob graph. Defaults to True.
+        vars : Variable, sequence of Variable or None, default None
+            Compute the gradient with respect to values of these variables.
+            If None, use all continuous free (unobserved) variables defined in the model.
+        jacobian : bool, default True
+            If True, add Jacobian contributions associated with automatic variable transformations,
+            so that the result is the true density of transformed random variables.
+            See :py:mod:`pymc.distributions.transforms` for details.
+        negate_output : bool, default True
+            If True, change the sign of the output and return the opposite of the Hessian.
 
         Returns
         -------
-        d²logp graph
+        Variable
+
+        See Also
+        --------
+        :py:meth:`compile_d2logp` :
+            Hessian of log-probability density as a compiled function.
+        :py:meth:`logp` :
+            log-probability density as a Variable (in a symbolic form).
+        :py:meth:`dlogp` :
+            gradient of log-probability density as a Variable (in a symbolic form).
         """
         if vars is None:
             value_vars = self.continuous_value_vars
