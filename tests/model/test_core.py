@@ -687,6 +687,45 @@ def test_make_obs_var():
     del fake_model.named_vars[fake_distribution.name]
 
 
+@pytest.mark.parametrize(
+    "dist_cls,dist_kwargs",
+    [
+        (pm.Binomial, {"n": 5, "p": 0.5}),
+        (pm.Poisson, {"mu": 3.0}),
+    ],
+)
+def test_discrete_float_observed_raises(dist_cls, dist_kwargs):
+    """Non-integer float observed data passed to discrete distributions should raise.
+
+    Regression test for https://github.com/pymc-devs/pymc/issues/8282.
+    """
+    with pm.Model():
+        with pytest.raises(TypeError, match="non-integer values"):
+            dist_cls("bad", observed=np.array([0.11, 1.5, 2.89], dtype=np.float32), **dist_kwargs)
+
+
+def test_discrete_float_observed_exact_ints_allowed():
+    """Float arrays containing exact integer values should be accepted by discrete dists.
+
+    Regression test for https://github.com/pymc-devs/pymc/issues/8282.
+    """
+    with pm.Model():
+        # Common pattern: floatX zeros/ones passed to Bernoulli
+        pm.Bernoulli("b", p=0.5, observed=np.array([0.0, 1.0, 0.0], dtype=np.float64))
+        # Integer-valued data in native int dtype
+        pm.Binomial("x", n=5, p=0.5, observed=np.array([0, 1, 2], dtype=np.int64))
+
+
+def test_discrete_float_observed_scalar():
+    """Scalar non-integer float to discrete should raise.
+
+    Regression test for https://github.com/pymc-devs/pymc/issues/8282.
+    """
+    with pm.Model():
+        with pytest.raises(TypeError, match="non-integer values"):
+            pm.Poisson("bad", mu=3.0, observed=np.float64(1.5))
+
+
 def test_initial_point():
     with pm.Model() as model:
         a = pm.Uniform("a")
