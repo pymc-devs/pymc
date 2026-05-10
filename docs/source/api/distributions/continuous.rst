@@ -41,3 +41,4 @@ Continuous
    VonMises
    Wald
    Weibull
+   ZeroOneInflatedBeta

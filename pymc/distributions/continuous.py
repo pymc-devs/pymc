@@ -1442,14 +1442,12 @@ class ZeroOneInflatedBeta(UnitContinuous):
         return mean
 
     def logp(value, zoi, coi, alpha, beta):
-        # Beta log-probability
         logp_beta = (
             pt.switch(pt.eq(alpha, 1.0), 0.0, (alpha - 1.0) * pt.log(value))
             + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-value))
             - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
         )
 
-        # Cases
         res = pt.switch(
             pt.eq(value, 0),
             pt.log(zoi) + pt.log1p(-coi),
@@ -1460,7 +1458,6 @@ class ZeroOneInflatedBeta(UnitContinuous):
             ),
         )
 
-        # Guard against values outside [0, 1]
         res = pt.switch(
             pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)),
             res,
@@ -1474,7 +1471,36 @@ class ZeroOneInflatedBeta(UnitContinuous):
             coi <= 1,
             alpha > 0,
             beta > 0,
-            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+            msg = "0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+        )
+    def logcdf(value, zoi, coi, alpha, beta):
+        beta_logcdf = pt.log(pt.betainc(alpha, beta, value))
+
+        res = pt.switch(
+            pt.lt(value, 0),
+            -np.inf,
+            pt.switch(
+                pt.eq(value, 0),
+                pt.log(zoi) + pt.log1p(-coi),
+                pt.switch(
+                    pt.lt(value, 1),
+                    pt.log(
+                        zoi * (1 - coi) + (1 - zoi) * pt.exp(beta_logcdf)
+                    ),
+                    0.0,
+                ),
+            ),
+        )
+
+        return check_parameters(
+            res,
+            zoi >= 0,
+            zoi <= 1,
+            coi >= 0,
+            coi <= 1,
+            alpha > 0,
+            beta > 0,
+            msg = "0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
         )
 
 
