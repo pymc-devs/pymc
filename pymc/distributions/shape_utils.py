@@ -46,6 +46,16 @@ from pymc.exceptions import ShapeError
 from pymc.pytensorf import PotentialShapeType
 
 
+def build_icar_covariance(W, tau):
+    D = np.diag(W.sum(axis=1))
+    Q = tau*(D-W)
+    vals, vecs = np.linalg.eigh(Q)
+    tol = np.max(vals)*1e-12
+    inv_vals = np.where(vals > tol, 1/vals, 0.0)
+    cov = (vecs*inv_vals) @ vecs.T
+    cov = 0.5*(cov+cov.T)
+    return cov
+
 def to_tuple(shape):
     """Convert ints, arrays, and Nones to tuples.
 
