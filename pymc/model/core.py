@@ -1890,15 +1890,32 @@ class Model(WithMemoization, metaclass=ContextMeta):
         print_(f"point={point}\n")
 
         rvs_to_check = list(self.basic_RVs)
-        if fn in ("logp", "dlogp"):
-            rvs_to_check += [self.replace_rvs_by_values(p) for p in self.potentials]
+        replaced_potentials: list = []
+        if fn == "logp":
+            # The replaced potential expression IS the logp contribution; add it directly.
+            # Potentials are skipped for dlogp because they have no associated value variable.
+            replaced_potentials = [self.replace_rvs_by_values([p])[0] for p in self.potentials]
+            rvs_to_check += replaced_potentials
 
         found_problem = False
         for rv in rvs_to_check:
+            is_potential = rv in replaced_potentials
             if fn == "logp":
-                rv_fn = pytensor.function(
-                    self.value_vars, self.logp(vars=rv, sum=False)[0], on_unused_input="ignore"
-                )
+                if is_potential:
+                    # Use the replaced potential expression directly to avoid calling
+                    # self.logp(), which only accepts the original potential objects.
+                    try:
+                        rv_fn = pytensor.function(self.value_vars, rv, on_unused_input="ignore")
+                    except Exception as exc:
+                        found_problem = True
+                        print_(f"The potential {rv} could not be compiled: {first_line(exc)}\n")
+                        if verbose:
+                            print_(exc)
+                        continue
+                else:
+                    rv_fn = pytensor.function(
+                        self.value_vars, self.logp(vars=rv, sum=False)[0], on_unused_input="ignore"
+                    )
             elif fn == "dlogp":
                 rv_fn = pytensor.function(
                     self.value_vars, self.dlogp(vars=rv), on_unused_input="ignore"
@@ -1940,8 +1957,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 if not np.all(np.isfinite(rv_fn_eval)):
                     found_problem = True
                     debug_parameters(rv)
-                    if fn == "random" or rv is self.potentials:
-                        print_("This combination seems able to generate non-finite values")
+                    if fn == "random" or is_potential:
+                        print_("This combination seems able to generate non-finite values\n")
                     else:
                         # Find which values are associated with non-finite evaluation
                         values = self.rvs_to_values[rv]
