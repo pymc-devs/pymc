@@ -1218,11 +1218,15 @@ class OrderedLogistic:
     R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
+
+    .. note::
+        The observed values are expected to be 0-indexed, i.e., they should
+        range from 0 to K-1 where K is the number of categories.
 
     .. math::
 
@@ -1317,11 +1321,15 @@ class OrderedProbit:
     Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
+
+    .. note::
+        The observed values are expected to be 0-indexed, i.e., they should
+        range from 0 to K-1 where K is the number of categories.
 
     In order to stabilize the computation, log-likelihood is computed
     in log space using the scaled error function `erfcx`.
