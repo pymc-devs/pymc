@@ -144,7 +144,7 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         print(rv_logp.eval({value: 0.9, mu: 0.0}))  # -1.32393853
 
         # Compile a function for repeated evaluations
-        rv_logp_fn = pm.compile_pymc([value, mu], rv_logp)
+        rv_logp_fn = pm.compile([value, mu], rv_logp)
         print(rv_logp_fn(value=0.9, mu=0.0))  # -1.32393853
 
 
@@ -166,7 +166,7 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         print(exp_rv_logp.eval({value: 0.9, mu: 0.0}))  # -0.81912844
 
         # Compile a function for repeated evaluations
-        exp_rv_logp_fn = pm.compile_pymc([value, mu], exp_rv_logp)
+        exp_rv_logp_fn = pm.compile([value, mu], exp_rv_logp)
         print(exp_rv_logp_fn(value=0.9, mu=0.0))  # -0.81912844
 
 
@@ -244,7 +244,7 @@ def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) 
         print(rv_logcdf.eval({value: 0.9, mu: 0.0}))  # -0.2034146
 
         # Compile a function for repeated evaluations
-        rv_logcdf_fn = pm.compile_pymc([value, mu], rv_logcdf)
+        rv_logcdf_fn = pm.compile([value, mu], rv_logcdf)
         print(rv_logcdf_fn(value=0.9, mu=0.0))  # -0.2034146
 
 
@@ -266,7 +266,7 @@ def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) 
         print(exp_rv_logcdf.eval({value: 0.9, mu: 0.0}))  # -0.78078813
 
         # Compile a function for repeated evaluations
-        exp_rv_logcdf_fn = pm.compile_pymc([value, mu], exp_rv_logcdf)
+        exp_rv_logcdf_fn = pm.compile([value, mu], exp_rv_logcdf)
         print(exp_rv_logcdf_fn(value=0.9, mu=0.0))  # -0.78078813
 
 
@@ -349,7 +349,7 @@ def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs)
         print(rv_logccdf.eval({value: 0.9, mu: 0.0}))  # -1.5272506
 
         # Compile a function for repeated evaluations
-        rv_logccdf_fn = pm.compile_pymc([value, mu], rv_logccdf)
+        rv_logccdf_fn = pm.compile([value, mu], rv_logccdf)
         print(rv_logccdf_fn(value=0.9, mu=0.0))  # -1.5272506
 
     """
@@ -410,7 +410,7 @@ def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         print(rv_icdf.eval({value: 0.9, mu: 0.0}))  # 1.28155157
 
         # Compile a function for repeated evaluations
-        rv_icdf_fn = pm.compile_pymc([value, mu], rv_icdf)
+        rv_icdf_fn = pm.compile([value, mu], rv_icdf)
         print(rv_icdf_fn(value=0.9, mu=0.0))  # 1.28155157
 
 
@@ -432,7 +432,7 @@ def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         print(exp_rv_icdf.eval({value: 0.9, mu: 0.0}))  # 3.60222448
 
         # Compile a function for repeated evaluations
-        exp_rv_icdf_fn = pm.compile_pymc([value, mu], exp_rv_icdf)
+        exp_rv_icdf_fn = pm.compile([value, mu], exp_rv_icdf)
         print(exp_rv_icdf_fn(value=0.9, mu=0.0))  # 3.60222448
 
     """

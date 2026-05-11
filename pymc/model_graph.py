@@ -203,14 +203,25 @@ DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
 def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTypeFormatterMapping:
     node_formatters = {**DEFAULT_NODE_FORMATTERS, **node_formatters}
 
-    unknown_keys = set(node_formatters.keys()) - set(NodeType)
+    # Allow both NodeType enum members and their string values
+    valid_keys = set(NodeType) | {node_type.value for node_type in NodeType}
+    unknown_keys = set(node_formatters.keys()) - valid_keys
     if unknown_keys:
         raise ValueError(
             f"Node formatters must be of type NodeType. Found: {list(unknown_keys)}."
             f" Please use one of {[node_type.value for node_type in NodeType]}."
         )
 
-    return node_formatters
+    # Convert string keys to enum keys for consistent handling
+    normalized_formatters = {}
+    for key, formatter in node_formatters.items():
+        if isinstance(key, str):
+            # Convert string to enum member
+            normalized_formatters[NodeType(key)] = formatter
+        else:
+            normalized_formatters[key] = formatter
+
+    return normalized_formatters
 
 
 AddNode = Callable[[str, GraphvizNodeKwargs], None]

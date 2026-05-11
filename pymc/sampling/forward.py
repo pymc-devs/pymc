@@ -294,7 +294,7 @@ def draw(
     random_seed : int, RandomState or numpy_Generator, optional
         Seed for the random number generator.
     **kwargs : dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
 
     Returns
     -------
@@ -410,7 +410,7 @@ def sample_prior_predictive(
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
     samples : int
         Number of samples from the prior predictive to generate. Deprecated in favor of `draws`.
 
@@ -580,7 +580,7 @@ def sample_posterior_predictive(
         Keyword arguments for :func:`pymc.to_inference_data` if ``predictions=False`` or to
         :func:`pymc.predictions_to_inference_data` otherwise.
     compile_kwargs: dict, optional
-        Keyword arguments for :func:`pymc.pytensorf.compile_pymc`.
+        Keyword arguments for :func:`pymc.pytensorf.compile`.
 
     Returns
     -------

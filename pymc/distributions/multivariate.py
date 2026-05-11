@@ -998,8 +998,17 @@ class Wishart(Continuous):
 
     Notes
     -----
-    This distribution is unusable in a PyMC model. You should instead
-    use LKJCholeskyCov or LKJCorr.
+    The Wishart distribution is generally unusable as a prior distribution for
+    MCMC sampling. The probability of sampling a symmetric positive definite
+    matrix is effectively zero, since MCMC proposals in unconstrained space
+    almost never land exactly on the SPD manifold.
+
+    For modeling covariance matrices, you should instead use
+    :class:`LKJCholeskyCov` or :class:`LKJCorr`.
+
+    However, the Wishart distribution may be used as a likelihood with
+    ``observed`` in some cases, where the distribution is evaluated at
+    fixed observed values rather than sampled during MCMC.
     """
 
     rv_op = wishart

@@ -1640,7 +1640,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             Whether to wrap the compiled function in a PointFunc, which takes a Point
             dictionary with model variable names and values as input.
         Other keyword arguments :
-            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile_pymc`.
+            Any other keyword argument is sent to :py:func:`pymc.pytensorf.compile`.
 
         Returns
         -------

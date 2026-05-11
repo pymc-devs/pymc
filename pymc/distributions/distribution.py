@@ -405,7 +405,7 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
 
         Returns a dictionary with the symbolic expressions required for correct updating
         of random state input variables repeated function evaluations. This is used by
-        `pytensorf.compile_pymc`.
+        `pytensorf.compile`.
         """
         return collect_default_updates_inner_fgraph(node)
 
