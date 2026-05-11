@@ -64,3 +64,61 @@ def test_sum_of_normals_logprob(axis):
         sum_logp.eval({x_sum_vv: test_val}),
         ref_logp.eval({ref_vv: test_val}),
     )
+
+
+@pytest.mark.parametrize("axis", (None, 0))
+def test_add_of_normals_logprob(axis):
+    mu1 = pt.constant([[1.0, 2.0, 3.0], [0.5, 1.5, 2.5]])
+    sigma1 = pt.constant([[1.0, 2.0, 3.0], [1.5, 2.5, 3.5]])
+    mu2 = pt.constant([[0.5, 1.0, 1.5], [2.0, 2.5, 3.0]])
+    sigma2 = pt.constant([[0.5, 1.0, 1.5], [1.0, 1.5, 2.0]])
+
+    x1_rv = pt.random.normal(mu1, sigma1, name="x1")
+    x2_rv = pt.random.normal(mu2, sigma2, name="x2")
+    x_add = pt.add(x1_rv, x2_rv)
+    if axis is not None:
+        x_add = pt.sum(x_add, axis=axis)
+    x_add_vv = pt.scalar("x_add")
+
+    add_logp = logp(x_add, x_add_vv)
+
+    ref_mu = pt.add(mu1, mu2)
+    ref_sigma = pt.sqrt(pt.square(sigma1) + pt.square(sigma2))
+    if axis is not None:
+        ref_mu = pt.sum(ref_mu, axis=axis)
+        ref_sigma = pt.sqrt(pt.sum(pt.square(ref_sigma), axis=axis))
+    ref_rv = pt.random.normal(ref_mu, ref_sigma, name="ref")
+    ref_vv = pt.scalar("ref_vv")
+    ref_logp = logp(ref_rv, ref_vv)
+
+    test_val = 0.5
+    np.testing.assert_allclose(
+        add_logp.eval({x_add_vv: test_val}),
+        ref_logp.eval({ref_vv: test_val}),
+    )
+
+
+def test_sub_of_normals_logprob():
+    mu1 = pt.constant([1.0, 2.0, 3.0])
+    sigma1 = pt.constant([1.0, 2.0, 3.0])
+    mu2 = pt.constant([0.5, 1.0, 1.5])
+    sigma2 = pt.constant([0.5, 1.0, 1.5])
+
+    x1_rv = pt.random.normal(mu1, sigma1, name="x1")
+    x2_rv = pt.random.normal(mu2, sigma2, name="x2")
+    x_sub = pt.sub(x1_rv, x2_rv)
+    x_sub_vv = pt.scalar("x_sub")
+
+    sub_logp = logp(x_sub, x_sub_vv)
+
+    ref_mu = mu1 - mu2
+    ref_sigma = pt.sqrt(pt.square(sigma1) + pt.square(sigma2))
+    ref_rv = pt.random.normal(ref_mu, ref_sigma, name="ref")
+    ref_vv = pt.scalar("ref_vv")
+    ref_logp = logp(ref_rv, ref_vv)
+
+    test_val = 0.5
+    np.testing.assert_allclose(
+        sub_logp.eval({x_sub_vv: test_val}),
+        ref_logp.eval({ref_vv: test_val}),
+    )
