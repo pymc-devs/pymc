@@ -25,6 +25,7 @@ dependencies:
 - myst-nb<=1.0.0
 - numpydoc
 - polyagamma
+- preliz>=0.20.0
 - pre-commit>=2.8.0
 - pymc-sphinx-theme>=0.16
 - sphinx-copybutton
