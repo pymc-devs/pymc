@@ -174,9 +174,7 @@ def circ_cont_transform(op, rv):
 @_default_transform.register(BoundedContinuous)
 def bounded_cont_transform(op, rv, bound_args_indices=None):
     if bound_args_indices is None:
-        raise ValueError(
-            f"Must specify bound_args_indices for {op} bounded distribution"
-        )
+        raise ValueError(f"Must specify bound_args_indices for {op} bounded distribution")
 
     def transform_params(*args):
         lower, upper = None, None
@@ -446,9 +444,7 @@ class HalfFlat(PositiveContinuous):
         return pt.switch(pt.lt(value, 0), -np.inf, pt.zeros_like(value))
 
     def logcdf(value):
-        return pt.switch(
-            pt.lt(value, np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, -np.inf)
-        )
+        return pt.switch(pt.lt(value, np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, -np.inf))
 
 
 class Normal(Continuous):
@@ -533,11 +529,7 @@ class Normal(Continuous):
         return mu
 
     def logp(value, mu, sigma):
-        res = (
-            -0.5 * pt.pow((value - mu) / sigma, 2)
-            - pt.log(pt.sqrt(2.0 * np.pi))
-            - pt.log(sigma)
-        )
+        res = -0.5 * pt.pow((value - mu) / sigma, 2) - pt.log(pt.sqrt(2.0 * np.pi)) - pt.log(sigma)
         return check_parameters(
             res,
             sigma > 0,
@@ -694,12 +686,8 @@ class TruncatedNormal(BoundedContinuous):
         sigma = pt.as_tensor_variable(sigma)
         mu = pt.as_tensor_variable(mu)
 
-        lower = (
-            pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
-        )
-        upper = (
-            pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
-        )
+        lower = pt.as_tensor_variable(lower) if lower is not None else pt.constant(-np.inf)
+        upper = pt.as_tensor_variable(upper) if upper is not None else pt.constant(np.inf)
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
     def support_point(rv, size, mu, sigma, lower, upper):
@@ -731,9 +719,7 @@ class TruncatedNormal(BoundedContinuous):
         is_lower_bounded = not (
             isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
         )
-        is_upper_bounded = not (
-            isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value))
-        )
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
         if is_lower_bounded and is_upper_bounded:
             norm = log_diff_normal_cdf(mu, sigma, upper, lower)
@@ -769,9 +755,7 @@ class TruncatedNormal(BoundedContinuous):
         is_lower_bounded = not (
             isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
         )
-        is_upper_bounded = not (
-            isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value))
-        )
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
         if is_lower_bounded:
             logcdf = pt.switch(value < lower, -np.inf, logcdf)
@@ -882,11 +866,7 @@ class HalfNormal(PositiveContinuous):
         return support_point
 
     def logp(value, loc, sigma):
-        res = (
-            -0.5 * pt.pow((value - loc) / sigma, 2)
-            + pt.log(pt.sqrt(2.0 / np.pi))
-            - pt.log(sigma)
-        )
+        res = -0.5 * pt.pow((value - loc) / sigma, 2) + pt.log(pt.sqrt(2.0 / np.pi)) - pt.log(sigma)
         res = pt.switch(pt.ge(value, loc), res, -np.inf)
         return check_parameters(
             res,
@@ -1232,9 +1212,7 @@ class Beta(UnitContinuous):
             + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-value))
             - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
         )
-        res = pt.switch(
-            pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)), res, -np.inf
-        )
+        res = pt.switch(pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)), res, -np.inf)
         return check_parameters(
             res,
             alpha > 0,
@@ -1285,13 +1263,11 @@ class ZeroOneInflatedBetaRV(SymbolicRandomVariable):
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
         if rv_size_is_none(size):
-            size = implicit_size_from_params(
-                zoi, coi, alpha, beta_, ndims_params=cls.ndims_params
-            )
+            size = implicit_size_from_params(zoi, coi, alpha, beta_, ndims_params=cls.ndims_params)
 
-        next_rng, u = uniform(size=size, rng=rng).owner.outputs
+        next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
 
-        next_rng, beta_draws = beta(alpha, beta_, size=size, rng=next_rng).owner.outputs
+        next_rng, beta_draws = beta(alpha, beta_, size=size, rng=next_rng, return_next_rng=True)
 
         draws = pt.switch(
             pt.lt(u, zoi * (1 - coi)),
@@ -1349,7 +1325,7 @@ class ZeroOneInflatedBeta(UnitContinuous):
         rng = np.random.default_rng(100)
         u = rng.random(n)
         alpha = true_mu * true_kappa
-        beta  = (1 - true_mu) * true_kappa   
+        beta  = (1 - true_mu) * true_kappa
         beta_data = rng.beta(alpha, beta, n)
         data = np.where(u < true_zoi * (1 - true_coi), 0.0,
                np.where(u < true_zoi, 1.0,
@@ -1411,11 +1387,7 @@ class ZeroOneInflatedBeta(UnitContinuous):
 
     @classmethod
     def dist(cls, zoi, coi, mu=None, kappa=None, alpha=None, beta=None, **kwargs):
-        if (
-            (alpha is not None)
-            and (beta is not None)
-            and (mu is not None or kappa is not None)
-        ):
+        if (alpha is not None) and (beta is not None) and (mu is not None or kappa is not None):
             warnings.warn(
                 "Both parametrizations provided. Proceeding with alpha and beta.",
                 UserWarning,
@@ -1471,8 +1443,9 @@ class ZeroOneInflatedBeta(UnitContinuous):
             coi <= 1,
             alpha > 0,
             beta > 0,
-            msg = "0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
         )
+
     def logcdf(value, zoi, coi, alpha, beta):
         beta_logcdf = pt.log(pt.betainc(alpha, beta, value))
 
@@ -1484,9 +1457,7 @@ class ZeroOneInflatedBeta(UnitContinuous):
                 pt.log(zoi) + pt.log1p(-coi),
                 pt.switch(
                     pt.lt(value, 1),
-                    pt.log(
-                        zoi * (1 - coi) + (1 - zoi) * pt.exp(beta_logcdf)
-                    ),
+                    pt.log(zoi * (1 - coi) + (1 - zoi) * pt.exp(beta_logcdf)),
                     0.0,
                 ),
             ),
@@ -1500,7 +1471,7 @@ class ZeroOneInflatedBeta(UnitContinuous):
             coi <= 1,
             alpha > 0,
             beta > 0,
-            msg = "0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
         )
 
 
@@ -1580,23 +1551,13 @@ class Kumaraswamy(UnitContinuous):
         return super().dist([a, b], *args, **kwargs)
 
     def support_point(rv, size, a, b):
-        mean = pt.exp(
-            pt.log(b)
-            + pt.gammaln(1 + 1 / a)
-            + pt.gammaln(b)
-            - pt.gammaln(1 + 1 / a + b)
-        )
+        mean = pt.exp(pt.log(b) + pt.gammaln(1 + 1 / a) + pt.gammaln(b) - pt.gammaln(1 + 1 / a + b))
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
         return mean
 
     def logp(value, a, b):
-        res = (
-            pt.log(a)
-            + pt.log(b)
-            + (a - 1) * pt.log(value)
-            + (b - 1) * pt.log(1 - value**a)
-        )
+        res = pt.log(a) + pt.log(b) + (a - 1) * pt.log(value) + (b - 1) * pt.log(1 - value**a)
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, 1)),
             -np.inf,
@@ -1628,9 +1589,7 @@ class Kumaraswamy(UnitContinuous):
         )
 
     def icdf(value, a, b):
-        res = pt.exp(
-            pt.reciprocal(a) * pt.log1mexp(pt.reciprocal(b) * pt.log1p(-value))
-        )
+        res = pt.exp(pt.reciprocal(a) * pt.log1mexp(pt.reciprocal(b) * pt.log1p(-value)))
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -1688,9 +1647,7 @@ class Exponential(PositiveContinuous):
         if lam is None and scale is None:
             scale = 1.0
         elif lam is not None and scale is not None:
-            raise ValueError(
-                "Incompatible parametrization. Can't specify both lam and scale."
-            )
+            raise ValueError("Incompatible parametrization. Can't specify both lam and scale.")
         elif lam is not None:
             scale = pt.reciprocal(lam)
 
@@ -1846,9 +1803,7 @@ class AsymmetricLaplaceRV(SymbolicRandomVariable):
         size = normalize_size_param(size)
 
         if rv_size_is_none(size):
-            size = implicit_size_from_params(
-                b, kappa, mu, ndims_params=cls.ndims_params
-            )
+            size = implicit_size_from_params(b, kappa, mu, ndims_params=cls.ndims_params)
 
         next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
         switch = kappa**2 / (1 + kappa**2)
@@ -2201,10 +2156,8 @@ class StudentT(Continuous):
     def icdf(value, nu, mu, sigma):
         res = pt.switch(
             pt.lt(value, 0.5),
-            -pt.sqrt(nu)
-            * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * value)) - 1.0),
-            pt.sqrt(nu)
-            * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * (1 - value))) - 1.0),
+            -pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * value)) - 1.0),
+            pt.sqrt(nu) * pt.sqrt((1.0 / betaincinv(nu * 0.5, 0.5, 2.0 * (1 - value))) - 1.0),
         )
         res = mu + res * sigma
         res = check_icdf_value(res, value)
@@ -2225,9 +2178,7 @@ class SkewStudentTRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, a, b, mu, sigma, size=None) -> np.ndarray:
         return np.asarray(
-            stats.jf_skew_t.rvs(
-                a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng
-            )
+            stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
         )
 
 
@@ -2521,9 +2472,7 @@ class Cauchy(Continuous):
         return alpha
 
     def logp(value, alpha, beta):
-        res = (
-            -pt.log(np.pi) - pt.log(beta) - pt.log1p(pt.pow((value - alpha) / beta, 2))
-        )
+        res = -pt.log(np.pi) - pt.log(beta) - pt.log1p(pt.pow((value - alpha) / beta, 2))
         return check_parameters(
             res,
             beta > 0,
@@ -2749,12 +2698,7 @@ class Gamma(PositiveContinuous):
 
     def logp(value, alpha, scale):
         beta = pt.reciprocal(scale)
-        res = (
-            -pt.gammaln(alpha)
-            + logpow(beta, alpha)
-            - beta * value
-            + logpow(value, alpha - 1)
-        )
+        res = -pt.gammaln(alpha) + logpow(beta, alpha) - beta * value + logpow(value, alpha - 1)
         res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
@@ -2872,12 +2816,7 @@ class InverseGamma(PositiveContinuous):
         return alpha, beta
 
     def logp(value, alpha, beta):
-        res = (
-            -pt.gammaln(alpha)
-            + logpow(beta, alpha)
-            - beta / value
-            + logpow(value, -alpha - 1)
-        )
+        res = -pt.gammaln(alpha) + logpow(beta, alpha) - beta / value + logpow(value, -alpha - 1)
         res = pt.switch(pt.ge(value, 0.0), res, -np.inf)
         return check_parameters(
             res,
@@ -3104,9 +3043,7 @@ class HalfStudentTRV(SymbolicRandomVariable):
         next_rng, t_draws = t(df=nu, scale=sigma, size=size, rng=rng, return_next_rng=True)
         draws = pt.abs(t_draws)
 
-        return cls(inputs=[rng, size, nu, sigma], outputs=[next_rng, draws])(
-            rng, size, nu, sigma
-        )
+        return cls(inputs=[rng, size, nu, sigma], outputs=[next_rng, draws])(rng, size, nu, sigma)
 
 
 class HalfStudentT(PositiveContinuous):
@@ -3226,9 +3163,7 @@ class ExGaussianRV(SymbolicRandomVariable):
         size = normalize_size_param(size)
 
         if rv_size_is_none(size):
-            size = implicit_size_from_params(
-                mu, sigma, nu, ndims_params=cls.ndims_params
-            )
+            size = implicit_size_from_params(mu, sigma, nu, ndims_params=cls.ndims_params)
 
         next_rng, normal_draws = normal(
             loc=mu, scale=sigma, size=size, rng=rng, return_next_rng=True
@@ -3428,9 +3363,7 @@ class VonMises(CircularContinuous):
 
     def logp(value, mu, kappa):
         res = kappa * pt.cos(mu - value) - pt.log(2 * np.pi) - pt.log(pt.i0(kappa))
-        res = pt.switch(
-            pt.bitwise_and(pt.ge(value, -np.pi), pt.le(value, np.pi)), res, -np.inf
-        )
+        res = pt.switch(pt.bitwise_and(pt.ge(value, -np.pi), pt.le(value, np.pi)), res, -np.inf)
         return check_parameters(
             res,
             kappa > 0,
@@ -3447,9 +3380,7 @@ class SkewNormalRV(RandomVariable):
     @classmethod
     def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
         return np.asarray(
-            stats.skewnorm.rvs(
-                a=alpha, loc=mu, scale=sigma, size=size, random_state=rng
-            )
+            stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
         )
 
 
@@ -3630,9 +3561,7 @@ class Triangular(BoundedContinuous):
             pt.log(2 * (value - lower) / ((upper - lower) * (c - lower))),
             pt.log(2 * (upper - value) / ((upper - lower) * (upper - c))),
         )
-        res = pt.switch(
-            pt.bitwise_and(pt.le(lower, value), pt.le(value, upper)), res, -np.inf
-        )
+        res = pt.switch(pt.bitwise_and(pt.le(lower, value), pt.le(value, upper)), res, -np.inf)
         return check_parameters(
             res,
             lower <= c,
@@ -4068,11 +3997,7 @@ class LogitNormal:
 
 
 def _interpolated_argcdf(p, pdf, cdf, x):
-    if (
-        np.prod(cdf.shape[:-1]) != 1
-        or np.prod(pdf.shape[:-1]) != 1
-        or np.prod(x.shape[:-1]) != 1
-    ):
+    if np.prod(cdf.shape[:-1]) != 1 or np.prod(pdf.shape[:-1]) != 1 or np.prod(x.shape[:-1]) != 1:
         raise NotImplementedError(
             "Function not implemented for batched points. "
             "Open an issue in https://github.com/pymc-devs/pymc if you need this functionality"
@@ -4092,9 +4017,7 @@ def _interpolated_argcdf(p, pdf, cdf, x):
     # This warning happens when we divide by slope = 0: we can ignore it
     # because the other result will be returned
     with warnings.catch_warnings():
-        warnings.filterwarnings(
-            "ignore", ".*invalid value encountered in.*", RuntimeWarning
-        )
+        warnings.filterwarnings("ignore", ".*invalid value encountered in.*", RuntimeWarning)
         large_slopes = (
             -pdf[index] + np.sqrt(pdf[index] ** 2 + 2 * slope * (p - cdf[index]))
         ) / slope
@@ -4192,8 +4115,7 @@ class Interpolated(BoundedContinuous):
         """Estimates the expectation integral using the trapezoid rule; cdf_points are not used."""
         x_fx = pt.mul(x_points, pdf_points)  # x_i * f(x_i) for all xi's in x_points
         support_point = (
-            pt.sum(pt.mul(pt.diff(x_points, axis=-1), x_fx[..., 1:] + x_fx[..., :-1]))
-            / 2
+            pt.sum(pt.mul(pt.diff(x_points, axis=-1), x_fx[..., 1:] + x_fx[..., :-1])) / 2
         )
 
         if not rv_size_is_none(size):
@@ -4204,9 +4126,7 @@ class Interpolated(BoundedContinuous):
     def logp(value, x_points, pdf_points, cdf_points):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
         # within a tensor.constant. We use the .data method to retrieve them
-        interp = InterpolatedUnivariateSpline(
-            x_points.data, pdf_points.data, k=1, ext="zeros"
-        )
+        interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
         Z = interp.integral(x_points.data[..., 0], x_points.data[..., -1])
 
         # interp and Z are converted to symbolic variables here
@@ -4306,11 +4226,7 @@ class Moyal(Continuous):
 
     def logp(value, mu, sigma):
         scaled = (value - mu) / sigma
-        res = (
-            -(1 / 2) * (scaled + pt.exp(-scaled))
-            - pt.log(sigma)
-            - (1 / 2) * pt.log(2 * np.pi)
-        )
+        res = -(1 / 2) * (scaled + pt.exp(-scaled)) - pt.log(sigma) - (1 / 2) * pt.log(2 * np.pi)
         return check_parameters(
             res,
             sigma > 0,
@@ -4371,9 +4287,7 @@ class PolyaGammaRV(RandomVariable):
         if size is None:
             size = np.broadcast_shapes(h.shape, z.shape)
         return np.asarray(
-            random_polyagamma(h, z, size=size, random_state=rng).astype(
-                pytensor.config.floatX
-            )
+            random_polyagamma(h, z, size=size, random_state=rng).astype(pytensor.config.floatX)
         )
 
 
