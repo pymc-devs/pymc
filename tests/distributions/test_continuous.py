@@ -178,7 +178,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Uniform,
             {"lower": -Rplusunif, "upper": Rplusunif},
-            lambda q, lower, upper: st.uniform.ppf(q=q, loc=lower, scale=upper - lower),
+            lambda q_value, lower, upper: st.uniform.ppf(q=q_value, loc=lower, scale=upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
         # Custom logp / logcdf check for invalid parameters
@@ -209,7 +209,9 @@ class TestMatchesScipy:
         check_icdf(
             pm.Triangular,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
-            lambda q, c, lower, upper: st.triang.ppf(q, c - lower, lower, upper - lower),
+            lambda q_value, c, lower, upper: st.triang.ppf(
+                q_value, c - lower, lower, upper - lower
+            ),
             skip_paramdomain_outside_edge_test=True,
         )
 
@@ -287,7 +289,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Normal,
             {"mu": R, "sigma": Rplus},
-            lambda q, mu, sigma: st.norm.ppf(q, mu, sigma),
+            lambda q_value, mu, sigma: st.norm.ppf(q_value, mu, sigma),
         )
 
     def test_half_normal(self):
@@ -307,7 +309,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.HalfNormal,
             {"sigma": Rplus},
-            lambda q, sigma: st.halfnorm.ppf(q, scale=sigma),
+            lambda q_value, sigma: st.halfnorm.ppf(q_value, scale=sigma),
         )
 
     def test_chisquared_logp(self):
@@ -416,7 +418,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Beta,
             {"alpha": Rplus, "beta": Rplus},
-            lambda q, alpha, beta: st.beta.ppf(q, alpha, beta),
+            lambda q_value, alpha, beta: st.beta.ppf(q_value, alpha, beta),
         )
 
     def test_kumaraswamy(self):
@@ -463,7 +465,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Exponential,
             {"lam": Rplus},
-            lambda q, lam: st.expon.ppf(q, loc=0, scale=1 / lam),
+            lambda q_value, lam: st.expon.ppf(q_value, loc=0, scale=1 / lam),
         )
 
     def test_laplace(self):
@@ -479,7 +481,9 @@ class TestMatchesScipy:
             {"mu": R, "b": Rplus},
             lambda value, mu, b: st.laplace.logcdf(value, mu, b),
         )
-        check_icdf(pm.Laplace, {"mu": R, "b": Rplus}, lambda q, mu, b: st.laplace.ppf(q, mu, b))
+        check_icdf(
+            pm.Laplace, {"mu": R, "b": Rplus}, lambda q_value, mu, b: st.laplace.ppf(q_value, mu, b)
+        )
 
     def test_laplace_asymmetric(self):
         check_logp(
@@ -518,7 +522,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.LogNormal,
             {"mu": R, "tau": Rplusbig},
-            lambda q, mu, tau: floatX(st.lognorm.ppf(q, tau**-0.5, 0, np.exp(mu))),
+            lambda q_value, mu, tau: floatX(st.lognorm.ppf(q_value, tau**-0.5, 0, np.exp(mu))),
         )
         # Because we exponentiate the normal quantile function, setting sigma >= 9.5
         # return extreme values that results in relative errors above 4 digits
@@ -527,7 +531,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.LogNormal,
             {"mu": R, "sigma": custom_rplusbig},
-            lambda q, mu, sigma: floatX(st.lognorm.ppf(q, sigma, 0, np.exp(mu))),
+            lambda q_value, mu, sigma: floatX(st.lognorm.ppf(q_value, sigma, 0, np.exp(mu))),
             decimal=select_by_precision(float64=4, float32=3),
         )
 
@@ -577,14 +581,14 @@ class TestMatchesScipy:
         check_icdf(
             pm.StudentT,
             {"nu": Rplusbig, "mu": R, "sigma": Rplusbig},
-            lambda q, nu, mu, sigma: st.t.ppf(q, nu, mu, sigma),
+            lambda q_value, nu, mu, sigma: st.t.ppf(q_value, nu, mu, sigma),
         )
 
     def test_halfstudentt_icdf(self):
         check_icdf(
             pm.HalfStudentT,
             {"nu": Rplusbig, "sigma": Rplusbig},
-            lambda q, nu, sigma: st.t.ppf(0.5 * (q + 1.0), nu, 0.0, sigma),
+            lambda q_value, nu, sigma: st.t.ppf(0.5 * (q_value + 1.0), nu, 0.0, sigma),
         )
 
     @pytest.mark.skipif(
@@ -603,7 +607,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.SkewStudentT,
             {"a": Rplusbig, "b": Rplusbig, "mu": R, "sigma": Rplusbig},
-            lambda q, a, b, mu, sigma: st.jf_skew_t.ppf(q, a, b, mu, sigma),
+            lambda q_value, a, b, mu, sigma: st.jf_skew_t.ppf(q_value, a, b, mu, sigma),
         )
 
     def test_cauchy(self):
@@ -622,7 +626,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Cauchy,
             {"alpha": R, "beta": Rplusbig},
-            lambda q, alpha, beta: st.cauchy.ppf(q, alpha, beta),
+            lambda q_value, alpha, beta: st.cauchy.ppf(q_value, alpha, beta),
         )
 
     def test_half_cauchy(self):
@@ -639,7 +643,9 @@ class TestMatchesScipy:
             lambda value, beta: st.halfcauchy.logcdf(value, scale=beta),
         )
         check_icdf(
-            pm.HalfCauchy, {"beta": Rplusbig}, lambda q, beta: st.halfcauchy.ppf(q, scale=beta)
+            pm.HalfCauchy,
+            {"beta": Rplusbig},
+            lambda q_value, beta: st.halfcauchy.ppf(q_value, scale=beta),
         )
 
     def test_gamma_logp(self):
@@ -676,7 +682,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Gamma,
             {"alpha": Rplusbig, "beta": Rplusbig},
-            lambda q, alpha, beta: st.gamma.ppf(q, alpha, scale=1.0 / beta),
+            lambda q_value, alpha, beta: st.gamma.ppf(q_value, alpha, scale=1.0 / beta),
         )
 
     def test_inverse_gamma_logp(self):
@@ -703,7 +709,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.InverseGamma,
             {"alpha": Rplusbig, "beta": Rplusbig},
-            lambda q, alpha, beta: st.invgamma.ppf(q, alpha, scale=beta),
+            lambda q_value, alpha, beta: st.invgamma.ppf(q_value, alpha, scale=beta),
         )
 
     @pytest.mark.skipif(
@@ -740,7 +746,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Pareto,
             {"alpha": Rplusbig, "m": Rplusbig},
-            lambda q, alpha, m: st.pareto.ppf(q, alpha, scale=m),
+            lambda q_value, alpha, m: st.pareto.ppf(q_value, alpha, scale=m),
         )
 
     @pytest.mark.skipif(
@@ -774,7 +780,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Weibull,
             {"alpha": Rplusbig, "beta": Rplusbig},
-            lambda q, alpha, beta: st.exponweib.ppf(q, 1, alpha, scale=beta),
+            lambda q_value, alpha, beta: st.exponweib.ppf(q_value, 1, alpha, scale=beta),
         )
 
     def test_half_studentt(self):
@@ -856,7 +862,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Gumbel,
             {"mu": R, "beta": Rplusbig},
-            lambda q, mu, beta: st.gumbel_r.ppf(q, loc=mu, scale=beta),
+            lambda q_value, mu, beta: st.gumbel_r.ppf(q_value, loc=mu, scale=beta),
         )
 
     def test_logistic(self):
@@ -877,7 +883,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Logistic,
             {"mu": R, "s": Rplus},
-            lambda q, mu, s: st.logistic.ppf(q, mu, s),
+            lambda q_value, mu, s: st.logistic.ppf(q_value, mu, s),
             decimal=select_by_precision(float64=6, float32=1),
         )
 
@@ -894,7 +900,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.LogitNormal,
             {"mu": R, "sigma": Rplus},
-            lambda q, mu, sigma: sp.expit(mu + sigma * st.norm.ppf(q)),
+            lambda q_value, mu, sigma: sp.expit(mu + sigma * st.norm.ppf(q_value)),
             decimal=select_by_precision(float64=12, float32=5),
         )
 
@@ -951,7 +957,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Moyal,
             {"mu": R, "sigma": Rplusbig},
-            lambda q, mu, sigma: floatX(st.moyal.ppf(q, mu, sigma)),
+            lambda q_value, mu, sigma: floatX(st.moyal.ppf(q_value, mu, sigma)),
         )
 
     def test_interpolated(self):

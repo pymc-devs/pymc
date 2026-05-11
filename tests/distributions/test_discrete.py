@@ -118,7 +118,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.DiscreteUniform,
             {"lower": -Rplusdunif, "upper": Rplusdunif},
-            lambda q, lower, upper: st.randint.ppf(q=q, low=lower, high=upper + 1),
+            lambda q_value, lower, upper: st.randint.ppf(q=q_value, low=lower, high=upper + 1),
             skip_paramdomain_outside_edge_test=True,
         )
         # Custom logp / logcdf check for invalid parameters
@@ -152,7 +152,7 @@ class TestMatchesScipy:
         check_icdf(
             pm.Geometric,
             {"p": Unit},
-            st.geom.ppf,
+            lambda q_value, p: st.geom.ppf(q=q_value, p=p),
         )
 
     def test_hypergeometric(self):
@@ -344,6 +344,14 @@ class TestMatchesScipy:
             pm.DiscreteWeibull,
             Nat,
             {"q": Unit, "beta": NatSmall},
+        )
+
+        check_icdf(
+            pm.DiscreteWeibull,
+            {"q": Unit, "beta": NatSmall},
+            lambda q_value, q, beta: np.ceil(
+                np.power(np.log1p(-q_value) / np.log(q), 1.0 / beta) - 1
+            ).astype("int64"),
         )
 
     def test_poisson(self):

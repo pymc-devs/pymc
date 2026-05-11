@@ -72,6 +72,8 @@ __all__ = [
     "SymbolicRandomVariable",
 ]
 
+from pymc.distributions.dist_math import check_icdf_value
+
 DIST_PARAMETER_TYPES: TypeAlias = np.ndarray | int | float | TensorVariable
 
 vectorized_ppc: contextvars.ContextVar[Callable | None] = contextvars.ContextVar(
@@ -730,6 +732,16 @@ class DiracDelta(Discrete):
             -np.inf,
             0,
         )
+
+    def icdf(value, c):
+        """
+        Inverse CDF (quantile function) for DiracDelta distribution.
+
+        For any probability p in (0,1), F^{-1}(p) = c since all mass is at c.
+        """
+        res = pt.broadcast_arrays(c, value)[0]
+        res = check_icdf_value(res, value)
+        return res
 
 
 class PartialObservedRV(SymbolicRandomVariable):
