@@ -1255,19 +1255,19 @@ class ZeroOneInflatedBetaRV(SymbolicRandomVariable):
     _print_name = ("ZeroOneInflatedBeta", "\\operatorname{ZeroOneInflatedBeta}")
 
     @classmethod
-    def rv_op(cls, zoi, coi, alpha, beta_, *, rng=None, size=None):
+    def rv_op(cls, zoi, coi, a, b, *, rng=None, size=None):
         zoi = pt.as_tensor(zoi)
         coi = pt.as_tensor(coi)
-        alpha = pt.as_tensor(alpha)
-        beta_ = pt.as_tensor(beta_)
+        a = pt.as_tensor(a)
+        b = pt.as_tensor(b)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
         if rv_size_is_none(size):
-            size = implicit_size_from_params(zoi, coi, alpha, beta_, ndims_params=cls.ndims_params)
+            size = implicit_size_from_params(zoi, coi, a, b, ndims_params=cls.ndims_params)
 
         next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
 
-        next_rng, beta_draws = beta(alpha, beta_, size=size, rng=next_rng, return_next_rng=True)
+        next_rng, beta_draws = beta(a, b, size=size, rng=next_rng, return_next_rng=True)
 
         draws = pt.switch(
             pt.lt(u, zoi * (1 - coi)),
@@ -1280,9 +1280,9 @@ class ZeroOneInflatedBetaRV(SymbolicRandomVariable):
         )
 
         return cls(
-            inputs=[rng, size, zoi, coi, alpha, beta_],
+            inputs=[rng, size, zoi, coi, a, b],
             outputs=[next_rng, draws],
-        )(rng, size, zoi, coi, alpha, beta_)
+        )(rng, size, zoi, coi, a, b)
 
 
 class ZeroOneInflatedBeta(UnitContinuous):

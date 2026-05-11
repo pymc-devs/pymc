@@ -74,9 +74,7 @@ class TestBoundedContinuous:
     def get_dist_params_and_interval_bounds(self, model, rv_name):
         rv = model.named_vars[rv_name]
         dist_params = rv.owner.inputs
-        lower_interval, upper_interval = model.rvs_to_transforms[rv].args_fn(
-            *rv.owner.inputs
-        )
+        lower_interval, upper_interval = model.rvs_to_transforms[rv].args_fn(*rv.owner.inputs)
         return (
             dist_params,
             lower_interval,
@@ -199,26 +197,20 @@ class TestMatchesScipy:
             pm.Triangular,
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
-            lambda value, c, lower, upper: st.triang.logpdf(
-                value, c - lower, lower, upper - lower
-            ),
+            lambda value, c, lower, upper: st.triang.logpdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
         check_logcdf(
             pm.Triangular,
             Runif,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
-            lambda value, c, lower, upper: st.triang.logcdf(
-                value, c - lower, lower, upper - lower
-            ),
+            lambda value, c, lower, upper: st.triang.logcdf(value, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
         check_icdf(
             pm.Triangular,
             {"lower": -Rplusunif, "c": Runif, "upper": Rplusunif},
-            lambda q, c, lower, upper: st.triang.ppf(
-                q, c - lower, lower, upper - lower
-            ),
+            lambda q, c, lower, upper: st.triang.ppf(q, c - lower, lower, upper - lower),
             skip_paramdomain_outside_edge_test=True,
         )
 
@@ -380,9 +372,7 @@ class TestMatchesScipy:
         # See e.g., doi: 10.1111/j.1467-9876.2005.00510.x, or
         # http://www.gamlss.org/.
         with pm.Model() as model:
-            pm.Wald(
-                "wald", mu=mu, lam=lam, phi=phi, alpha=alpha, default_transform=None
-            )
+            pm.Wald("wald", mu=mu, lam=lam, phi=phi, alpha=alpha, default_transform=None)
         point = {"wald": value}
         decimals = select_by_precision(float64=6, float32=1)
         npt.assert_almost_equal(
@@ -445,9 +435,7 @@ class TestMatchesScipy:
             elif value == 0:
                 return np.log(zoi * (1 - coi))
             elif value < 1:
-                return np.log(
-                    zoi * (1 - coi) + (1 - zoi) * st.beta.cdf(value, alpha, beta)
-                )
+                return np.log(zoi * (1 - coi) + (1 - zoi) * st.beta.cdf(value, alpha, beta))
             else:
                 return 0.0
 
@@ -467,12 +455,7 @@ class TestMatchesScipy:
     def test_kumaraswamy(self):
         # Scipy does not have a built-in Kumaraswamy
         def scipy_log_pdf(value, a, b):
-            return (
-                np.log(a)
-                + np.log(b)
-                + (a - 1) * np.log(value)
-                + (b - 1) * np.log(1 - value**a)
-            )
+            return np.log(a) + np.log(b) + (a - 1) * np.log(value) + (b - 1) * np.log(1 - value**a)
 
         def log1mexp(x):
             return np.log1p(-np.exp(x)) if x < np.log(0.5) else np.log(-np.expm1(x))
@@ -529,9 +512,7 @@ class TestMatchesScipy:
             {"mu": R, "b": Rplus},
             lambda value, mu, b: st.laplace.logcdf(value, mu, b),
         )
-        check_icdf(
-            pm.Laplace, {"mu": R, "b": Rplus}, lambda q, mu, b: st.laplace.ppf(q, mu, b)
-        )
+        check_icdf(pm.Laplace, {"mu": R, "b": Rplus}, lambda q, mu, b: st.laplace.ppf(q, mu, b))
 
     def test_laplace_asymmetric(self):
         check_logp(
@@ -547,17 +528,13 @@ class TestMatchesScipy:
             pm.LogNormal,
             Rplus,
             {"mu": R, "tau": Rplusbig},
-            lambda value, mu, tau: floatX(
-                st.lognorm.logpdf(value, tau**-0.5, 0, np.exp(mu))
-            ),
+            lambda value, mu, tau: floatX(st.lognorm.logpdf(value, tau**-0.5, 0, np.exp(mu))),
         )
         check_logp(
             pm.LogNormal,
             Rplus,
             {"mu": R, "sigma": Rplusbig},
-            lambda value, mu, sigma: floatX(
-                st.lognorm.logpdf(value, sigma, 0, np.exp(mu))
-            ),
+            lambda value, mu, sigma: floatX(st.lognorm.logpdf(value, sigma, 0, np.exp(mu))),
         )
         check_logcdf(
             pm.LogNormal,
@@ -909,9 +886,7 @@ class TestMatchesScipy:
             skip_paramdomain_inside_edge_test=True,  # Valid values are tested above
         )
 
-    @pytest.mark.skipif(
-        condition=(pytensor.config.floatX == "float32"), reason="Fails on float32"
-    )
+    @pytest.mark.skipif(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
     def test_vonmises(self):
         check_logp(
             pm.VonMises,
@@ -967,8 +942,7 @@ class TestMatchesScipy:
             Unit,
             {"mu": R, "sigma": Rplus},
             lambda value, mu, sigma: (
-                st.norm.logpdf(sp.logit(value), mu, sigma)
-                - (np.log(value) + np.log1p(-value))
+                st.norm.logpdf(sp.logit(value), mu, sigma) - (np.log(value) + np.log1p(-value))
             ),
             decimal=select_by_precision(float64=6, float32=1),
         )
@@ -991,18 +965,14 @@ class TestMatchesScipy:
             lambda value, b, sigma: st.rice.logpdf(value, b=b, loc=0, scale=sigma),
         )
         if pytensor.config.floatX == "float32":
-            raise Exception(
-                "Flaky test: It passed this time, but XPASS is not allowed."
-            )
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_rice_nu(self):
         check_logp(
             pm.Rice,
             Rplus,
             {"nu": Rplus, "sigma": Rplusbig},
-            lambda value, nu, sigma: st.rice.logpdf(
-                value, b=nu / sigma, loc=0, scale=sigma
-            ),
+            lambda value, nu, sigma: st.rice.logpdf(value, b=nu / sigma, loc=0, scale=sigma),
         )
 
     def test_moyal_logp(self):
@@ -1030,9 +1000,7 @@ class TestMatchesScipy:
             lambda value, mu, sigma: floatX(st.moyal.logcdf(value, mu, sigma)),
         )
         if pytensor.config.floatX == "float32":
-            raise Exception(
-                "Flaky test: It passed this time, but XPASS is not allowed."
-            )
+            raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
     def test_moyal_icdf(self):
         check_icdf(
@@ -1054,9 +1022,7 @@ class TestMatchesScipy:
                     def dist(cls, **kwargs):
                         x_points = np.linspace(xmin, xmax, 100000)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        return super().dist(
-                            x_points=x_points, pdf_points=pdf_points, **kwargs
-                        )
+                        return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 def ref_pdf(value):
                     return np.where(
@@ -1318,13 +1284,9 @@ class TestMoments:
             (1, 1, [-np.inf, -np.inf, -np.inf], 10, None, np.full(3, 9)),
         ],
     )
-    def test_truncatednormal_support_point(
-        self, mu, sigma, lower, upper, size, expected
-    ):
+    def test_truncatednormal_support_point(self, mu, sigma, lower, upper, size, expected):
         with pm.Model() as model:
-            pm.TruncatedNormal(
-                "x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size
-            )
+            pm.TruncatedNormal("x", mu=mu, sigma=sigma, lower=lower, upper=upper, size=size)
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1976,9 +1938,7 @@ class TestAsymmetricLaplace(BaseTestDistributionRandom):
 
     def seeded_asymmetriclaplace_rng_fn(self):
         uniform_rng_fct = self.get_random_state().uniform
-        return ft.partial(
-            self.asymmetriclaplace_rng_fn, uniform_rng_fct=uniform_rng_fct
-        )
+        return ft.partial(self.asymmetriclaplace_rng_fn, uniform_rng_fct=uniform_rng_fct)
 
     pymc_dist = pm.AsymmetricLaplace
 
@@ -2007,12 +1967,8 @@ class TestAsymmetricLaplaceQ(BaseTestDistributionRandom):
 
 
 class TestExGaussian(BaseTestDistributionRandom):
-    def exgaussian_rng_fn(
-        self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct
-    ):
-        return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(
-            scale=nu, size=size
-        )
+    def exgaussian_rng_fn(self, mu, sigma, nu, size, normal_rng_fct, exponential_rng_fct):
+        return normal_rng_fct(mu, sigma, size=size) + exponential_rng_fct(scale=nu, size=size)
 
     def seeded_exgaussian_rng_fn(self):
         normal_rng_fct = self.get_random_state().normal
@@ -2063,17 +2019,13 @@ class TestStudentT(BaseTestDistributionRandom):
 
 class TestHalfStudentT(BaseTestDistributionRandom):
     def halfstudentt_rng_fn(self, df, loc, scale, size, rng):
-        return np.abs(
-            st.t.rvs(df=df, loc=loc, scale=scale, size=size, random_state=rng)
-        )
+        return np.abs(st.t.rvs(df=df, loc=loc, scale=scale, size=size, random_state=rng))
 
     pymc_dist = pm.HalfStudentT
     pymc_dist_params = {"nu": 5.0, "sigma": 2.0}
     expected_rv_op_params = {"nu": 5.0, "sigma": 2.0}
     reference_dist_params = {"df": 5.0, "loc": 0, "scale": 2.0}
-    reference_dist = lambda self: ft.partial(
-        self.halfstudentt_rng_fn, rng=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2309,9 +2261,7 @@ class TestLogitNormal(BaseTestDistributionRandom):
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
     reference_dist_params = {"loc": 5.0, "scale": 10.0}
-    reference_dist = lambda self: ft.partial(
-        self.logit_normal_rng_fn, rng=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(self.logit_normal_rng_fn, rng=self.get_random_state())
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2382,9 +2332,7 @@ class TestBeta(BaseTestDistributionRandom):
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     reference_dist_params = {"a": 2.0, "b": 5.0}
     size = 15
-    reference_dist = lambda self: ft.partial(
-        clipped_beta_rvs, random_state=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(clipped_beta_rvs, random_state=self.get_random_state())
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2463,9 +2411,7 @@ class TestHalfCauchy(BaseTestDistributionRandom):
     pymc_dist_params = {"beta": 5.0}
     expected_rv_op_params = {"beta": 5.0}
     reference_dist_params = {"scale": 5.0}
-    reference_dist = lambda self: ft.partial(
-        self.halfcauchy_rng_fn, rng=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(self.halfcauchy_rng_fn, rng=self.get_random_state())
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference_not_numba",
@@ -2601,17 +2547,13 @@ class TestPolyaGamma(BaseTestDistributionRandom):
     def polyagamma_rng_fn(self, size, h, z, rng):
         # Polyagamma returns different values if inputs have explicit broadcasted dims
         # Which PyTensor RVs always do when size is not None.
-        return random_polyagamma(
-            np.atleast_1d(h), np.atleast_1d(z), size=size, random_state=rng
-        )
+        return random_polyagamma(np.atleast_1d(h), np.atleast_1d(z), size=size, random_state=rng)
 
     pymc_dist = pm.PolyaGamma
     pymc_dist_params = {"h": 1.0, "z": 0.0}
     expected_rv_op_params = {"h": 1.0, "z": 0.0}
     reference_dist_params = {"h": 1.0, "z": 0.0}
-    reference_dist = lambda self: ft.partial(
-        self.polyagamma_rng_fn, rng=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(self.polyagamma_rng_fn, rng=self.get_random_state())
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2632,9 +2574,7 @@ class TestInterpolated(BaseTestDistributionRandom):
     pymc_dist_params = {"x_points": x_points, "pdf_points": pdf_points}
     reference_dist_params = {"mu": mu, "sigma": sigma}
 
-    reference_dist = lambda self: ft.partial(
-        self.interpolated_rng_fn, rng=self.get_random_state()
-    )  # noqa: E731
+    reference_dist = lambda self: ft.partial(self.interpolated_rng_fn, rng=self.get_random_state())
     checks_to_run = [
         "check_rv_size",
         "check_draws",
@@ -2655,9 +2595,7 @@ class TestInterpolated(BaseTestDistributionRandom):
                     def dist(cls, **kwargs):
                         x_points = np.linspace(mu - 5 * sigma, mu + 5 * sigma, 100)
                         pdf_points = st.norm.pdf(x_points, loc=mu, scale=sigma)
-                        return super().dist(
-                            x_points=x_points, pdf_points=pdf_points, **kwargs
-                        )
+                        return super().dist(x_points=x_points, pdf_points=pdf_points, **kwargs)
 
                 continuous_random_tester(
                     TestedInterpolated,
@@ -2670,7 +2608,7 @@ class TestInterpolated(BaseTestDistributionRandom):
 class TestZeroOneInflatedBeta(BaseTestDistributionRandom):
     pymc_dist = pm.ZeroOneInflatedBeta
     pymc_dist_params = {"zoi": 0.3, "coi": 0.4, "mu": 0.5, "kappa": 10.0}
-    expected_rv_op_params = {"zoi": 0.3, "coi": 0.4, "alpha": 5.0, "beta_": 5.0}
+    expected_rv_op_params = {"zoi": 0.3, "coi": 0.4, "a": 5.0, "b": 5.0}
     size = 15
     checks_to_run = [
         "check_pymc_params_match_rv_op",
@@ -2679,7 +2617,6 @@ class TestZeroOneInflatedBeta(BaseTestDistributionRandom):
 
 
 class TestZeroOneInflatedBetaLogp:
-
     def test_logp_at_zero(self):
         zoi, coi, mu, kappa = 0.3, 0.4, 0.4, 10.0
         expected = np.log(zoi) + np.log1p(-coi)
@@ -2705,9 +2642,7 @@ class TestZeroOneInflatedBetaLogp:
             with pm.Model():
                 dist = pm.ZeroOneInflatedBeta.dist(zoi=zoi, coi=coi, mu=mu, kappa=kappa)
                 got = pm.logp(dist, v).eval()
-            np.testing.assert_allclose(
-                got, expected, rtol=1e-6, err_msg=f"Mismatch at value={v}"
-            )
+            np.testing.assert_allclose(got, expected, rtol=1e-6, err_msg=f"Mismatch at value={v}")
 
     def test_support_point(self):
         zoi, coi, mu, kappa = 0.2, 0.3, 0.4, 10.0
@@ -2735,34 +2670,26 @@ class TestZeroOneInflatedBetaLogp:
 
         with pytest.raises(ParameterValueError):
             with pm.Model():
-                dist = pm.ZeroOneInflatedBeta.dist(
-                    zoi=0.3, coi=0.4, alpha=-1.0, beta=5.0
-                )
+                dist = pm.ZeroOneInflatedBeta.dist(zoi=0.3, coi=0.4, alpha=-1.0, beta=5.0)
                 pm.logp(dist, 0.5).eval()
 
         def test_zib_special_case(self):
             with pm.Model():
-                y = pm.ZeroOneInflatedBeta(
-                    "y", zoi=0.5, coi=0.0, mu=0.5, kappa=10, size=1000
-                )
+                y = pm.ZeroOneInflatedBeta("y", zoi=0.5, coi=0.0, mu=0.5, kappa=10, size=1000)
                 prior = pm.sample_prior_predictive(draws=1, random_seed=42)
             samples = prior.prior["y"].values.flatten()
             assert np.sum(samples == 1.0) == 0
 
     def test_oib_special_case(self):
         with pm.Model():
-            y = pm.ZeroOneInflatedBeta(
-                "y", zoi=0.5, coi=1.0, mu=0.5, kappa=10, size=1000
-            )
+            y = pm.ZeroOneInflatedBeta("y", zoi=0.5, coi=1.0, mu=0.5, kappa=10, size=1000)
             prior = pm.sample_prior_predictive(draws=1, random_seed=42)
         samples = prior.prior["y"].values.flatten()
         assert np.sum(samples == 0.0) == 0
 
     def test_high_zoi_produces_many_boundaries(self):
         with pm.Model():
-            y = pm.ZeroOneInflatedBeta(
-                "y", zoi=0.9, coi=0.5, mu=0.5, kappa=10, size=2000
-            )
+            y = pm.ZeroOneInflatedBeta("y", zoi=0.9, coi=0.5, mu=0.5, kappa=10, size=2000)
             prior = pm.sample_prior_predictive(draws=1, random_seed=42)
         samples = prior.prior["y"].values.flatten()
         prop_boundary = np.mean((samples == 0.0) | (samples == 1.0))
@@ -2770,9 +2697,7 @@ class TestZeroOneInflatedBetaLogp:
 
     def test_zoib_both_boundaries(self):
         with pm.Model():
-            y = pm.ZeroOneInflatedBeta(
-                "y", zoi=0.5, coi=0.5, mu=0.5, kappa=10, size=5000
-            )
+            y = pm.ZeroOneInflatedBeta("y", zoi=0.5, coi=0.5, mu=0.5, kappa=10, size=5000)
             prior = pm.sample_prior_predictive(draws=1, random_seed=42)
         samples = prior.prior["y"].values.flatten()
         prop_zeros = np.mean(samples == 0.0)
@@ -2791,9 +2716,7 @@ class TestZeroOneInflatedBetaLogp:
             with pm.Model():
                 dist = pm.ZeroOneInflatedBeta.dist(zoi=0.0, coi=0.5, mu=mu, kappa=kappa)
                 got = pm.logp(dist, v).eval()
-            np.testing.assert_allclose(
-                got, expected, rtol=1e-6, err_msg=f"Mismatch at value={v}"
-            )
+            np.testing.assert_allclose(got, expected, rtol=1e-6, err_msg=f"Mismatch at value={v}")
 
     def test_zoib_mu_kappa_matches_alpha_beta(self):
         mu, kappa = 0.4, 10.0
@@ -2802,14 +2725,10 @@ class TestZeroOneInflatedBetaLogp:
         zoi, coi = 0.3, 0.4
         for v in [0.0, 0.5, 1.0]:
             with pm.Model():
-                dist_mk = pm.ZeroOneInflatedBeta.dist(
-                    zoi=zoi, coi=coi, mu=mu, kappa=kappa
-                )
+                dist_mk = pm.ZeroOneInflatedBeta.dist(zoi=zoi, coi=coi, mu=mu, kappa=kappa)
                 logp_mk = pm.logp(dist_mk, v).eval()
             with pm.Model():
-                dist_ab = pm.ZeroOneInflatedBeta.dist(
-                    zoi=zoi, coi=coi, alpha=alpha, beta=beta
-                )
+                dist_ab = pm.ZeroOneInflatedBeta.dist(zoi=zoi, coi=coi, alpha=alpha, beta=beta)
                 logp_ab = pm.logp(dist_ab, v).eval()
             np.testing.assert_allclose(
                 logp_mk, logp_ab, rtol=1e-6, err_msg=f"Mismatch at value={v}"
@@ -2847,9 +2766,7 @@ class TestZeroOneInflatedBetaLogp:
             coi = pm.Beta("coi", alpha=1, beta=1)
             mu = pm.Beta("mu", alpha=2, beta=2)
             kappa = pm.Gamma("kappa", alpha=2, beta=0.1)
-            pm.ZeroOneInflatedBeta(
-                "y", zoi=zoi, coi=coi, mu=mu, kappa=kappa, observed=data
-            )
+            pm.ZeroOneInflatedBeta("y", zoi=zoi, coi=coi, mu=mu, kappa=kappa, observed=data)
             trace = pm.sample(
                 1000,
                 tune=1000,
