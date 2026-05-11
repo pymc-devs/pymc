@@ -200,7 +200,7 @@ class RichProgressBackend:
         columns += [
             TextColumn(
                 "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Speed", ratio=1),
+                table_column=Column("Speed", ratio=2, no_wrap=True),
             ),
             TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
             TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
@@ -229,9 +229,13 @@ class RichProgressBackend:
         self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
+        # ``start=False`` defers the per-task clock until ``start_task`` is
+        # called on the first ``update``. With ``cores < chains``, later chains
+        # would otherwise be timed against the first chain's start.
         self._tasks = [
             self._progress.add_task(
                 "Sampling",
+                start=False,
                 completed=0,
                 total=self.initial_total,
                 task_idx=task_idx,
@@ -242,6 +246,7 @@ class RichProgressBackend:
             )
             for task_idx in range(self.n_bars)
         ]
+        self._started: list[bool] = [False] * self.n_bars
 
     def update(
         self,
@@ -276,6 +281,10 @@ class RichProgressBackend:
         if rich_task_id is None:
             return
 
+        if not self._started[task_id]:
+            self._progress.start_task(rich_task_id)
+            self._started[task_id] = True
+
         if is_last:
             if total is None:
                 total = self._progress.tasks[task_id].total  # type: ignore[assignment]
@@ -296,7 +305,12 @@ class RichProgressBackend:
         elapsed = task.elapsed if task.elapsed is not None else 0.0
 
         action = self.step_name.lower()
-        speed = completed / max(elapsed, 1e-6)
+        # Wait for a small window of elapsed time before computing speed so the
+        # first reading isn't ``completed / ~0 ≈ infinity``.
+        if elapsed > 0.25:
+            speed = completed / elapsed
+        else:
+            speed = 0
         if speed > 1 or speed == 0:
             unit = f"{action}s/s"
         else:
