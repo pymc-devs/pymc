@@ -25,7 +25,7 @@ import scipy.sparse as sps
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
 from pytensor.gradient import grad
-from pytensor.graph import Type, rewrite_graph
+from pytensor.graph import Type, ancestors, rewrite_graph
 from pytensor.graph.basic import (
     Apply,
     Constant,
@@ -38,7 +38,7 @@ from pytensor.graph.op import HasInnerGraph
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
-from pytensor.tensor.basic import _as_tensor_variable
+from pytensor.tensor.basic import _as_tensor_variable, infer_shape_db
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
@@ -135,6 +135,35 @@ def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVar
 
 
 _cheap_eval_mode = Mode(linker="py", optimizer="minimum_compile")
+
+
+def get_symbolic_rv_shapes(
+    rvs: Sequence[Variable], raise_if_rvs_in_graph: bool = True
+) -> tuple[TensorVariable]:
+    """Get the shapes of the random variables in the graph.
+
+    Parameters
+    ----------
+    rvs : Sequence[Variable]
+        The random variables to get the shapes of.
+    raise_if_rvs_in_graph : bool, optional
+        Whether to raise an error if the random variables are still in the graph.
+
+    Returns
+    -------
+    tuple[TensorVariable]
+        The shapes of the random variables.
+    """
+    rv_shapes = [rv.shape for rv in rvs]
+    shape_fg = FunctionGraph(outputs=rv_shapes, features=[ShapeFeature()], clone=True)
+    with pytensor.config.change_flags(optdb__max_use_ratio=10, cxx=""):
+        infer_shape_db.default_query.rewrite(shape_fg)
+    rv_shapes = shape_fg.outputs
+
+    if raise_if_rvs_in_graph and (overlap := (set(rvs) & set(ancestors(rv_shapes)))):
+        raise ValueError(f"rv_shapes still depend the following rvs {overlap}")
+
+    return tuple(rv_shapes)
 
 
 def extract_obs_data(x: TensorVariable) -> np.ndarray:
