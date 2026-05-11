@@ -17,6 +17,7 @@ import importlib.util
 import logging
 import multiprocessing
 import pickle
+import re
 import sys
 import time
 import warnings
@@ -377,6 +378,16 @@ def _sample_external_nuts(
             )
         import nutpie
 
+        # Strip pre-release suffixes like "rc1" from each component.
+        version_tuple = tuple(
+            int(re.match(r"\d+", p).group()) for p in nutpie.__version__.split(".")[:3]
+        )
+        if version_tuple < (0, 16, 10):
+            raise ImportError(
+                f"pymc requires nutpie>=0.16.10 (found {nutpie.__version__}). "
+                "Upgrade with `pip install -U nutpie` or `conda install -c conda-forge 'nutpie>=0.16.10'`."
+            )
+
         if isinstance(initvals, dict):
             compile_kwargs.setdefault("initial_points", initvals)
         elif initvals is not None:
@@ -426,18 +437,13 @@ def _sample_external_nuts(
                 cores=cores,
                 seed=int(random_seed[0]),
                 save_warmup=not discard_tuned_samples,
+                store_unconstrained=include_transformed,
                 progress_bar=False,
                 progress_callback=pb_manager.update,
                 **nuts_kwargs,
             )
         t_sample = time.time() - t_start
-        patch_nutpie_idata(
-            idata,
-            model,
-            tune=tune,
-            sampling_time=t_sample,
-            include_transformed=include_transformed,
-        )
+        patch_nutpie_idata(idata, model, sampling_time=t_sample)
         if log_likelihood:
             warnings.warn(
                 "Passing `log_likelihood` via `idata_kwargs` is deprecated and will be removed "
