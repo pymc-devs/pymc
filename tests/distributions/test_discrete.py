@@ -796,6 +796,33 @@ class TestCategorical(BaseTestDistributionRandom):
         "check_rv_size",
     ]
 
+    @pytest.mark.parametrize("n", [2, 3, 4])
+    def test_categorical_icdf(self, n):
+        paramdomains = {"p": Simplex(n)}
+
+        def numpy_categorical_ppf(q, p):
+            cdf = np.cumsum(p, axis=-1)
+            q = np.asarray(q)
+            return np.argmax(q[..., None] <= cdf, axis=-1)
+
+        check_icdf(pm.Categorical, paramdomains, numpy_categorical_ppf)
+
+    def test_categorical_icdf_batch_shapes(self):
+        p = np.array([[0.2, 0.3, 0.5], [0.1, 0.1, 0.8]])
+        q_vec = np.array([0.0, 0.25])
+        dist = pm.Categorical.dist(p=p)
+        out_vec = icdf(dist, q_vec).eval()
+        np.testing.assert_array_equal(out_vec, np.array([0, 2]))
+        q_mat = np.array([[0.05, 0.6, 0.99], [0.21, 0.19, 0.81]])
+        out_mat = icdf(dist, q_mat).eval()
+        np.testing.assert_array_equal(out_mat, np.array([[0, 2, 2], [2, 1, 2]]))
+
+    def test_categorical_icdf_upper_edge(self):
+        p = np.array([0.1, 0.2, 0.7])
+        dist = pm.Categorical.dist(p=p)
+        out = icdf(dist, np.array([1.0])).eval()
+        assert out[0] == 2
+
 
 class TestLogitCategorical(BaseTestDistributionRandom):
     pymc_dist = pm.Categorical
