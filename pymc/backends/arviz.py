@@ -106,13 +106,15 @@ def find_constants(model: "Model") -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     model_vars = model.basic_RVs + model.deterministics + model.potentials
     value_vars = set(model.rvs_to_values.values())
+    # Compute ancestors of value_vars that are not ancestors of model_vars
+    # This handles cases where observed data goes through Cast operations (e.g., for discrete distributions)
+    value_vars_ancestors = set(ancestors(value_vars)) - set(ancestors(model_vars))
 
     constant_data = {}
     for var in model.data_vars:
-        if var in value_vars:
-            # An observed value variable could also be part of the generative graph
-            if var not in ancestors(model_vars):
-                continue
+        if var in value_vars_ancestors:
+            # This data variable is only used as observed data, skip it
+            continue
 
         if isinstance(var, SharedVariable):
             var_value = var.get_value()
