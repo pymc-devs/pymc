@@ -94,27 +94,16 @@ class MarimoProgressBackend:
 
     def _initialize_tasks(self) -> None:
         """Initialize progress tracking state for all tasks."""
-        if self.combined:
-            self._task_state = [
-                {
-                    "completed": 0,
-                    "total": self.total * self.n_bars,
-                    "failing": False,
-                    "stats": {},
-                }
-            ]
-            self._start_times = [perf_counter()]
-        else:
-            self._task_state = [
-                {
-                    "completed": 0,
-                    "total": self.total,
-                    "failing": False,
-                    "stats": {},
-                }
-                for _ in range(self.n_bars)
-            ]
-            self._start_times = [perf_counter() for _ in range(self.n_bars)]
+        self._task_state = [
+            {
+                "completed": 0,
+                "total": self.total,
+                "failing": False,
+                "stats": {},
+            }
+            for _ in range(self.n_bars)
+        ]
+        self._start_times = [perf_counter() for _ in range(self.n_bars)]
 
     def update(
         self,
