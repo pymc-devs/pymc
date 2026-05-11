@@ -1268,3 +1268,102 @@ def test_advanced_subtensor_none_and_integer():
         match="logprob terms of the following value variables could not be derived: {b_val}",
     ):
         conditional_logp({b: b_val, a: a_val})
+
+
+@pytest.mark.parametrize(
+    "op, threshold, x_true, x_false",
+    [
+        # GT: x > k, true branch when x > k
+        (pt.gt, 5.0, 8.0, 2.0),
+        # GE: x >= k
+        (pt.ge, 5.0, 8.0, 2.0),
+        # LT: x < k, true branch when x < k
+        (pt.lt, 500.0, 2.0, 800.0),
+        # LE: x <= k
+        (pt.le, 500.0, 2.0, 800.0),
+        # Negative threshold
+        (pt.gt, -3.0, 0.0, -5.0),
+        # Zero threshold (should still work)
+        (pt.gt, 0.0, 2.0, -2.0),
+    ],
+)
+def test_non_overlapping_switch_nonzero_threshold(op, threshold, x_true, x_false):
+    """Test that non-overlapping switch logp works for non-zero thresholds with all comparison ops."""
+    srng = pt.random.RandomStream(1234)
+
+    X_rv = srng.normal(0, 10, name="X")
+    k = pt.constant(threshold)
+
+    # Branches are constructed so they don't overlap:
+    # true branch shifts far positive, false branch shifts far negative
+    Z_rv = pt.switch(op(X_rv, k), X_rv + 100, X_rv - 100)
+    Z_rv.name = "Z"
+
+    z_vv = Z_rv.clone()
+    z_vv.name = "z"
+
+    # Should not raise — logp must be derivable
+    z_logp = logp(Z_rv, z_vv)
+    assert_no_rvs(z_logp)
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    # Value from true branch: x_true shifted by +100
+    true_val = np.array(x_true + 100, dtype=pytensor.config.floatX)
+    logp_true = z_logp.eval({z_vv: true_val})
+    # Should match Normal(0, 10).logpdf(x_true)
+    exp_true = sp.norm(0, 10).logpdf(x_true)
+    np.testing.assert_almost_equal(logp_true, exp_true, decimal=decimals)
+
+    # Value from false branch: x_false shifted by -100
+    false_val = np.array(x_false - 100, dtype=pytensor.config.floatX)
+    logp_false = z_logp.eval({z_vv: false_val})
+    exp_false = sp.norm(0, 10).logpdf(x_false)
+    np.testing.assert_almost_equal(logp_false, exp_false, decimal=decimals)
+
+
+def test_non_overlapping_switch_threshold_on_rhs():
+    """Test switch where the measurable variable is on the LHS: switch(x > k, ...)."""
+    srng = pt.random.RandomStream(5678)
+
+    X_rv = srng.normal(0, 10, name="X")
+    k = pt.constant(3.0)
+
+    Z_rv = pt.switch(pt.gt(X_rv, k), X_rv + 100, X_rv - 100)
+    Z_rv.name = "Z"
+    z_vv = Z_rv.clone()
+
+    z_logp = logp(Z_rv, z_vv)
+    assert_no_rvs(z_logp)
+
+    decimals = 6 if pytensor.config.floatX == "float64" else 4
+
+    # x=5 > 3, so true branch: observed value = 5 + 100 = 105
+    np.testing.assert_almost_equal(
+        z_logp.eval({z_vv: np.array(105.0, dtype=pytensor.config.floatX)}),
+        sp.norm(0, 10).logpdf(5.0),
+        decimal=decimals,
+    )
+
+    # x=-2 <= 3, so false branch: observed value = -2 - 100 = -102
+    np.testing.assert_almost_equal(
+        z_logp.eval({z_vv: np.array(-102.0, dtype=pytensor.config.floatX)}),
+        sp.norm(0, 10).logpdf(-2.0),
+        decimal=decimals,
+    )
+
+
+def test_non_overlapping_switch_dirac_branch():
+    """Test non-overlapping switch where one branch is a constant (DiracDelta)."""
+    srng = pt.random.RandomStream(9999)
+
+    X_rv = srng.normal(10, 1, name="X")
+    k = pt.constant(5.0)
+
+    # false branch is a constant -999 (DiracDelta), true branch is measurable
+    Z_rv = pt.switch(pt.gt(X_rv, k), X_rv, pt.as_tensor(-999.0))
+    Z_rv.name = "Z"
+    z_vv = Z_rv.clone()
+
+    z_logp = logp(Z_rv, z_vv)
+    assert_no_rvs(z_logp)
