@@ -1,7 +1,7 @@
 (consulting)=
 # Consulting
 
-<center><a href="https://www.pymc-labs.com/"><img src="https://github.com/pymc-devs/brand/blob/main/sponsors/sponsor_logos/pymc_labs.png?raw=true" class="center" width="75%"></a></center>
+<center><a href="https://www.pymc-labs.com/"><img src="../images/pymc_labs_logo.png" alt="PyMC Labs" class="center" width="75%"></a></center>
 <br>
 
 If you need professional help with your PyMC model, [PyMC Labs](https://www.pymc-labs.com) is a Bayesian consultancy consisting of [members of the PyMC core development team](https://www.pymc-labs.com/team/). Typically PyMC Labs work includes:
