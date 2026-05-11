@@ -13,6 +13,7 @@
 #   limitations under the License.
 """PyMC-ArviZ conversion code."""
 
+import json
 import logging
 import warnings
 
@@ -42,7 +43,7 @@ import pymc
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import get_default_varnames, get_untransformed_name, is_transformed_name
+from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
     from pymc.backends.base import MultiTrace
@@ -141,42 +142,17 @@ def find_constants(model: "Model") -> dict[str, Var]:
 def patch_nutpie_idata(
     idata: DataTree,
     model: "Model",
-    tune: int,
     sampling_time: float,
-    include_transformed: bool = False,
 ) -> None:
     """Fix up the ``DataTree`` returned by ``nutpie.sample`` in place.
 
     Work-around for gaps in what nutpie attaches to the returned ``DataTree``:
 
-    - drops transformed variables from ``posterior`` / ``warmup_posterior``
-      (when ``include_transformed`` is ``False``) or moves them into
-      ``unconstrained_posterior`` / ``warmup_unconstrained_posterior``
-      (when ``True``). Drop once
-      https://github.com/pymc-devs/nutpie/pull/298 and
-      https://github.com/pymc-devs/nutpie/issues/78 are released;
     - attaches ``constant_data`` / ``observed_data`` groups gathered from the
       model. Drop once https://github.com/pymc-devs/nutpie/issues/74 is released;
     - stamps ``sampling_time`` / ``tuning_steps`` attrs onto the posterior.
     """
     import nutpie
-
-    for src, dst in (
-        ("posterior", "unconstrained_posterior"),
-        ("warmup_posterior", "warmup_unconstrained_posterior"),
-    ):
-        if src not in idata.children:
-            continue
-        ds = idata[src].to_dataset()
-        transformed = [v for v in ds.data_vars if is_transformed_name(v)]
-        if not transformed:
-            continue
-        idata[src] = DataTree(ds.drop_vars(transformed))
-        if include_transformed:
-            unconstrained = ds[transformed].rename(
-                {v: get_untransformed_name(v) for v in transformed}
-            )
-            idata[dst] = DataTree(unconstrained)
 
     coords, dims = coords_and_dims_for_inferencedata(model)
     idata["constant_data"] = DataTree(
@@ -198,8 +174,9 @@ def patch_nutpie_idata(
         )
     )
 
+    nutpie_settings = json.loads(idata.sample_stats.attrs["inference_library_settings"])
     attrs = make_attrs(
-        {"sampling_time": sampling_time, "tuning_steps": tune},
+        {"sampling_time": sampling_time, "tuning_steps": nutpie_settings["settings"]["num_tune"]},
         inference_library=nutpie,
     )
     for k, v in attrs.items():
