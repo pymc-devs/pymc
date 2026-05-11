@@ -257,10 +257,11 @@ class MCMCProgressBarManager(ProgressBarManager):
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
         self.completed_draws = 0
-        self.total_draws = draws + tune
+        total_draws = draws + tune
+        self.total_draws = total_draws * chains if self.combined_progress else total_draws
 
         self._backend = self._create_backend(
-            total=self.total_draws * chains if self.combined_progress else self.total_draws,
+            total=self.total_draws,
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
@@ -378,26 +379,47 @@ class NutpieProgressBarManager(ProgressBarManager):
         if not self._show_progress:
             return
 
-        for chain_idx, cp in enumerate(chain_progresses):
-            delta = cp.finished_draws - self._previous_finished[chain_idx]
-            if delta <= 0:
-                continue
-            self._previous_finished[chain_idx] = cp.finished_draws
-            is_last = cp.finished_draws >= cp.total_draws
+        if self.combined_progress:
             stats = {
-                "divergences": cp.divergences,
-                "step_size": cp.step_size,
-                "tree_size": cp.latest_num_steps,
-                "draw": cp.finished_draws,
+                "divergences": 0,
+                "step_size": 0,
+                "tree_size": 0,
+                "draw": 0,
             }
-            task_id = 0 if self.combined_progress else chain_idx
+            delta = 0
+            for chain_idx, cp in enumerate(chain_progresses):
+                cp_finished_draws = cp.finished_draws
+                delta += cp_finished_draws - self._previous_finished[chain_idx]
+                self._previous_finished[chain_idx] = cp_finished_draws
+                stats["divergences"] += len(cp.divergent_draws)
+                stats["tree_size"] = max(stats["tree_size"], cp.latest_num_steps)
+                stats["draw"] += cp_finished_draws
+            bar_total = cp.total_draws * len(chain_progresses)
             self._backend.update(
-                task_id=task_id,
+                task_id=0,
                 advance=delta,
-                failing=cp.divergences > 0,
+                failing=stats["divergences"] > 0,
                 stats=stats,
-                is_last=is_last,
+                is_last=stats["draw"] >= bar_total,
             )
+        else:
+            for chain_idx, cp in enumerate(chain_progresses):
+                cp_finished_draws = cp.finished_draws
+                delta = cp_finished_draws - self._previous_finished[chain_idx]
+                self._previous_finished[chain_idx] = cp_finished_draws
+                stats = {
+                    "divergences": len(cp.divergent_draws),
+                    "step_size": cp.step_size,
+                    "tree_size": cp.latest_num_steps,
+                    "draw": cp_finished_draws,
+                }
+                self._backend.update(
+                    task_id=chain_idx,
+                    advance=delta,
+                    failing=bool(cp.divergent_draws),
+                    stats=stats,
+                    is_last=cp_finished_draws >= cp.total_draws,
+                )
 
 
 class SMCProgressBarManager(ProgressBarManager):

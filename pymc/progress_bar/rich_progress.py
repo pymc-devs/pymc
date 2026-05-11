@@ -226,33 +226,19 @@ class RichProgressBackend:
         self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
-        if self.combined:
-            self._tasks = [
-                self._progress.add_task(
-                    "Sampling",
-                    completed=0,
-                    total=self.total * self.n_bars,
-                    task_idx=0,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[0] for stat, value in self.progress_stats.items()},
-                )
-            ]
-        else:
-            self._tasks = [
-                self._progress.add_task(
-                    "Sampling",
-                    completed=0,
-                    total=self.total,
-                    task_idx=task_idx,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[task_idx] for stat, value in self.progress_stats.items()},
-                )
-                for task_idx in range(self.n_bars)
-            ]
+        self._tasks = [
+            self._progress.add_task(
+                "Sampling",
+                completed=0,
+                total=self.total,
+                task_idx=task_idx,
+                sampling_speed=0,
+                speed_unit="draws/s",
+                failing=False,
+                **{stat: value[task_idx] for stat, value in self.progress_stats.items()},
+            )
+            for task_idx in range(self.n_bars)
+        ]
 
     def update(
         self,
@@ -284,7 +270,7 @@ class RichProgressBackend:
         if is_last:
             self._progress.update(
                 rich_task_id,
-                completed=self.total if not self.combined else self.total * self.n_bars,
+                completed=self.total,
                 failing=failing,
                 refresh=True,
                 **stats,
