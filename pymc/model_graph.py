@@ -199,18 +199,35 @@ DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
     NodeType.DATA: default_data,
 }
 
+# Map NodeType.value strings to enum members for normalizing user-provided keys
+_NODETYPE_VALUE_TO_MEMBER = {nt.value: nt for nt in NodeType}
 
-def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTypeFormatterMapping:
-    node_formatters = {**DEFAULT_NODE_FORMATTERS, **node_formatters}
 
-    unknown_keys = set(node_formatters.keys()) - set(NodeType)
-    if unknown_keys:
+def update_node_formatters(
+    node_formatters: NodeTypeFormatterMapping | dict[str, NodeFormatter],
+) -> NodeTypeFormatterMapping:
+    # Normalize string keys (e.g. "Free Random Variable") to NodeType enum members
+    # so that the documented API works alongside enum keys
+    normalized: NodeTypeFormatterMapping = {}
+    unknown_keys_input: list[Any] = []
+    for key, formatter in node_formatters.items():
+        if isinstance(key, str) and key in _NODETYPE_VALUE_TO_MEMBER:
+            normalized[_NODETYPE_VALUE_TO_MEMBER[key]] = formatter
+        elif isinstance(key, NodeType):
+            normalized[key] = formatter
+        else:
+            unknown_keys_input.append(key)
+
+    result = {**DEFAULT_NODE_FORMATTERS, **normalized}
+
+    if unknown_keys_input:
         raise ValueError(
-            f"Node formatters must be of type NodeType. Found: {list(unknown_keys)}."
-            f" Please use one of {[node_type.value for node_type in NodeType]}."
+            f"Node formatters must be of type NodeType or a valid NodeType value string. "
+            f"Found: {unknown_keys_input}. "
+            f"Please use one of {[node_type.value for node_type in NodeType]}."
         )
 
-    return node_formatters
+    return result
 
 
 AddNode = Callable[[str, GraphvizNodeKwargs], None]

@@ -562,7 +562,10 @@ def simple_model() -> pm.Model:
 
 
 def test_unknown_node_type(simple_model):
-    with pytest.raises(ValueError, match="Node formatters must be of type NodeType."):
+    with pytest.raises(
+        ValueError,
+        match="Node formatters must be of type NodeType or a valid NodeType value string",
+    ):
         model_to_graphviz(simple_model, node_formatters={"Unknown Node Type": "dummy"})
 
 
