@@ -280,6 +280,7 @@ class _CustomSymbolicDist(Distribution):
             (CustomSymbolicDistRV,),
             # If logp is not provided, we try to infer it from the dist graph
             {
+                "name": class_name,
                 "inline_logprob": logp is None,
                 "_print_name": (class_name, f"\\operatorname{{{class_name}}}"),
             },
