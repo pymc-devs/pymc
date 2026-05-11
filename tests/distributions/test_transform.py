@@ -148,11 +148,14 @@ def test_simplex_accuracy():
 
 
 def test_sum_to_1():
-    check_vector_transform(tr.sum_to_1, Simplex(2))
-    check_vector_transform(tr.sum_to_1, Simplex(4))
+    with pytest.warns(FutureWarning, match="SumTo1.*deprecated"):
+        transform = tr.SumTo1()
+
+    check_vector_transform(transform, Simplex(2))
+    check_vector_transform(transform, Simplex(4))
 
     check_jacobian_det(
-        tr.sum_to_1,
+        transform,
         Vector(Unit, 2),
         pt.vector,
         floatX(np.array([0, 0])),
