@@ -112,8 +112,18 @@ def convert_outer_out_to_in(
             oo_var, field_filter=lambda x: x.startswith("outer_out")
         )
 
-        assert var_info is not None
-        assert oo_var in new_outer_input_vars
+        if var_info is None:
+            raise RuntimeError(
+                "Failed to compute log-probability for Scan: "
+                "could not match an outer output to an inner output. "
+                "This usually indicates an unsupported Scan structure."
+            )
+
+        if oo_var not in new_outer_input_vars:
+            raise RuntimeError(
+                "Failed to compute log-probability for Scan: "
+                "no value was provided for a required random output."
+            )
 
         io_var = output_scan_args.get_alt_field(var_info, "inner_out")
         old_inner_outs_to_outer_outs[io_var] = oo_var
@@ -328,6 +338,12 @@ def logprob_scan(op, values, *inputs, name=None, **kwargs):
     new_node = op.make_node(*inputs)
     scan_args = ScanArgs.from_node(new_node)
     rv_outer_outs = get_random_outer_outputs(scan_args)
+    if len(rv_outer_outs) > 1:
+        raise RuntimeError(
+            "Log-probability for Scan with multiple random outputs "
+            "is not supported."
+        )
+
 
     # values = (pt.zeros(11)[1:].set(values[0]),)
     # For random variable sequences with taps, we need to place the value variable in the
