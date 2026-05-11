@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import nullcontext
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
 
 from rich.progress import TextColumn
@@ -394,6 +395,10 @@ class NutpieProgressBarManager(ProgressBarManager):
                 stats["tree_size"] = max(stats["tree_size"], cp.latest_num_steps)
                 stats["draw"] += cp_finished_draws
             bar_total: int = cp.total_draws * len(chain_progresses)
+            # Use the slowest chain's runtime as the combined bar's elapsed.
+            max_runtime_ms = max(cp.runtime_ms for cp in chain_progresses)
+            if max_runtime_ms > 0:
+                self._set_task_elapsed(0, max_runtime_ms / 1000.0)
             self._backend.update(
                 task_id=0,
                 advance=delta,
@@ -404,9 +409,18 @@ class NutpieProgressBarManager(ProgressBarManager):
             )
         else:
             for chain_idx, cp in enumerate(chain_progresses):
+                # With ``cores < chains`` queued chains haven't started yet;
+                # skip them so their bar doesn't show progress or elapsed time.
+                if not cp.started:
+                    continue
                 cp_finished_draws = cp.finished_draws
                 delta = cp_finished_draws - self._previous_finished[chain_idx]
                 self._previous_finished[chain_idx] = cp_finished_draws
+                # Use nutpie's per-chain runtime as the source of truth for
+                # elapsed/speed, so reads aren't skewed by the wait time
+                # before this chain started.
+                if cp.runtime_ms > 0:
+                    self._set_task_elapsed(chain_idx, cp.runtime_ms / 1000.0)
                 stats = {
                     "divergences": len(cp.divergent_draws),
                     "step_size": cp.step_size,
@@ -421,6 +435,19 @@ class NutpieProgressBarManager(ProgressBarManager):
                     is_last=cp_finished_draws >= cp.total_draws,
                     total=cp.total_draws,
                 )
+
+    def _set_task_elapsed(self, task_id: int, elapsed_seconds: float) -> None:
+        """Override the backend's elapsed clock to match nutpie's per-chain runtime."""
+        backend = self._backend
+        now = perf_counter()
+        if isinstance(backend, RichProgressBackend):
+            rich_task_id = backend._tasks[task_id]
+            if rich_task_id is None:
+                return
+            backend._progress.tasks[task_id].start_time = now - elapsed_seconds
+            backend._started[task_id] = True
+        elif isinstance(backend, MarimoProgressBackend):
+            backend._start_times[task_id] = now - elapsed_seconds
 
 
 class SMCProgressBarManager(ProgressBarManager):

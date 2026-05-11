@@ -208,18 +208,22 @@ def test_nutpie_progress_bar_manager_update():
     pb._show_progress = True  # force the update path even without a real backend
 
     cp0 = SimpleNamespace(
+        started=True,
         finished_draws=5,
         total_draws=20,
         divergent_draws=[],
         step_size=0.5,
         latest_num_steps=3,
+        runtime_ms=10,
     )
     cp1 = SimpleNamespace(
+        started=True,
         finished_draws=4,
         total_draws=20,
         divergent_draws=[],
         step_size=0.4,
         latest_num_steps=7,
+        runtime_ms=8,
     )
     pb.update([cp0, cp1])
     assert pb._backend.update.call_count == 2

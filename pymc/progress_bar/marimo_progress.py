@@ -70,7 +70,7 @@ class MarimoProgressBackend:
 
         self._mo_replace: Callable[[object], None] | None = None
         self._task_state: list[dict[str, Any]] = []
-        self._start_times: list[float] = []
+        self._start_times: list[float | None] = []
         self._last_render_time: float = 0.0
         self._min_render_interval: float = 0.1
 
@@ -103,7 +103,10 @@ class MarimoProgressBackend:
             }
             for _ in range(self.n_bars)
         ]
-        self._start_times = [perf_counter() for _ in range(self.n_bars)]
+        # Per-bar clocks start lazily on the first update so that, with
+        # ``cores < chains``, later chains aren't timed from the first chain's
+        # start.
+        self._start_times = [None] * self.n_bars
 
     def update(
         self,
@@ -135,6 +138,9 @@ class MarimoProgressBackend:
         """
         if total is not None:
             self._task_state[task_id]["total"] = total
+
+        if self._start_times[task_id] is None:
+            self._start_times[task_id] = perf_counter()
 
         self._task_state[task_id]["completed"] += advance
         self._task_state[task_id]["failing"] = failing
@@ -208,10 +214,16 @@ class MarimoProgressBackend:
         stats = state["stats"]
 
         pct = (completed / total * 100) if total else 0
-        elapsed = perf_counter() - self._start_times[task_id]
+        start_time = self._start_times[task_id]
+        elapsed = 0.0 if start_time is None else perf_counter() - start_time
 
         action = self.step_name.lower()
-        speed = completed / max(elapsed, 1e-6)
+        # Wait for a small window of elapsed time before computing speed so the
+        # first reading isn't ``completed / ~0 ≈ infinity``.
+        if elapsed > 0.25:
+            speed = completed / elapsed
+        else:
+            speed = 0
         if speed > 1 or speed == 0:
             unit = f"{action}s/s"
         else:
