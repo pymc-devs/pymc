@@ -1683,37 +1683,36 @@ def init_nuts(
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]
     apoints_data = [apoint.data for apoint in apoints]
-    potential: quadpotential.QuadPotential
+    mean = np.mean(apoints_data, axis=0)
 
-    if init == "adapt_diag":
-        mean = np.mean(apoints_data, axis=0)
-        var = np.ones_like(mean)
-        n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10, rng=random_seed_list[0])
-    elif init == "jitter+adapt_diag":
-        mean = np.mean(apoints_data, axis=0)
-        var = np.ones_like(mean)
-        n = len(var)
-        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10, rng=random_seed_list[0])
-    elif init == "jitter+adapt_diag_grad":
-        mean = np.mean(apoints_data, axis=0)
-        var = np.ones_like(mean)
-        n = len(var)
+    # ------------------------------
+    # Split init components
+    # ------------------------------
 
-        if tune is not None and tune > 250:
-            stop_adaptation = tune - 50
+    parts = init.split("+")
+    parts = [p for p in parts if p != "jitter"]
+
+    init_method = None
+    adapt_method = None
+
+    INIT_METHODS = {"advi", "advi_map", "map"}
+    ADAPT_METHODS = {"adapt_diag", "adapt_diag_grad", "adapt_full"}
+
+    for p in parts:
+        if p in INIT_METHODS:
+            init_method = p
+        elif p in ADAPT_METHODS:
+            adapt_method = p
         else:
-            stop_adaptation = None
+            raise ValueError(f"Unknown initializer component: {p}")
 
-        potential = quadpotential.QuadPotentialDiagAdaptExp(
-            n,
-            mean,
-            alpha=0.02,
-            use_grads=True,
-            stop_adaptation=stop_adaptation,
-            rng=random_seed_list[0],
-        )
-    elif init == "advi+adapt_diag":
+    cov = None
+
+    # ------------------------------
+    # Initialization
+    # ------------------------------
+
+    if init_method == "advi":
         approx = pm.fit(
             random_seed=random_seed_list[0],
             n=n_init,
@@ -1725,36 +1724,15 @@ def init_nuts(
             compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
-        )
-        initial_points = [approx_sample[i] for i in range(chains)]
-        std_apoint = approx.std.eval()
-        cov = std_apoint**2
-        mean = approx.mean.get_value()
-        weight = 50
-        n = len(cov)
-        potential = quadpotential.QuadPotentialDiagAdapt(
-            n, mean, cov, weight, rng=random_seed_list[0]
-        )
-
-    elif init == "advi":
-        approx = pm.fit(
+            draws=chains,
             random_seed=random_seed_list[0],
-            n=n_init,
-            method="advi",
-            model=model,
-            callbacks=cb,
-            progressbar=progressbar and not quiet,
-            obj_optimizer=pm.adagrad_window,
-            compile_kwargs=compile_kwargs,
-        )
-        approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            return_inferencedata=False,
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
-    elif init == "advi_map":
+        mean = approx.mean.get_value()
+
+    elif init_method == "advi_map":
         start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
@@ -1767,35 +1745,61 @@ def init_nuts(
             compile_kwargs=compile_kwargs,
         )
         approx_sample = approx.sample(
-            draws=chains, random_seed=random_seed_list[0], return_inferencedata=False
+            draws=chains,
+            random_seed=random_seed_list[0],
+            return_inferencedata=False,
         )
         initial_points = [approx_sample[i] for i in range(chains)]
         cov = approx.std.eval() ** 2
-        potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
-    elif init == "map":
+
+    elif init_method == "map":
         start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
         cov = -pm.find_hessian(point=start, negate_output=False)
         initial_points = [start] * chains
-        potential = quadpotential.QuadPotentialFull(cov, rng=random_seed_list[0])
-    elif init == "adapt_full":
-        mean = np.mean(apoints_data * chains, axis=0)
-        initial_point = initial_points[0]
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(
-            initial_point_model_size, mean, cov, 10, rng=random_seed_list[0]
-        )
-    elif init == "jitter+adapt_full":
-        mean = np.mean(apoints_data, axis=0)
-        initial_point = initial_points[0]
-        initial_point_model_size = sum(initial_point[n.name].size for n in model.value_vars)
-        cov = np.eye(initial_point_model_size)
-        potential = quadpotential.QuadPotentialFullAdapt(
-            initial_point_model_size, mean, cov, 10, rng=random_seed_list[0]
-        )
-    else:
-        raise ValueError(f"Unknown initializer: {init}.")
 
+    # ------------------------------
+    # Adaptation
+    # ------------------------------
+
+    if adapt_method == "adapt_diag":
+        var = cov if cov is not None else np.ones_like(mean)
+        n = len(var)
+        potential = quadpotential.QuadPotentialDiagAdapt(n, mean, var, 10, rng=random_seed_list[0])
+
+    elif adapt_method == "adapt_diag_grad":
+        n = len(mean)
+        stop_adaptation = tune - 50 if tune and tune > 250 else None
+        potential = quadpotential.QuadPotentialDiagAdaptExp(
+            n,
+            mean,
+            alpha=0.02,
+            use_grads=True,
+            stop_adaptation=stop_adaptation,
+            rng=random_seed_list[0],
+        )
+
+    elif adapt_method == "adapt_full":
+        initial_point = initial_points[0]
+        size = sum(initial_point[n.name].size for n in model.value_vars)
+        cov_matrix = cov if cov is not None else np.eye(size)
+        potential = quadpotential.QuadPotentialFullAdapt(
+            size,
+            mean,
+            cov_matrix,
+            10,
+            rng=random_seed_list[0],
+        )
+
+    else:
+        # If no adaptation but cov exists → static potential
+        if cov is not None:
+            potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
+        else:
+            var = np.ones_like(mean)
+            n = len(var)
+            potential = quadpotential.QuadPotentialDiagAdapt(
+                n, mean, var, 10, rng=random_seed_list[0]
+            )
     step = pm.NUTS(
         potential=potential,
         model=model,
