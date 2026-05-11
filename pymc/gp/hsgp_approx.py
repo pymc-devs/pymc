@@ -172,21 +172,23 @@ class HSGP(Base):
     R"""
     Hilbert Space Gaussian process approximation.
 
-    The `gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.  It is a
-    reduced rank GP approximation that uses a fixed set of basis vectors whose coefficients are
-    random functions of a stationary covariance function's power spectral density.  Its usage
-    is largely similar to `gp.Latent`.  Like `gp.Latent`, it does not assume a Gaussian noise model
-    and can be used with any likelihood, or as a component anywhere within a model.  Also like
-    `gp.Latent`, it has `prior` and `conditional` methods.  It supports any sum of covariance
-    functions that implement a `power_spectral_density` method. (Note, this excludes the
-    `Periodic` covariance function, which uses a different set of basis functions for a
-    low rank approximation, as described in `HSGPPeriodic`.).
+    The :class:`~pymc.gp.HSGP` class is an implementation of the Hilbert Space Gaussian process.
+    It is a reduced rank GP approximation that uses a fixed set of basis vectors whose
+    coefficients are random functions of a stationary covariance function's power spectral
+    density.  Its usage is largely similar to :class:`~pymc.gp.Latent`.  Like :class:`~pymc.gp.Latent`,
+    it does not assume a Gaussian noise model and can be used with any likelihood, or as a
+    component anywhere within a model.  Also like :class:`~pymc.gp.Latent`, it has :meth:`prior`
+    and :meth:`conditional` methods.  It supports any sum of covariance functions that implement
+    a :meth:`power_spectral_density <pymc.gp.cov.Stationary.power_spectral_density>` method.
+    (Note, this excludes the :class:`~pymc.gp.cov.Periodic` covariance function, which uses a
+    different set of basis functions for a low rank approximation, as described in
+    :class:`~pymc.gp.HSGPPeriodic`.).
 
     For information on choosing appropriate `m`, `L`, and `c`, refer to Ruitort-Mayol et al. or to
     the PyMC examples that use HSGP.
 
     To work with the HSGP in its "linearized" form, as a matrix of basis vectors and a vector of
-    coefficients, see the method `prior_linearized`.
+    coefficients, see the method :meth:`prior_linearized`.
 
     Parameters
     ----------
@@ -208,9 +210,9 @@ class HSGP(Base):
     parametrization: str
         Whether to use the `centered` or `noncentered` parametrization when multiplying the
         basis by the coefficients.
-    cov_func: Covariance function, must be an instance of `Stationary` and implement a
-        `power_spectral_density` method.
-    mean_func: None, instance of Mean
+    cov_func: :class:`~pymc.gp.cov.Stationary`
+    Covariance function. Must implement a :meth:`power_spectral_density <pymc.gp.cov.Stationary.power_spectral_density>` method.
+    mean_func: :class:`~pymc.gp.mean.Mean`, default :class:`~pymc.gp.mean.Zero`
         The mean function.  Defaults to zero.
 
     Examples
@@ -523,14 +525,14 @@ class HSGPPeriodic(Base):
     approximation to a Gaussian process. In this case, the approximation is based on a series of
     stochastic resonators.
 
-    For these reasons, we have followed the same API as `gp.HSGP`, and can be used as a drop-in
-    replacement for `gp.Latent`. Like `gp.Latent`, it has `prior` and `conditional` methods.
+    For these reasons, we have followed the same API as :class:`~pymc.gp.HSGP`, and can be used as a drop-in
+    replacement for :class:`~pymc.gp.Latent`. Like :class:`~pymc.gp.Latent`, it has :meth:`prior` and :meth:`conditional` methods.
 
     For information on choosing appropriate `m`, refer to Ruitort-Mayol et al.. Note, this approximation
     is only implemented for the 1-D case.
 
     To work with the approximation in its "linearized" form, as a matrix of basis vectors and a
-    vector of coefficients, see the method `prior_linearized`.
+    vector of coefficients, see the method :meth:`prior_linearized`.
 
     Parameters
     ----------
