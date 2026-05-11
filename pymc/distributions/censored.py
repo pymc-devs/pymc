@@ -87,9 +87,9 @@ class Censored(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower : float or None
+    lower : float | int | array-like | None
         Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper : float or None
+    upper : float | int | array-like | None
         Upper (right) censoring point. If `None`, the distribution will not be right censored.
 
     Warnings
@@ -109,6 +109,13 @@ class Censored(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
+    
+    Partially censored vector using +/- inf masking:
+
+    >>> y = np.array([3.2, 10.5, 1.1, 14.4])
+    >>> lower = np.array([-np.inf, 9.0, -np.inf, 12.0])
+    >>> upper = np.array([ 4.0,  np.inf, 2.5,   np.inf])
+    >>> Censored("y_obs", pm.Normal.dist(mu=5, sigma=3), lower=lower, upper=upper, observed=y)
     """
 
     rv_type = CensoredRV
