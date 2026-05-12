@@ -61,9 +61,11 @@ Saved backends can be loaded using `arviz.from_netcdf`
 
 """
 
+from __future__ import annotations
+
 from collections.abc import Mapping, Sequence
 from copy import copy
-from typing import Optional, TypeAlias, Union
+from typing import TYPE_CHECKING, Optional, TypeAlias, Union
 
 import numpy as np
 
@@ -72,10 +74,37 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.backends.arviz import predictions_to_inference_data, to_inference_data
 from pymc.backends.base import BaseTrace, IBaseTrace
 from pymc.backends.ndarray import NDArray
-from pymc.backends.zarr import ZarrTrace
 from pymc.blocking import PointType
 from pymc.model import Model
 from pymc.step_methods.compound import BlockedStep, CompoundStep
+
+if TYPE_CHECKING:
+    from pymc.backends.zarr import ZarrTrace
+
+
+class _ZarrChainBase:
+    """Marker base for :class:`pymc.backends.zarr.ZarrChain`.
+
+    Importing the real class pulls the optional ``zarr`` dependency. Callers that
+    only need an ``isinstance`` check (e.g. dispatch in ``pymc.sampling``) can
+    import this base instead and skip the zarr import. The method stubs mirror
+    the subset of ``ZarrChain`` invoked through this base so type checkers can
+    validate calls guarded by ``isinstance(_, _ZarrChainBase)``.
+    """
+
+    def link_stepper(self, step_method) -> None: ...
+    def record_sampling_state(self, step=None) -> None: ...
+    def store_sampling_state(self, sampling_state) -> None: ...
+
+
+class _ZarrTraceBase:
+    """Marker base for :class:`pymc.backends.zarr.ZarrTrace`. See ``_ZarrChainBase``."""
+
+    straces: Sequence[BaseTrace]
+
+    def init_trace(self, *args, **kwargs) -> None: ...
+    def split_warmup_groups(self) -> None: ...
+
 
 HAS_MCB = False
 try:
@@ -92,6 +121,15 @@ except ImportError:
 
 
 __all__ = ["predictions_to_inference_data", "to_inference_data"]
+
+
+# ZarrTrace requires the optional zarr dependency, so we keep it lazy.
+def __getattr__(name):
+    if name == "ZarrTrace":
+        from pymc.backends.zarr import ZarrTrace
+
+        return ZarrTrace
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 def _init_trace(
@@ -131,7 +169,7 @@ def init_traces(
     tune: int = 0,
 ) -> tuple[RunType | None, Sequence[IBaseTrace]]:
     """Initialize a trace recorder for each chain."""
-    if isinstance(backend, ZarrTrace):
+    if isinstance(backend, _ZarrTraceBase):
         backend.init_trace(
             chains=chains,
             draws=expected_length - tune,

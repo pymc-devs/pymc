@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import importlib.util
 import logging
@@ -24,10 +26,10 @@ import warnings
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
     TypeAlias,
-    cast,
     overload,
 )
 
@@ -45,10 +47,15 @@ from xarray import DataTree
 
 import pymc as pm
 
-from pymc.backends import RunType, TraceOrBackend, init_traces
+from pymc.backends import (
+    RunType,
+    TraceOrBackend,
+    _ZarrChainBase,
+    _ZarrTraceBase,
+    init_traces,
+)
 from pymc.backends.arviz import patch_nutpie_idata
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
-from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -82,10 +89,8 @@ from pymc.util import (
 )
 from pymc.vartypes import discrete_types
 
-try:
-    from zarr.storage import MemoryStore
-except ImportError:
-    MemoryStore = type("MemoryStore", (), {})
+if TYPE_CHECKING:
+    from pymc.backends.zarr import ZarrChain, ZarrTrace
 
 NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
 NUTPIE_MIN_VERSION = (0, 16, 10)
@@ -119,7 +124,7 @@ __all__ = [
 Step: TypeAlias = BlockedStep | CompoundStep
 
 
-def get_default_tune_steps(step: "Step", tune: int | None, default_tune_steps: int = 1000) -> int:
+def get_default_tune_steps(step: Step, tune: int | None, default_tune_steps: int = 1000) -> int:
     """Get the default number of tuning steps.
 
     If ``tune`` is an explicit integer, return it directly.
@@ -887,7 +892,11 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
+    if (
+        not discard_tuned_samples
+        and not return_inferencedata
+        and not isinstance(trace, _ZarrTraceBase)
+    ):
         warnings.warn(
             "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
             " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
@@ -1153,7 +1162,7 @@ def sample(
     # into a function to make it easier to test and refactor.
     return _sample_return(
         run=run,
-        traces=trace if isinstance(trace, ZarrTrace) else traces,
+        traces=trace if isinstance(trace, _ZarrTraceBase) else traces,
         tune=tune,
         t_sampling=t_sampling,
         discard_tuned_samples=discard_tuned_samples,
@@ -1231,7 +1240,7 @@ def _sample_return(
             stacklevel=2,
         )
 
-    if isinstance(traces, ZarrTrace):
+    if isinstance(traces, _ZarrTraceBase):
         # Split warmup from posterior samples
         traces.split_warmup_groups()
 
@@ -1521,7 +1530,7 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
-    if isinstance(trace, ZarrChain):
+    if isinstance(trace, _ZarrChainBase):
         trace.link_stepper(step)
 
     try:
@@ -1547,13 +1556,13 @@ def _iter_sample(
             yield stats
 
     except (KeyboardInterrupt, BaseException):
-        if isinstance(trace, ZarrChain):
+        if isinstance(trace, _ZarrChainBase):
             trace.record_sampling_state(step=step)
         trace.close()
         raise
 
     else:
-        if isinstance(trace, ZarrChain):
+        if isinstance(trace, _ZarrChainBase):
             trace.record_sampling_state(step=step)
         trace.close()
 
@@ -1615,8 +1624,10 @@ def _mp_sample(
     draws -= tune
     zarr_chains: list[ZarrChain] | None = None
     zarr_recording = False
-    if all(isinstance(trace, ZarrChain) for trace in traces):
-        if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
+    if all(isinstance(trace, _ZarrChainBase) for trace in traces):
+        from zarr.storage import MemoryStore
+
+        if isinstance(traces[0]._posterior.store, MemoryStore):  # type: ignore[attr-defined]
             warnings.warn(
                 "Parallel sampling with MemoryStore zarr store wont write the processes "
                 "step method sampling state. If you wish to be able to access the step "
@@ -1624,7 +1635,7 @@ def _mp_sample(
                 "DirectoryStore or ZipStore"
             )
         else:
-            zarr_chains = cast(list[ZarrChain], traces)
+            zarr_chains = traces  # type: ignore[assignment]
             zarr_recording = True
 
     sampler = ps.ParallelSampler(
