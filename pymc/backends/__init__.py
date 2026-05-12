@@ -63,6 +63,9 @@ Saved backends can be loaded using `arviz.from_netcdf`
 
 from __future__ import annotations
 
+import importlib.util
+import warnings
+
 from collections.abc import Mapping, Sequence
 from copy import copy
 from typing import TYPE_CHECKING, Optional, TypeAlias, Union
@@ -106,16 +109,14 @@ class _ZarrTraceBase:
     def split_warmup_groups(self) -> None: ...
 
 
-HAS_MCB = False
-try:
-    from mcbackend import Backend, Run
+HAS_MCB = importlib.util.find_spec("mcbackend") is not None
 
-    from pymc.backends.mcbackend import init_chain_adapters
+if TYPE_CHECKING and HAS_MCB:
+    from mcbackend import Backend, Run
 
     TraceOrBackend: TypeAlias = BaseTrace | Backend
     RunType: TypeAlias = Run
-    HAS_MCB = True
-except ImportError:
+else:
     TraceOrBackend = BaseTrace  # type: ignore[assignment, misc]
     RunType = type(None)  # type: ignore[assignment, misc]
 
@@ -180,14 +181,26 @@ def init_traces(
             test_point=initial_point,
         )
         return None, backend.straces
-    if HAS_MCB and isinstance(backend, Backend):
-        return init_chain_adapters(
-            backend=backend,
-            chains=chains,
-            initial_point=initial_point,
-            step=step,
-            model=model,
-        )
+    if HAS_MCB:
+        try:
+            with warnings.catch_warnings():
+                # mcbackend touches arviz.InferenceData on import; the
+                # MigrationWarning is emitted from arviz, so filter by message.
+                warnings.filterwarnings("ignore", "arviz.InferenceData")
+                from mcbackend import Backend
+        except ImportError:
+            pass
+        else:
+            if isinstance(backend, Backend):
+                from pymc.backends.mcbackend import init_chain_adapters
+
+                return init_chain_adapters(
+                    backend=backend,
+                    chains=chains,
+                    initial_point=initial_point,
+                    step=step,
+                    model=model,
+                )
 
     assert backend is None or isinstance(backend, BaseTrace)
     traces = [
