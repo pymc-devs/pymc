@@ -321,9 +321,17 @@ class TP(Latent):
         mu = self.mean_func(X)
         cov = stabilize(self.cov_func(X), jitter)
         if reparameterize:
-            size = np.shape(X)[0]
-            v = pm.StudentT(name + "_rotated_", mu=0.0, sigma=1.0, nu=self.nu, size=size, **kwargs)
-            f = pm.Deterministic(name, mu + cholesky(cov).dot(v), dims=kwargs.get("dims", None))
+            if "dims" in kwargs:
+                v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, **kwargs)
+            else:
+                size = np.shape(X)[0]
+                v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=size, **kwargs)
+            scale = pm.Gamma(name + "_scale", alpha=self.nu / 2, beta=self.nu / 2)
+            f = pm.Deterministic(
+                name,
+                mu + cholesky(cov).dot(v) / pt.sqrt(scale),
+                dims=kwargs.get("dims", None),
+            )
         else:
             f = pm.MvStudentT(name, nu=self.nu, mu=mu, scale=cov, **kwargs)
         return f

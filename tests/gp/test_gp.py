@@ -20,8 +20,11 @@ import numpy.testing as npt
 import pytensor.tensor as pt
 import pytest
 
+from scipy.integrate import quad
+
 import pymc as pm
 
+from pymc.gp.util import JITTER_DEFAULT
 from pymc.math import cartesian
 
 
@@ -354,6 +357,7 @@ class TestTP:
             f = gp.prior("f", X, reparameterize=False)
             p = gp.conditional("p", Xnew)
         self.gp_latent_logp = model1.compile_logp()({"f": y, "p": pnew})
+        self.gp_latent_conditional_logp = model1.compile_logp(vars=[p])({"f": y, "p": pnew})
         self.X = X
         self.y = y
         self.Xnew = Xnew
@@ -379,10 +383,65 @@ class TestTP:
             p = tp.conditional("p", self.Xnew)
         assert tuple(f.shape.eval()) == (self.X.shape[0],)
         assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
-        chol = np.linalg.cholesky(scale_func(self.X).eval())
+        cov = scale_func(self.X).eval() + JITTER_DEFAULT * np.eye(self.X.shape[0])
+        chol = np.linalg.cholesky(cov)
         f_rotated = np.linalg.solve(chol, self.y)
-        tp_logp = model.compile_logp()({"f_rotated_": f_rotated, "p": self.pnew})
-        npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
+        tp_logp = model.compile_logp(vars=[p])(
+            {"f_rotated_": f_rotated, "f_scale_log__": 0.0, "p": self.pnew}
+        )
+        npt.assert_allclose(self.gp_latent_conditional_logp, tp_logp, atol=0, rtol=1e-2)
+
+    def testTPReparameterizedPriorUsesSharedScale(self):
+        X = np.array([[0.0], [1.0]])
+        y = np.array([0.5, -0.75])
+        scale_value = 4.0
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.3)
+
+        with pm.Model() as model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=3.0)
+            f = tp.prior("f", X, reparameterize=True, jitter=0.0)
+            (f_value,) = model.replace_rvs_by_values([f])
+            f_fn = model.compile_fn(f_value)
+
+        chol = np.linalg.cholesky(scale_func(X).eval())
+        f_rotated = np.linalg.solve(chol, y * np.sqrt(scale_value))
+        npt.assert_allclose(
+            f_fn({"f_rotated_": f_rotated, "f_scale_log__": np.log(scale_value)}),
+            y,
+        )
+
+    def testTPReparameterizedPriorMatchesMvStudentT(self):
+        nu = 3.0
+        X = np.array([[0.0], [1.0]])
+        y = np.array([0.5, -0.75])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.3)
+
+        with pm.Model() as reparam_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu)
+            tp.prior("f", X, reparameterize=True, jitter=0.0)
+            reparam_logp_fn = reparam_model.compile_logp()
+
+        with pm.Model() as direct_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            direct_logp_fn = direct_model.compile_logp()
+
+        chol = np.linalg.cholesky(scale_func(X).eval())
+        n = X.shape[0]
+        log_det_chol = np.log(np.linalg.det(chol))
+
+        def integrand(log_scale):
+            scale = np.exp(log_scale)
+            f_rotated = np.linalg.solve(chol, y * np.sqrt(scale))
+            log_integrand = (
+                reparam_logp_fn({"f_rotated_": f_rotated, "f_scale_log__": log_scale})
+                + (n / 2) * log_scale
+                - log_det_chol
+            )
+            return np.exp(log_integrand)
+
+        integral, _ = quad(integrand, -30, 30, epsabs=1e-10, epsrel=1e-10)
+        npt.assert_allclose(np.log(integral), direct_logp_fn({"f": y}), rtol=1e-6)
 
     def testAdditiveTPRaises(self):
         with pm.Model() as model:
