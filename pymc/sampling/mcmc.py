@@ -88,6 +88,25 @@ except ImportError:
     MemoryStore = type("MemoryStore", (), {})
 
 NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
+NUTPIE_MIN_VERSION = (0, 16, 10)
+
+
+def _nutpie_meets_min_version() -> bool:
+    """Return True if nutpie is installed, importable, and meets the minimum version."""
+    if not NUTPIE_INSTALLED:
+        return False
+    try:
+        import nutpie
+    except ImportError:
+        return False
+    try:
+        # Strip pre-release suffixes like "rc1" from each component.
+        version_tuple = tuple(
+            int(re.match(r"\d+", p).group()) for p in nutpie.__version__.split(".")[:3]
+        )
+    except (AttributeError, ValueError):
+        return False
+    return version_tuple >= NUTPIE_MIN_VERSION
 
 
 sys.setrecursionlimit(10000)
@@ -395,17 +414,14 @@ def _sample_external_nuts(
             raise ImportError(
                 "nutpie not found. Install it with conda install -c conda-forge nutpie"
             )
-        import nutpie
-
-        # Strip pre-release suffixes like "rc1" from each component.
-        version_tuple = tuple(
-            int(re.match(r"\d+", p).group()) for p in nutpie.__version__.split(".")[:3]
-        )
-        if version_tuple < (0, 16, 10):
+        if not _nutpie_meets_min_version():
+            min_version_str = ".".join(map(str, NUTPIE_MIN_VERSION))
             raise ImportError(
-                f"pymc requires nutpie>=0.16.10 (found {nutpie.__version__}). "
-                "Upgrade with `pip install -U nutpie` or `conda install -c conda-forge 'nutpie>=0.16.10'`."
+                f"pymc requires nutpie>={min_version_str}. "
+                f"Upgrade with `pip install -U nutpie` or "
+                f"`conda install -c conda-forge 'nutpie>={min_version_str}'`."
             )
+        import nutpie
 
         if isinstance(initvals, dict):
             compile_kwargs.setdefault("initial_points", initvals)
@@ -917,6 +933,17 @@ def sample(
             and (initvals is None or isinstance(initvals, dict))
             and isinstance(get_mode(compile_kwargs.get("mode")).linker, NumbaLinker | JAXLinker)
         )
+        if can_use_nutpie and not _nutpie_meets_min_version():
+            min_version_str = ".".join(map(str, NUTPIE_MIN_VERSION))
+            warnings.warn(
+                f"pymc requires nutpie>={min_version_str}. "
+                "Falling back to the pymc NUTS sampler. "
+                f"Upgrade with `pip install -U nutpie` or "
+                f"`conda install -c conda-forge 'nutpie>={min_version_str}'`.",
+                UserWarning,
+                stacklevel=2,
+            )
+            can_use_nutpie = False
         nuts_sampler = "nutpie" if can_use_nutpie else "pymc"
     elif nuts_sampler != "pymc" and not exclusive_nuts:
         raise ValueError(

@@ -383,6 +383,33 @@ class TestNutpieAutoSelection:
         mock_ext.assert_not_called()
 
     @pytest.mark.parametrize(
+        "version_str",
+        ["0.16.9", "0.16.9rc1", "0.16", "not-a-version"],
+        ids=["older_patch", "older_rc", "fewer_parts", "malformed"],
+    )
+    def test_warns_and_falls_back_to_pymc_when_nutpie_too_old(self, version_str):
+        pytest.importorskip("nutpie")
+        with (
+            mock.patch("nutpie.__version__", version_str),
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_ext,
+        ):
+            with self._model:
+                with pytest.warns(UserWarning, match="pymc requires nutpie>="):
+                    sample(**self._BASE_KWARGS, compile_kwargs={"mode": "NUMBA"})
+        mock_ext.assert_not_called()
+
+    def test_dispatches_to_nutpie_at_exactly_min_version(self):
+        # Tripwire: update the version literal in lockstep with NUTPIE_MIN_VERSION.
+        pytest.importorskip("nutpie")
+        with (
+            mock.patch("nutpie.__version__", "0.16.10"),
+            mock.patch("pymc.sampling.mcmc._sample_external_nuts") as mock_ext,
+        ):
+            with self._model:
+                sample(**self._BASE_KWARGS, compile_kwargs={"mode": "NUMBA"})
+        assert mock_ext.call_args.kwargs["sampler"] == "nutpie"
+
+    @pytest.mark.parametrize(
         "arg_name,arg",
         [
             ("return_inferencedata", False),
