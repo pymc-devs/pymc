@@ -71,8 +71,7 @@ except ImportError:  # pragma: no cover
         raise RuntimeError("polyagamma package is not installed!")
 
 
-from scipy import stats
-from scipy.interpolate import InterpolatedUnivariateSpline
+from pytensor.utils import lazy_scipy_module
 
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
@@ -93,6 +92,9 @@ from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous, Sy
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp
+
+stats = lazy_scipy_module("stats")
+interpolate = lazy_scipy_module("interpolate")
 
 __all__ = [
     "AsymmetricLaplace",
@@ -3860,7 +3862,7 @@ class Interpolated(BoundedContinuous):
 
     @classmethod
     def dist(cls, x_points, pdf_points, *args, **kwargs):
-        interp = InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
+        interp = interpolate.InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
 
         Z = interp.integral(x_points[0], x_points[-1])
         cdf_points = interp.antiderivative()(x_points) / Z
@@ -3891,7 +3893,9 @@ class Interpolated(BoundedContinuous):
     def logp(value, x_points, pdf_points, cdf_points):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
         # within a tensor.constant. We use the .data method to retrieve them
-        interp = InterpolatedUnivariateSpline(x_points.data, pdf_points.data, k=1, ext="zeros")
+        interp = interpolate.InterpolatedUnivariateSpline(
+            x_points.data, pdf_points.data, k=1, ext="zeros"
+        )
         Z = interp.integral(x_points.data[..., 0], x_points.data[..., -1])
 
         # interp and Z are converted to symbolic variables here
