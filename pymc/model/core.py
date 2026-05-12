@@ -444,7 +444,20 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         from pymc.model_graph import model_to_mermaid
 
-        return mo.mermaid(model_to_mermaid(self))
+        diagram = model_to_mermaid(self)
+        try:
+            return mo.mermaid(
+                diagram,
+                theme_variables={
+                    "primaryColor": "#12698A",
+                    "primaryTextColor": "#FFFFFF",
+                    "primaryBorderColor": "#0E5A7A",
+                    "lineColor": "#504A4E",
+                    "tertiaryColor": "#F0F5F8",
+                },
+            )
+        except TypeError:
+            return mo.mermaid(diagram)
 
     @staticmethod
     def _validate_name(name):
