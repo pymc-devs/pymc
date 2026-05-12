@@ -13,6 +13,8 @@
 #   limitations under the License.
 """PyMC-ArviZ conversion code."""
 
+from __future__ import annotations
+
 import json
 import logging
 import warnings
@@ -21,17 +23,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
-    Union,
     cast,
 )
 
 import numpy as np
 import xarray
 
-from arviz_base import dict_to_dataset, make_attrs, rcParams
-from arviz_base.base import requires
-from arviz_base.types import CoordSpec, DimSpec
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -46,7 +43,43 @@ from pymc.pytensorf import PointFunc, extract_obs_data
 from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
+    from arviz_base.types import CoordSpec, DimSpec
+
     from pymc.backends.base import MultiTrace
+
+
+class requires:
+    """Decorator that returns None if all required attributes on the wrapped instance are None."""
+
+    def __init__(self, *props):
+        self.props = props
+
+    def __call__(self, func):
+        def wrapped(cls):
+            for prop in self.props:
+                prop_list = [prop] if isinstance(prop, str) else prop
+                if all(getattr(cls, prop_i) is None for prop_i in prop_list):
+                    return None
+            return func(cls)
+
+        return wrapped
+
+
+# Self-replacing lazy stubs. First call imports arviz_base, rebinds the module-level
+# name to the real implementation, then forwards. Subsequent calls go straight to it.
+def dict_to_dataset(*args, **kwargs):  # noqa: F811
+    global dict_to_dataset
+    from arviz_base import dict_to_dataset
+
+    return dict_to_dataset(*args, **kwargs)
+
+
+def make_attrs(*args, **kwargs):  # noqa: F811
+    global make_attrs
+    from arviz_base import make_attrs
+
+    return make_attrs(*args, **kwargs)
+
 
 ___all__ = [""]
 
@@ -101,7 +134,7 @@ def dict_to_dataset_drop_incompatible_coords(
     return ds
 
 
-def find_observations(model: "Model") -> dict[str, Var]:
+def find_observations(model: Model) -> dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
@@ -118,7 +151,7 @@ def find_observations(model: "Model") -> dict[str, Var]:
     return observations
 
 
-def find_constants(model: "Model") -> dict[str, Var]:
+def find_constants(model: Model) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     model_vars = model.basic_RVs + model.deterministics + model.potentials
     value_vars = set(model.rvs_to_values.values())
@@ -141,7 +174,7 @@ def find_constants(model: "Model") -> dict[str, Var]:
 
 def patch_nutpie_idata(
     idata: DataTree,
-    model: "Model",
+    model: Model,
     sampling_time: float,
 ) -> None:
     """Fix up the ``DataTree`` returned by ``nutpie.sample`` in place.
@@ -271,7 +304,11 @@ class DataTreeConverter:
         save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
-        self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        if save_warmup is None:
+            from arviz_base import rcParams
+
+            save_warmup = rcParams["data.save_warmup"]
+        self.save_warmup = save_warmup
         self.include_transformed = include_transformed
         self.trace = trace
 
@@ -325,7 +362,7 @@ class DataTreeConverter:
 
         self.observations = find_observations(self.model)
 
-    def split_trace(self) -> tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(self) -> tuple[MultiTrace | None, MultiTrace | None]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns
@@ -574,7 +611,7 @@ class DataTreeConverter:
 
 
 def to_inference_data(
-    trace: Optional["MultiTrace"] = None,
+    trace: MultiTrace | None = None,
     *,
     prior: Mapping[str, Any] | None = None,
     posterior_predictive: Mapping[str, Any] | None = None,
@@ -583,7 +620,7 @@ def to_inference_data(
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    model: "Model" = None,
+    model: Model = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> DataTree:
@@ -651,8 +688,8 @@ def to_inference_data(
 ### perhaps we should have an inplace argument?
 def predictions_to_inference_data(
     predictions,
-    posterior_trace: Optional["MultiTrace"] = None,
-    model: Optional["Model"] = None,
+    posterior_trace: MultiTrace | None = None,
+    model: Model | None = None,
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,

@@ -17,7 +17,6 @@ from typing import Any
 import numpy as np
 import xarray as xr
 
-from arviz_base.base import make_attrs
 from pytensor.tensor.variable import TensorVariable
 from xarray import DataTree
 
@@ -28,6 +27,7 @@ from pymc.backends.arviz import (
     coords_and_dims_for_inferencedata,
     find_constants,
     find_observations,
+    make_attrs,
 )
 from pymc.backends.base import BaseTrace
 from pymc.blocking import StatDtype, StatShape
