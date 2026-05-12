@@ -12,15 +12,18 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from collections.abc import Iterable
 from sys import stderr
 from typing import Any, Self
 
 from rich.box import SIMPLE_HEAD
-from rich.console import Console
+from rich.console import Console, ConsoleOptions, RenderResult
 from rich.progress import (
     BarColumn,
     Progress,
+    ProgressBar,
     ProgressColumn,
     Task,
     TaskID,
@@ -28,6 +31,7 @@ from rich.progress import (
     TimeElapsedColumn,
     TimeRemainingColumn,
 )
+from rich.segment import Segment
 from rich.style import Style
 from rich.table import Column, Table
 from rich.theme import Theme
@@ -106,8 +110,44 @@ class CustomProgress(Progress):
         return table
 
 
-class RecolorOnFailureBarColumn(BarColumn):
-    """Rich colorbar that changes color when a chain has detected a failure."""
+class MarkerProgressBar(ProgressBar):
+    """A progress bar with a thin gap at a given position (e.g. tune/draw boundary)."""
+
+    def __init__(self, *args, marker_pos: int | None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.marker_pos = marker_pos
+
+    def __rich_console__(self, console: Console, options: ConsoleOptions) -> RenderResult:
+        if self.marker_pos is None or not self.total:
+            yield from super().__rich_console__(console, options)
+            return
+
+        width = min(self.width or options.max_width, options.max_width)
+        # Map marker_pos (in task units) to a column index (in characters).
+        marker_col = max(0, min(int(width * self.marker_pos / self.total), width - 1))
+
+        # Rich yields ~3-5 bulk Segments (e.g. "━━━━━" for completed, "━━━" for
+        # remaining). We iterate those and split only the one that spans the
+        # marker column, replacing one character with a thin-space gap.
+        pos = 0
+        seg: Segment
+        for seg in super().__rich_console__(console, options):  # type: ignore[assignment]
+            seg_len = len(seg.text)
+            seg_end = pos + seg_len
+            if pos <= marker_col < seg_end:
+                i = marker_col - pos
+                if i > 0:
+                    yield Segment(seg.text[:i], seg.style)
+                yield Segment(" ", Style.null())  # thin space (U+2009)
+                if i + 1 < seg_len:
+                    yield Segment(seg.text[i + 1 :], seg.style)
+            else:
+                yield seg
+            pos = seg_end
+
+
+class CustomBarColumn(BarColumn):
+    """Bar column that recolors on divergences and renders a separator marker."""
 
     def __init__(self, *args, failing_color: str = "red", **kwargs):
         from matplotlib.colors import to_rgb
@@ -128,6 +168,20 @@ class RecolorOnFailureBarColumn(BarColumn):
         else:
             self.complete_style = self.default_complete_style
             self.finished_style = self.default_finished_style
+
+    def render(self, task: Task) -> ProgressBar:
+        return MarkerProgressBar(
+            total=max(0, task.total) if task.total is not None else None,
+            completed=max(0, task.completed),
+            width=None if self.bar_width is None else max(1, self.bar_width),
+            pulse=not task.started,
+            animation_time=task.get_time(),
+            style=self.style,
+            complete_style=self.complete_style,
+            finished_style=self.finished_style,
+            pulse_style=self.pulse_style,
+            marker_pos=task.fields.get("marker_pos"),
+        )
 
 
 class RichProgressBackend:
@@ -207,7 +261,7 @@ class RichProgressBackend:
         ]
 
         return CustomProgress(
-            RecolorOnFailureBarColumn(
+            CustomBarColumn(
                 bar_width=None,
                 table_column=Column("Progress", ratio=2),
                 failing_color="tab:red",
@@ -337,3 +391,14 @@ def RichSimpleProgress(theme: Theme | None):
         TimeElapsedColumn(),
         console=Console(file=stderr, theme=default_progress_theme if theme is None else theme),
     )
+
+
+def __getattr__(name: str):
+    if name == "RecolorOnFailureBarColumn":
+        warnings.warn(
+            "RecolorOnFailureBarColumn has been renamed to CustomBarColumn.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return CustomBarColumn
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
