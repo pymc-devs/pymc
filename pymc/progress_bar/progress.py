@@ -261,7 +261,9 @@ class MCMCProgressBarManager(ProgressBarManager):
         self.completed_draws = 0
         total_draws = draws + tune
         self.total_draws = total_draws * chains if self.combined_progress else total_draws
+        self._tune_total = tune * chains if self.combined_progress else tune
 
+        progress_stats["marker_pos"] = [self._tune_total] * chains
         self._backend = self._create_backend(
             total=self.total_draws,
             progress_columns=progress_columns,
@@ -323,7 +325,12 @@ class MCMCProgressBarManager(ProgressBarManager):
             chain_idx = 0
 
         failing, all_step_stats = self._extract_stats(stats)
-        all_step_stats["draw"] = draw + 1 if not self.combined_progress else draw
+
+        count = draw + 1 if not self.combined_progress else draw
+        if count <= self._tune_total:
+            all_step_stats["draw"] = count
+        else:
+            all_step_stats["draw"] = count - self._tune_total
 
         self._backend.update(
             task_id=chain_idx,
@@ -373,6 +380,7 @@ class NutpieProgressBarManager(ProgressBarManager):
         # Used to compute delta draws between calls
         self._previous_finished = [0] * chains
         self._chain_completed = [False] * chains
+        self._draws = draws
 
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
@@ -382,16 +390,29 @@ class NutpieProgressBarManager(ProgressBarManager):
         progress_stats = {
             stat: [0] * chains for stat in ("divergences", "step_size", "tree_size", "draw")
         }
+        self._tune_total: int | None = None
         self._backend = self._create_backend(
             total=None,  # Will be set on first callback
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
 
+    def _reset_draw(self, count: int) -> int:
+        if self._tune_total and count > self._tune_total:
+            return count - self._tune_total
+        return count
+
     def update(self, chain_progresses) -> None:
         """Consume a list of ``nutpie.ChainProgress`` objects and advance each bar."""
         if not self._show_progress:
             return
+
+        if self._tune_total is None:
+            for cp in chain_progresses:
+                if cp.started:
+                    tune = cp.total_draws - self._draws
+                    self._tune_total = tune * self.n_bars if self.combined_progress else tune
+                    break
 
         if self.combined_progress:
             stats = {
@@ -409,6 +430,10 @@ class NutpieProgressBarManager(ProgressBarManager):
                 stats["tree_size"] = max(stats["tree_size"], cp.latest_num_steps)
                 stats["draw"] += cp_finished_draws
             bar_total: int = cp.total_draws * len(chain_progresses)
+            total_finished = stats["draw"]
+            stats["draw"] = self._reset_draw(total_finished)
+            if self._tune_total:
+                stats["marker_pos"] = self._tune_total
             # Use the slowest chain's runtime as the combined bar's elapsed.
             max_runtime_ms = max(cp.runtime_ms for cp in chain_progresses)
             if max_runtime_ms > 0:
@@ -418,7 +443,7 @@ class NutpieProgressBarManager(ProgressBarManager):
                 advance=delta,
                 failing=stats["divergences"] > 0,
                 stats=stats,
-                is_last=stats["draw"] >= bar_total,
+                is_last=total_finished >= bar_total,
                 total=bar_total,
             )
         else:
@@ -442,8 +467,10 @@ class NutpieProgressBarManager(ProgressBarManager):
                     "divergences": len(cp.divergent_draws),
                     "step_size": cp.step_size,
                     "tree_size": cp.latest_num_steps,
-                    "draw": cp_finished_draws,
+                    "draw": self._reset_draw(cp_finished_draws),
                 }
+                if self._tune_total:
+                    stats["marker_pos"] = self._tune_total
                 self._backend.update(
                     task_id=chain_idx,
                     advance=delta,
