@@ -25,8 +25,6 @@ from typing import (
 )
 
 import numpy as np
-import xarray
-import xarray as xr
 
 from pytensor import tensor as pt
 from pytensor.graph import vectorize_graph
@@ -39,6 +37,7 @@ from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from rich.theme import Theme
+from xarray import Dataset, DataTree
 
 import pymc as pm
 
@@ -482,7 +481,7 @@ def sample_prior_predictive(
     idata_kwargs: dict | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
-) -> xarray.DataTree: ...
+) -> DataTree: ...
 @overload
 def sample_prior_predictive(
     draws: int = 500,
@@ -503,7 +502,7 @@ def sample_prior_predictive(
     idata_kwargs: dict | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
-) -> xarray.DataTree | dict[str, np.ndarray]:
+) -> DataTree | dict[str, np.ndarray]:
     """Generate samples from the prior predictive distribution.
 
     Parameters
@@ -530,7 +529,7 @@ def sample_prior_predictive(
 
     Returns
     -------
-    xarray.DataTree or dict
+    DataTree or dict
         A ``DataTree`` object containing the prior and prior predictive samples (default),
         or a dictionary with variable names as keys and samples as numpy arrays.
     """
@@ -611,7 +610,7 @@ def sample_posterior_predictive(
     idata_kwargs: dict | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
-) -> xarray.DataTree: ...
+) -> DataTree: ...
 @overload
 def sample_posterior_predictive(
     trace,
@@ -648,7 +647,7 @@ def sample_posterior_predictive(
     idata_kwargs: dict | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
-) -> xarray.DataTree | dict[str, np.ndarray]:
+) -> DataTree | dict[str, np.ndarray]:
     """Generate forward samples for `var_names`, conditioned on the posterior samples of variables found in the `trace`.
 
     This method can be used to perform different kinds of model predictions, including posterior predictive checks.
@@ -661,7 +660,7 @@ def sample_posterior_predictive(
 
     Parameters
     ----------
-    trace : backend, list, xarray.Dataset, xarray.DataTree, or MultiTrace
+    trace : backend, list, Dataset, DataTree, or MultiTrace
         Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
         or :class:`xarray.Dataset` (eg. DataTree.posterior or DataTree.prior)
     model : Model (optional if in ``with`` context)
@@ -695,7 +694,7 @@ def sample_posterior_predictive(
     sample_dims : list of str, optional
         Dimensions over which to loop and generate posterior predictive samples.
         When ``sample_dims`` is ``None`` (default) both "chain" and "draw" are considered sample
-        dimensions. Only taken into account when `trace` is xarray.DataTree or Dataset.
+        dimensions. Only taken into account when `trace` is DataTree or Dataset.
     random_seed : int, RandomState or Generator, optional
         Seed for the random number generator.
     progressbar : bool
@@ -710,7 +709,7 @@ def sample_posterior_predictive(
         already contains a group that would be added (e.g. ``posterior_predictive``), a warning
         is issued and the existing group is overwritten.
     predictions : bool, default False
-        Flag used to set the location of posterior predictive samples within the returned ``xarray.DataTree`` object.
+        Flag used to set the location of posterior predictive samples within the returned ``DataTree`` object.
         If False, assumes samples are generated based on the fitting data to be used for posterior predictive checks,
         and samples are stored in the ``posterior_predictive``. If True, assumes samples are generated based on
         out-of-sample data as predictions, and samples are stored in the ``predictions`` group.
@@ -725,8 +724,8 @@ def sample_posterior_predictive(
 
     Returns
     -------
-    xarray.DataTree or Dict
-        A ``xarray.DataTree`` object containing the posterior predictive samples (default), or
+    DataTree or Dict
+        A ``DataTree`` object containing the posterior predictive samples (default), or
         a dictionary with variable names as keys, and samples as numpy arrays.
 
 
@@ -1041,10 +1040,10 @@ def sample_posterior_predictive(
     trace_coords: dict[str, np.ndarray] = {}
     if "coords" not in idata_kwargs:
         idata_kwargs["coords"] = {}
-    idata: xarray.DataTree | None = None
+    idata: DataTree | None = None
     observed_data = None
     stacked_dims = None
-    if isinstance(trace, xarray.DataTree):
+    if isinstance(trace, DataTree):
         _constant_data = getattr(trace, "constant_data", None)
         if _constant_data is not None:
             trace_coords.update({str(k): v.data for k, v in _constant_data.coords.items()})
@@ -1055,7 +1054,7 @@ def sample_posterior_predictive(
             trace = trace["posterior"].dataset
         else:
             trace = trace.dataset
-    if isinstance(trace, xarray.Dataset):
+    if isinstance(trace, Dataset):
         trace_coords.update({str(k): v.data for k, v in trace.coords.items()})
         _trace, stacked_dims = dataset_to_point_list(trace, sample_dims)
         nchain = 1
@@ -1187,7 +1186,7 @@ def sample_posterior_predictive(
     if not output_vars:
         # Nothing to produce — neither sampled nor copied from the trace.
         if return_inferencedata and not extend_inferencedata:
-            return xr.DataTree()
+            return DataTree()
         elif return_inferencedata and extend_inferencedata:
             return trace if idata is None else idata
         return {}
@@ -1325,7 +1324,7 @@ def sample_posterior_predictive(
 
 def vectorize_over_posterior(
     outputs: list[Variable],
-    posterior: xr.Dataset,
+    posterior: Dataset,
     input_rvs: list[Variable],
     allow_rvs_in_graph: bool = True,
     sample_dims: tuple[str, ...] = ("chain", "draw"),
@@ -1340,7 +1339,7 @@ def vectorize_over_posterior(
     ----------
     outputs : list[Variable]
         The list of variables to vectorize over the posterior samples.
-    posterior : xr.Dataset
+    posterior : Dataset
         The posterior samples to use as replacements for the `input_rvs`.
     input_rvs : list[Variable]
         The list of random variables to replace with their posterior samples.

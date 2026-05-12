@@ -586,7 +586,7 @@ def to_inference_data(
     model: "Model" = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Convert pymc data into an InferenceData object.
 
     All three of them are optional arguments, but at least one of ``trace``,
@@ -627,7 +627,7 @@ def to_inference_data(
 
     Returns
     -------
-    xarray.DataTree
+    DataTree
     """
     if isinstance(trace, DataTree):
         return trace
@@ -656,9 +656,9 @@ def predictions_to_inference_data(
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    idata_orig: xarray.DataTree | None = None,
+    idata_orig: DataTree | None = None,
     inplace: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Translate out-of-sample predictions into ``DataTree``.
 
     Parameters
