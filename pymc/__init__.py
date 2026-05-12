@@ -59,7 +59,7 @@ from pymc.model_graph import model_to_graphviz, model_to_mermaid, model_to_netwo
 from pymc.pytensorf import compile
 from pymc.sampling import *
 from pymc.smc import *
-from pymc.stats import compute_log_likelihood
+from pymc.stats.log_density import compute_log_likelihood
 from pymc.step_methods import *
 from pymc.tuning import *
 from pymc.variational import *
