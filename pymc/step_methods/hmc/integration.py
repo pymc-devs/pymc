@@ -16,10 +16,12 @@ from typing import NamedTuple
 
 import numpy as np
 
-from scipy import linalg
+from pytensor.utils import lazy_scipy_module
 
 from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.step_methods.hmc.quadpotential import QuadPotential
+
+linalg = lazy_scipy_module("linalg")
 
 
 class State(NamedTuple):

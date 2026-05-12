@@ -18,7 +18,6 @@ from functools import partial, reduce
 
 import numpy as np
 import pytensor
-import pytensor.sparse
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply
