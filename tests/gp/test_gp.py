@@ -410,7 +410,7 @@ class TestTP:
             y,
         )
 
-    def testTPReparameterizedPriorMatchesMvStudentT(self):
+    def testTPReparameterizedPriorMatchesNonReparameterizedPrior(self):
         nu = 3.0
         X = np.array([[0.0], [1.0]])
         y = np.array([0.5, -0.75])
@@ -431,8 +431,8 @@ class TestTP:
         log_det_chol = np.log(np.linalg.det(chol))
 
         def integrand(log_scale):
-            scale = np.exp(log_scale)
-            f_rotated = np.linalg.solve(chol, y * np.sqrt(scale))
+            mixing_scale = np.exp(log_scale)
+            f_rotated = np.linalg.solve(chol, y * np.sqrt(mixing_scale))
             log_integrand = (
                 reparam_logp_fn({"f_rotated_": f_rotated, "f_scale_log__": log_scale})
                 + (n / 2) * log_scale
