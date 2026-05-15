@@ -52,6 +52,7 @@ from pytensor.scalar.basic import Mul
 from pytensor.tensor.basic import get_underlying_scalar_constant_value
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
+from pytensor.tensor.rewriting.basic import register_canonicalize, register_specialize
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import MeasurableOp, ValuedRV, _logprob
@@ -236,6 +237,98 @@ pytensor.compile.optdb["canonicalize"].register(
     local_check_parameter_to_ninf_switch,
     use_db_name_as_tag=False,
 )
+
+
+@register_canonicalize
+@register_specialize
+@node_rewriter([pt.math.sqr])
+def local_sqr_of_sqrt_div(fgraph, node):
+    """Sqr(Sqrt(A) / B) -> A / Sqr(B) and Sqr(A / Sqrt(B)) -> Sqr(A) / B.
+
+    Cancels Sqr with Sqrt when they are separated by a Mul or True_div.
+    """
+    import pytensor.scalar.basic as ps
+
+    [x] = node.inputs
+    if not (x.owner and isinstance(x.owner.op, Elemwise)):
+        return None
+
+    inner_scalar_op = x.owner.op.scalar_op
+    if not isinstance(inner_scalar_op, (ps.TrueDiv, ps.Mul)):
+        return None
+
+    terms = x.owner.inputs
+    is_div = isinstance(inner_scalar_op, ps.TrueDiv)
+
+    sqrt_indices = []
+    for i, term in enumerate(terms):
+        if (
+            term.owner
+            and isinstance(term.owner.op, Elemwise)
+            and isinstance(term.owner.op.scalar_op, ps.Sqrt)
+        ):
+            sqrt_indices.append(i)
+
+    if not sqrt_indices:
+        return None
+
+    if is_div:
+        numerator, denominator = terms
+        if (
+            numerator.owner
+            and isinstance(numerator.owner.op, Elemwise)
+            and isinstance(numerator.owner.op.scalar_op, ps.Sqrt)
+        ):
+            # Sqr(Sqrt(A) / B) -> A / Sqr(B)
+            return [numerator.owner.inputs[0] / pt.sqr(denominator)]
+        elif (
+            denominator.owner
+            and isinstance(denominator.owner.op, Elemwise)
+            and isinstance(denominator.owner.op.scalar_op, ps.Sqrt)
+        ):
+            # Sqr(A / Sqrt(B)) -> Sqr(A) / B
+            return [pt.sqr(numerator) / denominator.owner.inputs[0]]
+    else:
+        # Mul: cancel one Sqrt factor, square the rest
+        # Sqr(Sqrt(A) * B * ...) -> A * Sqr(B) * Sqr(...)
+        idx = sqrt_indices[0]
+        new_terms = []
+        for i, term in enumerate(terms):
+            if i == idx:
+                new_terms.append(term.owner.inputs[0])
+            else:
+                new_terms.append(pt.sqr(term))
+        result = new_terms[0]
+        for t in new_terms[1:]:
+            result = result * t
+        return [result]
+
+
+@register_canonicalize
+@register_specialize
+@node_rewriter([pt.math.sqr])
+def local_sqr_of_abs(fgraph, node):
+    """Sqr(Abs(x)) -> Sqr(x), since squaring already eliminates sign."""
+    import pytensor.scalar.basic as ps
+
+    [x] = node.inputs
+    if (
+        x.owner
+        and isinstance(x.owner.op, Elemwise)
+        and isinstance(x.owner.op.scalar_op, ps.Abs)
+    ):
+        return [pt.sqr(x.owner.inputs[0])]
+
+
+@register_specialize
+@node_rewriter([pt.true_div])
+def local_x_div_x(fgraph, node):
+    """x / x -> ones_like(x), using structural equality."""
+    from pytensor.graph.basic import equal_computations
+
+    x, y = node.inputs
+    if x is y or equal_computations([x], [y]):
+        return [pt.ones_like(x)]
 
 
 class DiracDelta(MeasurableOp, Op):
