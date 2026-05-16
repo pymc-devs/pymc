@@ -12,13 +12,15 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from time import sleep
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import MCMCProgressBarManager
+from pymc.progress_bar import MCMCProgressBarManager, NutpieProgressBarManager
 from pymc.progress_bar.marimo_progress import MarimoProgressBackend
 
 
@@ -75,6 +77,7 @@ class TestMarimoProgressBackend:
                 {"completed": 75, "total": 150, "failing": True, "stats": {"divergences": 1}},
             ]
             backend._start_times = [0, 0]
+            backend._end_times = [None, None]
 
             html = backend._render_html()
 
@@ -103,6 +106,7 @@ class TestMarimoProgressBackend:
                 },
             ]
             backend._start_times = [0]
+            backend._end_times = [None]
 
             html = backend._render_html()
 
@@ -120,6 +124,25 @@ class TestMarimoProgressBackend:
 
         assert backend._task_state[0]["completed"] == 150
         assert backend._task_state[1]["completed"] == 0
+
+    def test_elapsed_freezes_after_completion(self):
+        """Completed chains must not show drifting speed/elapsed on re-renders."""
+        backend = MarimoProgressBackend(
+            step_name="Draw", n_bars=2, total=10, combined=False, full_stats=False
+        )
+        backend._initialize_tasks()
+
+        # Complete chain 0
+        for i in range(10):
+            backend.update(task_id=0, advance=1, failing=False, stats={}, is_last=i == 9)
+
+        html_at_finish = backend._render_task_row(0, backend._task_state[0], [])
+
+        # Let wall-clock advance so unfrozen elapsed would visibly drift
+        sleep(0.3)
+
+        html_after = backend._render_task_row(0, backend._task_state[0], [])
+        assert html_at_finish == html_after
 
     def test_marimo_smc_progress(self):
         backend = MarimoProgressBackend(
@@ -139,3 +162,39 @@ class TestMarimoProgressBackend:
             old = beta
 
         assert backend._task_state[0]["completed"] == 1.0
+
+    def test_nutpie_elapsed_freezes_after_completion(self):
+        """Completed nutpie chains must not show drifting elapsed in marimo."""
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
+            manager = NutpieProgressBarManager(chains=2, draws=100, progressbar=True)
+        assert isinstance(manager._backend, MarimoProgressBackend)
+        total = 1100
+
+        backend = manager._backend
+        backend._initialize_tasks()
+
+        def cp(finished, runtime_ms, started=True):
+            return SimpleNamespace(
+                finished_draws=finished,
+                total_draws=total,
+                runtime_ms=runtime_ms,
+                started=started,
+                divergent_draws=[],
+                step_size=0.5,
+                latest_num_steps=7,
+            )
+
+        # Chain 0 finishes, chain 1 halfway
+        manager.update([cp(total, runtime_ms=5000), cp(500, runtime_ms=2500)])
+
+        html_at_finish = backend._render_task_row(0, backend._task_state[0], [])
+
+        # Let wall-clock advance so unfrozen elapsed would visibly drift
+        sleep(0.3)
+
+        # More callbacks arrive while chain 1 is still running
+        manager.update([cp(total, runtime_ms=5000), cp(800, runtime_ms=4000)])
+
+        # Chain 0's row must be identical — elapsed and speed frozen
+        html_after = backend._render_task_row(0, backend._task_state[0], [])
+        assert html_at_finish == html_after

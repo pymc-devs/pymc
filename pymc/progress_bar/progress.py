@@ -372,6 +372,7 @@ class NutpieProgressBarManager(ProgressBarManager):
         )
         # Used to compute delta draws between calls
         self._previous_finished = [0] * chains
+        self._chain_completed = [False] * chains
 
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
@@ -424,11 +425,14 @@ class NutpieProgressBarManager(ProgressBarManager):
             for chain_idx, cp in enumerate(chain_progresses):
                 # With ``cores < chains`` queued chains haven't started yet;
                 # skip them so their bar doesn't show progress or elapsed time.
-                if not cp.started:
+                if not cp.started or self._chain_completed[chain_idx]:
                     continue
                 cp_finished_draws = cp.finished_draws
                 delta = cp_finished_draws - self._previous_finished[chain_idx]
                 self._previous_finished[chain_idx] = cp_finished_draws
+                is_last = cp_finished_draws >= cp.total_draws
+                if is_last:
+                    self._chain_completed[chain_idx] = True
                 # Use nutpie's per-chain runtime as the source of truth for
                 # elapsed/speed, so reads aren't skewed by the wait time
                 # before this chain started.
@@ -445,7 +449,7 @@ class NutpieProgressBarManager(ProgressBarManager):
                     advance=delta,
                     failing=bool(cp.divergent_draws),
                     stats=stats,
-                    is_last=cp_finished_draws >= cp.total_draws,
+                    is_last=is_last,
                     total=cp.total_draws,
                 )
 
