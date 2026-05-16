@@ -275,24 +275,45 @@ class TP(Latent):
 
     The usage is nearly identical to that of `gp.Latent`.  The differences
     are that it must be initialized with a degrees of freedom parameter, and
-    TP is not additive. Given a mean and covariance function, and a degrees of
+    TP is not additive. Given a mean and a kernel function, and a degrees of
     freedom parameter, the function :math:`f(x)` is modeled as,
 
     .. math::
 
        f(X) \sim \mathcal{TP}\left( \mu(X), k(X, X'), \nu \right)
 
+    How the kernel :math:`k` is interpreted is controlled by the
+    ``paper_covariance`` argument. The default (``False``) treats
+    :math:`k` as the scale matrix of an underlying :class:`~pymc.MvStudentT`,
+    which makes the actual prior covariance equal to
+    :math:`\nu / (\nu - 2) \, k`. Passing ``True`` treats :math:`k` as the
+    actual covariance, matching the convention in Shah, Wilson, and
+    Ghahramani (2014). The default will change to ``True`` in a future
+    release; see the ``paper_covariance`` parameter below for migration
+    guidance.
 
     Parameters
     ----------
     mean_func : Mean, default ~pymc.gp.mean.Zero
         The mean function.
     scale_func : 2D array-like, or Covariance, default ~pymc.gp.cov.Constant
-        The covariance function.
+        The kernel function. Interpreted as the scale matrix or the actual
+        covariance depending on the ``paper_covariance`` argument.
     cov_func : 2D array-like, or Covariance, default None
         Deprecated, previous version of "scale_func"
     nu : float
-        The degrees of freedom
+        The degrees of freedom. For ``paper_covariance=True`` the kernel
+        only equals the prior covariance when :math:`\nu > 2`.
+    paper_covariance : bool, optional
+        Whether the kernel returned by ``scale_func`` is interpreted as the
+        actual prior covariance, matching Shah, Wilson, and Ghahramani
+        (2014). When ``False`` (the current default), the kernel is the
+        scale matrix of the underlying multivariate Student-t and the
+        actual prior covariance is ``nu / (nu - 2)`` times the kernel.
+        When left unspecified, ``False`` is used and a
+        :class:`FutureWarning` is emitted because the default will change
+        in a future release. Pass the value explicitly to silence the
+        warning.
 
     References
     ----------
@@ -300,7 +321,15 @@ class TP(Latent):
         Processes as Alternatives to Gaussian Processes.  arXiv preprint arXiv:1402.4306.
     """
 
-    def __init__(self, *, mean_func=Zero(), scale_func=Constant(0.0), cov_func=None, nu=None):
+    def __init__(
+        self,
+        *,
+        mean_func=Zero(),
+        scale_func=Constant(0.0),
+        cov_func=None,
+        nu=None,
+        paper_covariance=None,
+    ):
         if nu is None:
             raise ValueError("Student's T process requires a degrees of freedom parameter, 'nu'")
         if cov_func is not None:
@@ -310,16 +339,49 @@ class TP(Latent):
                 FutureWarning,
             )
             scale_func = cov_func
+        if paper_covariance is None:
+            warnings.warn(
+                "The current default for pm.gp.TP treats the kernel returned by "
+                "scale_func as the scale matrix of the underlying MvStudentT, "
+                "which makes the actual prior covariance equal to nu / (nu - 2) "
+                "times the kernel. This does not match the convention in Shah, "
+                "Wilson, and Ghahramani (2014) where the kernel is the actual "
+                "covariance. A future release will change the default to "
+                "paper_covariance=True to match the paper. To preserve the "
+                "current behavior, pass paper_covariance=False explicitly. To "
+                "opt in to the paper-correct behavior now, pass "
+                "paper_covariance=True.",
+                FutureWarning,
+                stacklevel=2,
+            )
+            paper_covariance = False
+        if not isinstance(paper_covariance, bool):
+            raise TypeError(
+                f"paper_covariance must be a bool, got {type(paper_covariance).__name__}"
+            )
         self.nu = nu
+        self.paper_covariance = paper_covariance
         super().__init__(mean_func=mean_func, cov_func=scale_func)
 
     def __add__(self, other):
         """Add two Student's T processes."""
         raise TypeError("Student's T processes aren't additive")
 
+    def _kernel_to_scale(self, K):
+        """Map the user-facing kernel to the MvStudentT scale matrix.
+
+        With ``paper_covariance=False`` the kernel is the scale matrix
+        directly. With ``paper_covariance=True`` the kernel is the desired
+        covariance, so the scale matrix is ``(nu - 2) / nu * K`` so that
+        ``nu / (nu - 2) * scale == K``.
+        """
+        if self.paper_covariance:
+            return (self.nu - 2) / self.nu * K
+        return K
+
     def _build_prior(self, name, X, reparameterize=True, jitter=JITTER_DEFAULT, **kwargs):
         mu = self.mean_func(X)
-        scale = stabilize(self.cov_func(X), jitter)
+        scale = self._kernel_to_scale(stabilize(self.cov_func(X), jitter))
         if reparameterize:
             if "dims" in kwargs:
                 v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, **kwargs)
@@ -376,7 +438,16 @@ class TP(Latent):
         mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
         beta = pt.dot(v, v)
         nu2 = self.nu + X.shape[0]
-        covT = (self.nu + beta - 2) / (nu2 - 2) * cov
+        # The Shah/Wilson/Ghahramani (2014) conditional covariance is
+        # (nu + beta - 2) / (nu + n - 2) * (Kss - Kxs^T Kxx^-1 Kxs).
+        # With paper_covariance=False we pass that quantity directly as the
+        # MvStudentT scale; with paper_covariance=True the scale must be
+        # divided by nu2 / (nu2 - 2) so that the actual covariance matches
+        # the paper. The two scaling factors collapse to the expression below.
+        if self.paper_covariance:
+            covT = (self.nu + beta - 2) / nu2 * cov
+        else:
+            covT = (self.nu + beta - 2) / (nu2 - 2) * cov
         return nu2, mu, covT
 
     def conditional(self, name, Xnew, jitter=JITTER_DEFAULT, **kwargs):
