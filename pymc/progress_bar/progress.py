@@ -345,6 +345,19 @@ class NutpieProgressBarManager(ProgressBarManager):
 
     step_name: str = "Draw"
 
+    def __enter__(self) -> Self:
+        self._backend.__enter__()
+        # nutpie's progress callback fires from a Rust thread where marimo's
+        # cell context is absent.  Replace the backend's output function with
+        # a thread-safe version that pins the cell identity.
+        if isinstance(self._backend, MarimoProgressBackend):
+            from nutpie.sample import _mo_create_replace
+
+            replace = _mo_create_replace()
+            if replace is not None:
+                self._backend._mo_replace = replace
+        return self
+
     def __init__(
         self,
         chains: int,
