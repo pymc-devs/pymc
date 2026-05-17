@@ -39,7 +39,7 @@ from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
-from pytensor.tensor.basic import _as_tensor_variable
+from pytensor.tensor.basic import _as_tensor_variable, infer_shape_db
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
@@ -1006,6 +1006,29 @@ def constant_fold(
     return tuple(
         folded_x.data if isinstance(folded_x, Constant) else folded_x for folded_x in folded_xs
     )
+
+
+def resolve_shapes(
+    shapes: Sequence[TensorVariable],
+) -> tuple[TensorVariable, ...]:
+    """Rewrite shape expressions via ShapeFeature + infer_shape rewrites.
+
+    Replaces Shape(rv) and similar references with equivalent expressions
+    derived from the op's inputs (e.g. distribution parameters).
+    """
+    shape_fg = FunctionGraph(
+        outputs=list(shapes), features=[ShapeFeature()], clone=True, copy_inputs=False
+    )
+    with pytensor.config.change_flags(optdb__max_use_ratio=10, cxx=""):
+        infer_shape_db.default_query.rewrite(shape_fg)
+    return cast(tuple[TensorVariable, ...], tuple(shape_fg.outputs))
+
+
+def get_symbolic_rv_shapes(
+    rvs: Sequence[TensorVariable],
+) -> tuple[TensorVariable, ...]:
+    """Compute symbolic shapes of random variables without referencing the RVs themselves."""
+    return resolve_shapes([rv.shape for rv in rvs])
 
 
 def rewrite_pregrad(graph):
