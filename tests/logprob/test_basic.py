@@ -475,3 +475,26 @@ def test_ir_ops_can_be_evaluated_with_warning():
 
     assert _eval_values[0].sum() == 3
     assert _eval_values[1] == np.exp(-1.5)
+
+
+def test_broadcasted_logp_does_not_reference_rv():
+    """Size referencing another RV's shape should not leak into the logp graph.
+
+    RVs in distribution parameters (e.g. Normal(mu=rv)) are expected — they
+    represent statistical dependencies. But RVs in the size are shape artifacts
+    from broadcast_shape(rv, ...) that have no role in the logp computation.
+    """
+    rv1 = pm.Normal.dist([0, 1, 2])
+    rv2 = pm.Normal.dist(0, 1, size=rv1.shape)
+    assert_no_rvs(pm.logp(rv2, 0))
+
+    # Faithful regression case for #8301
+    def logp(value, sigma):
+        inner = pm.Truncated.dist(pm.Normal.dist(sigma=sigma), lower=-5.0, upper=5.0)
+        outer = pm.Truncated.dist(inner, lower=0.1)
+        return pm.logp(outer, value)
+
+    with pm.Model() as m:
+        pm.CustomDist("x", np.ones(3), logp=logp)
+
+    assert_no_rvs(m.logp())
