@@ -196,7 +196,7 @@ jobs:
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
 
       fail-fast: false
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
@@ -348,7 +348,7 @@ jobs:
     strategy:
       matrix:
         linker: [cvm, numba]
-        os: [windows-latest]
+        os: [windows-2022]
         python-version: ["3.14"]
         test-subset:
           - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
