@@ -1414,9 +1414,19 @@ class ZeroOneInflatedBeta(UnitContinuous):
         return mean
 
     def logp(value, zoi, coi, alpha, beta):
+        saved_zoi = zoi
+        saved_coi = coi    
+
+        check_zoi = pt.bitwise_and(pt.ge(zoi, 0), pt.le(zoi, 1))
+        check_coi = pt.bitwise_and(pt.ge(coi, 0), pt.le(coi, 1))
+        zoi = pt.switch(check_zoi, pt.clip(zoi, 1e-12, 1 - 1e-12), zoi)
+        coi = pt.switch(check_coi, pt.clip(coi, 1e-12, 1 - 1e-12), coi)
+
+        safe_value = pt.clip(value, 1e-12, 1 - 1e-12)
+
         logp_beta = (
-            pt.switch(pt.eq(alpha, 1.0), 0.0, (alpha - 1.0) * pt.log(value))
-            + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-value))
+            pt.switch(pt.eq(alpha, 1.0), 0.0, (alpha - 1.0) * pt.log(safe_value))
+            + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-safe_value))
             - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
         )
 
@@ -1437,16 +1447,24 @@ class ZeroOneInflatedBeta(UnitContinuous):
         )
         return check_parameters(
             res,
-            zoi >= 0,
-            zoi <= 1,
-            coi >= 0,
-            coi <= 1,
+            saved_zoi >= 0,
+            saved_zoi <= 1,
+            saved_coi >= 0,
+            saved_coi <= 1,
             alpha > 0,
             beta > 0,
             msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
         )
 
     def logcdf(value, zoi, coi, alpha, beta):
+        saved_zoi = zoi
+        saved_coi = coi
+
+        check_zoi = pt.bitwise_and(pt.ge(zoi, 0), pt.le(zoi, 1))
+        check_coi = pt.bitwise_and(pt.ge(coi, 0), pt.le(coi, 1))
+        zoi = pt.switch(check_zoi, pt.clip(zoi, 1e-12, 1 - 1e-12), zoi)
+        coi = pt.switch(check_coi, pt.clip(coi, 1e-12, 1 - 1e-12), coi)
+
         beta_logcdf = pt.log(pt.betainc(alpha, beta, value))
 
         res = pt.switch(
@@ -1465,10 +1483,10 @@ class ZeroOneInflatedBeta(UnitContinuous):
 
         return check_parameters(
             res,
-            zoi >= 0,
-            zoi <= 1,
-            coi >= 0,
-            coi <= 1,
+            saved_zoi >= 0,
+            saved_zoi <= 1,
+            saved_coi >= 0,
+            saved_coi <= 1,
             alpha > 0,
             beta > 0,
             msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
