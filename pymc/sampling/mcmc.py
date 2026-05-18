@@ -620,7 +620,7 @@ def sample(
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     trace : backend, optional
-        A backend instance or None. Ignored when ``nuts_sampler`` is not ``"pymc"``.
+        A backend instance or None. Raises a ``ValueError`` when ``nuts_sampler`` is not ``"pymc"``.
         If ``None``, a ``MultiTrace`` object with underlying ``NDArray`` trace objects
         is used. If ``trace`` is a :class:`~pymc.backends.zarr.ZarrTrace` instance,
         the drawn samples will be written onto the desired storage while sampling is
