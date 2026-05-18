@@ -36,6 +36,7 @@ from pymc.distributions.continuous import (
     halfflat,
     truncated_normal,
 )
+from pymc.distributions.discrete import NegativeBinomial as RegularNegativeBinomial
 from pymc.util import UNSET
 
 
@@ -295,3 +296,22 @@ class Weibull(PositiveDimDistribution):
         core_rv = WeibullBetaRV.rv_op(alpha=alpha.values, beta=beta.values).owner.op
         xop = ptxr.as_xrv(core_rv)
         return xop(alpha, beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
+
+
+@copy_docstring(regular_dists.Poisson)
+class Poisson(DimDistribution):
+    xrv_op = ptxr.poisson
+
+    @classmethod
+    def dist(cls, mu, **kwargs):
+        return super().dist([mu], **kwargs)
+
+
+@copy_docstring(regular_dists.NegativeBinomial)
+class NegativeBinomial(DimDistribution):
+    xrv_op = ptxr.nbinom
+
+    @classmethod
+    def dist(cls, mu=None, alpha=None, p=None, n=None, **kwargs):
+        n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
+        return super().dist([n, p], **kwargs)
