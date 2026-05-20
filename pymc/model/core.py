@@ -2246,6 +2246,29 @@ def Deterministic(name, var, model=None, dims=None):
     they don't add randomness to the model.  They are generally used to record
     an intermediary result.
 
+    .. note::
+
+       Wrapping an expression in :func:`Deterministic` is **optional**: the
+       model fits and samples identically whether you use it or not. What it
+       buys you is two specific capabilities described below. If you don't
+       need either of them, you can leave the variable as a plain PyTensor
+       expression and the model will behave the same way (and use a tiny bit
+       less memory in the trace).
+
+    When you *do* want a :class:`Deterministic`:
+
+    1. **You want to read the value of an intermediate quantity from the
+       trace.** Anything wrapped in :func:`Deterministic` is recorded in the
+       :class:`~arviz.InferenceData` returned by :func:`pymc.sample` (and in
+       posterior-predictive output), so you can plot it, summarise it, and
+       index it by name. Plain PyTensor expressions are not.
+    2. **You want to target the variable with a model transform.** Some
+       transforms identify variables by name — for example,
+       :func:`pymc.do` for hard interventions and :func:`pymc.observe` for
+       turning a latent into observed data both need a named variable. If
+       you wrap an intermediate quantity with :func:`Deterministic`, those
+       transforms can address it directly.
+
     Parameters
     ----------
     name : str
@@ -2294,6 +2317,11 @@ def Deterministic(name, var, model=None, dims=None):
     However, in the first case, the inference data will only contain values for
     the variables ``alpha``, ``intercept`` and ``outcome``.  In the second, it
     will also contain sampled values of ``p`` for each of the observed points.
+
+    The same is true for model transforms: the wrapped form above lets you
+    later call e.g. ``pm.do({"p": 0.5})`` to hard-set the intermediate
+    probability, while the unwrapped form does not, because ``p`` is not a
+    named node in the model.
 
     Notes
     -----
