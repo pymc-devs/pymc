@@ -104,9 +104,7 @@ class CustomDist(DimDistribution):
 
         def normal_logp(value, mu, sigma):
             v = value.values  # strip dims for tensor ops
-            return pt.sum(
-                pt.pow(v - mu, 2) / (2 * sigma**2) + pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(pt.pow(v - mu, 2) / (2 * sigma**2) + pt.log(sigma * pt.sqrt(2 * np.pi)))
 
 
         pmd.CustomDist("y", mu, sigma, logp=normal_logp, observed=y, dims="city")

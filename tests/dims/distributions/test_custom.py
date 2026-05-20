@@ -73,9 +73,7 @@ class TestCustomDistBlackbox:
 
         def normal_logp(value, mu, sigma):
             v = value.values
-            return pt.sum(
-                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
         coords = {"city": range(5)}
         rng = np.random.default_rng(42)
@@ -101,9 +99,7 @@ class TestCustomDistBlackbox:
 
         def normal_logp(value, mu, sigma):
             v = value.values
-            return pt.sum(
-                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
         def normal_random(mu, sigma, rng=None, size=None):
             return rng.normal(loc=mu, scale=sigma, size=size)
@@ -135,9 +131,7 @@ class TestCustomDistBlackbox:
 
         def normal_logp(value, mu, sigma):
             v = value.values
-            return pt.sum(
-                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
         def normal_logcdf(value, mu, sigma):
             v = value.values
@@ -169,9 +163,7 @@ class TestCustomDistBlackbox:
 
         def normal_logp(value, mu, sigma):
             v = value.values
-            return pt.sum(
-                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
         coords = {"city": range(5)}
         rng = np.random.default_rng(42)
@@ -197,9 +189,7 @@ class TestCustomDistBlackbox:
 
         def normal_logp(value, mu, sigma):
             v = value.values
-            return pt.sum(
-                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * pt.constant(np.pi)))
-            )
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
         def custom_support_point(rv, size, mu, sigma):
             return pt.full_like(rv, mu)
