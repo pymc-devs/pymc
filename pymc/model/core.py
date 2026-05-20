@@ -1336,7 +1336,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ):
             if isinstance(data, np.ma.MaskedArray):
                 check_data = data.compressed()
-            elif sps.issparse(data):
+            elif sparse.issparse(data):
                 check_data = data.data
             else:
                 check_data = np.asarray(data)
