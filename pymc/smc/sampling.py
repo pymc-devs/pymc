@@ -69,9 +69,40 @@ def sample_smc(
         independent chains. Defaults to 2000.
     kernel : SMC_kernel, optional
         SMC kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
-    start : dict or array of dict, optional
-        Starting point in parameter space. It should be a list of dict with length `chains`.
-        When None (default) the starting point is sampled from the prior distribution.
+    start : dict or sequence of dict, optional
+        Starting population for the SMC particles. Unlike :func:`pymc.sample`, where ``start``
+        is a *single point* per chain, SMC needs ``draws`` particles per chain, so each
+        starting "value" here is itself a *population*. ``start`` can be:
+
+        - ``None`` (default): sample the initial population from the model prior.
+        - ``dict``: a single starting population, reused for every chain.
+        - sequence of ``dict``: one starting population per chain. Length must equal
+          ``chains``, otherwise :class:`ValueError` is raised.
+
+        Each starting population is a dict mapping the *value-variable name* of every
+        free random variable in the model to a NumPy array of shape ``(draws, *var.shape)``.
+        Row ``i`` of every array is the value used by particle ``i``.
+
+        The value-variable name is the name of ``model.rvs_to_values[rv]`` and may differ
+        from the random-variable name when an automatic transform is applied (e.g. the
+        value variable for ``pm.HalfNormal("sigma")`` is named ``"sigma_log__"``, and you
+        should supply the starting values on the unconstrained scale). The free random
+        variables of a model are :attr:`pymc.Model.free_RVs`.
+
+        Example::
+
+            with pm.Model() as model:
+                mu = pm.Normal("mu", 0.0, 1.0)
+                sigma = pm.HalfNormal("sigma", 1.0)
+                obs = pm.Normal("y", mu=mu, sigma=sigma, observed=data)
+
+            draws = 2000
+            rng = np.random.default_rng(0)
+            start = {
+                "mu": rng.normal(size=draws),         # untransformed
+                "sigma_log__": rng.normal(size=draws),  # transformed
+            }
+            idata = pm.sample_smc(draws=draws, start=start, chains=4)
     model : Model (optional if in ``with`` context).
     random_seed :  int, array_like of int, RandomState or numpy_Generator, optional
         Random seed(s) used by the sampling steps. If a list, tuple or array of ints
