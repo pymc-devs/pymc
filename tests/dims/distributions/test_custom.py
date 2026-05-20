@@ -127,13 +127,7 @@ class TestCustomDistBlackbox:
         assert np.isfinite(logp_val)
 
     def test_hybrid_derived_params(self):
-        """Hybrid path: dist uses more params than the internal RV expects.
-
-        The dist function derives a single param from multiple inputs.
-        This was broken before because ``_symbolic_xrv_op`` passed all
-        ``xtensor_params`` to ``_call_rv_op``, whose signature used the
-        discovered op's ``ndims_params`` — causing a ``zip()`` mismatch.
-        """
+        """Hybrid path: dist derives params."""
 
         def poisson_dist(a, b, c):
             lam = a + b + c
