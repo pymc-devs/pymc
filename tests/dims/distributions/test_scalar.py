@@ -31,7 +31,9 @@ from pymc.dims import (
     InverseGamma,
     Laplace,
     LogNormal,
+    NegativeBinomial,
     Normal,
+    Poisson,
     StudentT,
     TruncatedNormal,
     Uniform,
@@ -308,6 +310,30 @@ def test_weibull():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Weibull("x", alpha=1, beta=2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_poisson():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Poisson("x", mu=2.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Poisson("x", mu=2.0, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_negative_binomial():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        NegativeBinomial("x", mu=5.0, alpha=2.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.NegativeBinomial("x", mu=5.0, alpha=2.0, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
