@@ -11,10 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-import functools
-
 from collections.abc import Callable, Sequence
 
+import numpy as np
+import pytensor
 import pytensor.tensor as pt
 
 from pytensor.tensor.random.op import RandomVariable
@@ -25,7 +25,6 @@ from pytensor.xtensor.type import XTensorVariable
 
 from pymc.dims.distributions.core import DimDistribution, expand_dist_dims
 from pymc.distributions.distribution import _call_rv_op, _support_point
-from pymc.distributions.shape_utils import rv_size_is_none
 from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.model.core import new_or_existing_block_model_access
 
@@ -61,29 +60,34 @@ def _default_not_implemented(rv_name, method_name):
     return func
 
 
-def _default_support_point(rv, size, *rv_inputs, rv_name=None, has_fallback=False):
-    if None not in rv.type.shape:
-        return pt.zeros(rv.type.shape)
-    elif rv.owner.op.ndim_supp == 0 and not rv_size_is_none(size):
-        return pt.zeros(size)
-    elif has_fallback:
-        return pt.zeros_like(rv)
-    else:
-        raise TypeError(
-            "Cannot safely infer the size of a multivariate random variable's "
-            "support_point. Please provide a support_point function when "
-            f"instantiating the {rv_name} random variable."
-        )
+def _default_support_point(rv, size=None, *rv_inputs):
+    return pt.zeros_like(rv)
+
+
+def _prep_logp_params(dist_params, param_dims, size):
+    """Prepare params for logp dispatch.
+
+    Params with non-empty dims are wrapped as XTensorVariable for dim-aware ops.
+    Params without dims (None) or with empty dims (scalar) stay as plain tensors.
+    """
+    del size  # Unused; params may have extra batch dims from explicit_expand_dims,
+    # but broadcasting handles that at the tensor level.
+    result = []
+    for p, dims in zip(dist_params, param_dims):
+        if dims:
+            result.append(xtensor_from_tensor(p, dims=dims))
+        else:
+            result.append(p)
+    return result
 
 
 class CustomDist(DimDistribution):
     """Dims-aware CustomDist for pymc.dims.
 
-    Supports the same ``dist=`` (symbolic) and ``logp=`` (black-box) paths as
-    ``pm.CustomDist``, but operates on ``XTensorVariable`` with named dims.
+    Provides ``dist`` (symbolic) and/or ``logp`` construction paths,
+    operating on ``XTensorVariable`` with named dims.
 
-    Symbolic path (``dist`` function receives XTensorVariable params,
-    use ``ptx.*`` ops for transforms)::
+    Symbolic path (``dist`` function receives XTensorVariable params)::
 
         import pytensor.xtensor.math as ptxm
 
@@ -94,55 +98,49 @@ class CustomDist(DimDistribution):
 
         pmd.CustomDist("x", mu, sigma, dist=logitnormal_dist, dims="city")
 
-    Black-box path (``logp`` function receives the ``value`` as an
-    ``XTensorVariable`` with dims; params are plain tensors unless they
-    have non-empty dims. Use ``value.values`` to access the underlying
-    tensor for ``pt.*`` operations, or use ``ptx.*`` for dim-aware ops)::
+    When ``dist`` is provided without ``logp``, PyMC auto-derives the logp
+    from the inner graph.  When ``logp`` is also given, it overrides the
+    auto-derived logp while ``dist`` still drives the random path.
+
+    Logp path (``logp`` function receives the ``value`` and all params as
+    ``XTensorVariable`` — use ``ptx.*`` for dim-aware operations)::
+
+        import pytensor.xtensor.math as ptx
+
+
+        def normal_logp(value, mu, sigma):
+            return ptx.sum(
+                -0.5 * ((value - mu) / sigma) ** 2 - ptx.log(sigma * ptx.sqrt(2 * np.pi))
+            )
+
+
+        pmd.CustomDist("y", mu, sigma, logp=normal_logp, observed=y, dims="city")
+
+    When ``logp`` is provided without ``dist``, prior/posterior predictive
+    sampling is not available — only MCMC (logp evaluation).  For both,
+    provide ``dist`` + ``logp`` together.
+
+    For tensor-level operations use ``value.values`` to access the
+    underlying tensor::
 
         import pytensor.tensor as pt
 
 
         def normal_logp(value, mu, sigma):
-            v = value.values  # strip dims for tensor ops
-            return pt.sum(pt.pow(v - mu, 2) / (2 * sigma**2) + pt.log(sigma * pt.sqrt(2 * np.pi)))
+            v = value.values
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
 
 
         pmd.CustomDist("y", mu, sigma, logp=normal_logp, observed=y, dims="city")
-
-    For dim-aware operations via ``pytensor.xtensor.math``::
-
-        import pytensor.xtensor.math as ptx
-
-
-        def tweedie_logp(value, mu, phi, p):
-            ll_core = (value * mu ** (1 - p) / (1 - p) - mu ** (2 - p) / (2 - p)) / phi
-            j = pt.arange(1, 30, dtype="float64")
-            alpha = (2 - p) / (p - 1)
-            log_Wj = j[:, None] * alpha * ptx.log(value)[None, :] - ...
-            log_a = ptx.logsumexp(log_Wj, dim="policy") - ptx.log(value)
-            ...
-
-
-        pmd.CustomDist("y", mu, phi, p, logp=tweedie_logp, observed=y, dims="policy")
-
-    **Why ``value`` arrives as XTensor but params may not be:** the
-    dispatch in ``_logprob`` reconstructs ``value`` from a lowered tensor
-    (``MeasurableXTensorFromTensor``) so the original dims are available;
-    each param is independently wrapped in XTensor only if the user
-    provided dims for it. Params without dims (scalars, observed data)
-    stay as plain tensors to avoid shape mismatches — PyTensor's
-    ``RandomVariable`` stores broadcast scalars with shape ``(1,)``, but
-    ``xtensor_from_tensor(x, dims=())`` rejects that. Use
-    ``value.values`` to access the raw tensor for ``pt.*`` operations, or
-    ``ptx.*`` for dim-aware code on any XTensorVariable.
     """
+
+    _forward_dim_lengths = True
 
     @classmethod
     def dist(
         cls,
         *dist_params,
         dist: Callable | None = None,
-        random: Callable | None = None,
         logp: Callable | None = None,
         logcdf: Callable | None = None,
         support_point: Callable | None = None,
@@ -156,7 +154,6 @@ class CustomDist(DimDistribution):
     ):
         kwargs.update(
             dist=dist,
-            random=random,
             logp=logp,
             logcdf=logcdf,
             support_point=support_point,
@@ -173,7 +170,7 @@ class CustomDist(DimDistribution):
         )
 
     @classmethod
-    def _infer_output_dims(cls, params, extra_dims, core_dims):
+    def _infer_output_dims(cls, params, extra_dims, core_dims, dim_lengths=None):
         """Infer output dims from params, extra_dims and core_dims."""
         param_dims = set()
         for p in params:
@@ -181,7 +178,9 @@ class CustomDist(DimDistribution):
                 param_dims |= set(p.dims)
             except AttributeError:
                 pass
-        if extra_dims:
+        if dim_lengths:
+            batch_dims = tuple(dim_lengths.keys())
+        elif extra_dims:
             batch_dims = tuple(d for d in extra_dims if d in param_dims) + tuple(
                 d for d in extra_dims if d not in param_dims
             )
@@ -194,7 +193,6 @@ class CustomDist(DimDistribution):
         cls,
         *dist_params,
         dist: Callable | None = None,
-        random: Callable | None = None,
         logp: Callable | None = None,
         logcdf: Callable | None = None,
         support_point: Callable | None = None,
@@ -209,6 +207,7 @@ class CustomDist(DimDistribution):
         return_next_rng: bool = False,
         **kwargs,
     ):
+        dim_lengths = kwargs.pop("dim_lengths", None)
         if dist is not None:
             return cls._symbolic_xrv_op(
                 list(dist_params),
@@ -219,6 +218,7 @@ class CustomDist(DimDistribution):
                 class_name=class_name,
                 core_dims=core_dims,
                 extra_dims=extra_dims or {},
+                dim_lengths=dim_lengths,
                 rng=rng,
                 return_next_rng=return_next_rng,
             )
@@ -228,7 +228,6 @@ class CustomDist(DimDistribution):
                 logp=logp,
                 logcdf=logcdf,
                 support_point=support_point,
-                random=random,
                 ndim_supp=ndim_supp,
                 ndims_params=ndims_params,
                 signature=signature,
@@ -236,6 +235,7 @@ class CustomDist(DimDistribution):
                 class_name=class_name,
                 core_dims=core_dims,
                 extra_dims=extra_dims or {},
+                dim_lengths=dim_lengths,
                 rng=rng,
                 return_next_rng=return_next_rng,
             )
@@ -252,6 +252,7 @@ class CustomDist(DimDistribution):
         class_name: str,
         core_dims: str | Sequence[str] | None,
         extra_dims: dict[str, int],
+        dim_lengths: dict | None,
         rng,
         return_next_rng: bool,
     ):
@@ -267,11 +268,126 @@ class CustomDist(DimDistribution):
             if missing_extra_dims:
                 rv = expand_dist_dims(rv, missing_extra_dims)
         else:
-            output_dims = cls._infer_output_dims(xtensor_params, extra_dims, core_dims)
+            output_dims = cls._infer_output_dims(xtensor_params, extra_dims, core_dims, dim_lengths)
             rv = xtensor_from_tensor(rv, dims=output_dims)
 
+        # If no user-provided functions to override, return the symbolic RV as-is
+        if logp is None and logcdf is None and support_point is None:
+            if return_next_rng:
+                return xtensor_shared_rng(seed=None), rv
+            return rv
+
+        # Hybrid: use dist for sampling but user functions for logp/logcdf/support_point
+        # Walk the owner chain to find the underlying RandomVariable op for its rng_fn
+        tensor_rv = rv.values if isinstance(rv, XTensorVariable) else rv
+        current = tensor_rv
+        while current.owner is not None:
+            op = current.owner.op
+            if hasattr(op, "rng_fn"):
+                orig_op = op
+                break
+            if hasattr(op, "core_op") and hasattr(op.core_op, "rng_fn"):
+                orig_op = op.core_op
+                break
+            current = current.owner.inputs[0]
+        else:
+            raise ValueError(
+                "Could not find a RandomVariable op in the dist graph. "
+                "The dist function must return a distribution with a sampler."
+            )
+
+        # Compile the full dist output graph for sampling.
+        # This is essential for compound processes (Poisson→Gamma→...) — the
+        # graph contains multiple RandomVariables whose chained evaluation
+        # produces correct draws from the compound, bypassing a single op's rng_fn.
+        from pytensor.graph.basic import Constant
+        from pytensor.graph.traversal import graph_inputs
+
+        # Only pass variables that are actual graph inputs (skip constants/unused params)
+        graph_deps = set(graph_inputs([rv.values]))
+        _input_indices = [
+            i
+            for i, p in enumerate(xtensor_params)
+            if p in graph_deps and not isinstance(p, Constant)
+        ]
+        sample_inputs = [xtensor_params[i] for i in _input_indices]
+        _sample_fn = pytensor.function(
+            inputs=sample_inputs,
+            outputs=rv.values,
+        )
+
+        def random_fn(*args, rng=None, size=None):
+            fn_args = [args[i] for i in _input_indices]
+            result = _sample_fn(*fn_args)
+            if size is not None and result.shape != tuple(size):
+                result = np.broadcast_to(result, tuple(size)).copy()
+            return result
+
+        ndim_supp = getattr(orig_op, "ndim_supp", 0)
+        ndims_params = [0] * len(xtensor_params)
+        hybrid_signature = safe_signature(
+            core_inputs_ndim=ndims_params,
+            core_outputs_ndim=[ndim_supp],
+        )
+
+        output_dims = rv.type.dims if isinstance(rv, XTensorVariable) else ()
+        param_dims = []
+        for p in xtensor_params:
+            try:
+                param_dims.append(p.dims)
+            except AttributeError:
+                param_dims.append(None)
+
+        rv_type = type(
+            class_name,
+            (_DimCustomDistRV,),
+            {
+                "signature": hybrid_signature,
+                "dtype": str(tensor_rv.dtype),
+                "_print_name": (class_name, f"\\operatorname{{{class_name}}}"),
+                "_random_fn": random_fn,
+                "_param_dims": tuple(param_dims),
+                "_output_dims": output_dims,
+            },
+        )
+
+        if logp is not None:
+
+            @_logprob.register(rv_type)
+            def _custom_dist_logp(op, values, rng, size, *dist_params, **kwargs):
+                value_xt = xtensor_from_tensor(values[0], dims=op._output_dims)
+                xtensor_params = _prep_logp_params(dist_params, op._param_dims, size)
+                result = logp(value_xt, *xtensor_params)
+                return result.values if isinstance(result, XTensorVariable) else result
+
+        if logcdf is not None:
+
+            @_logcdf.register(rv_type)
+            def _custom_dist_logcdf(op, value, rng, size, *dist_params, **kwargs):
+                value_xt = xtensor_from_tensor(value, dims=op._output_dims)
+                xtensor_params = _prep_logp_params(dist_params, op._param_dims, size)
+                result = logcdf(value_xt, *xtensor_params)
+                return result.values if isinstance(result, XTensorVariable) else result
+
+        _support_point_fn = support_point if support_point is not None else _default_support_point
+
+        @_support_point.register(rv_type)
+        def _custom_dist_support_point(op, rv, rng, size, *dist_params):
+            return _support_point_fn(rv, size, *dist_params)
+
+        size = None
+        if output_dims and dim_lengths:
+            size = tuple(dim_lengths[d] for d in output_dims if d in dim_lengths)
+        if not size:
+            size = tuple(extra_dims.values()) if extra_dims else None
+        rv_op = rv_type()
+        _, new_tensor_rv = _call_rv_op(
+            rv_op, *[p.values for p in xtensor_params], size=size, rng=rng
+        )
+        rv = xtensor_from_tensor(new_tensor_rv, dims=output_dims)
+
         if return_next_rng:
-            return xtensor_shared_rng(seed=None), rv
+            return rng, rv
         return rv
 
     @classmethod
@@ -282,7 +398,6 @@ class CustomDist(DimDistribution):
         logp: Callable | None,
         logcdf: Callable | None,
         support_point: Callable | None,
-        random: Callable | None,
         ndim_supp: int | None,
         ndims_params: Sequence[int] | None,
         signature: str | None,
@@ -290,6 +405,7 @@ class CustomDist(DimDistribution):
         class_name: str,
         core_dims: str | Sequence[str] | None,
         extra_dims: dict[str, int],
+        dim_lengths: dict | None,
         rng,
         return_next_rng: bool,
     ):
@@ -317,7 +433,7 @@ class CustomDist(DimDistribution):
             )
 
         # Infer output dims for the XTensor wrapping
-        output_dims = cls._infer_output_dims(dist_params, extra_dims, core_dims)
+        output_dims = cls._infer_output_dims(dist_params, extra_dims, core_dims, dim_lengths)
 
         # Dynamically create a RandomVariable subclass with ONLY signature
         # (no ndim_supp/ndims_params class attributes) to avoid deprecation warnings.
@@ -333,7 +449,7 @@ class CustomDist(DimDistribution):
                 "signature": signature,
                 "dtype": dtype,
                 "_print_name": (class_name, f"\\operatorname{{{class_name}}}"),
-                "_random_fn": random,
+                "_random_fn": _default_not_implemented(class_name, "random"),
                 "_param_dims": tuple(param_dims),
                 "_output_dims": output_dims,
             },
@@ -345,10 +461,7 @@ class CustomDist(DimDistribution):
         @_logprob.register(rv_type)
         def _custom_dist_logp(op, values, rng, size, *dist_params, **kwargs):
             value_xt = xtensor_from_tensor(values[0], dims=op._output_dims)
-            xtensor_params = [
-                xtensor_from_tensor(p, dims=dims) if dims else p
-                for p, dims in zip(dist_params, op._param_dims)
-            ]
+            xtensor_params = _prep_logp_params(dist_params, op._param_dims, size)
             result = _logp_fn(value_xt, *xtensor_params)
             return result.values if isinstance(result, XTensorVariable) else result
 
@@ -358,23 +471,12 @@ class CustomDist(DimDistribution):
             @_logcdf.register(rv_type)
             def _custom_dist_logcdf(op, value, rng, size, *dist_params, **kwargs):
                 value_xt = xtensor_from_tensor(value, dims=op._output_dims)
-                xtensor_params = [
-                    xtensor_from_tensor(p, dims=dims) if dims else p
-                    for p, dims in zip(dist_params, op._param_dims)
-                ]
+                xtensor_params = _prep_logp_params(dist_params, op._param_dims, size)
                 result = logcdf(value_xt, *xtensor_params)
                 return result.values if isinstance(result, XTensorVariable) else result
 
         # Dispatch support_point
-        _support_point_fn = (
-            support_point
-            if support_point is not None
-            else functools.partial(
-                _default_support_point,
-                rv_name=class_name,
-                has_fallback=random is not None,
-            )
-        )
+        _support_point_fn = support_point if support_point is not None else _default_support_point
 
         @_support_point.register(rv_type)
         def _custom_dist_support_point(op, rv, rng, size, *dist_params):

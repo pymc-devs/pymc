@@ -19,7 +19,7 @@ from pytensor.xtensor import as_xtensor
 
 import pymc.distributions as regular_distributions
 
-from pymc.dims import CustomDist, Normal
+from pymc.dims import CustomDist, Normal, Poisson
 from pymc.model.core import Model
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
@@ -94,15 +94,15 @@ class TestCustomDistBlackbox:
         logp_val = model.compile_logp()(ip)
         assert np.isfinite(logp_val)
 
-    def test_random_logp(self):
-        """Black-box path with both random and logp."""
+    def test_hybrid_dist_logp(self):
+        """Hybrid path: dist for sampling + logp override."""
+
+        def normal_dist(mu, sigma):
+            return Normal.dist(mu, sigma)
 
         def normal_logp(value, mu, sigma):
             v = value.values
             return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
-
-        def normal_random(mu, sigma, rng=None, size=None):
-            return rng.normal(loc=mu, scale=sigma, size=size)
 
         coords = {"city": range(5)}
         with Model(coords=coords) as model:
@@ -110,21 +110,131 @@ class TestCustomDistBlackbox:
                 "x",
                 0,
                 1,
+                dist=normal_dist,
                 logp=normal_logp,
-                random=normal_random,
                 dims="city",
             )
 
-        # Verify shape via draw
+        # Verify sampling works (via draw)
         from pymc import draw as pm_draw
 
         draws = pm_draw(model["x"], draws=3)
         assert draws.shape == (3, 5)
 
-        # Verify logp
+        # Verify logp evaluates
         ip = model.initial_point()
         logp_val = model.compile_logp()(ip)
         assert np.isfinite(logp_val)
+
+    def test_hybrid_derived_params(self):
+        """Hybrid path: dist uses more params than the internal RV expects.
+
+        The dist function derives a single param from multiple inputs.
+        This was broken before because ``_symbolic_xrv_op`` passed all
+        ``xtensor_params`` to ``_call_rv_op``, whose signature used the
+        discovered op's ``ndims_params`` — causing a ``zip()`` mismatch.
+        """
+
+        def poisson_dist(a, b, c):
+            lam = a + b + c
+            return Poisson.dist(mu=lam)
+
+        def poisson_logp(value, a, b, c):
+            v = value.values
+            lam = a + b + c
+            return pt.sum(v * pt.log(lam) - lam - pt.gammaln(v + 1))
+
+        coords = {"city": range(5)}
+        with Model(coords=coords) as model:
+            CustomDist(
+                "x",
+                0.5,
+                0.3,
+                0.2,
+                dist=poisson_dist,
+                logp=poisson_logp,
+                dims="city",
+            )
+
+        # pm.draw — evaluates the full dist graph (compound inference)
+        from pymc import draw as pm_draw
+
+        draws = pm_draw(model["x"], draws=3)
+        assert draws.shape == (3, 5)
+        assert draws.dtype.kind == "i"
+
+        # logp evaluates
+        ip = model.initial_point()
+        logp_val = model.compile_logp()(ip)
+        assert np.isfinite(logp_val)
+
+    def test_hybrid_logp_override(self):
+        """Hybrid path: verify user logp overrides auto-derived logp."""
+
+        def normal_dist(mu, sigma):
+            return Normal.dist(mu, sigma)
+
+        def scaled_logp(value, mu, sigma):
+            """Custom logp that multiplies normal logp by 2."""
+            v = value.values
+            normal_logp = -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi))
+            return 2.0 * pt.sum(normal_logp)
+
+        coords = {"city": range(5)}
+        with Model(coords=coords) as model_hybrid:
+            CustomDist(
+                "x",
+                0,
+                1,
+                dist=normal_dist,
+                logp=scaled_logp,
+                dims="city",
+            )
+
+        # Auto-derived logp (no logp override)
+        with Model(coords=coords) as model_auto:
+            CustomDist(
+                "x",
+                0,
+                1,
+                dist=normal_dist,
+                dims="city",
+            )
+
+        ip = model_hybrid.initial_point()
+        hybrid_logp = model_hybrid.compile_logp()(ip)
+        auto_logp = model_auto.compile_logp()(ip)
+        # Hybrid logp should be 2x auto logp
+        np.testing.assert_allclose(hybrid_logp, 2.0 * auto_logp)
+
+    def test_hybrid_basic_dims(self):
+        """Hybrid path with dims on params."""
+
+        def normal_dist(mu, sigma):
+            return Normal.dist(mu, sigma)
+
+        def normal_logp(value, mu, sigma):
+            v = value.values
+            m = mu.values if hasattr(mu, "values") else mu
+            s = sigma.values if hasattr(sigma, "values") else sigma
+            return pt.sum(-0.5 * ((v - m) / s) ** 2 - pt.log(s * pt.sqrt(2 * np.pi)))
+
+        coords = {"city": range(5)}
+        mu = as_xtensor(np.array([0.0, 0.5, 1.0, 1.5, 2.0]), dims=("city",))
+        sigma = as_xtensor(np.array([1.0, 1.1, 1.2, 1.3, 1.4]), dims=("city",))
+
+        with Model(coords=coords) as model:
+            x = CustomDist("x", mu, sigma, dist=normal_dist, logp=normal_logp)
+
+        assert set(x.dims) == {"city"}
+        ip = model.initial_point()
+        logp_val = model.compile_logp()(ip)
+        assert np.isfinite(logp_val)
+
+        from pymc import draw as pm_draw
+
+        draws = pm_draw(model["x"], draws=3)
+        assert draws.shape == (3, 5)
 
     def test_logcdf(self):
         """Black-box path with logcdf function."""

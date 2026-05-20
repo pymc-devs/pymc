@@ -191,6 +191,7 @@ class DimDistribution:
 
     xrv_op: Callable
     default_transform: DimTransform | None = None
+    _forward_dim_lengths: bool = False
 
     @staticmethod
     def _as_xtensor(x):
@@ -325,6 +326,8 @@ class DimDistribution:
             }
         if kwargs.get("rng") is None:
             kwargs["rng"] = pt.random.shared_rng(seed=None)
+        if cls._forward_dim_lengths and dim_lengths is not None:
+            kwargs["dim_lengths"] = dim_lengths
         _, rv = cls.xrv_op(
             *dist_params,
             extra_dims=extra_dims,
