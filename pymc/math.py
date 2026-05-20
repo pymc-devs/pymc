@@ -18,7 +18,6 @@ from functools import partial, reduce
 
 import numpy as np
 import pytensor
-import pytensor.sparse
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply
@@ -133,6 +132,7 @@ from pytensor.tensor import (
     zeros_like,
 )
 from pytensor.tensor.linalg import (
+    block_diag,
     cho_solve,
     cholesky,
     det,
@@ -166,7 +166,7 @@ __all__ = [
     "as_tensor",
     "batched_diag",
     "betainc",
-    "block_diagonal",
+    "block_diag",
     "broadcast_arrays",
     "broadcast_to",
     "cartesian",
@@ -582,30 +582,3 @@ def batched_diag(C):
         return C[..., idx, idx]
     else:
         raise ValueError("Input should be 2 or 3 dimensional")
-
-
-def block_diagonal(matrices, sparse=False, format="csr"):
-    r"""See pt.linalg.block_diag or pytensor.sparse.basic.block_diag for reference.
-
-    Parameters
-    ----------
-    matrices: tensors
-    format: str (default 'csr')
-        must be one of: 'csr', 'csc'
-    sparse: bool (default False)
-        if True return sparse format
-
-    Returns
-    -------
-    matrix
-    """
-    warnings.warn(
-        "pymc.math.block_diagonal is deprecated in favor of `pytensor.tensor.linalg.block_diag` and "
-        "`pytensor.sparse.block_diag` functions. This function will be removed in a future release",
-    )
-    if len(matrices) == 1:  # graph optimization
-        return matrices[0]
-    if sparse:
-        return pytensor.sparse.basic.block_diag(*matrices, format=format)
-    else:
-        return pt.linalg.block_diag(*matrices)

@@ -56,7 +56,7 @@ class MarimoProgressBackend:
         self,
         step_name: str,
         n_bars: int,
-        total: int | float,
+        total: int | float | None,
         combined: bool,
         full_stats: bool,
         css_theme: str | None = None,
@@ -70,7 +70,8 @@ class MarimoProgressBackend:
 
         self._mo_replace: Callable[[object], None] | None = None
         self._task_state: list[dict[str, Any]] = []
-        self._start_times: list[float] = []
+        self._start_times: list[float | None] = []
+        self._end_times: list[float | None] = []
         self._last_render_time: float = 0.0
         self._min_render_interval: float = 0.1
 
@@ -94,27 +95,20 @@ class MarimoProgressBackend:
 
     def _initialize_tasks(self) -> None:
         """Initialize progress tracking state for all tasks."""
-        if self.combined:
-            self._task_state = [
-                {
-                    "completed": 0,
-                    "total": self.total * self.n_bars,
-                    "failing": False,
-                    "stats": {},
-                }
-            ]
-            self._start_times = [perf_counter()]
-        else:
-            self._task_state = [
-                {
-                    "completed": 0,
-                    "total": self.total,
-                    "failing": False,
-                    "stats": {},
-                }
-                for _ in range(self.n_bars)
-            ]
-            self._start_times = [perf_counter() for _ in range(self.n_bars)]
+        self._task_state = [
+            {
+                "completed": 0,
+                "total": self.total,
+                "failing": False,
+                "stats": {},
+            }
+            for _ in range(self.n_bars)
+        ]
+        # Per-bar clocks start lazily on the first update so that, with
+        # ``cores < chains``, later chains aren't timed from the first chain's
+        # start.
+        self._start_times = [None] * self.n_bars
+        self._end_times = [None] * self.n_bars
 
     def update(
         self,
@@ -123,6 +117,7 @@ class MarimoProgressBackend:
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
+        total: int | None = None,
     ) -> None:
         """Update progress for a specific task.
 
@@ -138,13 +133,25 @@ class MarimoProgressBackend:
             Statistics to display
         is_last : bool
             Whether this is the final update
+        total : int, optional
+            Updated total for the bar. If None, the existing total is kept.
+            Pass an integer when the total wasn't known at construction time
+            (e.g. nutpie's tune count) or changes mid-run.
         """
+        if total is not None:
+            self._task_state[task_id]["total"] = total
+
+        if self._start_times[task_id] is None:
+            self._start_times[task_id] = perf_counter()
+
         self._task_state[task_id]["completed"] += advance
         self._task_state[task_id]["failing"] = failing
         self._task_state[task_id]["stats"] = stats
 
         if is_last:
             self._task_state[task_id]["completed"] = self._task_state[task_id]["total"]
+            if self._end_times[task_id] is None:
+                self._end_times[task_id] = perf_counter()
 
         now = perf_counter()
         if is_last or (now - self._last_render_time) >= self._min_render_interval:
@@ -210,11 +217,22 @@ class MarimoProgressBackend:
         failing = state["failing"]
         stats = state["stats"]
 
-        pct = (completed / total * 100) if total > 0 else 0
-        elapsed = perf_counter() - self._start_times[task_id]
+        pct = (completed / total * 100) if total else 0
+        start_time = self._start_times[task_id]
+        if start_time is None:
+            elapsed = 0.0
+        else:
+            end_time = self._end_times[task_id]
+            now = end_time if end_time is not None else perf_counter()
+            elapsed = now - start_time
 
         action = self.step_name.lower()
-        speed = completed / max(elapsed, 1e-6)
+        # Wait for a small window of elapsed time before computing speed so the
+        # first reading isn't ``completed / ~0 ≈ infinity``.
+        if elapsed > 0.25:
+            speed = completed / elapsed
+        else:
+            speed = 0
         if speed > 1 or speed == 0:
             unit = f"{action}s/s"
         else:
@@ -227,9 +245,10 @@ class MarimoProgressBackend:
         elif pct >= 100:
             bar_class += " finished"
 
+        total_str = "?" if total is None else str(total)
         cells = [
             f'<td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>',
-            f"<td>{completed}/{total} ({pct:.0f}%)</td>",
+            f"<td>{completed}/{total_str} ({pct:.0f}%)</td>",
         ]
 
         for key in stat_keys:

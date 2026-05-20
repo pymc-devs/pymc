@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+
 import warnings
 
 from collections.abc import Iterable, Sequence
@@ -20,7 +21,6 @@ import numpy as np
 import pandas as pd
 import pytensor
 import pytensor.tensor as pt
-import scipy.sparse as sps
 
 from pytensor.compile import Function, Mode, get_mode
 from pytensor.compile.builders import OpFromGraph
@@ -39,7 +39,7 @@ from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
-from pytensor.tensor.basic import _as_tensor_variable
+from pytensor.tensor.basic import _as_tensor_variable, infer_shape_db
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
@@ -49,10 +49,13 @@ from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
 from pytensor.tensor.variable import TensorVariable
+from pytensor.utils import lazy_scipy_module
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
 from pymc.vartypes import continuous_types, isgenerator, typefilter
+
+sparse = lazy_scipy_module("sparse")
 
 PotentialShapeType = int | np.ndarray | Sequence[int | Variable] | TensorVariable
 
@@ -116,7 +119,7 @@ def convert_data(data) -> np.ndarray | Variable:
                 ret = data
     elif isinstance(data, Variable):
         ret = data
-    elif sps.issparse(data):
+    elif sparse.issparse(data):
         ret = data
     else:
         ret = np.asarray(data)
@@ -1003,6 +1006,29 @@ def constant_fold(
     return tuple(
         folded_x.data if isinstance(folded_x, Constant) else folded_x for folded_x in folded_xs
     )
+
+
+def resolve_shapes(
+    shapes: Sequence[TensorVariable],
+) -> tuple[TensorVariable, ...]:
+    """Rewrite shape expressions via ShapeFeature + infer_shape rewrites.
+
+    Replaces Shape(rv) and similar references with equivalent expressions
+    derived from the op's inputs (e.g. distribution parameters).
+    """
+    shape_fg = FunctionGraph(
+        outputs=list(shapes), features=[ShapeFeature()], clone=True, copy_inputs=False
+    )
+    with pytensor.config.change_flags(optdb__max_use_ratio=10, cxx=""):
+        infer_shape_db.default_query.rewrite(shape_fg)
+    return cast(tuple[TensorVariable, ...], tuple(shape_fg.outputs))
+
+
+def get_symbolic_rv_shapes(
+    rvs: Sequence[TensorVariable],
+) -> tuple[TensorVariable, ...]:
+    """Compute symbolic shapes of random variables without referencing the RVs themselves."""
+    return resolve_shapes([rv.shape for rv in rvs])
 
 
 def rewrite_pregrad(graph):

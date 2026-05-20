@@ -21,13 +21,24 @@ See https://arviz-devs.github.io/arviz/ for details.
 
 import sys
 
-import arviz_stats as azs
-
-azs_exports = [attr for attr in dir(azs) if not attr.startswith("_")]
-
-for attr in azs_exports:
-    setattr(sys.modules[__name__], attr, getattr(azs, attr))
-
 from pymc.stats.log_density import compute_log_likelihood, compute_log_prior
 
-__all__ = ("compute_log_likelihood", "compute_log_prior", *azs_exports)
+__all__ = ("compute_log_likelihood", "compute_log_prior")
+
+
+def __getattr__(name):
+    import arviz_stats as azs
+
+    try:
+        value = getattr(azs, name)
+    except AttributeError:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}") from None
+    setattr(sys.modules[__name__], name, value)
+    return value
+
+
+def __dir__():
+    import arviz_stats as azs
+
+    own = ["compute_log_likelihood", "compute_log_prior"]
+    return own + [attr for attr in dir(azs) if not attr.startswith("_")]

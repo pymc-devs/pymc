@@ -33,7 +33,7 @@ import pymc as pm
 from pymc.backends.ndarray import NDArray
 from pymc.distributions import transforms
 from pymc.exceptions import SamplingError
-from pymc.sampling.mcmc import assign_step_methods
+from pymc.sampling.mcmc import assign_step_methods, get_default_tune_steps
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import (
     NUTS,
@@ -691,10 +691,12 @@ def test_step_args():
 
     with pm.Model() as model:
         a = pm.Normal("a")
-        idata_default = pm.sample(random_seed=1410)
-        idata0 = pm.sample(target_accept=0.5, random_seed=1410)
-        idata1 = pm.sample(nuts={"target_accept": 0.5}, random_seed=1410 * 2)
-        idata2 = pm.sample(target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410)
+        idata_default = pm.sample(draws=200, tune=200, random_seed=1410)
+        idata0 = pm.sample(draws=200, tune=200, target_accept=0.5, random_seed=1410)
+        idata1 = pm.sample(draws=200, tune=200, nuts={"target_accept": 0.5}, random_seed=1410 * 2)
+        idata2 = pm.sample(
+            draws=200, tune=200, target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410
+        )
 
         with pytest.raises(ValueError, match="`target_accept` was defined twice."):
             pm.sample(target_accept=0.5, nuts={"target_accept": 0.95}, random_seed=1410)
@@ -709,13 +711,17 @@ def test_step_args():
     with pm.Model() as model:
         a = pm.Normal("a")
         b = pm.Poisson("b", 1)
-        idata0 = pm.sample(target_accept=0.5, random_seed=1418)
+        idata0 = pm.sample(draws=200, tune=200, target_accept=0.5, random_seed=1418)
         with warnings.catch_warnings():
             warnings.filterwarnings(
                 "ignore", "invalid value encountered in double_scalars", RuntimeWarning
             )
             idata1 = pm.sample(
-                nuts={"target_accept": 0.5}, metropolis={"scaling": 0}, random_seed=1418 * 2
+                draws=200,
+                tune=200,
+                nuts={"target_accept": 0.5},
+                metropolis={"scaling": 0},
+                random_seed=1418 * 2,
             )
 
     npt.assert_almost_equal(accept(idata0).mean(), 0.5, decimal=1)
@@ -1017,3 +1023,74 @@ class TestQuietMode:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert len(pymc_logs) > 0
+
+
+class TestDefaultTuneSteps:
+    def test_default(self):
+        with pm.Model():
+            x = pm.Normal("x")
+            step = pm.Metropolis([x])
+
+        assert get_default_tune_steps(step, 42) == 42
+        assert get_default_tune_steps(step, 0) == 0
+        assert get_default_tune_steps(step, None) == 1000
+
+        assert get_default_tune_steps(step, 37, default_tune_steps=999) == 37
+        assert get_default_tune_steps(step, 0, default_tune_steps=999) == 0
+        assert get_default_tune_steps(step, None, default_tune_steps=999) == 999
+
+    def test_custom_step(self):
+        class PerfectMetropolis(pm.Metropolis):
+            default_tune_steps = 0
+
+        with pm.Model():
+            y = pm.Categorical("y", p=[0.25, 0.25, 0.5])
+            step = PerfectMetropolis([y])
+
+        assert get_default_tune_steps(step, None) == 0
+        assert get_default_tune_steps(step, 15) == 15
+
+    def test_compound_step(self):
+        class PerfectMetropolis(pm.Metropolis):
+            default_tune_steps = 0
+
+        class AlmostPerfectMetropolis(pm.Metropolis):
+            default_tune_steps = 50
+
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Categorical("y", p=[0.25, 0.25, 0.5])
+            step0 = pm.CompoundStep([pm.NUTS([x]), AlmostPerfectMetropolis([y])])
+            step1 = pm.CompoundStep([PerfectMetropolis([x]), AlmostPerfectMetropolis([y])])
+
+        assert get_default_tune_steps(step0, None) == 1000
+        assert get_default_tune_steps(step0, None, default_tune_steps=999) == 999
+        assert get_default_tune_steps(step0, 999) == 999
+        assert get_default_tune_steps(step0, 1001) == 1001
+
+        assert get_default_tune_steps(step1, None) == 50
+        assert get_default_tune_steps(step1, None, default_tune_steps=999) == 50
+        assert get_default_tune_steps(step1, 999) == 999
+
+    def test_sample(self):
+        class PerfectMetropolis(pm.Metropolis):
+            default_tune_steps = 0
+
+        with pm.Model():
+            y = pm.Bernoulli("y", p=0.25)
+            step = PerfectMetropolis([y])
+
+            kwargs = {
+                "draws": 10,
+                "step": step,
+                "chains": 1,
+                "discard_tuned_samples": False,
+                "progressbar": False,
+                "compute_convergence_checks": False,
+            }
+
+            idata = pm.sample(tune=None, **kwargs)
+            assert not hasattr(idata, "warmup_posterior")
+
+            idata = pm.sample(tune=10, **kwargs)
+            assert idata.warmup_posterior.sizes["draw"] == 10

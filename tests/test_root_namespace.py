@@ -12,6 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import subprocess
+import sys
+import textwrap
 import types
 
 import pymc
@@ -83,3 +86,58 @@ def test_root_module_not_polluted():
     )
     assert not unexpected, f"Unexpected names at pymc root: {sorted(unexpected)}. {hint}"
     assert not missing, f"Missing names at pymc root: {sorted(missing)}. {hint}"
+
+
+def test_eager_import_heavy_dependencies():
+    """`import pymc` must not eagerly load heavy optional dependencies.
+
+    These modules are deferred to first use to keep ``import pymc`` fast.
+    Note: ``scipy.sparse`` is intentionally omitted because ``xarray`` pulls it
+    in transitively, which is outside of pymc's control.
+    """
+    expensive_modules = (
+        "arviz_base",
+        "arviz_plots",
+        "arviz_stats",
+        "pytensor.sparse",
+        "scipy.cluster",
+        "scipy.interpolate",
+        "scipy.linalg",
+        "scipy.optimize",
+        "scipy.spatial",
+        "scipy.special",
+        "scipy.stats",
+        "zarr",
+    )
+
+    # The subprocess hooks builtins.__import__ to capture a stack trace the
+    # first time any expensive module is imported, so failures show exactly
+    # which pymc file triggered the eager load.
+    code = textwrap.dedent("""\
+        import builtins, sys, traceback
+        _targets = set({targets})
+        _traces, _real = {{}}, builtins.__import__
+        def _hook(name, *a, **kw):
+            if name in _targets and name not in sys.modules and name not in _traces:
+                _traces[name] = ''.join(traceback.format_stack())
+            return _real(name, *a, **kw)
+        builtins.__import__ = _hook
+        import pymc
+        loaded = [m for m in sorted(_targets) if m in sys.modules]
+        print(','.join(loaded))
+        for m in loaded[:3]:
+            print(f'--- {{m}} ---')
+            print(_traces.get(m, '(no trace)'))
+    """).format(targets=expensive_modules)
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    lines = result.stdout.strip().split("\n")
+    loaded = [m for m in lines[0].split(",") if m]
+    assert not loaded, (
+        f"`import pymc` eagerly loaded heavy modules: {loaded}. "
+        "These should be deferred to first use.\n" + "\n".join(lines[1:])
+    )

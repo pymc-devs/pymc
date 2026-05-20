@@ -36,6 +36,7 @@ default_progress_theme = Theme(
     {
         "bar.complete": "#1764f4",
         "bar.finished": "#1764f4",
+        "bar.pulse": "grey23",
         "progress.remaining": "none",
         "progress.elapsed": "none",
     }
@@ -140,7 +141,7 @@ class RichProgressBackend:
         self,
         step_name: str,
         n_bars: int,
-        total: int | float,
+        total: int | float | None,
         combined: bool,
         full_stats: bool,
         progress_columns: list,
@@ -170,7 +171,7 @@ class RichProgressBackend:
         """
         self.step_name = step_name
         self.n_bars = n_bars
-        self.total = total
+        self.initial_total = total
         self.combined = combined
         self.full_stats = full_stats
         self.progress_stats = progress_stats
@@ -199,7 +200,7 @@ class RichProgressBackend:
         columns += [
             TextColumn(
                 "{task.fields[sampling_speed]:0.2f} {task.fields[speed_unit]}",
-                table_column=Column("Speed", ratio=1),
+                table_column=Column("Speed", ratio=2, no_wrap=True),
             ),
             TimeElapsedColumn(table_column=Column("Elapsed", ratio=1)),
             TimeRemainingColumn(table_column=Column("Remaining", ratio=1)),
@@ -207,14 +208,16 @@ class RichProgressBackend:
 
         return CustomProgress(
             RecolorOnFailureBarColumn(
+                bar_width=None,
                 table_column=Column("Progress", ratio=2),
                 failing_color="tab:red",
                 complete_style=Style.parse("rgb(31,119,180)"),
                 finished_style=Style.parse("rgb(31,119,180)"),
             ),
             *columns,
-            console=Console(file=stderr, theme=theme),
+            console=Console(theme=theme),
             include_headers=True,
+            expand=True,
         )
 
     def __enter__(self) -> Self:
@@ -226,33 +229,24 @@ class RichProgressBackend:
         self._progress.__exit__(exc_type, exc_val, exc_tb)
 
     def _initialize_tasks(self) -> None:
-        if self.combined:
-            self._tasks = [
-                self._progress.add_task(
-                    "Sampling",
-                    completed=0,
-                    total=self.total * self.n_bars,
-                    task_idx=0,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[0] for stat, value in self.progress_stats.items()},
-                )
-            ]
-        else:
-            self._tasks = [
-                self._progress.add_task(
-                    "Sampling",
-                    completed=0,
-                    total=self.total,
-                    task_idx=task_idx,
-                    sampling_speed=0,
-                    speed_unit="draws/s",
-                    failing=False,
-                    **{stat: value[task_idx] for stat, value in self.progress_stats.items()},
-                )
-                for task_idx in range(self.n_bars)
-            ]
+        # ``start=False`` defers the per-task clock until ``start_task`` is
+        # called on the first ``update``. With ``cores < chains``, later chains
+        # would otherwise be timed against the first chain's start.
+        self._tasks = [
+            self._progress.add_task(
+                "Sampling",
+                start=False,
+                completed=0,
+                total=self.initial_total,
+                task_idx=task_idx,
+                sampling_speed=0,
+                speed_unit="draws/s",
+                failing=False,
+                **{stat: value[task_idx] for stat, value in self.progress_stats.items()},
+            )
+            for task_idx in range(self.n_bars)
+        ]
+        self._started: list[bool] = [False] * self.n_bars
 
     def update(
         self,
@@ -261,6 +255,7 @@ class RichProgressBackend:
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
+        total: int | None = None,
     ) -> None:
         """Update a progress bar.
 
@@ -276,17 +271,29 @@ class RichProgressBackend:
             Statistics to display
         is_last : bool
             Whether this is the final update
+        total : int, optional
+            Updated total for the bar. If None, the existing total is kept —
+            use this when the total is fixed at construction time. Pass an
+            integer when the total is only known later (e.g. nutpie chooses
+            its own tune count) or can change mid-run.
         """
         rich_task_id = self._tasks[task_id]
         if rich_task_id is None:
             return
 
+        if not self._started[task_id]:
+            self._progress.start_task(rich_task_id)
+            self._started[task_id] = True
+
         if is_last:
+            if total is None:
+                total = self._progress.tasks[task_id].total  # type: ignore[assignment]
             self._progress.update(
                 rich_task_id,
-                completed=self.total if not self.combined else self.total * self.n_bars,
+                completed=total,
                 failing=failing,
                 refresh=True,
+                total=total,
                 **stats,
             )
             return
@@ -298,7 +305,12 @@ class RichProgressBackend:
         elapsed = task.elapsed if task.elapsed is not None else 0.0
 
         action = self.step_name.lower()
-        speed = completed / max(elapsed, 1e-6)
+        # Wait for a small window of elapsed time before computing speed so the
+        # first reading isn't ``completed / ~0 ≈ infinity``.
+        if elapsed > 0.25:
+            speed = completed / elapsed
+        else:
+            speed = 0
         if speed > 1 or speed == 0:
             unit = f"{action}s/s"
         else:
@@ -310,6 +322,7 @@ class RichProgressBackend:
             sampling_speed=speed,
             speed_unit=unit,
             failing=failing,
+            total=total,
             **stats,
         )
 
