@@ -674,6 +674,46 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
+    progressbar_theme : rich.theme.Theme or str, optional
+        How to style the live progress bar that the ``pymc`` and ``nutpie`` samplers
+        render through `rich <https://rich.readthedocs.io/>`_. Three kinds of values
+        are accepted:
+
+        - ``None`` (default) — fall back to PyMC's built-in theme
+          (``pymc.progress_bar.default_progress_theme``), which paints the bar in
+          PyMC blue (``#1764f4``).
+        - A :class:`rich.theme.Theme` instance — used as-is to construct the
+          underlying :class:`rich.console.Console` and :class:`rich.progress.Progress`
+          objects. Keys you typically want to override are ``bar.complete``,
+          ``bar.finished``, ``bar.pulse``, ``progress.remaining`` and
+          ``progress.elapsed``.
+        - A string — passed straight through as ``css_theme`` when sampling inside
+          a Jupyter notebook (`nutpie` only). This lets you reuse the CSS theme
+          name that ``nutpie`` ships, for example to match a dark-mode notebook.
+
+        The argument is ignored entirely when ``progressbar=False``, when
+        ``quiet=True``, and when the selected ``nuts_sampler`` does not render
+        its own progress bar (``numpyro`` and ``blackjax``).
+
+        Example:
+
+        .. code-block:: python
+
+            from rich.theme import Theme
+            import pymc as pm
+
+            my_theme = Theme(
+                {
+                    "bar.complete": "magenta",
+                    "bar.finished": "magenta",
+                    "progress.remaining": "dim",
+                }
+            )
+
+            with pm.Model():
+                pm.Normal("x")
+                idata = pm.sample(progressbar_theme=my_theme)
+
     quiet : bool, default False
         If True, suppress all logging output and progress bars during sampling.
         This is useful when sampling in loops or when no output is desired.
