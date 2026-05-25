@@ -28,7 +28,7 @@ from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
-from pytensor.xtensor.vectorization import XRV
+from pytensor.xtensor.vectorization import XRV, XElemwise
 
 from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
@@ -191,7 +191,6 @@ class DimDistribution:
 
     xrv_op: Callable
     default_transform: DimTransform | None = None
-    _forward_dim_lengths: bool = False
 
     @staticmethod
     def _as_xtensor(x):
@@ -326,8 +325,6 @@ class DimDistribution:
             }
         if kwargs.get("rng") is None:
             kwargs["rng"] = pt.random.shared_rng(seed=None)
-        if cls._forward_dim_lengths and dim_lengths is not None:
-            kwargs["dim_lengths"] = dim_lengths
         _, rv = cls.xrv_op(
             *dist_params,
             extra_dims=extra_dims,
@@ -377,6 +374,14 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             # We don't propagate the old RNG, because we don't want the new and old dists to be correlated
             new_rng = pt.random.shared_rng(seed=None)
             return new_dist_op(new_rng, *extra_dims.values(), *params_and_dim_lengths)
+        case XElemwise():
+            expanded_inputs = [
+                expand_dist_dims(inp, extra_dims=extra_dims)
+                if isinstance(inp, XTensorVariable)
+                else inp
+                for inp in dist.owner.inputs
+            ]
+            return dist.owner.op.make_node(*expanded_inputs).outputs[0]
         case Transpose():
             return expand_dist_dims(dist.owner.inputs[0], extra_dims=extra_dims).transpose(
                 ..., *dist.dims

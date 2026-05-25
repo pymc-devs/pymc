@@ -32,6 +32,26 @@ pytestmark = pytest.mark.filterwarnings(
 class TestCustomDistSymbolic:
     """Tests for the symbolic (dist=) path of pmd.CustomDist."""
 
+    def test_compound_non_xrv_output(self):
+        """Compound dist with non-XRV output gets dims via expand_dist_dims."""
+
+        def logitnormal_dist(mu, sigma):
+            import pytensor.xtensor.math as ptxm
+
+            return ptxm.sigmoid(Normal.dist(mu=mu, sigma=sigma))
+
+        coords = {"city": range(5)}
+        with Model(coords=coords) as model:
+            x = CustomDist("x", 0, 1, dist=logitnormal_dist, dims="city")
+
+        assert set(x.dims) == {"city"}
+
+        from pymc import draw as pm_draw
+
+        draws = pm_draw(model["x"], draws=5)
+        assert draws.shape == (5, 5)
+        assert (draws > 0).all() and (draws < 1).all()
+
     def test_basic(self):
         """Symbolic path: dist function wrapping Normal.dist, compared against regular Normal."""
 
@@ -65,11 +85,11 @@ class TestCustomDistSymbolic:
         assert x.type.shape == (5,)
 
 
-class TestCustomDistBlackbox:
-    """Tests for the black-box (logp=/random=) path of pmd.CustomDist."""
+class TestCustomDistArbitrary:
+    """Tests for the arbitrarily-defined (logp=) path of pmd.CustomDist."""
 
     def test_logp_basic(self):
-        """Black-box path with logp function and dims on output."""
+        """Arbitrary path with logp function and dims on output."""
 
         def normal_logp(value, mu, sigma):
             v = value.values
@@ -171,8 +191,10 @@ class TestCustomDistBlackbox:
         def scaled_logp(value, mu, sigma):
             """Custom logp that multiplies normal logp by 2."""
             v = value.values
-            normal_logp = -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi))
-            return 2.0 * pt.sum(normal_logp)
+            normal_logp = pt.sum(
+                -0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi))
+            )
+            return 2.0 * normal_logp
 
         coords = {"city": range(5)}
         with Model(coords=coords) as model_hybrid:
@@ -231,7 +253,7 @@ class TestCustomDistBlackbox:
         assert draws.shape == (3, 5)
 
     def test_logcdf(self):
-        """Black-box path with logcdf function."""
+        """Arbitrary path with logcdf function."""
 
         def normal_logp(value, mu, sigma):
             v = value.values
@@ -263,7 +285,7 @@ class TestCustomDistBlackbox:
         assert np.isfinite(logp_val)
 
     def test_mu_as_model_var(self):
-        """Black-box path with mu as a model variable (no dims on mu)."""
+        """Arbitrary path with mu as a model variable (no dims on mu)."""
 
         def normal_logp(value, mu, sigma):
             v = value.values
@@ -289,7 +311,7 @@ class TestCustomDistBlackbox:
         assert np.isfinite(logp_val)
 
     def test_support_point(self):
-        """Black-box path with custom support_point."""
+        """Arbitrary path with custom support_point."""
 
         def normal_logp(value, mu, sigma):
             v = value.values
@@ -304,6 +326,36 @@ class TestCustomDistBlackbox:
                 "x",
                 0,
                 1,
+                logp=normal_logp,
+                support_point=custom_support_point,
+                dims="city",
+            )
+
+        from pymc.distributions.distribution import support_point
+
+        sp = support_point(model["x"])
+        np.testing.assert_allclose(sp.eval(), np.zeros(5))
+
+    def test_hybrid_support_point(self):
+        """Hybrid path with custom support_point."""
+
+        def normal_dist(mu, sigma):
+            return Normal.dist(mu, sigma)
+
+        def normal_logp(value, mu, sigma):
+            v = value.values
+            return pt.sum(-0.5 * ((v - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi)))
+
+        def custom_support_point(rv, size, mu, sigma):
+            return pt.full_like(rv, mu)
+
+        coords = {"city": range(5)}
+        with Model(coords=coords) as model:
+            CustomDist(
+                "x",
+                0,
+                1,
+                dist=normal_dist,
                 logp=normal_logp,
                 support_point=custom_support_point,
                 dims="city",

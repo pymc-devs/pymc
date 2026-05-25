@@ -354,7 +354,7 @@ class _CustomSymbolicDist(Distribution):
 
         inputs = [*dummy_params, *rngs]
         outputs = [dummy_rv, *rngs_updates]
-        extended_signature = cls._infer_final_signature(
+        extended_signature = _infer_final_signature(
             signature, n_inputs=len(inputs), n_outputs=len(outputs), n_rngs=len(rngs)
         )
         rv_op = rv_type(
@@ -372,35 +372,43 @@ class _CustomSymbolicDist(Distribution):
             rngs = (rng,)
         return rv_op(size, *dist_params, *rngs)
 
-    @staticmethod
-    def _infer_final_signature(signature: str, n_inputs, n_outputs, n_rngs) -> str:
-        """Add size and updates to user provided gufunc signature if they are missing."""
-        # Regex to split across outer commas
-        # Copied from https://stackoverflow.com/a/26634150
-        outer_commas = re.compile(r",\s*(?![^()]*\))")
 
-        input_sig, output_sig = signature.split("->")
-        # It's valid to have a signature without params inputs, as in a Flat RV
-        n_inputs_sig = len(outer_commas.split(input_sig)) if input_sig.strip() else 0
-        n_outputs_sig = len(outer_commas.split(output_sig))
+def _infer_final_signature(signature: str, n_inputs, n_outputs, n_rngs, *, add_size=True) -> str:
+    """Add size and updates to user provided gufunc signature if they are missing.
 
-        if n_inputs_sig == n_inputs and n_outputs_sig == n_outputs:
-            # User provided a signature with no missing parts
-            return signature
+    Parameters
+    ----------
+    add_size : bool
+        Whether to include ``[size]`` in the input signature. Set to ``False``
+        when batch dimensions are baked into params (e.g. dims path).
+    """
+    # Regex to split across outer commas
+    # Copied from https://stackoverflow.com/a/26634150
+    outer_commas = re.compile(r",\s*(?![^()]*\))")
 
-        size_sig = "[size]"
-        rngs_sig = ("[rng]",) * n_rngs
-        if n_inputs_sig == (n_inputs - n_rngs - 1):
-            # Assume size and rngs are missing
-            if input_sig.strip():
-                input_sig = ",".join((size_sig, input_sig, *rngs_sig))
-            else:
-                input_sig = ",".join((size_sig, *rngs_sig))
-        if n_outputs_sig == (n_outputs - n_rngs):
-            # Assume updates are missing
-            output_sig = ",".join((output_sig, *rngs_sig))
-        signature = "->".join((input_sig, output_sig))
+    input_sig, output_sig = signature.split("->")
+    # It's valid to have a signature without params inputs, as in a Flat RV
+    n_inputs_sig = len(outer_commas.split(input_sig)) if input_sig.strip() else 0
+    n_outputs_sig = len(outer_commas.split(output_sig))
+
+    if n_inputs_sig == n_inputs and n_outputs_sig == n_outputs:
+        # User provided a signature with no missing parts
         return signature
+
+    rngs_sig = ("[rng]",) * n_rngs
+    n_extra_inputs = (1 if add_size else 0) + n_rngs
+    if n_inputs_sig == (n_inputs - n_extra_inputs):
+        parts = []
+        if add_size:
+            parts.append("[size]")
+        if input_sig.strip():
+            parts.append(input_sig)
+        parts.extend(rngs_sig)
+        input_sig = ",".join(parts)
+    if n_outputs_sig == (n_outputs - n_rngs):
+        output_sig = ",".join((output_sig, *rngs_sig))
+    signature = "->".join((input_sig, output_sig))
+    return signature
 
 
 class SupportPointRewrite(GraphRewriter):
