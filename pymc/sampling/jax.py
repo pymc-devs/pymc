@@ -558,7 +558,7 @@ def sample_jax_nuts(
         "vectorized".
     postprocessing_backend : Optional[Literal["cpu", "gpu"]], default None,
         Specify how postprocessing should be computed. gpu or cpu
-    postprocessing_vectorize : Literal["vmap", "scan"], default "scan"
+    postprocessing_vectorize : Literal["vmap", "scan"], default "vmap"
         How to vectorize the postprocessing: vmap or sequential scan
     postprocessing_chunks : None
         This argument is deprecated
