@@ -397,3 +397,42 @@ def test_multivariate_transform():
     new_ip = new_m.initial_point()
     np.testing.assert_allclose(ip["x_simplex__"], new_ip["x_simplex__"])
     np.testing.assert_allclose(ip["y_cholesky-cov-packed__"], new_ip["y_cholesky-cov-packed__"])
+
+
+@pytest.mark.parametrize("initval", [3.14, "prior"])
+def test_round_trip_scalar_or_strategy_initval(initval):
+    with pm.Model() as m_old:
+        pm.Normal("x", initval=initval)
+
+    m_new = model_from_fgraph(fgraph_from_model(m_old)[0])
+    assert m_new.rvs_to_initial_values[m_new["x"]] == initval
+
+
+def test_round_trip_ndarray_initval():
+    with pm.Model() as m_old:
+        pm.Normal("x", shape=(3,), initval=np.array([1.0, 2.0, 3.0]))
+
+    m_new = model_from_fgraph(fgraph_from_model(m_old)[0])
+    np.testing.assert_array_equal(
+        m_new.rvs_to_initial_values[m_new["x"]], [1.0, 2.0, 3.0]
+    )
+
+
+def test_round_trip_initval_variable_depending_on_data():
+    with pm.Model() as m_old:
+        x_data = pm.Data("x_data", np.array([2.0, 4.0, 6.0]))
+        pm.Normal("x", shape=(3,), initval=x_data * 2)
+
+    m_new = model_from_fgraph(fgraph_from_model(m_old)[0])
+    new_initval = m_new.rvs_to_initial_values[m_new["x"]]
+
+    assert x_data not in graph_inputs([new_initval])
+    np.testing.assert_allclose(m_new.initial_point()["x"], [4.0, 8.0, 12.0])
+
+
+def test_clone_model_preserves_initval():
+    with pm.Model() as m_old:
+        pm.Normal("x", initval=2.5)
+
+    m_new = clone_model(m_old)
+    assert m_new.rvs_to_initial_values[m_new["x"]] == 2.5

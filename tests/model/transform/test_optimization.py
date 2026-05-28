@@ -15,7 +15,7 @@ import numpy as np
 import pytest
 
 from pytensor.compile import SharedVariable
-from pytensor.graph import Constant
+from pytensor.graph import Constant, graph_inputs
 
 from pymc import Deterministic, do
 from pymc.data import Data
@@ -159,3 +159,23 @@ def test_freeze_dims_and_data_partially_observed_rv():
 
     frozen_y = freeze_dims_and_data(model)["y"]
     assert constant_fold([frozen_y.shape]) == (3,)
+
+
+def test_freeze_dims_and_data_with_initval():
+    with Model() as m:
+        Normal("x", initval=1.5)
+
+    frozen_m = freeze_dims_and_data(m)
+    assert frozen_m.initial_point()["x"] == 1.5
+
+
+def test_freeze_dims_and_data_with_initval_depending_on_data():
+    with Model(coords={"d": range(3)}) as m:
+        mu_data = Data("mu_data", np.array([1.0, 2.0, 3.0]), dims="d")
+        Normal("x", shape=(3,), initval=mu_data + 10)
+
+    frozen_m = freeze_dims_and_data(m)
+    new_initval = frozen_m.rvs_to_initial_values[frozen_m["x"]]
+
+    assert mu_data not in graph_inputs([new_initval])
+    np.testing.assert_array_equal(frozen_m.initial_point()["x"], [11.0, 12.0, 13.0])

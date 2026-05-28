@@ -378,3 +378,29 @@ def test_remove_value_transforms():
     new_p = new_m["p"]
     new_q = new_m["q"]
     assert new_m.rvs_to_transforms == {new_p: logodds, new_q: None}
+
+
+def test_do_drops_initval_of_intervened_rv_and_preserves_others():
+    with pm.Model() as m:
+        pm.Normal("a", initval=1.0)
+        pm.Normal("b", initval=2.0)
+        pm.Normal("c", initval=3.0)
+        pm.Normal("d")
+
+    new_m = do(m, {m["b"]: 5.0})
+
+    assert {
+        rv.name: new_m.rvs_to_initial_values[rv] for rv in new_m.free_RVs
+    } == {"a": 1.0, "c": 3.0, "d": None}
+    np.testing.assert_array_equal(new_m["b"].eval(), 5.0)
+
+
+def test_do_rewires_variable_initval_through_intervened_data():
+    with pm.Model() as m:
+        mu_data = pm.Data("mu_data", np.array([1.0, 2.0, 3.0]))
+        pm.Normal("a", shape=(3,), initval=mu_data + 10)
+
+    new_m = do(m, {mu_data: np.array([0.0, 0.0, 0.0])}, make_interventions_shared=False)
+
+    assert isinstance(new_m["mu_data"], Constant)
+    np.testing.assert_array_equal(new_m.initial_point()["a"], [10.0, 10.0, 10.0])
