@@ -52,6 +52,7 @@ import collections
 import itertools
 import warnings
 
+from dataclasses import dataclass
 from typing import Any, overload
 
 import numpy as np
@@ -115,6 +116,25 @@ class ParametrizationError(VariationalInferenceError, ValueError):
 
 class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups."""
+
+
+@dataclass
+class VIState:
+    """State of a fitted variational inference approximation.
+
+    Parameters
+    ----------
+    mean : Dataset
+        Posterior mean of each latent variable in the original
+        (constrained) space of the model.
+    std : Dataset or None
+        Posterior standard deviation of each latent variable in the
+        original (constrained) space. ``None`` for particle-based
+        methods.
+    """
+
+    mean: Dataset
+    std: Dataset | None
 
 
 def _known_scan_ignored_inputs(terms):
@@ -1171,6 +1191,27 @@ class Group(WithMemoization):
     def std_data(self) -> Dataset:
         """Standard deviation of the latent variables as an xarray Dataset."""
         return self.var_to_data(self.std)
+
+    @property
+    def state(self) -> VIState:
+        """Fit state with mean and std in the original (constrained) space."""
+        from pymc.model.transform_values import constrain_values
+
+        def _constrain_flat(flat_tensor: pt.TensorVariable) -> Dataset:
+            ds = self.var_to_data(flat_tensor)
+            ds = ds.expand_dims("__sample__")
+            result = constrain_values(
+                ds,
+                model=self.model,
+                sample_dims=("__sample__",),
+                compile_kwargs={"mode": "FAST_COMPILE"},
+            )
+            return result.squeeze("__sample__", drop=True)
+
+        return VIState(
+            mean=_constrain_flat(self.mean),
+            std=_constrain_flat(self.std) if self.has_logq else None,
+        )
 
 
 group_for_params = Group.group_for_params

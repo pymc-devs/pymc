@@ -22,6 +22,8 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from xarray import Dataset
+
 import pymc as pm
 import pymc.variational.opvi as opvi
 
@@ -509,9 +511,99 @@ def test_sample_outside_model_context():
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
 
-    # Fit with explicit model, then exit the model context
     approx = pm.fit(10, method="advi", model=model, progressbar=False)
-
-    # sample() should work without an active model context
     trace = approx.sample(50)
     assert trace.posterior["mu"].shape == (1, 50)
+
+
+class TestUntransformedData:
+    def test_state_mean_field(self):
+        """ADVI state has family='mean_field', mean and std in constrained space."""
+        rng = np.random.default_rng(42)
+        with pm.Model():
+            pm.HalfNormal("sigma", sigma=5.0)
+            pm.Normal("mu", 0, 1)
+            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            fitted = pm.fit(100, method="advi", progressbar=False, random_seed=42)
+
+        s = fitted.state
+        assert set(s.mean.keys()) == {"sigma", "mu"}
+        assert set(s.std.keys()) == {"sigma", "mu"}
+        assert s.std is not None
+        assert s.mean["sigma"].values > 0
+        assert s.std["sigma"].values > 0
+
+    def test_state_full_rank(self):
+        """FullRankADVI state has mean and std."""
+        rng = np.random.default_rng(42)
+        with pm.Model():
+            pm.HalfNormal("sigma", sigma=5.0)
+            pm.Normal("mu", 0, 1)
+            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            fitted = pm.fit(100, method="fullrank_advi", progressbar=False, random_seed=42)
+
+        s = fitted.state
+        assert s.mean.keys() == {"sigma", "mu"}
+        assert s.std is not None
+        assert s.mean["sigma"].values > 0
+
+    def test_state_empirical_std_is_none(self):
+        """Empirical state has std=None."""
+        rng = np.random.default_rng(42)
+        with pm.Model():
+            pm.Normal("mu", 0, 1)
+            pm.Normal("y", rng.normal(size=10), observed=rng.normal(size=10))
+            inference = pm.SVGD(n_particles=50, random_seed=42)
+            fitted = inference.fit(100, progressbar=False)
+
+        s = fitted.state
+        assert s.std is None
+        assert "mu" in s.mean
+
+    def test_state_is_single_group_approx_attr(self):
+        """state is accessible from SingleGroupApproximation via __getattr__ proxy."""
+        with pm.Model():
+            pm.Normal("mu", 0, 1)
+            inference = pm.ADVI(random_seed=42)
+            fitted = inference.fit(10, progressbar=False)
+
+        s = fitted.state
+        assert "mu" in s.mean
+
+    def test_state_in_callback(self):
+        """Callbacks can access state during training."""
+        rng = np.random.default_rng(42)
+        snapshots = []
+
+        def callback(approx, losses, i):
+            s = approx.state
+            snapshots.append(
+                {
+                    "i": i,
+                    "mean": s.mean,
+                    "std": s.std,
+                }
+            )
+
+        with pm.Model():
+            pm.HalfNormal("sigma", sigma=5.0)
+            pm.Normal("mu", 0, 1)
+            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            inference = pm.ADVI(random_seed=42)
+            fitted = inference.fit(50, callbacks=[callback], progressbar=False)
+
+        assert len(snapshots) == 50
+        for snap in snapshots:
+            assert isinstance(snap["mean"], Dataset)
+            assert set(snap["mean"].keys()) == {"sigma", "mu"}
+            assert snap["std"] is not None
+            assert set(snap["std"].keys()) == {"sigma", "mu"}
+        # The last snapshot should match the final state
+        final = fitted.state
+        np.testing.assert_allclose(
+            snapshots[-1]["mean"]["sigma"].values, final.mean["sigma"].values
+        )
+        # Parameters should have moved from their initial values
+        first_mean = snapshots[0]["mean"]["mu"].values
+        last_mean = snapshots[-1]["mean"]["mu"].values
+        assert not np.allclose(first_mean, last_mean), "parameters should change during training"
