@@ -178,3 +178,52 @@ def test_equivalence_with_in_ram_minibatch():
         stream = ap.sample(400).posterior["b"].values.reshape(-1, 3).mean(0)
 
     np.testing.assert_allclose(in_ram, stream, atol=0.1)
+
+
+def test_total_size_zero_raises():
+    # total_size=0 is falsy: it slips a None-only check and the model's truthy
+    # `if total_size:` guard, silently skipping the N/batch_size rescaling.
+    data = np.zeros((8, 1))
+    with pytest.raises(ValueError, match="positive integer"):
+        StreamingDataset(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=0)
+
+
+def test_total_size_negative_raises():
+    # negative total_size is truthy but yields a negative scaling coefficient
+    # (the data log-likelihood's sign flips, so VI maximizes mis-fit).
+    data = np.zeros((8, 1))
+    with pytest.raises(ValueError, match="positive integer"):
+        StreamingDataset(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=-100)
+
+
+def test_shuffle_buffer_small_buffer_conserves_rows():
+    # buffer_size < batch_size must NOT silently discard the dataset: the buffer
+    # accumulates to at least batch_size before emitting (regression for the
+    # early-return data-loss bug).
+    data = np.arange(120, dtype="float64").reshape(120, 1)
+    src = shuffle_buffer(_chunks(data, 7), buffer_size=3, batch_size=10, seed=0)
+    batches = list(src())
+    assert batches, "buffer_size < batch_size silently produced zero batches"
+    assert all(b.shape == (10, 1) for b in batches)
+    seen = np.sort(np.concatenate([b.ravel() for b in batches]))
+    np.testing.assert_array_equal(seen, data.ravel())  # 120 % 10 == 0, nothing dropped
+
+
+def test_shuffle_buffer_rejects_nonpositive_sizes():
+    data = np.zeros((10, 1))
+    with pytest.raises(ValueError, match="buffer_size"):
+        shuffle_buffer(_chunks(data, 5), buffer_size=0, batch_size=4)
+    with pytest.raises(ValueError, match="batch_size"):
+        shuffle_buffer(_chunks(data, 5), buffer_size=10, batch_size=0)
+
+
+def test_accepts_numpy_integer_sizes_rejects_bool():
+    # the positive-int check uses numbers.Integral: numpy ints are valid, bool is not.
+    data = np.zeros((8, 1))
+    ds = StreamingDataset(
+        _chunks(data, 4), batch_size=np.int64(4), sample_shape=(1,), total_size=np.int64(8)
+    )
+    ds.advance()
+    assert ds.batch_size == 4
+    with pytest.raises(ValueError):
+        StreamingDataset(_chunks(data, 4), batch_size=True, sample_shape=(1,), total_size=8)

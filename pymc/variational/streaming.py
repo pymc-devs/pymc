@@ -63,6 +63,7 @@ Example
 
 from __future__ import annotations
 
+import numbers
 import warnings
 
 from collections.abc import Callable, Iterable, Iterator
@@ -70,6 +71,11 @@ from collections.abc import Callable, Iterable, Iterator
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
+
+
+def _is_positive_int(value: object) -> bool:
+    """True for a strictly positive integer (incl. numpy integer types), excluding bool."""
+    return isinstance(value, numbers.Integral) and not isinstance(value, bool) and value > 0
 
 
 class StreamingDataset:
@@ -90,11 +96,13 @@ class StreamingDataset:
         Dtype of the shared buffer. If it differs from ``pytensor.config.floatX``
         the model will insert a per-step cast on the observed tensor.
     total_size : int, optional
-        The true dataset size ``N``. Pass it to the observed distribution as
-        ``total_size=ds.total_size`` so the minibatch log-likelihood is rescaled
-        by ``N / batch_size`` (the same mechanism as ``pm.Minibatch``). Unlike
-        ``pm.Minibatch`` it cannot be inferred from a resident array, so it must
-        be supplied; a warning is issued at construction if it is left ``None``.
+        The true dataset size ``N`` (a positive integer). Pass it to the observed
+        distribution as ``total_size=ds.total_size`` so the minibatch
+        log-likelihood is rescaled by ``N / batch_size`` (the same mechanism as
+        ``pm.Minibatch``). Unlike ``pm.Minibatch`` it cannot be inferred from a
+        resident array, so it must be supplied; ``None`` warns at construction and
+        a non-positive value raises (it would otherwise silently disable or invert
+        the rescaling).
     preprocess_fn : callable, optional
         Pure transform applied to each batch before it lands in the buffer.
     cycle : bool, default True
@@ -116,8 +124,8 @@ class StreamingDataset:
         cycle: bool = True,
         name: str = "streaming_buffer",
     ):
-        if not isinstance(batch_size, int) or batch_size <= 0:
-            raise ValueError(f"batch_size must be a positive integer, got {batch_size}")
+        if not _is_positive_int(batch_size):
+            raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
         if total_size is None:
             warnings.warn(
                 "StreamingDataset created with total_size=None: the minibatch "
@@ -125,6 +133,17 @@ class StreamingDataset:
                 "biased. Pass total_size=N (the true dataset size).",
                 UserWarning,
                 stacklevel=2,
+            )
+        elif not _is_positive_int(total_size):
+            # A non-positive total_size is silently dangerous: 0 is falsy, so the
+            # model never wraps the observed RV and the N/batch_size rescaling is
+            # skipped (posterior collapses toward the prior); a negative value
+            # yields a negative scaling coefficient that flips the data
+            # log-likelihood's sign (VI then maximizes mis-fit). Reject it loudly.
+            raise ValueError(
+                "total_size must be a positive integer (the true dataset size N) so "
+                "the minibatch log-likelihood is rescaled by N / batch_size; got "
+                f"{total_size!r}."
             )
 
         self._source_factory = _make_factory(source)
@@ -247,16 +266,28 @@ def shuffle_buffer(
 
     It does **not** by itself fix a strongly time/row-ordered stream (a bounded
     buffer only block-shuffles such data) -- pre-shuffle on disk, or interleave
-    shards into ``chunk_source``, for that. Note ``buffer_size`` is a *lower*
-    bound: a single yielded chunk larger than ``buffer_size`` is taken whole, so
-    peak buffer memory is ``max(buffer_size, largest_chunk_rows)``.
+    shards into ``chunk_source``, for that. ``buffer_size`` is a *lower* bound: the
+    buffer always accumulates at least ``max(buffer_size, batch_size)`` rows before
+    emitting (so a ``buffer_size`` smaller than ``batch_size`` still yields full
+    batches instead of silently dropping the stream), and a single chunk larger
+    than that is taken whole, so peak buffer memory is
+    ``max(buffer_size, batch_size, largest_chunk_rows)``.
     """
+    if not _is_positive_int(batch_size):
+        raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
+    if not _is_positive_int(buffer_size):
+        raise ValueError(f"buffer_size must be a positive integer, got {buffer_size!r}")
 
     def factory() -> Iterator[np.ndarray]:
         rng = np.random.default_rng(seed)
         it = chunk_source()
         carry: np.ndarray | None = None  # leftover (< batch_size) from last fill
         exhausted = False
+        # Accumulate at least one full batch's worth even when buffer_size <
+        # batch_size: otherwise the inner loop would break early with fewer than
+        # batch_size rows and the `have < batch_size` guard below would silently
+        # discard the entire stream.
+        target = max(buffer_size, batch_size)
         while not exhausted:
             bufs: list[np.ndarray] = []
             have = 0
@@ -268,12 +299,14 @@ def shuffle_buffer(
                 a = np.asarray(arr)
                 bufs.append(a)
                 have += a.shape[0]
-                if have >= buffer_size:
+                if have >= target:
                     break
             else:
                 exhausted = True  # for-loop ran to completion: source is done
             if have < batch_size:
-                return  # nothing left that can form a batch
+                # Only reachable once the source is exhausted: drop the final
+                # sub-batch remainder (it cannot form a full batch).
+                return
             buf = np.concatenate(bufs, axis=0)  # always a fresh, owned copy
             rng.shuffle(buf)
             n_full = buf.shape[0] // batch_size
