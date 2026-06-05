@@ -976,7 +976,9 @@ class LatentKron(Base):
         mu = self.mean_func(cartesian(*Xs))
         chols = [cholesky(stabilize(cov(X), jitter)) for cov, X in zip(self.cov_funcs, Xs)]
         v = pm.Normal(name + "_rotated_", mu=0.0, sigma=1.0, size=self.N, **kwargs)
-        f = pm.Deterministic(name, mu + pt.flatten(kron_dot(chols, v)))
+        f = pm.Deterministic(
+            name, mu + pt.flatten(kron_dot(chols, v)), dims=kwargs.get("dims", None)
+        )
         return f
 
     def prior(self, name, Xs, jitter=JITTER_DEFAULT, **kwargs):
@@ -995,9 +997,14 @@ class LatentKron(Base):
         jitter : float, default 1e-6
             A small correction added to the diagonal of positive semi-definite
             covariance matrices to ensure numerical stability.
+        dims : str or tuple of str, optional
+            Dimension name(s) for the GP random variable, passed to
+            :func:`~pymc.Deterministic`. Allows the GP to be identified
+            by named coordinates in the model, consistent with
+            :class:`~pymc.gp.Latent` and :class:`~pymc.gp.HSGP`.
         **kwargs
-            Extra keyword arguments that are passed to the :class:`~pymc.KroneckerNormal`
-            distribution constructor.
+            Extra keyword arguments that are passed to the internal
+            :class:`~pymc.Normal` rotated variable.
         """
         if len(Xs) != len(self.cov_funcs):
             raise ValueError("Must provide a covariance function for each X")

@@ -454,6 +454,15 @@ class TestLatentKron:
         with pytest.raises(ValueError):
             gp.prior("f", Xs=[np.linspace(0, 1, 7)[:, None], np.linspace(0, 1, 5)[:, None]])
 
+    def testLatentKronDims(self):
+        """Test that LatentKron.prior correctly passes dims to the Deterministic GP variable."""
+        n_points = int(np.prod([len(X) for X in self.Xs]))
+        with pm.Model(coords={"gp_dim": np.arange(n_points)}) as kron_model:
+            kron_gp = pm.gp.LatentKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
+            f = kron_gp.prior("f", self.Xs, dims="gp_dim")
+        assert f.name == "f"
+        assert kron_model.named_vars_to_dims["f"] == ("gp_dim",)
+
 
 class TestMarginalKron:
     """
