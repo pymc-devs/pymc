@@ -227,3 +227,34 @@ def test_accepts_numpy_integer_sizes_rejects_bool():
     assert ds.batch_size == 4
     with pytest.raises(ValueError):
         StreamingDataset(_chunks(data, 4), batch_size=True, sample_shape=(1,), total_size=8)
+
+
+def test_shuffle_buffer_reshuffles_across_epochs():
+    # a seeded buffer must NOT replay one fixed permutation every epoch (that
+    # would weaken shuffling under cycle=True); each epoch reshuffles, but rows
+    # are conserved.
+    data = np.arange(60, dtype="float64").reshape(60, 1)
+    factory = shuffle_buffer(_chunks(data, 10), buffer_size=60, batch_size=10, seed=0)
+    epoch1 = np.concatenate([b.ravel() for b in factory()])
+    epoch2 = np.concatenate([b.ravel() for b in factory()])
+    assert not np.array_equal(epoch1, epoch2)  # different order across epochs
+    np.testing.assert_array_equal(np.sort(epoch1), data.ravel())  # but conserves rows
+    np.testing.assert_array_equal(np.sort(epoch2), data.ravel())
+
+
+def test_shuffle_buffer_seed_reproducible_across_runs():
+    # same seed => identical first-epoch order across independent constructions.
+    data = np.arange(60, dtype="float64").reshape(60, 1)
+    a = np.concatenate(
+        [
+            b.ravel()
+            for b in shuffle_buffer(_chunks(data, 10), buffer_size=60, batch_size=10, seed=7)()
+        ]
+    )
+    b = np.concatenate(
+        [
+            b.ravel()
+            for b in shuffle_buffer(_chunks(data, 10), buffer_size=60, batch_size=10, seed=7)()
+        ]
+    )
+    np.testing.assert_array_equal(a, b)

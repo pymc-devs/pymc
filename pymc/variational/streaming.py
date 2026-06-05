@@ -272,14 +272,23 @@ def shuffle_buffer(
     batches instead of silently dropping the stream), and a single chunk larger
     than that is taken whole, so peak buffer memory is
     ``max(buffer_size, batch_size, largest_chunk_rows)``.
+
+    Each epoch (each call of the returned factory) draws a fresh permutation from
+    a sub-stream of ``seed``, so the shuffle order differs across epochs -- a
+    seeded buffer must not replay one fixed order forever -- while staying
+    reproducible for a given ``seed``.
     """
     if not _is_positive_int(batch_size):
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
     if not _is_positive_int(buffer_size):
         raise ValueError(f"buffer_size must be a positive integer, got {buffer_size!r}")
+    seed_seq = np.random.SeedSequence(seed)
 
     def factory() -> Iterator[np.ndarray]:
-        rng = np.random.default_rng(seed)
+        # Spawn a fresh sub-stream per epoch so re-iterating (cycle=True) reshuffles
+        # rather than replaying one fixed permutation forever; still reproducible
+        # across runs for a given seed.
+        rng = np.random.default_rng(seed_seq.spawn(1)[0])
         it = chunk_source()
         carry: np.ndarray | None = None  # leftover (< batch_size) from last fill
         exhausted = False
