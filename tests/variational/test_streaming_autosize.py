@@ -59,6 +59,15 @@ def test_auto_rejects_one_shot_iterator():
         StreamingDataset(one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
 
 
+def test_auto_rejects_factory_returning_same_one_shot_iterator():
+    # a "factory" that hands back the SAME already-consumable iterator each call is
+    # not re-readable: the counting pass consumes it and advance() would get nothing.
+    data = np.zeros((20, 1))
+    one_shot = (data[i : i + 4] for i in range(0, 20, 4))
+    with pytest.raises(ValueError, match="fresh iterator"):
+        StreamingDataset(lambda: one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
+
+
 def test_auto_rejects_bad_n_rows():
     f = _factory(np.zeros((8, 1)), 4)
     f.n_rows = 0

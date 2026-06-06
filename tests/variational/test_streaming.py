@@ -258,3 +258,65 @@ def test_shuffle_buffer_seed_reproducible_across_runs():
         ]
     )
     np.testing.assert_array_equal(a, b)
+
+
+def test_sizes_normalized_to_python_int():
+    # numpy integer sizes must be stored as plain Python ints so ds.total_size is
+    # accepted downstream by create_minibatch_rv (regression for the np.int64 trap).
+    data = np.zeros((8, 1))
+    ds = StreamingDataset(
+        _chunks(data, 4), batch_size=np.int64(4), sample_shape=(1,), total_size=np.int64(8)
+    )
+    assert type(ds.batch_size) is int
+    assert type(ds.total_size) is int
+
+
+def test_numpy_total_size_accepted_by_observed_rv():
+    # a stored np.int64 total_size used to reach create_minibatch_rv and raise
+    # "Invalid type for total_size"; it must now build a valid observed RV.
+    data = np.zeros((4, 1), dtype="float64")
+    ds = StreamingDataset(
+        lambda: iter([data]), batch_size=4, sample_shape=(1,), total_size=np.int64(4)
+    )
+    ds.advance()
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        pm.Normal("y", mu, 1, observed=ds.as_tensor()[:, 0], total_size=ds.total_size)
+    # compiling the observed logp exercises the create_minibatch_rv scaling path
+    model.compile_logp(model.observed_RVs)({"mu": np.array(0.0)})
+
+
+def test_factory_returning_reiterable_is_accepted():
+    # a zero-arg factory may return ANY iterable (e.g. a list), not just an
+    # iterator; advance() used to crash with "'list' object is not an iterator".
+    data = [np.zeros((4, 1), dtype="float64")]
+    ds = StreamingDataset(lambda: data, batch_size=4, sample_shape=(1,), total_size=4)
+    ds.advance()
+    assert ds.as_tensor().get_value().shape == (4, 1)
+
+
+def test_scalar_batch_rejected_with_clear_error():
+    # a 0-D batch used to raise an opaque IndexError on batch.shape[0].
+    ds = StreamingDataset(
+        lambda: iter([np.array(1.0)]), batch_size=1, sample_shape=(), total_size=1
+    )
+    with pytest.raises(ValueError, match="leading batch dimension"):
+        ds.advance()
+
+
+def test_fit_callback_seeds_buffer_by_default():
+    # PyMC runs callbacks AFTER each step, so the buffer must be seeded before the
+    # first step; fit_callback() seeds on creation unless seed=False.
+    data = np.ones((4, 1))
+    ds = StreamingDataset(lambda: iter([data, data]), batch_size=4, sample_shape=(1,), total_size=8)
+    assert ds.batches_seen == 0
+    ds.fit_callback()  # default seed=True
+    assert ds.batches_seen == 1
+    np.testing.assert_array_equal(ds.as_tensor().get_value(), data)  # not the zero placeholder
+
+
+def test_fit_callback_seed_false_does_not_advance():
+    data = np.ones((4, 1))
+    ds = StreamingDataset(lambda: iter([data]), batch_size=4, sample_shape=(1,), total_size=4)
+    ds.fit_callback(seed=False)
+    assert ds.batches_seen == 0
