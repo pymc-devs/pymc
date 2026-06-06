@@ -370,6 +370,16 @@ def shuffle_buffer(
             rem = buf.shape[0] - n_full * batch_size
             carry = buf[n_full * batch_size :].copy() if rem else None
 
+    # Forward a known row count (e.g. parquet_source's .n_rows from Parquet
+    # metadata) to the wrapped factory, so
+    # ``StreamingDataset(shuffle_buffer(parquet_source(dir)), total_size="auto")``
+    # resolves N for free instead of doing a counting pass. The only discrepancy is
+    # the single dropped trailing partial batch (< batch_size rows), well within the
+    # auto-size sanity tolerance.
+    source_n_rows = getattr(chunk_source, "n_rows", None)
+    if source_n_rows is not None:
+        factory.n_rows = source_n_rows  # type: ignore[attr-defined]
+
     return factory
 
 
