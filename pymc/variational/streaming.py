@@ -51,7 +51,6 @@ Example
         sample_shape=(4,),  # 3 features + 1 observed column
         total_size=N,
     )
-    ds.advance()  # seed the buffer
 
     with pm.Model():
         b = pm.Normal("b", 0.0, 3.0, shape=4)
@@ -157,10 +156,14 @@ class StreamingDataset:
             )
 
         self._source_iter: Iterator[np.ndarray] = self._source_factory()
-        self._batch_size = batch_size
+        # Normalize integer-like sizes to plain Python ints. ``_is_positive_int``
+        # accepts numpy integers (via ``numbers.Integral``), but the downstream
+        # ``create_minibatch_rv`` type-checks ``isinstance(total_size, int)`` and
+        # would raise on a stored ``np.int64`` ("Invalid type for total_size").
+        self._batch_size = int(batch_size)
         self._sample_shape = tuple(sample_shape)
         self._dtype = dtype
-        self._total_size = total_size
+        self._total_size = None if total_size is None else int(total_size)
         self._preprocess_fn = preprocess_fn
         self._cycle = cycle
 
@@ -214,8 +217,17 @@ class StreamingDataset:
         self._batches_seen += 1
         self._rows_streamed += int(arr.shape[0])
 
-    def fit_callback(self) -> Callable:
-        """A 3-arg callback ``(approx, losses, i)`` for ``pm.fit(callbacks=...)``."""
+    def fit_callback(self, *, seed: bool = True) -> Callable:
+        """A 3-arg callback ``(approx, losses, i)`` for ``pm.fit(callbacks=...)``.
+
+        PyMC runs callbacks *after* each optimization step, so the buffer must
+        already hold a real batch before step 0 -- otherwise the first step trains
+        on the zero-initialized placeholder. By default this seeds the buffer (one
+        :meth:`advance`) if it has not been advanced yet; pass ``seed=False`` to
+        opt out (e.g. when you seed manually).
+        """
+        if seed and self._batches_seen == 0:
+            self.advance()
 
         def _cb(*_):
             self.advance()
@@ -264,6 +276,11 @@ class StreamingDataset:
     def _validate(self, batch: np.ndarray) -> None:
         if not isinstance(batch, np.ndarray):
             raise TypeError(f"expected np.ndarray batch, got {type(batch).__name__}")
+        if batch.ndim < 1:
+            raise ValueError(
+                "batch needs a leading batch dimension; got a scalar array with "
+                f"shape {batch.shape}."
+            )
         if batch.shape[0] != self._batch_size:
             raise ValueError(
                 f"batch shape[0] = {batch.shape[0]} does not match batch_size = "
@@ -366,7 +383,13 @@ def _make_factory(
     re-``iter``-ed each epoch.
     """
     if callable(source) and not isinstance(source, Iterator):
-        return source  # type: ignore[return-value]
+        # A factory may return any iterable (a list of batches, a generator, ...),
+        # not only an iterator; normalize so ``__next__`` always has an iterator to
+        # pull from (a bare ``list`` would otherwise fail ``next(...)``).
+        def _factory() -> Iterator[np.ndarray]:
+            return iter(source())  # type: ignore[operator]
+
+        return _factory
     if isinstance(source, Iterator):
         consumed = {"done": False}
 
@@ -411,11 +434,20 @@ def _auto_total_size(
         UserWarning,
         stacklevel=3,
     )
+    first_iter = factory()
     count = 0
-    for chunk in factory():
+    for chunk in first_iter:
         count += int(np.asarray(chunk).shape[0])
     if count <= 0:
         raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
+    if factory() is first_iter:
+        # A genuine factory yields a FRESH iterator each call; one that returns the
+        # same (now-exhausted) iterator would leave advance() with nothing to pull.
+        raise ValueError(
+            "total_size='auto' got a factory that returns the same one-shot iterator "
+            "each call; pass a factory that creates a fresh iterator each call, or "
+            "total_size=N explicitly."
+        )
     return count
 
 
