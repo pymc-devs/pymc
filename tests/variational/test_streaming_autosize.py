@@ -18,7 +18,7 @@ import warnings
 import numpy as np
 import pytest
 
-from pymc.variational.streaming import StreamingDataset, parquet_source
+from pymc.variational.streaming import StreamingDataset, parquet_source, shuffle_buffer
 
 
 def _factory(data, size):
@@ -57,6 +57,29 @@ def test_auto_rejects_one_shot_iterator():
     one_shot = (data[i : i + 4] for i in range(0, 20, 4))
     with pytest.raises(ValueError, match="re-readable"):
         StreamingDataset(one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
+
+
+def test_shuffle_buffer_forwards_n_rows_for_auto():
+    # shuffle_buffer must forward a known .n_rows so total_size="auto" works through
+    # the common shuffle_buffer(parquet_source(...)) composition WITHOUT a counting
+    # pass (the realistic way users wrap a Parquet source).
+    data = np.arange(40, dtype="float64").reshape(40, 1)
+    src = _factory(data, 8)
+    src.n_rows = 40
+    wrapped = shuffle_buffer(src, buffer_size=20, batch_size=10, seed=0)
+    assert wrapped.n_rows == 40
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)  # a counting pass would warn -> fail
+        ds = StreamingDataset(wrapped, batch_size=10, sample_shape=(1,), total_size="auto")
+    assert ds.total_size == 40
+
+
+def test_shuffle_buffer_without_n_rows_has_no_attribute():
+    # a plain source without .n_rows must not gain a bogus one.
+    data = np.arange(40, dtype="float64").reshape(40, 1)
+    wrapped = shuffle_buffer(_factory(data, 8), buffer_size=20, batch_size=10, seed=0)
+    assert not hasattr(wrapped, "n_rows")
 
 
 def test_auto_rejects_factory_returning_same_one_shot_iterator():
