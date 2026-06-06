@@ -1,0 +1,107 @@
+#   Copyright 2024 - present The PyMC Developers
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+"""Prototype: total_size='auto' resolution + the rows_streamed sanity warning."""
+
+import warnings
+
+import numpy as np
+import pytest
+
+from pymc.variational.streaming import StreamingDataset, parquet_source
+
+
+def _factory(data, size):
+    """A re-readable zero-arg factory yielding `size`-row chunks of `data`."""
+
+    def f():
+        for i in range(0, len(data), size):
+            yield data[i : i + size]
+
+    return f
+
+
+def test_auto_counts_finite_source():
+    # no .n_rows -> auto does one counting pass and resolves the true N.
+    data = np.arange(60, dtype="float64").reshape(60, 1)
+    with pytest.warns(UserWarning, match="counting pass"):
+        ds = StreamingDataset(
+            _factory(data, 7), batch_size=10, sample_shape=(1,), total_size="auto"
+        )
+    assert ds.total_size == 60
+
+
+def test_auto_uses_n_rows_fast_path():
+    # source advertises .n_rows -> auto trusts it WITHOUT counting (the factory only
+    # really yields 8 rows, but n_rows says 999; auto must return 999).
+    data = np.zeros((8, 1))
+    f = _factory(data, 4)
+    f.n_rows = 999
+    ds = StreamingDataset(f, batch_size=4, sample_shape=(1,), total_size="auto")
+    assert ds.total_size == 999
+
+
+def test_auto_rejects_one_shot_iterator():
+    # a bare generator is consumed by counting -> auto must refuse it.
+    data = np.zeros((20, 1))
+    one_shot = (data[i : i + 4] for i in range(0, 20, 4))
+    with pytest.raises(ValueError, match="re-readable"):
+        StreamingDataset(one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
+
+
+def test_auto_rejects_bad_n_rows():
+    f = _factory(np.zeros((8, 1)), 4)
+    f.n_rows = 0
+    with pytest.raises(ValueError, match="n_rows must be a positive integer"):
+        StreamingDataset(f, batch_size=4, sample_shape=(1,), total_size="auto")
+
+
+def test_sanity_warns_on_grossly_wrong_total_size():
+    # one full pass = 20 rows, but total_size=100 -> at the first epoch boundary, warn.
+    data = np.arange(20, dtype="float64").reshape(20, 1)
+    ds = StreamingDataset(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=100)
+    with pytest.warns(UserWarning, match="disagrees with"):
+        for _ in range(6):  # 5 batches = one epoch, the 6th crosses the boundary
+            ds.advance()
+
+
+def test_sanity_silent_when_total_size_matches():
+    data = np.arange(20, dtype="float64").reshape(20, 1)
+    ds = StreamingDataset(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=20)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)  # any UserWarning fails the test
+        for _ in range(6):
+            ds.advance()
+
+
+def test_parquet_source_n_rows_from_metadata(tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    rng = np.random.default_rng(0)
+    total = 0
+    for i in range(3):
+        n = 100 + 50 * i
+        total += n
+        block = rng.normal(size=(n, 2))
+        pq.write_table(
+            pa.table({"a": block[:, 0], "b": block[:, 1]}),
+            f"{tmp_path}/part_{i:02d}.parquet",
+        )
+    src = parquet_source(str(tmp_path))
+    assert src.n_rows == total  # read from metadata, no data scan
+
+    # and total_size='auto' picks it up for free (no counting pass / warning)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        ds = StreamingDataset(src, batch_size=10, sample_shape=(2,), total_size="auto")
+    assert ds.total_size == total
