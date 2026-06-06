@@ -11,14 +11,19 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""Prototype: total_size='auto' resolution + the rows_streamed sanity warning."""
+"""total_size='auto' resolution + the rows_streamed sanity warning."""
 
 import warnings
 
 import numpy as np
 import pytest
 
-from pymc.variational.streaming import StreamingDataset, parquet_source, shuffle_buffer
+from pymc.variational.streaming import (
+    DataLoader,
+    IterableDataset,
+    parquet_source,
+    shuffle_buffer,
+)
 
 
 def _factory(data, size):
@@ -35,9 +40,7 @@ def test_auto_counts_finite_source():
     # no .n_rows -> auto does one counting pass and resolves the true N.
     data = np.arange(60, dtype="float64").reshape(60, 1)
     with pytest.warns(UserWarning, match="counting pass"):
-        ds = StreamingDataset(
-            _factory(data, 7), batch_size=10, sample_shape=(1,), total_size="auto"
-        )
+        ds = DataLoader(_factory(data, 7), batch_size=10, sample_shape=(1,), total_size="auto")
     assert ds.total_size == 60
 
 
@@ -47,7 +50,7 @@ def test_auto_uses_n_rows_fast_path():
     data = np.zeros((8, 1))
     f = _factory(data, 4)
     f.n_rows = 999
-    ds = StreamingDataset(f, batch_size=4, sample_shape=(1,), total_size="auto")
+    ds = DataLoader(f, batch_size=4, sample_shape=(1,), total_size="auto")
     assert ds.total_size == 999
 
 
@@ -56,13 +59,13 @@ def test_auto_rejects_one_shot_iterator():
     data = np.zeros((20, 1))
     one_shot = (data[i : i + 4] for i in range(0, 20, 4))
     with pytest.raises(ValueError, match="re-readable"):
-        StreamingDataset(one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
+        DataLoader(one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
 
 
 def test_shuffle_buffer_forwards_n_rows_for_auto():
     # shuffle_buffer must forward a known .n_rows so total_size="auto" works through
-    # the common shuffle_buffer(parquet_source(...)) composition WITHOUT a counting
-    # pass (the realistic way users wrap a Parquet source).
+    # the explicit shuffle_buffer(parquet_source(...)) composition WITHOUT a counting
+    # pass (the realistic way power users wrap a Parquet source).
     data = np.arange(40, dtype="float64").reshape(40, 1)
     src = _factory(data, 8)
     src.n_rows = 40
@@ -71,7 +74,27 @@ def test_shuffle_buffer_forwards_n_rows_for_auto():
 
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)  # a counting pass would warn -> fail
-        ds = StreamingDataset(wrapped, batch_size=10, sample_shape=(1,), total_size="auto")
+        ds = DataLoader(wrapped, batch_size=10, sample_shape=(1,), total_size="auto")
+    assert ds.total_size == 40
+
+
+def test_dataloader_shuffle_auto_resolves_via_n_rows():
+    # DataLoader(shuffle=True, total_size="auto") must resolve N from the source's
+    # .n_rows WITHOUT a counting pass, even though shuffle wraps the source.
+    data = np.arange(40, dtype="float64").reshape(40, 1)
+    src = _factory(data, 8)
+    src.n_rows = 40
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        ds = DataLoader(
+            src,
+            batch_size=10,
+            shuffle=True,
+            buffer_size=20,
+            seed=0,
+            sample_shape=(1,),
+            total_size="auto",
+        )
     assert ds.total_size == 40
 
 
@@ -88,20 +111,20 @@ def test_auto_rejects_factory_returning_same_one_shot_iterator():
     data = np.zeros((20, 1))
     one_shot = (data[i : i + 4] for i in range(0, 20, 4))
     with pytest.raises(ValueError, match="fresh iterator"):
-        StreamingDataset(lambda: one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
+        DataLoader(lambda: one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
 
 
 def test_auto_rejects_bad_n_rows():
     f = _factory(np.zeros((8, 1)), 4)
     f.n_rows = 0
     with pytest.raises(ValueError, match="n_rows must be a positive integer"):
-        StreamingDataset(f, batch_size=4, sample_shape=(1,), total_size="auto")
+        DataLoader(f, batch_size=4, sample_shape=(1,), total_size="auto")
 
 
 def test_sanity_warns_on_grossly_wrong_total_size():
     # one full pass = 20 rows, but total_size=100 -> at the first epoch boundary, warn.
     data = np.arange(20, dtype="float64").reshape(20, 1)
-    ds = StreamingDataset(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=100)
+    ds = DataLoader(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=100)
     with pytest.warns(UserWarning, match="disagrees with"):
         for _ in range(6):  # 5 batches = one epoch, the 6th crosses the boundary
             ds.advance()
@@ -109,7 +132,7 @@ def test_sanity_warns_on_grossly_wrong_total_size():
 
 def test_sanity_silent_when_total_size_matches():
     data = np.arange(20, dtype="float64").reshape(20, 1)
-    ds = StreamingDataset(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=20)
+    ds = DataLoader(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=20)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)  # any UserWarning fails the test
         for _ in range(6):
@@ -130,10 +153,11 @@ def test_parquet_source_n_rows_from_metadata(tmp_path):
             f"{tmp_path}/part_{i:02d}.parquet",
         )
     src = parquet_source(str(tmp_path))
+    assert isinstance(src, IterableDataset)  # parquet_source is a dataset now
     assert src.n_rows == total  # read from metadata, no data scan
 
     # and total_size='auto' picks it up for free (no counting pass / warning)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
-        ds = StreamingDataset(src, batch_size=10, sample_shape=(2,), total_size="auto")
+        ds = DataLoader(src, batch_size=10, sample_shape=(2,), total_size="auto")
     assert ds.total_size == total

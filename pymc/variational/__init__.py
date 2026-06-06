@@ -44,7 +44,13 @@ from pymc.variational.opvi import Approximation, Group
 
 # special
 from pymc.variational.stein import Stein
-from pymc.variational.streaming import StreamingDataset, parquet_source, shuffle_buffer
+from pymc.variational.streaming import (
+    DataLoader,
+    IterableDataset,
+    Trainer,
+    parquet_source,
+    shuffle_buffer,
+)
 from pymc.variational.updates import (
     adadelta,
     adagrad,
@@ -65,12 +71,14 @@ __all__ = (
     "ADVI",
     "ASVGD",
     "SVGD",
+    "DataLoader",
     "Empirical",
     "FullRank",
     "FullRankADVI",
     "Group",
+    "IterableDataset",
     "MeanField",
-    "StreamingDataset",
+    "Trainer",
     "adadelta",
     "adagrad",
     "adagrad_window",
