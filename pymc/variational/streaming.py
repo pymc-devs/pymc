@@ -119,18 +119,28 @@ class StreamingDataset:
         batch_size: int,
         sample_shape: tuple[int, ...] = (),
         dtype: str = "float64",
-        total_size: int | None = None,
+        total_size: int | str | None = None,
         preprocess_fn: Callable[[np.ndarray], np.ndarray] | None = None,
         cycle: bool = True,
         name: str = "streaming_buffer",
     ):
         if not _is_positive_int(batch_size):
             raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
-        if total_size is None:
+
+        self._source_factory = _make_factory(source)
+
+        if isinstance(total_size, str):
+            if total_size != "auto":
+                raise ValueError(f"total_size string must be 'auto', got {total_size!r}")
+            # Resolve N automatically: a source-provided .n_rows (cheap, e.g. from
+            # parquet_source's metadata) else one counting pass over a finite,
+            # re-readable source. One-shot / infinite sources cannot be auto-counted.
+            total_size = _auto_total_size(self._source_factory, source)
+        elif total_size is None:
             warnings.warn(
                 "StreamingDataset created with total_size=None: the minibatch "
                 "log-likelihood will NOT be rescaled and the posterior will be "
-                "biased. Pass total_size=N (the true dataset size).",
+                "biased. Pass total_size=N (the true dataset size) or total_size='auto'.",
                 UserWarning,
                 stacklevel=2,
             )
@@ -146,7 +156,6 @@ class StreamingDataset:
                 f"{total_size!r}."
             )
 
-        self._source_factory = _make_factory(source)
         self._source_iter: Iterator[np.ndarray] = self._source_factory()
         self._batch_size = batch_size
         self._sample_shape = tuple(sample_shape)
@@ -157,6 +166,7 @@ class StreamingDataset:
 
         self._batches_seen = 0
         self._rows_streamed = 0
+        self._warned_size = False  # the sanity check below fires at most once
 
         self._shared = pytensor.shared(
             np.zeros((batch_size, *self._sample_shape), dtype=dtype), name=name
@@ -229,8 +239,27 @@ class StreamingDataset:
         except StopIteration:
             if not self._cycle:
                 raise
+            # First exhaustion == one full pass: rows_streamed now equals the real
+            # row count, so we can sanity-check the user's total_size for free.
+            self._maybe_warn_total_size()
             self._source_iter = self._source_factory()
             return next(self._source_iter)
+
+    def _maybe_warn_total_size(self) -> None:
+        """Warn once if total_size grossly disagrees with the rows seen in one pass."""
+        if self._warned_size or self._total_size is None:
+            return
+        self._warned_size = True
+        seen = self._rows_streamed
+        if seen and abs(self._total_size - seen) > 0.1 * seen:
+            warnings.warn(
+                f"total_size={self._total_size} disagrees with the {seen} rows streamed "
+                f"in one full pass; the N/batch_size rescaling -- and therefore the "
+                f"posterior width -- is likely wrong. Pass the true dataset size, or "
+                f"total_size='auto'.",
+                UserWarning,
+                stacklevel=3,
+            )
 
     def _validate(self, batch: np.ndarray) -> None:
         if not isinstance(batch, np.ndarray):
@@ -352,3 +381,71 @@ def _make_factory(
 
         return _factory
     return lambda: iter(source)
+
+
+def _auto_total_size(
+    factory: Callable[[], Iterator[np.ndarray]],
+    source: object,
+) -> int:
+    """Resolve ``total_size="auto"``: a source ``.n_rows`` (cheap) else a counting pass.
+
+    Fast path: if ``source`` advertises ``.n_rows`` (e.g. :func:`parquet_source`, which
+    reads it from Parquet metadata without scanning the data) use it directly. Otherwise
+    do a single counting pass over a finite, re-readable source. A bare one-shot iterator
+    cannot be auto-counted (counting consumes it) and an infinite stream would make the
+    pass hang -- both must pass ``total_size`` explicitly.
+    """
+    n = getattr(source, "n_rows", None)
+    if n is not None:
+        if not _is_positive_int(n):
+            raise ValueError(f"source.n_rows must be a positive integer, got {n!r}")
+        return int(n)
+    if isinstance(source, Iterator):
+        raise ValueError(
+            "total_size='auto' needs a re-readable source (a zero-arg factory or an "
+            "iterable), not a one-shot iterator; pass total_size=N explicitly instead."
+        )
+    warnings.warn(
+        "total_size='auto' is doing a full counting pass over the source; for a cheap "
+        "path use a source exposing .n_rows (e.g. parquet_source, from Parquet metadata).",
+        UserWarning,
+        stacklevel=3,
+    )
+    count = 0
+    for chunk in factory():
+        count += int(np.asarray(chunk).shape[0])
+    if count <= 0:
+        raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
+    return count
+
+
+def parquet_source(
+    directory: str,
+    *,
+    columns: list[str] | None = None,
+    pattern: str = "*.parquet",
+) -> Callable[[], Iterator[np.ndarray]]:
+    """A finite, re-readable streaming source over a directory of Parquet files.
+
+    Yields one ``(rows, n_columns)`` ``float64`` array per file, and carries an
+    ``n_rows`` attribute read from Parquet *metadata* (no data scan) so that
+    ``StreamingDataset(parquet_source(dir), ..., total_size="auto")`` resolves the
+    dataset size for free. Wrap it in :func:`shuffle_buffer` to get fixed-size,
+    shuffled batches.
+    """
+    import glob as _glob
+    import os
+
+    import pyarrow.parquet as pq
+
+    paths = sorted(_glob.glob(os.path.join(directory, pattern)))
+    if not paths:
+        raise ValueError(f"no Parquet files match {os.path.join(directory, pattern)!r}")
+
+    def factory() -> Iterator[np.ndarray]:
+        for path in paths:
+            table = pq.read_table(path, columns=columns)
+            yield np.column_stack([table.column(c).to_numpy() for c in table.column_names])
+
+    factory.n_rows = sum(pq.read_metadata(p).num_rows for p in paths)  # type: ignore[attr-defined]
+    return factory

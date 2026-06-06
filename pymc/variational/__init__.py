@@ -44,7 +44,7 @@ from pymc.variational.opvi import Approximation, Group
 
 # special
 from pymc.variational.stein import Stein
-from pymc.variational.streaming import StreamingDataset, shuffle_buffer
+from pymc.variational.streaming import StreamingDataset, parquet_source, shuffle_buffer
 from pymc.variational.updates import (
     adadelta,
     adagrad,
@@ -71,7 +71,6 @@ __all__ = (
     "Group",
     "MeanField",
     "StreamingDataset",
-    "shuffle_buffer",
     "adadelta",
     "adagrad",
     "adagrad_window",
@@ -83,8 +82,10 @@ __all__ = (
     "momentum",
     "nesterov_momentum",
     "norm_constraint",
+    "parquet_source",
     "rmsprop",
     "sample_approx",
     "sgd",
+    "shuffle_buffer",
     "total_norm_constraint",
 )
