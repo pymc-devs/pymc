@@ -154,8 +154,8 @@ def test_total_size_rescales_logp_like_minibatch():
 def test_trainer_end_to_end_matches_in_ram_minibatch():
     """End-to-end: Trainer-driven streaming ADVI reproduces in-RAM pm.Minibatch ADVI.
 
-    Also exercises the no-callback design: the Trainer seeds and advances the
-    DataLoader internally -- the user wires up nothing.
+    Exercises the whole blueprint API: a pm.Data placeholder + total_size=len(loader),
+    and a Trainer that streams minibatches into it with set_data -- no user callbacks.
     """
     seed = 0
     rng = np.random.default_rng(seed)
@@ -189,52 +189,72 @@ def test_trainer_end_to_end_matches_in_ram_minibatch():
     )
     with pm.Model() as model:
         b = pm.Normal("b", 0, 3, shape=3)
-        buf = loader.as_tensor()
+        batch = pm.Data("batch", np.zeros((bs, 3)))  # placeholder; full data stays out of RAM
         pm.Bernoulli(
             "o",
-            logit_p=b[0] + b[1] * buf[:, 0] + b[2] * buf[:, 1],
-            observed=buf[:, 2],
-            total_size=loader.total_size,
+            logit_p=b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1],
+            observed=batch[:, 2],
+            total_size=len(loader),  # N comes from the loader, PyTorch-style
         )
-    ap = Trainer(method="advi", obj_optimizer=pm.adam(learning_rate=0.02)).fit(
-        model, loader, 6000, random_seed=seed
-    )
-    with model:
+        ap = Trainer(
+            method="advi",
+            dataloader=loader,
+            data_name="batch",
+            obj_optimizer=pm.adam(learning_rate=0.02),
+        ).fit(6000, random_seed=seed)
         stream = ap.sample(400).posterior["b"].values.reshape(-1, 3).mean(0)
 
     np.testing.assert_allclose(in_ram, stream, atol=0.1)
 
 
-def test_trainer_seeds_buffer_before_first_step():
-    # PyMC runs fit callbacks AFTER each step, so the Trainer must seed the buffer
-    # before step 0 (otherwise step 0 trains on the zero placeholder). After a
-    # short fit, the buffer holds a real batch and batches_seen == n_steps + 1.
+def test_trainer_streams_into_placeholder():
+    # The Trainer seeds the pm.Data placeholder before step 0 (pm.fit runs callbacks
+    # AFTER each step) and overwrites it each step; after fitting it holds a real
+    # batch, not the zero seed -- with the user writing no callbacks.
     data = np.ones((4, 1))
     loader = DataLoader(lambda: iter([data] * 100), batch_size=4, sample_shape=(1,), total_size=4)
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
-        pm.Normal("y", mu, 1, observed=loader.as_tensor()[:, 0], total_size=loader.total_size)
-    Trainer(method="advi").fit(model, loader, 5, progressbar=False, random_seed=0)
-    assert loader.batches_seen == 6  # one seed + five steps
-    np.testing.assert_array_equal(loader.as_tensor().get_value(), data)  # not the zero placeholder
+        batch = pm.Data("batch", np.zeros((4, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        Trainer(method="advi", dataloader=loader, data_name="batch").fit(
+            5, progressbar=False, random_seed=0
+        )
+    np.testing.assert_array_equal(model["batch"].get_value(), data)  # not the zero seed
 
 
 def test_trainer_rejects_non_dataloader():
-    with pm.Model() as model:
-        pm.Normal("x", 0, 1)
+    # the isinstance guard fires before any model lookup, so no context is needed.
     with pytest.raises(TypeError, match="DataLoader"):
-        Trainer(method="advi").fit(model, object(), 10)
+        Trainer(method="advi", dataloader=object()).fit(10)
 
 
-def test_trainer_warns_when_total_size_missing():
+def test_len_returns_total_size():
+    data = np.zeros((40, 1))
+    loader = DataLoader(_chunks(data, 8), batch_size=8, sample_shape=(1,), total_size=40)
+    assert len(loader) == 40
+
+
+def test_len_raises_when_total_size_none():
+    # len(loader) IS N; with total_size=None there is no N to hand the model, so it
+    # raises rather than silently skipping the N/batch_size rescaling.
     data = np.ones((4, 1))
     with pytest.warns(UserWarning, match="total_size=None"):
-        loader = DataLoader(lambda: iter([data] * 50), batch_size=4, sample_shape=(1,))
-    with pm.Model() as model:
-        mu = pm.Normal("mu", 0, 1)
-        pm.Normal("y", mu, 1, observed=loader.as_tensor()[:, 0])  # unscaled
-    with pytest.warns(UserWarning, match="total_size=None"):
-        Trainer(method="advi").fit(model, loader, 3, progressbar=False, random_seed=0)
+        loader = DataLoader(lambda: iter([data] * 5), batch_size=4, sample_shape=(1,))
+    with pytest.raises(TypeError, match="total_size=None"):
+        len(loader)
+
+
+def test_iter_yields_clean_batches_and_reiterates():
+    # __iter__ yields validated (batch_size, *sample_shape) batches and can be
+    # re-iterated for another epoch -- this is the stream the Trainer consumes.
+    data = np.arange(40, dtype="float64").reshape(40, 1)
+    loader = DataLoader(_chunks(data, 10), batch_size=10, sample_shape=(1,), total_size=40)
+    e1 = list(loader)
+    e2 = list(loader)  # re-iterable
+    assert len(e1) == 4 and all(b.shape == (10, 1) for b in e1)
+    np.testing.assert_array_equal(np.sort(np.concatenate([b.ravel() for b in e1])), data.ravel())
+    np.testing.assert_array_equal(np.sort(np.concatenate([b.ravel() for b in e2])), data.ravel())
 
 
 def test_total_size_zero_raises():
