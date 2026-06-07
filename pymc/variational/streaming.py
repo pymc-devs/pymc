@@ -26,22 +26,24 @@ transfers directly:
   (e.g. :func:`parquet_source` over a directory of shards). It never loads the
   whole dataset; it yields it a chunk at a time.
 * :class:`DataLoader` -- turns a dataset into fixed-size (optionally shuffled)
-  minibatches and owns the small ``pytensor.shared`` buffer the model observes.
+  minibatches; it is iterable (the minibatch stream) and sized (``len(loader)``
+  is the dataset size ``N``), exactly like a PyTorch one.
 * :class:`Trainer` -- drives variational inference (ADVI, ...) over a
-  ``DataLoader`` with **no user-facing callbacks**; ``Trainer.fit(model, loader)``
-  advances the buffer each step internally.
+  ``DataLoader`` with **no user-facing callbacks**;
+  ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
+  model's ``pm.Data`` placeholder with ``set_data``.
 
-**The full data never enters RAM.** The model graph observes only the
-``(batch_size, *sample_shape)`` shared buffer -- a *placeholder* that the loader
+**The full data never enters RAM.** The model graph observes only a
+``(batch_size, *sample_shape)`` ``pm.Data`` *placeholder* that the ``Trainer``
 overwrites with the next minibatch every step. Passing a directory of 122 GB of
 Parquet shards still gives a model whose resident footprint is one batch.
 
 The unbiased-gradient rescaling is the *same* as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
-:func:`~pymc.variational.minibatch_rv.create_minibatch_rv`. Today that means
-passing ``total_size=loader.total_size`` to the observed distribution; see
-:class:`Trainer` for the in-progress effort to inject it at fit time so it no
-longer has to appear in the model body.
+:func:`~pymc.variational.minibatch_rv.create_minibatch_rv`. ``N`` is exactly
+``len(loader)`` -- a :class:`DataLoader` is sized like a PyTorch one -- so the
+model passes ``total_size=len(loader)``. (Folding that scaling into the inference
+step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 
 The one extra obligation relative to ``pm.Minibatch`` is **shuffling**.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
@@ -55,6 +57,7 @@ Example
 -------
 .. code-block:: python
 
+    import numpy as np
     import pymc as pm
     from pymc.variational.streaming import DataLoader, Trainer, parquet_source
 
@@ -64,17 +67,18 @@ Example
         parquet_source("shuffled/"),  # an IterableDataset over the shards
         batch_size=4096,
         sample_shape=(4,),  # 3 features + 1 observed column
-        total_size="auto",  # infer N from Parquet metadata
+        total_size="auto",  # infer N from Parquet metadata; N == len(loader)
     )
 
     with pm.Model() as model:
         b = pm.Normal("b", 0.0, 3.0, shape=4)
-        buf = loader.as_tensor()  # (4096, 4) shared buffer -- the ONLY data in RAM
-        logit = b[0] + b[1] * buf[:, 0] + b[2] * buf[:, 1] + b[3] * buf[:, 2]
-        pm.Bernoulli("y", logit_p=logit, observed=buf[:, 3], total_size=loader.total_size)
+        batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder -- the ONLY data in RAM
+        logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
+        pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
 
-    # No callbacks: the Trainer advances the buffer each step internally.
-    approx = Trainer(method="advi").fit(model, loader, 20_000)
+    # No callbacks: the Trainer streams each minibatch into "batch" with set_data.
+    with model:
+        approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
 """
 
 from __future__ import annotations
@@ -122,9 +126,10 @@ class DataLoader:
     """Turn an out-of-core dataset into fixed-size minibatches for variational inference.
 
     The analogue of ``torch.utils.data.DataLoader``: it batches (and optionally
-    shuffles) an :class:`IterableDataset` and owns the small ``pytensor.shared``
-    buffer the model observes. The full dataset never enters memory -- only one
-    ``(batch_size, *sample_shape)`` buffer does.
+    shuffles) an :class:`IterableDataset` into the minibatch stream that
+    :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
+    is the dataset size ``N``). The full dataset never enters memory -- only one
+    ``(batch_size, *sample_shape)`` batch does.
 
     Parameters
     ----------
@@ -266,65 +271,60 @@ class DataLoader:
         """Total rows pushed through the buffer (grows past ``N`` across epochs)."""
         return self._rows_streamed
 
-    # ----- the model-facing tensor ------------------------------------------
+    # ----- iteration: the minibatch stream ----------------------------------
+
+    def __iter__(self) -> Iterator[np.ndarray]:
+        """Yield one epoch of validated ``(batch_size, *sample_shape)`` minibatches.
+
+        This is the stream :class:`Trainer` pushes into the model's ``pm.Data``
+        placeholder via ``set_data``. Re-iterate the loader for another epoch.
+        """
+        for batch in self._source_factory():
+            yield self._prepare(batch)
+
+    def __len__(self) -> int:
+        """The dataset size ``N`` -- pass to the observed distribution's ``total_size``.
+
+        Sized like a PyTorch ``DataLoader``; ``total_size=len(loader)`` is how the
+        model gets the ``N / batch_size`` rescaling.
+        """
+        if self._total_size is None:
+            raise TypeError(
+                "len(DataLoader) is the dataset size N, but this loader was built with "
+                "total_size=None; construct it with total_size=N or total_size='auto'."
+            )
+        return self._total_size
+
+    # ----- shared-buffer path (advanced; the Trainer uses pm.Data instead) ---
 
     def as_tensor(self) -> pt.TensorVariable:
-        """The ``pytensor.shared`` buffer the model observes (mutates each step)."""
+        """A ``pytensor.shared`` buffer the model can observe directly.
+
+        An alternative to the recommended ``pm.Data`` + :class:`Trainer` path: drive
+        ``pm.fit`` yourself and call :meth:`advance` (e.g. from a callback) to refill
+        this buffer each step.
+        """
         return self._shared
 
-    # ----- the only mutator --------------------------------------------------
-
     def advance(self) -> None:
-        """Pull the next batch from the source into the buffer.
-
-        :class:`Trainer` calls this once per optimization step, so end users never
-        need to. Power users driving ``pm.fit`` directly can call it themselves.
-        """
-        batch = self._next_batch()
-        if self._preprocess_fn is not None:
-            batch = self._preprocess_fn(batch)
-        self._validate(batch)
-        # Own a fresh contiguous copy before borrowing into the shared variable:
-        # the source may legitimately yield *views* into a reused array, so we
-        # must not alias it. np.array(copy default) guarantees an owned array.
-        arr = np.array(batch, dtype=self._dtype)
+        """Pull the next batch from the source into the :meth:`as_tensor` buffer."""
+        arr = self._prepare(self._next_batch())
         self._shared.set_value(arr, borrow=True)
         self._batches_seen += 1
         self._rows_streamed += int(arr.shape[0])
 
-    # ----- iterator sugar ----------------------------------------------------
-
-    def __iter__(self) -> DataLoader:
-        return self
-
-    def __next__(self) -> np.ndarray:
-        self.advance()
-        return self._shared.get_value(borrow=False)  # an owned copy, safe to keep
-
     # ----- internals ---------------------------------------------------------
 
-    def _seed_buffer(self) -> None:
-        """Load the first real batch if the buffer still holds the zero placeholder.
+    def _prepare(self, batch: np.ndarray) -> np.ndarray:
+        """Preprocess, validate, and return an *owned* copy of one batch.
 
-        PyMC runs ``pm.fit`` callbacks *after* each optimization step, so the
-        buffer must already hold a real batch before step 0 -- otherwise the first
-        step trains on the zero-initialized placeholder. :class:`Trainer` calls
-        this before fitting.
+        The owned copy matters: a source may legitimately yield *views* into a
+        reused array, so neither the buffer nor an iteration consumer may alias it.
         """
-        if self._batches_seen == 0:
-            self.advance()
-
-    def _advance_callback(self) -> Callable:
-        """A 3-arg ``(approx, losses, i)`` callback that advances the buffer.
-
-        Internal: :class:`Trainer` wires this into ``pm.fit`` so the user never has
-        to. Kept private deliberately -- the user-facing design has no callbacks.
-        """
-
-        def _cb(*_):
-            self.advance()
-
-        return _cb
+        if self._preprocess_fn is not None:
+            batch = self._preprocess_fn(batch)
+        self._validate(batch)
+        return np.array(batch, dtype=self._dtype)  # np.array(copy default) owns it
 
     def _next_batch(self) -> np.ndarray:
         try:
@@ -378,89 +378,116 @@ class DataLoader:
 class Trainer:
     """Drive variational inference over a :class:`DataLoader` -- without callbacks.
 
-    Mirrors the PyTorch Lightning ``Trainer``/``fit`` split: the ``Trainer`` owns
-    the training loop, the :class:`DataLoader` owns batching, and the model owns
-    the math. ``Trainer(method="advi").fit(model, loader, n_steps)`` seeds the
-    buffer, then runs ``pm.fit`` while advancing the loader once per step. The
-    per-step advance is wired in internally, so the user-facing API has **no**
-    callbacks (the design Rob asked for).
+    Follows the design in PyMC's variational-inference rework (Grabowski, *VI
+    Overview*) and PyTorch Lightning: the ``Trainer`` owns the training loop, the
+    :class:`DataLoader` owns batching (and ``len(dataloader)`` is the dataset size
+    ``N``), and the model owns the math. The model exposes a ``pm.Data`` placeholder;
+    the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
+    step, so the user wires up **no** callbacks (the design Rob asked for).
+
+    .. code-block:: python
+
+        import numpy as np
+
+        loader = DataLoader(
+            parquet_source("shuffled/"), batch_size=4096, sample_shape=(4,), total_size="auto"
+        )
+        with pm.Model() as model:
+            b = pm.Normal("b", 0.0, 3.0, shape=4)
+            batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder
+            logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
+            pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
+            approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
 
     Parameters
     ----------
-    method : str or Inference, default "advi"
-        Passed straight through to :func:`pymc.fit` (``"advi"``,
-        ``"fullrank_advi"``, ...).
+    method : str, default "advi"
+        Variational method, forwarded to :func:`pymc.fit` (``"advi"``,
+        ``"fullrank_advi"``, ...). When PyMC's VI rework lands this will also accept
+        an inference *instance* (e.g. ``ADVI()``); a string drives today's ``pm.fit``.
+    dataloader : DataLoader
+        The minibatch source. ``len(dataloader)`` is ``N`` -- the model should pass
+        it to the observed distribution's ``total_size``.
+    model : pymc.Model, optional
+        Defaults to the model on the context stack.
+    data_name : str, default "data"
+        Name of the ``pm.Data`` placeholder minibatches are streamed into.
     **fit_kwargs
-        Default keyword arguments forwarded to :func:`pymc.fit` on every
-        :meth:`fit` call (e.g. ``obj_optimizer``); per-call kwargs override them.
+        Default keyword arguments forwarded to :func:`pymc.fit` (e.g.
+        ``obj_optimizer``); per-call kwargs to :meth:`fit` override them.
 
     Notes
     -----
-    This is the *starting point* Rob suggested: the streaming step logic lives in
-    the ``Trainer`` rather than in the inference operator. The longer-term plan is
-    to fold it into ADVI itself once the variational-inference rework lands.
+    This is the *starting point* Rob suggested: the per-step ``set_data`` logic
+    lives in the ``Trainer``. The longer-term plan is to fold it into the inference
+    object's ``step(batch)`` once the VI rework lands, at which point the
+    ``total_size`` rescaling can be derived from ``len(dataloader)`` and dropped
+    from the model body entirely.
     """
 
-    def __init__(self, *, method: str = "advi", **fit_kwargs):
+    def __init__(
+        self,
+        *,
+        method: str = "advi",
+        dataloader: DataLoader,
+        model=None,
+        data_name: str = "data",
+        **fit_kwargs,
+    ):
         self.method = method
+        self.dataloader = dataloader
+        self.model = model
+        self.data_name = data_name
         self._fit_kwargs = fit_kwargs
 
     def fit(
         self,
-        model,
-        data: DataLoader,
-        n_steps: int = 10_000,
+        n: int = 10_000,
         *,
         random_seed: int | None = None,
         progressbar: bool = False,
         **kwargs,
     ):
-        """Fit ``model`` on the stream from ``data`` for ``n_steps`` steps.
+        """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
 
-        Parameters
-        ----------
-        model : pymc.Model
-            The model. Its observed RV should read ``data.as_tensor()`` and (for
-            now) pass ``total_size=data.total_size`` so the log-likelihood is
-            rescaled by ``N / batch_size``.
-        data : DataLoader
-            The minibatch source. Its buffer is seeded before step 0 and advanced
-            once after every optimization step.
-        n_steps : int
-            Number of optimization steps.
-        random_seed, progressbar, **kwargs
-            Forwarded to :func:`pymc.fit` (per-call kwargs override the Trainer's
-            defaults).
-
-        Returns
-        -------
-        Approximation
-            Whatever :func:`pymc.fit` returns for the chosen method.
+        Returns whatever :func:`pymc.fit` returns for the chosen method.
         """
+        from pymc.model import modelcontext
         from pymc.variational.inference import fit as _fit
 
-        if not isinstance(data, DataLoader):
+        loader = self.dataloader
+        if not isinstance(loader, DataLoader):
             raise TypeError(
-                f"Trainer.fit expects a DataLoader for `data`, got {type(data).__name__}."
+                f"Trainer needs a DataLoader for `dataloader`, got {type(loader).__name__}."
             )
-        if data.total_size is None:
-            warnings.warn(
-                "Trainer.fit: the DataLoader has total_size=None, so the minibatch "
-                "log-likelihood is not rescaled and the posterior will be biased. "
-                "Construct the DataLoader with total_size=N or total_size='auto'.",
-                UserWarning,
-                stacklevel=2,
-            )
+        model = modelcontext(self.model)
 
-        data._seed_buffer()
+        # An endless minibatch stream: re-iterate the loader across epochs.
+        def _stream() -> Iterator[np.ndarray]:
+            while True:
+                empty = True
+                for batch in loader:
+                    empty = False
+                    yield batch
+                if empty:
+                    raise RuntimeError("dataloader yielded no batches")
+
+        batches = _stream()
+        # Seed the placeholder before step 0: pm.fit runs callbacks AFTER each step,
+        # so without this the first step would train on the placeholder's contents.
+        model.set_data(self.data_name, next(batches))
+
+        def _advance(*_):
+            model.set_data(self.data_name, next(batches))
+
         merged = {**self._fit_kwargs, **kwargs}
         return _fit(
-            n_steps,
+            n,
             method=self.method,
             model=model,
             random_seed=random_seed,
             progressbar=progressbar,
-            callbacks=[data._advance_callback()],
+            callbacks=[_advance],
             **merged,
         )
 
