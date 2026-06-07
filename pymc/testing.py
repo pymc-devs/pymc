@@ -229,8 +229,21 @@ PosNat = Domain([1, 2, 3, np.inf], "int64")
 Bool = Domain([0, 0, 1, 1], "int64")
 
 
-def select_by_precision(float64, float32):
-    """Choose reasonable decimal cutoffs for different floatX modes."""
+def select_by_precision(float64=6, float32=3):
+    """Choose reasonable decimal cutoffs for different floatX modes.
+
+    Parameters
+    ----------
+    float64 : int, optional
+        Decimal precision for float64 mode. Default 6.
+    float32 : int, optional
+        Decimal precision for float32 mode. Default 3.
+
+    Returns
+    -------
+    int
+        The appropriate decimal precision for the current floatX mode.
+    """
     decimal = float64 if pytensor.config.floatX == "float64" else float32
     return decimal
 
@@ -312,7 +325,9 @@ def check_logp(
     paramdomains: dict[str, Domain],
     scipy_logp: Callable,
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
     extra_args: dict[str, Any] | None = None,
     scipy_args: dict[str, Any] | None = None,
     skip_paramdomain_outside_edge_test: bool = False,
@@ -332,9 +347,21 @@ def check_logp(
         Supported domains of distribution parameters
     scipy_logp : Scipy logpmf/logpdf method
         Scipy logp method of equivalent pymc_dist distribution
-    decimal : Int
+    decimal : Int, optional
         Level of precision with which pymc_dist and scipy logp are compared.
-        Defaults to 6 for float64 and 3 for float32
+        Defaults to 6 for float64 and 3 for float32. Deprecated in favor of
+        atol and rtol.
+    rtol : Float, optional
+        Relative tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-10. Used only for numerical stability with very large
+        logp values.
+    atol : Float, optional
+        Absolute tolerance with which pymc_dist and scipy logp are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-6 for float64 and 1e-3 for float32. Absolute tolerance
+        is preferred for logp/logcdf since MCMC is invariant to additive
+        constants.
     n_samples : Int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -348,8 +375,15 @@ def check_logp(
     """
     import pytest
 
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     if scipy_args is None:
         scipy_args = {}
@@ -369,10 +403,11 @@ def check_logp(
     domains["value"] = domain
     for point in product(domains, n_samples=n_samples):
         point = dict(point)
-        npt.assert_almost_equal(
+        npt.assert_allclose(
             pymc_logp(**point),
             scipy_logp_with_scipy_args(**point),
-            decimal=decimal,
+            rtol=rtol,
+            atol=atol,
             err_msg=str(point),
         )
 
@@ -421,7 +456,9 @@ def check_logcdf(
     paramdomains: dict[str, Domain],
     scipy_logcdf: Callable,
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
     skip_paramdomain_inside_edge_test: bool = False,
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
@@ -450,9 +487,21 @@ def check_logcdf(
         Supported domains of distribution parameters
     scipy_logcdf : Scipy logcdf method
         Scipy logcdf method of equivalent pymc_dist distribution
-    decimal : Int
+    decimal : Int, optional
         Level of precision with which pymc_dist and scipy_logcdf are compared.
-        Defaults to 6 for float64 and 3 for float32
+        Defaults to 6 for float64 and 3 for float32. Deprecated in favor of
+        atol and rtol.
+    rtol : Float, optional
+        Relative tolerance with which pymc_dist and scipy_logcdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-10. Used only for numerical stability with very large
+        logcdf values.
+    atol : Float, optional
+        Absolute tolerance with which pymc_dist and scipy_logcdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-6 for float64 and 1e-3 for float32. Absolute tolerance
+        is preferred for logp/logcdf since MCMC is invariant to additive
+        constants.
     n_samples : Int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -468,8 +517,15 @@ def check_logcdf(
     """
     import pytest
 
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
     value = dist.type()
@@ -484,10 +540,11 @@ def check_logcdf(
         domains["value"] = domain
         for point in product(domains, n_samples=n_samples):
             point = dict(point)
-            npt.assert_almost_equal(
+            npt.assert_allclose(
                 pymc_logcdf(**point),
                 scipy_logcdf(**point),
-                decimal=decimal,
+                rtol=rtol,
+                atol=atol,
                 err_msg=str(point),
             )
 
@@ -538,7 +595,9 @@ def check_logccdf(
     paramdomains: dict[str, Domain],
     scipy_logccdf: Callable,
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
     skip_paramdomain_inside_edge_test: bool = False,
     skip_paramdomain_outside_edge_test: bool = False,
 ) -> None:
@@ -566,9 +625,21 @@ def check_logccdf(
         Supported domains of distribution parameters
     scipy_logccdf : Callable
         Scipy logsf method of equivalent pymc_dist distribution
-    decimal : Int
+    decimal : Int, optional
         Level of precision with which pymc_dist and scipy_logccdf are compared.
-        Defaults to 6 for float64 and 3 for float32
+        Defaults to 6 for float64 and 3 for float32. Deprecated in favor of
+        atol and rtol.
+    rtol : Float, optional
+        Relative tolerance with which pymc_dist and scipy_logccdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-10. Used only for numerical stability with very large
+        logccdf values.
+    atol : Float, optional
+        Absolute tolerance with which pymc_dist and scipy_logccdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-6 for float64 and 1e-3 for float32. Absolute tolerance
+        is preferred for logp/logcdf since MCMC is invariant to additive
+        constants.
     n_samples : Int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -584,8 +655,15 @@ def check_logccdf(
     """
     import pytest
 
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
     value = dist.type()
@@ -600,10 +678,11 @@ def check_logccdf(
         domains["value"] = domain
         for point in product(domains, n_samples=n_samples):
             point = dict(point)
-            npt.assert_almost_equal(
+            npt.assert_allclose(
                 pymc_logccdf(**point),
                 scipy_logccdf(**point),
-                decimal=decimal,
+                rtol=rtol,
+                atol=atol,
                 err_msg=str(point),
             )
 
@@ -656,7 +735,9 @@ def check_icdf(
     scipy_icdf: Callable,
     skip_paramdomain_outside_edge_test=False,
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
 ) -> None:
     """
     Test PyMC icdf and equivalent scipy icdf methods give similar results for valid values and parameters inside the supported edges.
@@ -680,7 +761,17 @@ def check_icdf(
         Scipy icdf (ppf) method of equivalent pymc_dist distribution
     decimal : int, optional
         Level of precision with which pymc_dist and scipy_icdf are compared.
-        Defaults to 6 for float64 and 3 for float32
+        Defaults to 6 for float64 and 3 for float32. Deprecated in favor of
+        atol and rtol.
+    rtol : float, optional
+        Relative tolerance with which pymc_dist and scipy_icdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-10. Used only for numerical stability with very large
+        icdf values.
+    atol : float, optional
+        Absolute tolerance with which pymc_dist and scipy_icdf are comparing
+        the difference between actual and desired to `atol + rtol * abs(desired)`.
+        Defaults to 1e-6 for float64 and 1e-3 for float32.
     n_samples : int
         Upper limit on the number of valid domain and value combinations that
         are compared between pymc and scipy methods. If n_samples is below the
@@ -693,8 +784,15 @@ def check_icdf(
     """
     import pytest
 
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     dist = create_dist_from_paramdomains(pymc_dist, paramdomains)
     q = pt.scalar(dtype="float64", name="q")
@@ -709,10 +807,11 @@ def check_icdf(
 
     for point in product(domains, n_samples=n_samples):
         point = dict(point)
-        npt.assert_almost_equal(
+        npt.assert_allclose(
             pymc_icdf(**point),
             scipy_icdf(**point),
-            decimal=decimal,
+            rtol=rtol,
+            atol=atol,
             err_msg=str(point),
         )
 
@@ -754,11 +853,20 @@ def check_selfconsistency_discrete_logcdf(
     domain: Domain,
     paramdomains: dict[str, Domain],
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
 ) -> None:
     """Check that logcdf of discrete distributions matches sum of logps up to value."""
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     dist = create_dist_from_paramdomains(distribution, paramdomains)
     value = dist.type()
@@ -778,10 +886,11 @@ def check_selfconsistency_discrete_logcdf(
         values = np.arange(domain.lower, value + 1)
 
         with pytensor.config.change_flags(mode=Mode("py")):
-            npt.assert_almost_equal(
+            npt.assert_allclose(
                 dist_logcdf_fn(**point, value=value),
                 sp.logsumexp([dist_logp_fn(value=value, **point) for value in values]),
-                decimal=decimal,
+                rtol=rtol,
+                atol=atol,
                 err_msg=str(point),
             )
 
@@ -791,14 +900,23 @@ def check_selfconsistency_icdf(
     paramdomains: dict[str, Domain],
     *,
     decimal: int | None = None,
-    n_samples: int = 100,
+    rtol: float | None = None,
+    atol: float | None = None,
+    n_samples: int = -1,
 ) -> None:
     """Check that the icdf and logcdf functions of the distribution are consistent.
 
     Only works with continuous distributions.
     """
-    if decimal is None:
-        decimal = select_by_precision(float64=6, float32=3)
+    if decimal is not None:
+        # Legacy: decimal maps to atol = 10**(-decimal), rtol = 1e-10
+        atol = atol if atol is not None else 10 ** (-decimal)
+        rtol = rtol if rtol is not None else 1e-10
+    else:
+        if atol is None:
+            atol = 10 ** (-select_by_precision())
+        if rtol is None:
+            rtol = 1e-10
 
     dist = create_dist_from_paramdomains(distribution, paramdomains)
     if dist.type.dtype.startswith("int"):
@@ -824,10 +942,11 @@ def check_selfconsistency_icdf(
             **point,
             value=icdf_value,
         )
-        np.testing.assert_almost_equal(
+        np.testing.assert_allclose(
             value,
             recovered_value,
-            decimal=decimal,
+            rtol=rtol,
+            atol=atol,
             err_msg=f"point: {point}",
         )
 
