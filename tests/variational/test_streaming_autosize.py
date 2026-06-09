@@ -161,3 +161,43 @@ def test_parquet_source_n_rows_from_metadata(tmp_path):
         warnings.simplefilter("error", UserWarning)
         ds = DataLoader(src, batch_size=10, sample_shape=(2,), total_size="auto")
     assert ds.total_size == total
+
+
+def test_auto_counts_unshuffled_source_when_shuffling_non_divisible():
+    # total_size="auto" with shuffle=True must count the UNSHUFFLED source: the
+    # shuffle buffer drops the final partial batch, so counting through it would
+    # undercount N by up to batch_size-1. N=125 is not divisible by batch_size=10.
+    data = np.arange(125, dtype="float64").reshape(125, 1)
+    with pytest.warns(UserWarning, match="counting pass"):
+        ds = DataLoader(
+            _factory(data, 125),  # one chunk, NO .n_rows -> forces a counting pass
+            batch_size=10,
+            shuffle=True,
+            buffer_size=30,
+            seed=0,
+            sample_shape=(1,),
+            total_size="auto",
+        )
+    assert ds.total_size == 125  # exact N, not 120 (was undercounted via the shuffle wrap)
+
+
+def test_stream_batches_updates_counters_and_warns_on_wrong_total_size():
+    # The accounting-aware stream the Trainer iterates (loader._stream_batches) must
+    # update the public counters AND fire the one-shot sanity check at the epoch
+    # boundary -- so a grossly wrong hand-passed total_size is still caught on the
+    # Trainer's primary path, not only via advance(); plain iteration stays pure.
+    data = np.arange(40, dtype="float64").reshape(20, 2)
+    ds = DataLoader(
+        _factory(data, 5),  # 4 chunks of 5 rows
+        batch_size=5,
+        sample_shape=(2,),
+        total_size=10_000,  # grossly wrong vs the 20 rows actually streamed
+    )
+    assert ds.batches_seen == 0 and ds.rows_streamed == 0
+    list(ds)  # plain __iter__ must NOT mutate counters
+    assert ds.batches_seen == 0 and ds.rows_streamed == 0
+    with pytest.warns(UserWarning, match="disagrees with"):
+        batches = list(ds._stream_batches())  # one epoch through the Trainer's path
+    assert len(batches) == 4
+    assert ds.batches_seen == 4
+    assert ds.rows_streamed == 20
