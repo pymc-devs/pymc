@@ -26,8 +26,9 @@ transfers directly:
   (e.g. :func:`parquet_source` over a directory of shards). It never loads the
   whole dataset; it yields it a chunk at a time.
 * :class:`DataLoader` -- turns a dataset into fixed-size (optionally shuffled)
-  minibatches; it is iterable (the minibatch stream) and sized (``len(loader)``
-  is the dataset size ``N``), exactly like a PyTorch one.
+  minibatches; it is iterable (the minibatch stream) and sized. Note ``len(loader)``
+  is the row count ``N`` (what the observed distribution needs for ``total_size``),
+  *not* the batch count ``torch.utils.data.DataLoader.__len__`` returns.
 * :class:`Trainer` -- drives variational inference (ADVI, ...) over a
   ``DataLoader`` with **no user-facing callbacks**;
   ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
@@ -41,7 +42,7 @@ Parquet shards still gives a model whose resident footprint is one batch.
 The unbiased-gradient rescaling is the *same* as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
 :func:`~pymc.variational.minibatch_rv.create_minibatch_rv`. ``N`` is exactly
-``len(loader)`` -- a :class:`DataLoader` is sized like a PyTorch one -- so the
+``len(loader)`` (the loader is sized; ``len`` returns the row count ``N``) -- so the
 model passes ``total_size=len(loader)``. (Folding that scaling into the inference
 step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 
@@ -193,24 +194,26 @@ class DataLoader:
         if not _is_positive_int(batch_size):
             raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
 
-        source_factory = _make_factory(dataset)
+        raw_factory = _make_factory(dataset)
+        source_factory = raw_factory
         if shuffle:
             if buffer_size is None:
                 buffer_size = 50 * int(batch_size)
-            # shuffle_buffer forwards a known .n_rows, so total_size="auto" still
-            # resolves cheaply through the shuffle wrapper.
             source_factory = shuffle_buffer(
-                source_factory, buffer_size=buffer_size, batch_size=batch_size, seed=seed
+                raw_factory, buffer_size=buffer_size, batch_size=batch_size, seed=seed
             )
         self._source_factory = source_factory
 
         if isinstance(total_size, str):
             if total_size != "auto":
                 raise ValueError(f"total_size string must be 'auto', got {total_size!r}")
-            # Resolve N automatically: a source-provided .n_rows (cheap, e.g. from
-            # parquet_source's metadata) else one counting pass over a finite,
-            # re-readable source. One-shot / infinite sources cannot be auto-counted.
-            total_size = _auto_total_size(self._source_factory, dataset)
+            # Resolve N automatically from the UNSHUFFLED source: a source-provided
+            # .n_rows (cheap, e.g. from parquet_source's metadata) else one counting
+            # pass over a finite, re-readable source. We count raw_factory, never the
+            # shuffle-wrapped one: the shuffle buffer drops the final partial batch, so
+            # counting through it would undercount N by up to batch_size-1. One-shot /
+            # infinite sources cannot be auto-counted.
+            total_size = _auto_total_size(raw_factory, dataset)
         elif total_size is None:
             warnings.warn(
                 "DataLoader created with total_size=None: the minibatch "
@@ -283,10 +286,12 @@ class DataLoader:
             yield self._prepare(batch)
 
     def __len__(self) -> int:
-        """The dataset size ``N`` -- pass to the observed distribution's ``total_size``.
+        """The dataset size ``N`` (row count) -- pass to the distribution's ``total_size``.
 
-        Sized like a PyTorch ``DataLoader``; ``total_size=len(loader)`` is how the
-        model gets the ``N / batch_size`` rescaling.
+        ``total_size=len(loader)`` is how the model gets the ``N / batch_size``
+        rescaling. Note this returns the *row* count ``N``, not the *batch* count
+        (``ceil(N / batch_size)``) that ``torch.utils.data.DataLoader.__len__``
+        returns; ``total_size`` needs ``N``. :attr:`total_size` is the same value.
         """
         if self._total_size is None:
             raise TypeError(
@@ -294,6 +299,24 @@ class DataLoader:
                 "total_size=None; construct it with total_size=N or total_size='auto'."
             )
         return self._total_size
+
+    def _stream_batches(self) -> Iterator[np.ndarray]:
+        """One epoch of prepared minibatches, with accounting (the Trainer's path).
+
+        Like :meth:`__iter__` but it updates :attr:`batches_seen` /
+        :attr:`rows_streamed` and fires the one-shot ``total_size`` sanity check at
+        the epoch boundary. :meth:`__iter__` stays side-effect-free so a plain
+        ``for b in loader`` / ``list(loader)`` does not mutate counters; the
+        :class:`Trainer` iterates *this* instead, so its (documented, primary)
+        workflow still benefits from the wrong-``total_size`` guard and reports
+        non-zero counters.
+        """
+        for batch in self._source_factory():
+            prepared = self._prepare(batch)
+            self._batches_seen += 1
+            self._rows_streamed += int(prepared.shape[0])
+            yield prepared
+        self._maybe_warn_total_size()
 
     # ----- shared-buffer path (advanced; the Trainer uses pm.Data instead) ---
 
@@ -336,7 +359,17 @@ class DataLoader:
             # row count, so we can sanity-check the user's total_size for free.
             self._maybe_warn_total_size()
             self._source_iter = self._source_factory()
-            return next(self._source_iter)
+            try:
+                return next(self._source_iter)
+            except StopIteration:
+                # A cycled source that restarts empty would otherwise leak a bare
+                # StopIteration out of advance(); surface it as a clear error (mirrors
+                # Trainer._stream's "yielded no batches" guard).
+                raise RuntimeError(
+                    "DataLoader source yielded no rows on restart (cycle=True); an "
+                    "empty/exhausted source cannot be cycled. Ensure the source factory "
+                    "returns a non-empty iterator each epoch."
+                ) from None
 
     def _maybe_warn_total_size(self) -> None:
         """Warn once if total_size grossly disagrees with the rows seen in one pass."""
@@ -410,8 +443,9 @@ class Trainer:
         it to the observed distribution's ``total_size``.
     model : pymc.Model, optional
         Defaults to the model on the context stack.
-    data_name : str, default "data"
-        Name of the ``pm.Data`` placeholder minibatches are streamed into.
+    data_name : str, default "batch"
+        Name of the ``pm.Data`` placeholder minibatches are streamed into. Must
+        match the name used for ``pm.Data(name, ...)`` in the model.
     **fit_kwargs
         Default keyword arguments forwarded to :func:`pymc.fit` (e.g.
         ``obj_optimizer``); per-call kwargs to :meth:`fit` override them.
@@ -431,7 +465,7 @@ class Trainer:
         method: str = "advi",
         dataloader: DataLoader,
         model=None,
-        data_name: str = "data",
+        data_name: str = "batch",
         **fit_kwargs,
     ):
         self.method = method
@@ -466,7 +500,7 @@ class Trainer:
         def _stream() -> Iterator[np.ndarray]:
             while True:
                 empty = True
-                for batch in loader:
+                for batch in loader._stream_batches():
                     empty = False
                     yield batch
                 if empty:

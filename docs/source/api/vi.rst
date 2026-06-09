@@ -68,6 +68,21 @@ Special
 
    Stein
 
+Streaming
+---------
+Out-of-core minibatching for variational inference on datasets that do not fit in
+memory (see :mod:`pymc.variational.streaming`).
+
+.. currentmodule:: pymc.variational
+.. autosummary::
+   :toctree: generated/
+
+   DataLoader
+   IterableDataset
+   Trainer
+   shuffle_buffer
+   parquet_source
+
 .. currentmodule:: pymc
 .. autosummary::
    :toctree: generated/
