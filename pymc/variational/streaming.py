@@ -94,6 +94,8 @@ import numpy as np
 from pymc.model import modelcontext
 from pymc.variational.inference import fit as _fit
 
+__all__ = ["DataLoader", "IterableDataset", "Trainer", "parquet_source", "shuffle_buffer"]
+
 
 def _is_positive_int(value: object) -> bool:
     """True for a strictly positive integer (incl. numpy integer types), excluding bool."""
