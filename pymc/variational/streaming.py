@@ -97,7 +97,7 @@ from pymc.variational.inference import fit as _fit
 
 def _is_positive_int(value: object) -> bool:
     """True for a strictly positive integer (incl. numpy integer types), excluding bool."""
-    return isinstance(value, numbers.Integral) and not isinstance(value, bool) and value > 0
+    return isinstance(value, numbers.Integral) and not isinstance(value, bool) and int(value) > 0
 
 
 class IterableDataset:
