@@ -54,8 +54,8 @@ bounded buffer is merely a block-shuffle and biases the variational posterior.
 Pre-shuffle the data once on disk (or interleave shards) and/or pass
 ``shuffle=True``.
 
-Example
--------
+Examples
+--------
 .. code-block:: python
 
     import numpy as np
@@ -353,20 +353,6 @@ class Trainer:
     the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
     step, so the user wires up no callbacks.
 
-    .. code-block:: python
-
-        import numpy as np
-
-        loader = DataLoader(
-            parquet_source("shuffled/"), batch_size=4096, sample_shape=(4,), total_size="auto"
-        )
-        with pm.Model() as model:
-            b = pm.Normal("b", 0.0, 3.0, shape=4)
-            batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder
-            logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
-            pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
-            approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
-
     Parameters
     ----------
     method : str, default "advi"
@@ -391,6 +377,20 @@ class Trainer:
     rework's ``Inference.step(batch)`` lands it moves there, at which point the
     ``total_size`` rescaling can be derived from ``len(dataloader)`` and dropped
     from the model body entirely.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        loader = DataLoader(
+            parquet_source("shuffled/"), batch_size=4096, sample_shape=(4,), total_size="auto"
+        )
+        with pm.Model() as model:
+            b = pm.Normal("b", 0.0, 3.0, shape=4)
+            batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder
+            logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
+            pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
+            approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
     """
 
     def __init__(
@@ -418,7 +418,10 @@ class Trainer:
     ):
         """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
 
-        Returns whatever :func:`pymc.fit` returns for the chosen method.
+        Returns
+        -------
+        :class:`Approximation`
+            The fitted approximation, as returned by :func:`pymc.fit`.
         """
         loader = self.dataloader
         if not isinstance(loader, DataLoader):
