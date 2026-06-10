@@ -1565,7 +1565,7 @@ class Approximation(WithMemoization):
             for i in range(draws)
         )
 
-        model = modelcontext(None)
+        model = pm.Model.get_context(error_if_none=False) or self.model
 
         trace = NDArray(
             model=model,
