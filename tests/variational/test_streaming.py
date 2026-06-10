@@ -43,10 +43,47 @@ def test_advance_shape_and_counters():
     assert ds.batches_seen == 2 and ds.rows_streamed == 8
 
 
-def test_wrong_batch_shape_rejected():
-    data = np.zeros((10, 2))
+def test_plain_loader_rebatches_arbitrary_blocks():
+    # blocks of 3 with batch_size=4: re-batched in order; the trailing 2 rows that
+    # cannot fill a final batch are dropped (drop_last semantics).
+    data = np.arange(20, dtype="float64").reshape(10, 2)
     ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
-    with pytest.raises(ValueError, match="does not match batch_size"):
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(4, 2), (4, 2)]
+    np.testing.assert_array_equal(np.concatenate(batches), data[:8])  # order preserved
+
+
+def test_raw_array_source_like_vi_rework_sketch():
+    # the VI-rework sketch usage: Dataloader(<raw array>, batch_size=...); rows are
+    # yielded one sample at a time and the loader re-batches them.
+    data = np.arange(40, dtype="float64").reshape(20, 2)
+    with pytest.warns(UserWarning, match="counting pass"):
+        ds = DataLoader(data, batch_size=8, sample_shape=(2,), total_size="auto")
+    assert ds.total_size == 20  # counted as 20 rows, not 40 flattened elements
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(8, 2), (8, 2)]  # trailing 4 rows dropped
+    np.testing.assert_array_equal(np.concatenate(batches), data[:16])
+
+
+def test_wrong_sample_shape_rejected():
+    data = np.zeros((12, 3))  # 3 columns, but the loader declares 2
+    ds = DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(2,), total_size=12)
+    with pytest.raises(ValueError, match="source yielded shape"):
+        ds.advance()
+
+
+def test_cycle_true_empty_restart_raises_clear_error():
+    calls = {"n": 0}
+
+    def factory():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            yield np.zeros((4, 1))
+        # second epoch: nothing (an exhausted/empty source cannot be cycled)
+
+    ds = DataLoader(factory, batch_size=4, sample_shape=(1,), total_size=4)
+    ds.advance()
+    with pytest.raises(RuntimeError, match="restart"):
         ds.advance()
 
 
@@ -370,11 +407,33 @@ def test_factory_returning_reiterable_is_accepted():
     assert ds.as_tensor().get_value().shape == (4, 1)
 
 
-def test_scalar_batch_rejected_with_clear_error():
-    # a 0-D batch used to raise an opaque IndexError on batch.shape[0].
-    ds = DataLoader(lambda: iter([np.array(1.0)]), batch_size=1, sample_shape=(), total_size=1)
-    with pytest.raises(ValueError, match="leading batch dimension"):
-        ds.advance()
+def test_scalar_samples_are_batched():
+    # with sample_shape=() a 0-D yield is ONE scalar sample (exactly what iterating
+    # a raw 1-D array produces); the loader batches scalars instead of erroring.
+    data = np.arange(6, dtype="float64")
+    ds = DataLoader(data, batch_size=3, sample_shape=(), total_size=6)
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(3,), (3,)]
+    np.testing.assert_array_equal(np.concatenate(batches), data)
+
+
+def test_trainer_appends_user_callbacks_and_streams_distinct_batches():
+    # user callbacks (e.g. convergence trackers) must compose with the internal
+    # advance callback, not collide with it on the `callbacks` keyword; and the
+    # placeholder must hold a DIFFERENT batch on successive steps.
+    blocks = [np.full((4, 1), float(i)) for i in range(60)]
+    loader = DataLoader(lambda: iter(blocks), batch_size=4, sample_shape=(1,), total_size=240)
+    seen = []
+    with pm.Model() as model:
+        x = pm.Normal("x", 0.0, 1.0)
+        batch = pm.Data("batch", np.zeros((4, 1)))
+        pm.Normal("y", x, 1.0, observed=batch[:, 0], total_size=len(loader))
+        # no data_name passed: the default ("batch") must match this placeholder
+        Trainer(method="advi", dataloader=loader).fit(
+            5, callbacks=[lambda *_: seen.append(float(model["batch"].get_value()[0, 0]))]
+        )
+    assert len(seen) == 5  # the user callback ran every step
+    assert len(set(seen)) > 1  # the placeholder advanced to new batches
 
 
 def test_iterable_dataset_base_is_abstract():
