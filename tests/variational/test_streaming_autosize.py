@@ -163,6 +163,29 @@ def test_parquet_source_n_rows_from_metadata(tmp_path):
     assert ds.total_size == total
 
 
+def test_parquet_source_columns_and_shard_order(tmp_path):
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    for i in range(2):
+        pq.write_table(
+            pa.table(
+                {"a": [float(i)] * 2, "b": [9.0] * 2, "c": [float(10 + i)] * 2},
+            ),
+            f"{tmp_path}/part_{i}.parquet",
+        )
+    src = parquet_source(str(tmp_path), columns=["a", "c"])
+    blocks = list(src)
+    assert [b.shape for b in blocks] == [(2, 2), (2, 2)]  # column b filtered out
+    np.testing.assert_array_equal(blocks[0][:, 0], [0.0, 0.0])  # sorted shard order
+    np.testing.assert_array_equal(blocks[1][:, 1], [11.0, 11.0])
+
+
+def test_parquet_source_empty_dir_raises(tmp_path):
+    pytest.importorskip("pyarrow")
+    with pytest.raises(ValueError, match="no Parquet files match"):
+        parquet_source(str(tmp_path))
+
+
 def test_auto_counts_unshuffled_source_when_shuffling_non_divisible():
     # total_size="auto" with shuffle=True must count the UNSHUFFLED source: the
     # shuffle buffer drops the final partial batch, so counting through it would

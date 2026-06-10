@@ -135,10 +135,14 @@ class DataLoader:
     Parameters
     ----------
     dataset : IterableDataset | Iterable[np.ndarray] | Callable[[], Iterator[np.ndarray]]
-        The source of rows. An :class:`IterableDataset`, a re-iterable, or a
-        zero-arg *factory* returning a fresh iterator (preferred, so the stream can
-        be restarted when ``cycle=True``). It may yield individual rows or
-        multi-row blocks; the loader re-batches to exactly ``batch_size`` rows.
+        The source of rows. An :class:`IterableDataset`, a re-iterable (including a
+        plain ``np.ndarray``), or a zero-arg *factory* returning a fresh iterator
+        (preferred, so the stream can be restarted when ``cycle=True``). It may
+        yield single samples (e.g. the rows of a raw array) or blocks of any size;
+        the loader re-batches them, in order, to exactly ``batch_size`` rows.
+        Trailing rows that do not fill a final batch are dropped at the end of a
+        pass, like ``drop_last=True`` in PyTorch (required here because the model
+        observes a fixed-shape placeholder).
     batch_size : int
         Leading dimension of every yielded minibatch (and of the buffer).
     shuffle : bool, default False
@@ -213,7 +217,7 @@ class DataLoader:
             # shuffle-wrapped one: the shuffle buffer drops the final partial batch, so
             # counting through it would undercount N by up to batch_size-1. One-shot /
             # infinite sources cannot be auto-counted.
-            total_size = _auto_total_size(raw_factory, dataset)
+            total_size = _auto_total_size(raw_factory, dataset, tuple(sample_shape))
         elif total_size is None:
             warnings.warn(
                 "DataLoader created with total_size=None: the minibatch "
@@ -234,7 +238,6 @@ class DataLoader:
                 f"{total_size!r}."
             )
 
-        self._source_iter: Iterator[np.ndarray] = self._source_factory()
         # Normalize integer-like sizes to plain Python ints. ``_is_positive_int``
         # accepts numpy integers (via ``numbers.Integral``), but the downstream
         # ``create_minibatch_rv`` type-checks ``isinstance(total_size, int)`` and
@@ -249,6 +252,9 @@ class DataLoader:
         self._batches_seen = 0
         self._rows_streamed = 0
         self._warned_size = False  # the sanity check below fires at most once
+
+        # The persistent stream behind advance()/as_tensor(); re-batched like __iter__.
+        self._source_iter: Iterator[np.ndarray] = self._rebatched()
 
         self._shared = pytensor.shared(
             np.zeros((batch_size, *self._sample_shape), dtype=dtype), name=name
@@ -276,13 +282,17 @@ class DataLoader:
 
     # ----- iteration: the minibatch stream ----------------------------------
 
+    def _rebatched(self) -> Iterator[np.ndarray]:
+        """A fresh pass of exactly ``batch_size``-row batches from the source."""
+        return _rebatch(self._source_factory(), self._batch_size, self._sample_shape)
+
     def __iter__(self) -> Iterator[np.ndarray]:
         """Yield one epoch of validated ``(batch_size, *sample_shape)`` minibatches.
 
         This is the stream :class:`Trainer` pushes into the model's ``pm.Data``
         placeholder via ``set_data``. Re-iterate the loader for another epoch.
         """
-        for batch in self._source_factory():
+        for batch in self._rebatched():
             yield self._prepare(batch)
 
     def __len__(self) -> int:
@@ -311,7 +321,7 @@ class DataLoader:
         workflow still benefits from the wrong-``total_size`` guard and reports
         non-zero counters.
         """
-        for batch in self._source_factory():
+        for batch in self._rebatched():
             prepared = self._prepare(batch)
             self._batches_seen += 1
             self._rows_streamed += int(prepared.shape[0])
@@ -358,7 +368,7 @@ class DataLoader:
             # First exhaustion == one full pass: rows_streamed now equals the real
             # row count, so we can sanity-check the user's total_size for free.
             self._maybe_warn_total_size()
-            self._source_iter = self._source_factory()
+            self._source_iter = self._rebatched()
             try:
                 return next(self._source_iter)
             except StopIteration:
@@ -515,13 +525,16 @@ class Trainer:
             model.set_data(self.data_name, next(batches))
 
         merged = {**self._fit_kwargs, **kwargs}
+        # User callbacks (e.g. convergence trackers) run AFTER the internal advance,
+        # appended rather than colliding with it on the `callbacks` keyword.
+        user_callbacks = merged.pop("callbacks", None) or []
         return _fit(
             n,
             method=self.method,
             model=model,
             random_seed=random_seed,
             progressbar=progressbar,
-            callbacks=[_advance],
+            callbacks=[_advance, *user_callbacks],
             **merged,
         )
 
@@ -619,6 +632,46 @@ def shuffle_buffer(
     return factory
 
 
+def _rebatch(
+    blocks: Iterable[np.ndarray],
+    batch_size: int,
+    sample_shape: tuple[int, ...],
+) -> Iterator[np.ndarray]:
+    """Slice a stream of samples/blocks into exact ``batch_size``-row batches, in order.
+
+    Accepts single samples (shape ``sample_shape``, e.g. the rows of a raw array)
+    and blocks of any size (shape ``(rows, *sample_shape)``), carrying remainders
+    across blocks so no row is lost mid-stream. Trailing rows that do not fill a
+    final batch are dropped when the stream ends (``drop_last=True`` behavior; the
+    model observes a fixed-shape placeholder, so a partial batch cannot be fed).
+    Sources that already yield exact ``batch_size`` blocks (e.g.
+    :func:`shuffle_buffer`) pass through without copying.
+    """
+    buf: list[np.ndarray] = []
+    have = 0
+    for arr in blocks:
+        a = np.asarray(arr)
+        if a.shape == sample_shape:  # a single sample, not a block
+            a = a[None, ...]
+        elif a.ndim != len(sample_shape) + 1 or a.shape[1:] != sample_shape:
+            raise ValueError(
+                f"source yielded shape {a.shape}; expected a single sample of shape "
+                f"{sample_shape} or a block of shape (rows, *{sample_shape})"
+            )
+        buf.append(a)
+        have += a.shape[0]
+        if have < batch_size:
+            continue
+        merged = np.concatenate(buf, axis=0) if len(buf) > 1 else buf[0]
+        n_full = merged.shape[0] // batch_size
+        for i in range(n_full):
+            yield merged[i * batch_size : (i + 1) * batch_size]
+        rem = merged.shape[0] - n_full * batch_size
+        buf = [merged[n_full * batch_size :].copy()] if rem else []
+        have = rem
+    # stream ended: the (< batch_size) remainder in buf is dropped
+
+
 def _make_factory(
     source: Iterable[np.ndarray] | Callable[[], Iterator[np.ndarray]],
 ) -> Callable[[], Iterator[np.ndarray]]:
@@ -662,6 +715,7 @@ def _make_factory(
 def _auto_total_size(
     factory: Callable[[], Iterator[np.ndarray]],
     source: object,
+    sample_shape: tuple[int, ...] = (),
 ) -> int:
     """Resolve ``total_size="auto"``: a source ``.n_rows`` (cheap) else a counting pass.
 
@@ -694,7 +748,10 @@ def _auto_total_size(
     first_iter = factory()
     count = 0
     for chunk in first_iter:
-        count += int(np.asarray(chunk).shape[0])
+        a = np.asarray(chunk)
+        # A yield of shape exactly `sample_shape` is ONE sample (e.g. one row of a
+        # raw array), not a block of a.shape[0] rows; count it as a single row.
+        count += 1 if a.shape == sample_shape else int(a.shape[0])
     if count <= 0:
         raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
     if factory() is first_iter:
