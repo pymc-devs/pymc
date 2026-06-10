@@ -13,7 +13,7 @@
 #   limitations under the License.
 """Out-of-core minibatching for variational inference.
 
-``pm.Minibatch`` random-indexes an array that is *fully resident in memory*; its
+``pm.Minibatch`` random-indexes an array that is fully resident in memory; its
 peak memory is therefore O(N) in the dataset size. This module instead streams
 minibatches from an out-of-core source into a ``pm.Data`` placeholder, so peak
 memory is O(batch) plus, if used, the shuffle buffer, independent of N.
@@ -21,36 +21,36 @@ memory is O(batch) plus, if used, the shuffle buffer, independent of N.
 The API mirrors PyTorch's ``torch.utils.data`` so the mental model transfers
 directly:
 
-* :class:`IterableDataset` -- a re-iterable, out-of-core source of rows
+* :class:`IterableDataset`: a re-iterable, out-of-core source of rows
   (e.g. :func:`parquet_source` over a directory of shards). It never loads the
   whole dataset; it yields it a chunk at a time.
-* :class:`DataLoader` -- turns a dataset into fixed-size (optionally shuffled)
+* :class:`DataLoader`: turns a dataset into fixed-size (optionally shuffled)
   minibatches; it is iterable (the minibatch stream) and sized. Note ``len(loader)``
   is the row count ``N`` (what the observed distribution needs for ``total_size``),
-  *not* the batch count ``torch.utils.data.DataLoader.__len__`` returns.
-* :class:`Trainer` -- drives variational inference (ADVI, ...) over a
-  ``DataLoader`` with **no user-facing callbacks**;
+  not the batch count ``torch.utils.data.DataLoader.__len__`` returns.
+* :class:`Trainer`: drives variational inference (ADVI, ...) over a
+  ``DataLoader`` with no user-facing callbacks;
   ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
   model's ``pm.Data`` placeholder with ``set_data``.
 
-**The full data never enters RAM.** The model graph observes only a
-``(batch_size, *sample_shape)`` ``pm.Data`` *placeholder* that the ``Trainer``
+The full data never enters RAM. The model graph observes only a
+``(batch_size, *sample_shape)`` ``pm.Data`` placeholder that the ``Trainer``
 overwrites with the next minibatch every step. Passing a directory of Parquet
 shards far larger than RAM still gives a model whose resident footprint is one
 batch.
 
-The unbiased-gradient rescaling is the *same* as for ``pm.Minibatch``: the
+The unbiased-gradient rescaling is the same as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
 :func:`~pymc.variational.minibatch_rv.create_minibatch_rv`. ``N`` is exactly
-``len(loader)`` (the loader is sized; ``len`` returns the row count ``N``) -- so the
+``len(loader)`` (the loader is sized; ``len`` returns the row count ``N``), so the
 model passes ``total_size=len(loader)``. (Folding that scaling into the inference
 step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 
-The one extra obligation relative to ``pm.Minibatch`` is **shuffling**.
+The one extra obligation relative to ``pm.Minibatch`` is shuffling.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
 minibatches are i.i.d. by construction.  A streaming source is only as well
 mixed as the order it yields rows in: reading time/row-ordered data through a
-*bounded* buffer is merely a block-shuffle and biases the variational posterior.
+bounded buffer is merely a block-shuffle and biases the variational posterior.
 Pre-shuffle the data once on disk (or interleave shards) and/or pass
 ``shuffle=True``.
 
@@ -101,14 +101,14 @@ def _is_positive_int(value: object) -> bool:
 
 
 class IterableDataset:
-    """A re-iterable, out-of-core source of rows -- the analogue of ``torch.utils.data.IterableDataset``.
+    """A re-iterable, out-of-core source of rows, the analogue of ``torch.utils.data.IterableDataset``.
 
     Subclass and implement :meth:`__iter__` to yield ``np.ndarray`` blocks of rows
     (shape ``(rows, *sample_shape)``); :class:`DataLoader` re-batches those blocks
-    into fixed-size minibatches. ``__iter__`` must return a **fresh** iterator each
+    into fixed-size minibatches. ``__iter__`` must return a fresh iterator each
     call so the dataset can be replayed across epochs.
 
-    Optionally set :attr:`n_rows` (the total row count, if known cheaply -- e.g.
+    Optionally set :attr:`n_rows` (the total row count, if known cheaply, e.g.
     from file metadata) so a :class:`DataLoader` with ``total_size="auto"`` can
     resolve ``N`` without a counting pass.
 
@@ -130,14 +130,14 @@ class DataLoader:
     The analogue of ``torch.utils.data.DataLoader``: it batches (and optionally
     shuffles) an :class:`IterableDataset` into the minibatch stream that
     :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
-    is the dataset size ``N``). The full dataset never enters memory -- only one
+    is the dataset size ``N``). The full dataset never enters memory; only one
     ``(batch_size, *sample_shape)`` batch does.
 
     Parameters
     ----------
     dataset : IterableDataset | Iterable[np.ndarray] | Callable[[], Iterator[np.ndarray]]
         The source of rows. An :class:`IterableDataset`, a re-iterable (including a
-        plain ``np.ndarray``), or a zero-arg *factory* returning a fresh iterator
+        plain ``np.ndarray``), or a zero-arg factory returning a fresh iterator
         (preferred, so the stream can be restarted each epoch). It may yield single
         samples (e.g. the rows of a raw array) or blocks of any size; the loader
         re-batches them, in order, to exactly ``batch_size`` rows. Trailing rows
@@ -149,8 +149,8 @@ class DataLoader:
     shuffle : bool, default False
         If ``True``, wrap the source in a bounded :func:`shuffle_buffer` of
         ``buffer_size`` rows. This only approximates i.i.d. batches for an
-        *already unordered* stream; a bounded buffer cannot fix strongly
-        time/row-ordered data (pre-shuffle on disk for that -- see the module
+        already unordered stream; a bounded buffer cannot fix strongly
+        time/row-ordered data (pre-shuffle on disk for that; see the module
         docstring).
     buffer_size : int, optional
         Shuffle-buffer size in rows when ``shuffle=True``. Defaults to
@@ -211,7 +211,7 @@ class DataLoader:
         elif total_size is None:
             warnings.warn(
                 "DataLoader created with total_size=None: the minibatch "
-                "log-likelihood will NOT be rescaled and the posterior will be "
+                "log-likelihood will not be rescaled and the posterior will be "
                 "biased. Pass total_size=N (the true dataset size) or total_size='auto'.",
                 UserWarning,
                 stacklevel=2,
@@ -268,10 +268,10 @@ class DataLoader:
             yield self._prepare(batch)
 
     def __len__(self) -> int:
-        """The dataset size ``N`` (row count) -- pass to the distribution's ``total_size``.
+        """The dataset size ``N`` (row count); pass it to the distribution's ``total_size``.
 
         ``total_size=len(loader)`` is how the model gets the ``N / batch_size``
-        rescaling. Note this returns the *row* count ``N``, not the *batch* count
+        rescaling. Note this returns the row count ``N``, not the batch count
         (``ceil(N / batch_size)``) that ``torch.utils.data.DataLoader.__len__``
         returns; ``total_size`` needs ``N``. :attr:`total_size` is the same value.
         """
@@ -317,8 +317,8 @@ class DataLoader:
         if seen and abs(self._total_size - seen) > 0.1 * seen:
             warnings.warn(
                 f"total_size={self._total_size} disagrees with the {seen} rows streamed "
-                f"in one full pass; the N/batch_size rescaling -- and therefore the "
-                f"posterior width -- is likely wrong. Pass the true dataset size, or "
+                f"in one full pass; the N/batch_size rescaling, and therefore the "
+                f"posterior width, is likely wrong. Pass the true dataset size, or "
                 f"total_size='auto'.",
                 UserWarning,
                 stacklevel=3,
@@ -344,7 +344,7 @@ class DataLoader:
 
 
 class Trainer:
-    """Drive variational inference over a :class:`DataLoader` -- without callbacks.
+    """Drive variational inference over a :class:`DataLoader` without user callbacks.
 
     Follows the design in PyMC's variational-inference rework (Grabowski, *VI
     Overview*) and PyTorch Lightning: the ``Trainer`` owns the training loop, the
@@ -372,9 +372,9 @@ class Trainer:
     method : str, default "advi"
         Variational method, forwarded to :func:`pymc.fit` (``"advi"``,
         ``"fullrank_advi"``, ...). Once the VI rework lands this will also accept
-        an inference *instance* (e.g. ``ADVI()``); a string drives today's ``pm.fit``.
+        an inference instance (e.g. ``ADVI()``); a string drives today's ``pm.fit``.
     dataloader : DataLoader
-        The minibatch source. ``len(dataloader)`` is ``N`` -- the model should pass
+        The minibatch source. ``len(dataloader)`` is ``N``; the model should pass
         it to the observed distribution's ``total_size``.
     model : pymc.Model, optional
         Defaults to the model on the context stack.
@@ -437,7 +437,7 @@ class Trainer:
                     raise RuntimeError("dataloader yielded no batches")
 
         batches = _stream()
-        # Seed the placeholder before step 0: pm.fit runs callbacks AFTER each step,
+        # Seed the placeholder before step 0: pm.fit runs callbacks after each step,
         # so without this the first step would train on the placeholder's contents.
         model.set_data(self.data_name, next(batches))
 
@@ -470,18 +470,18 @@ def shuffle_buffer(
 
     Accumulates rows from ``chunk_source`` into a buffer of at least
     ``buffer_size`` rows, shuffles it, and yields ``batch_size`` slices; rows that
-    do not fill a final batch are **carried over** into the next buffer (never
+    do not fill a final batch are carried over into the next buffer (never
     dropped) until the source is exhausted, at which point a single trailing
     partial batch (< ``batch_size`` rows) is dropped. This approximates i.i.d.
-    minibatches from an *unordered* or pre-shuffled stream.
+    minibatches from an unordered or pre-shuffled stream.
 
     :class:`DataLoader` calls this for you when ``shuffle=True``; use it directly
     when you want explicit control over ``buffer_size`` independently of the
     loader.
 
-    It does **not** by itself fix a strongly time/row-ordered stream (a bounded
-    buffer only block-shuffles such data) -- pre-shuffle on disk, or interleave
-    shards into ``chunk_source``, for that. ``buffer_size`` is a *lower* bound: the
+    It does not by itself fix a strongly time/row-ordered stream (a bounded
+    buffer only block-shuffles such data); pre-shuffle on disk, or interleave
+    shards into ``chunk_source``, for that. ``buffer_size`` is a lower bound: the
     buffer always accumulates at least ``max(buffer_size, batch_size)`` rows before
     emitting (so a ``buffer_size`` smaller than ``batch_size`` still yields full
     batches instead of silently dropping the stream), and a single chunk larger
@@ -634,7 +634,7 @@ def _auto_total_size(
     reads it from Parquet metadata without scanning the data) use it directly. Otherwise
     do a single counting pass over a finite, re-readable source. A bare one-shot iterator
     cannot be auto-counted (counting consumes it) and an infinite stream would make the
-    pass hang -- both must pass ``total_size`` explicitly.
+    pass hang; both must pass ``total_size`` explicitly.
     """
     n = getattr(source, "n_rows", None)
     if n is None:
@@ -658,7 +658,7 @@ def _auto_total_size(
     count = 0
     for chunk in first_iter:
         a = np.asarray(chunk)
-        # A yield of shape exactly `sample_shape` is ONE sample, not a block.
+        # A yield of shape exactly `sample_shape` is one sample, not a block.
         count += 1 if a.shape == sample_shape else int(a.shape[0])
     if count <= 0:
         raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
@@ -677,7 +677,7 @@ class _ParquetDataset(IterableDataset):
     """An :class:`IterableDataset` over a directory of Parquet shards.
 
     Yields one ``(rows, n_columns)`` ``float64`` array per file and exposes
-    :attr:`n_rows` read from Parquet *metadata* (no data scan).
+    :attr:`n_rows` read from Parquet metadata (no data scan).
     """
 
     def __init__(self, paths: list[str], columns: list[str] | None, n_rows: int):
@@ -702,7 +702,7 @@ def parquet_source(
     """An :class:`IterableDataset` over a directory of Parquet files.
 
     Yields one ``(rows, n_columns)`` ``float64`` array per file, and carries an
-    ``n_rows`` attribute read from Parquet *metadata* (no data scan) so that
+    ``n_rows`` attribute read from Parquet metadata (no data scan) so that
     ``DataLoader(parquet_source(dir), ..., total_size="auto")`` resolves the
     dataset size for free. Pass ``shuffle=True`` to the :class:`DataLoader` (or
     wrap in :func:`shuffle_buffer`) to get shuffled batches.
