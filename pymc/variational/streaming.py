@@ -14,13 +14,12 @@
 """Out-of-core minibatching for variational inference.
 
 ``pm.Minibatch`` random-indexes an array that is *fully resident in memory*; its
-peak memory is therefore O(N) in the dataset size.  This module instead feeds
-minibatches from an out-of-core source into a small fixed-size
-``pytensor.shared`` buffer, so peak memory is O(buffer) -- the batch buffer plus,
-if used, the shuffle buffer -- and independent of N.
+peak memory is therefore O(N) in the dataset size. This module instead streams
+minibatches from an out-of-core source into a ``pm.Data`` placeholder, so peak
+memory is O(batch) plus, if used, the shuffle buffer, independent of N.
 
-The API deliberately mirrors PyTorch's ``torch.utils.data`` so the mental model
-transfers directly:
+The API mirrors PyTorch's ``torch.utils.data`` so the mental model transfers
+directly:
 
 * :class:`IterableDataset` -- a re-iterable, out-of-core source of rows
   (e.g. :func:`parquet_source` over a directory of shards). It never loads the
@@ -36,8 +35,9 @@ transfers directly:
 
 **The full data never enters RAM.** The model graph observes only a
 ``(batch_size, *sample_shape)`` ``pm.Data`` *placeholder* that the ``Trainer``
-overwrites with the next minibatch every step. Passing a directory of 122 GB of
-Parquet shards still gives a model whose resident footprint is one batch.
+overwrites with the next minibatch every step. Passing a directory of Parquet
+shards far larger than RAM still gives a model whose resident footprint is one
+batch.
 
 The unbiased-gradient rescaling is the *same* as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
@@ -73,7 +73,7 @@ Example
 
     with pm.Model() as model:
         b = pm.Normal("b", 0.0, 3.0, shape=4)
-        batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder -- the ONLY data in RAM
+        batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder, the only data in RAM
         logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
         pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
 
@@ -90,8 +90,9 @@ import warnings
 from collections.abc import Callable, Iterable, Iterator
 
 import numpy as np
-import pytensor
-import pytensor.tensor as pt
+
+from pymc.model import modelcontext
+from pymc.variational.inference import fit as _fit
 
 
 def _is_positive_int(value: object) -> bool:
@@ -137,14 +138,14 @@ class DataLoader:
     dataset : IterableDataset | Iterable[np.ndarray] | Callable[[], Iterator[np.ndarray]]
         The source of rows. An :class:`IterableDataset`, a re-iterable (including a
         plain ``np.ndarray``), or a zero-arg *factory* returning a fresh iterator
-        (preferred, so the stream can be restarted when ``cycle=True``). It may
-        yield single samples (e.g. the rows of a raw array) or blocks of any size;
-        the loader re-batches them, in order, to exactly ``batch_size`` rows.
-        Trailing rows that do not fill a final batch are dropped at the end of a
-        pass, like ``drop_last=True`` in PyTorch (required here because the model
-        observes a fixed-shape placeholder).
+        (preferred, so the stream can be restarted each epoch). It may yield single
+        samples (e.g. the rows of a raw array) or blocks of any size; the loader
+        re-batches them, in order, to exactly ``batch_size`` rows. Trailing rows
+        that do not fill a final batch are dropped at the end of a pass, like
+        ``drop_last=True`` in PyTorch (required here because the model observes a
+        fixed-shape placeholder).
     batch_size : int
-        Leading dimension of every yielded minibatch (and of the buffer).
+        Leading dimension of every yielded minibatch.
     shuffle : bool, default False
         If ``True``, wrap the source in a bounded :func:`shuffle_buffer` of
         ``buffer_size`` rows. This only approximates i.i.d. batches for an
@@ -160,24 +161,19 @@ class DataLoader:
         Trailing shape of a single observation. ``()`` for scalar observations,
         ``(k,)`` to stream ``k`` columns (e.g. features + the observed column).
     dtype : str, default "float64"
-        Dtype of the shared buffer. If it differs from ``pytensor.config.floatX``
-        the model will insert a per-step cast on the observed tensor.
+        Dtype each prepared batch is cast to; match the dtype of the ``pm.Data``
+        placeholder the batches are streamed into.
     total_size : int or "auto", optional
         The true dataset size ``N`` (a positive integer), or ``"auto"`` to infer
         it (from the source's ``n_rows`` if available, else a single counting
         pass). Pass it on to the observed distribution as
-        ``total_size=loader.total_size`` so the minibatch log-likelihood is
-        rescaled by ``N / batch_size`` (the same mechanism as ``pm.Minibatch``).
-        Unlike ``pm.Minibatch`` it cannot be inferred from a resident array;
-        ``None`` warns at construction and a non-positive value raises (it would
-        otherwise silently disable or invert the rescaling).
+        ``total_size=len(loader)`` so the minibatch log-likelihood is rescaled by
+        ``N / batch_size`` (the same mechanism as ``pm.Minibatch``). Unlike
+        ``pm.Minibatch`` it cannot be inferred from a resident array; ``None``
+        warns at construction and a non-positive value raises (it would otherwise
+        silently disable or invert the rescaling).
     preprocess_fn : callable, optional
-        Pure transform applied to each batch before it lands in the buffer.
-    cycle : bool, default True
-        Restart the source when exhausted (the usual case: many epochs). If
-        ``False``, :meth:`advance` raises ``StopIteration`` once exhausted.
-    name : str
-        Name of the underlying ``pytensor.shared`` variable.
+        Pure transform applied to each batch before it is yielded.
     """
 
     def __init__(
@@ -192,8 +188,6 @@ class DataLoader:
         dtype: str = "float64",
         total_size: int | str | None = None,
         preprocess_fn: Callable[[np.ndarray], np.ndarray] | None = None,
-        cycle: bool = True,
-        name: str = "dataloader_buffer",
     ):
         if not _is_positive_int(batch_size):
             raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
@@ -211,12 +205,8 @@ class DataLoader:
         if isinstance(total_size, str):
             if total_size != "auto":
                 raise ValueError(f"total_size string must be 'auto', got {total_size!r}")
-            # Resolve N automatically from the UNSHUFFLED source: a source-provided
-            # .n_rows (cheap, e.g. from parquet_source's metadata) else one counting
-            # pass over a finite, re-readable source. We count raw_factory, never the
-            # shuffle-wrapped one: the shuffle buffer drops the final partial batch, so
-            # counting through it would undercount N by up to batch_size-1. One-shot /
-            # infinite sources cannot be auto-counted.
+            # Count the unshuffled source: the shuffle wrapper drops the trailing
+            # partial batch, so counting through it would undercount N.
             total_size = _auto_total_size(raw_factory, dataset, tuple(sample_shape))
         elif total_size is None:
             warnings.warn(
@@ -227,40 +217,24 @@ class DataLoader:
                 stacklevel=2,
             )
         elif not _is_positive_int(total_size):
-            # A non-positive total_size is silently dangerous: 0 is falsy, so the
-            # model never wraps the observed RV and the N/batch_size rescaling is
-            # skipped (posterior collapses toward the prior); a negative value
-            # yields a negative scaling coefficient that flips the data
-            # log-likelihood's sign (VI then maximizes mis-fit). Reject it loudly.
+            # 0 is falsy (the rescaling would be silently skipped) and a negative
+            # value flips the sign of the data log-likelihood; reject both loudly.
             raise ValueError(
                 "total_size must be a positive integer (the true dataset size N) so "
                 "the minibatch log-likelihood is rescaled by N / batch_size; got "
                 f"{total_size!r}."
             )
 
-        # Normalize integer-like sizes to plain Python ints. ``_is_positive_int``
-        # accepts numpy integers (via ``numbers.Integral``), but the downstream
-        # ``create_minibatch_rv`` type-checks ``isinstance(total_size, int)`` and
-        # would raise on a stored ``np.int64`` ("Invalid type for total_size").
+        # Plain Python ints: create_minibatch_rv rejects np.int64 for total_size.
         self._batch_size = int(batch_size)
         self._sample_shape = tuple(sample_shape)
         self._dtype = dtype
         self._total_size = None if total_size is None else int(total_size)
         self._preprocess_fn = preprocess_fn
-        self._cycle = cycle
 
         self._batches_seen = 0
         self._rows_streamed = 0
-        self._warned_size = False  # the sanity check below fires at most once
-
-        # The persistent stream behind advance()/as_tensor(); re-batched like __iter__.
-        self._source_iter: Iterator[np.ndarray] = self._rebatched()
-
-        self._shared = pytensor.shared(
-            np.zeros((batch_size, *self._sample_shape), dtype=dtype), name=name
-        )
-
-    # ----- read-only state ---------------------------------------------------
+        self._warned_size = False
 
     @property
     def batch_size(self) -> int:
@@ -277,10 +251,8 @@ class DataLoader:
 
     @property
     def rows_streamed(self) -> int:
-        """Total rows pushed through the buffer (grows past ``N`` across epochs)."""
+        """Total rows streamed into the model (grows past ``N`` across epochs)."""
         return self._rows_streamed
-
-    # ----- iteration: the minibatch stream ----------------------------------
 
     def _rebatched(self) -> Iterator[np.ndarray]:
         """A fresh pass of exactly ``batch_size``-row batches from the source."""
@@ -314,12 +286,9 @@ class DataLoader:
         """One epoch of prepared minibatches, with accounting (the Trainer's path).
 
         Like :meth:`__iter__` but it updates :attr:`batches_seen` /
-        :attr:`rows_streamed` and fires the one-shot ``total_size`` sanity check at
-        the epoch boundary. :meth:`__iter__` stays side-effect-free so a plain
-        ``for b in loader`` / ``list(loader)`` does not mutate counters; the
-        :class:`Trainer` iterates *this* instead, so its (documented, primary)
-        workflow still benefits from the wrong-``total_size`` guard and reports
-        non-zero counters.
+        :attr:`rows_streamed` and runs the one-shot ``total_size`` sanity check at
+        the epoch boundary. :meth:`__iter__` stays side-effect-free so plain
+        iteration does not mutate counters.
         """
         for batch in self._rebatched():
             prepared = self._prepare(batch)
@@ -328,58 +297,16 @@ class DataLoader:
             yield prepared
         self._maybe_warn_total_size()
 
-    # ----- shared-buffer path (advanced; the Trainer uses pm.Data instead) ---
-
-    def as_tensor(self) -> pt.TensorVariable:
-        """A ``pytensor.shared`` buffer the model can observe directly.
-
-        An alternative to the recommended ``pm.Data`` + :class:`Trainer` path: drive
-        ``pm.fit`` yourself and call :meth:`advance` (e.g. from a callback) to refill
-        this buffer each step.
-        """
-        return self._shared
-
-    def advance(self) -> None:
-        """Pull the next batch from the source into the :meth:`as_tensor` buffer."""
-        arr = self._prepare(self._next_batch())
-        self._shared.set_value(arr, borrow=True)
-        self._batches_seen += 1
-        self._rows_streamed += int(arr.shape[0])
-
-    # ----- internals ---------------------------------------------------------
-
     def _prepare(self, batch: np.ndarray) -> np.ndarray:
-        """Preprocess, validate, and return an *owned* copy of one batch.
+        """Preprocess, validate, and return an owned copy of one batch.
 
-        The owned copy matters: a source may legitimately yield *views* into a
-        reused array, so neither the buffer nor an iteration consumer may alias it.
+        A source may legitimately yield views into a reused array; the copy
+        prevents the consumer from aliasing it.
         """
         if self._preprocess_fn is not None:
             batch = self._preprocess_fn(batch)
         self._validate(batch)
-        return np.array(batch, dtype=self._dtype)  # np.array(copy default) owns it
-
-    def _next_batch(self) -> np.ndarray:
-        try:
-            return next(self._source_iter)
-        except StopIteration:
-            if not self._cycle:
-                raise
-            # First exhaustion == one full pass: rows_streamed now equals the real
-            # row count, so we can sanity-check the user's total_size for free.
-            self._maybe_warn_total_size()
-            self._source_iter = self._rebatched()
-            try:
-                return next(self._source_iter)
-            except StopIteration:
-                # A cycled source that restarts empty would otherwise leak a bare
-                # StopIteration out of advance(); surface it as a clear error (mirrors
-                # Trainer._stream's "yielded no batches" guard).
-                raise RuntimeError(
-                    "DataLoader source yielded no rows on restart (cycle=True); an "
-                    "empty/exhausted source cannot be cycled. Ensure the source factory "
-                    "returns a non-empty iterator each epoch."
-                ) from None
+        return np.array(batch, dtype=self._dtype)
 
     def _maybe_warn_total_size(self) -> None:
         """Warn once if total_size grossly disagrees with the rows seen in one pass."""
@@ -407,9 +334,7 @@ class DataLoader:
             )
         if batch.shape[0] != self._batch_size:
             raise ValueError(
-                f"batch shape[0] = {batch.shape[0]} does not match batch_size = "
-                f"{self._batch_size}; partial batches are not allowed (drop them in "
-                "the source, e.g. via shuffle=True / shuffle_buffer)."
+                f"batch shape[0] = {batch.shape[0]} does not match batch_size = {self._batch_size}."
             )
         if batch.shape[1:] != self._sample_shape:
             raise ValueError(
@@ -426,7 +351,7 @@ class Trainer:
     :class:`DataLoader` owns batching (and ``len(dataloader)`` is the dataset size
     ``N``), and the model owns the math. The model exposes a ``pm.Data`` placeholder;
     the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
-    step, so the user wires up **no** callbacks (the design Rob asked for).
+    step, so the user wires up no callbacks.
 
     .. code-block:: python
 
@@ -446,7 +371,7 @@ class Trainer:
     ----------
     method : str, default "advi"
         Variational method, forwarded to :func:`pymc.fit` (``"advi"``,
-        ``"fullrank_advi"``, ...). When PyMC's VI rework lands this will also accept
+        ``"fullrank_advi"``, ...). Once the VI rework lands this will also accept
         an inference *instance* (e.g. ``ADVI()``); a string drives today's ``pm.fit``.
     dataloader : DataLoader
         The minibatch source. ``len(dataloader)`` is ``N`` -- the model should pass
@@ -462,9 +387,8 @@ class Trainer:
 
     Notes
     -----
-    This is the *starting point* Rob suggested: the per-step ``set_data`` logic
-    lives in the ``Trainer``. The longer-term plan is to fold it into the inference
-    object's ``step(batch)`` once the VI rework lands, at which point the
+    The per-step ``set_data`` currently lives in the ``Trainer``. Once the VI
+    rework's ``Inference.step(batch)`` lands it moves there, at which point the
     ``total_size`` rescaling can be derived from ``len(dataloader)`` and dropped
     from the model body entirely.
     """
@@ -496,9 +420,6 @@ class Trainer:
 
         Returns whatever :func:`pymc.fit` returns for the chosen method.
         """
-        from pymc.model import modelcontext
-        from pymc.variational.inference import fit as _fit
-
         loader = self.dataloader
         if not isinstance(loader, DataLoader):
             raise TypeError(
@@ -506,7 +427,6 @@ class Trainer:
             )
         model = modelcontext(self.model)
 
-        # An endless minibatch stream: re-iterate the loader across epochs.
         def _stream() -> Iterator[np.ndarray]:
             while True:
                 empty = True
@@ -525,8 +445,8 @@ class Trainer:
             model.set_data(self.data_name, next(batches))
 
         merged = {**self._fit_kwargs, **kwargs}
-        # User callbacks (e.g. convergence trackers) run AFTER the internal advance,
-        # appended rather than colliding with it on the `callbacks` keyword.
+        # User callbacks (e.g. convergence trackers) are appended after the
+        # internal advance instead of colliding with it on the keyword.
         user_callbacks = merged.pop("callbacks", None) or []
         return _fit(
             n,
@@ -569,9 +489,8 @@ def shuffle_buffer(
     ``max(buffer_size, batch_size, largest_chunk_rows)``.
 
     Each epoch (each call of the returned factory) draws a fresh permutation from
-    a sub-stream of ``seed``, so the shuffle order differs across epochs -- a
-    seeded buffer must not replay one fixed order forever -- while staying
-    reproducible for a given ``seed``.
+    a sub-stream of ``seed``, so the shuffle order differs across epochs while
+    staying reproducible for a given ``seed``.
     """
     if not _is_positive_int(batch_size):
         raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
@@ -580,17 +499,14 @@ def shuffle_buffer(
     seed_seq = np.random.SeedSequence(seed)
 
     def factory() -> Iterator[np.ndarray]:
-        # Spawn a fresh sub-stream per epoch so re-iterating (cycle=True) reshuffles
-        # rather than replaying one fixed permutation forever; still reproducible
-        # across runs for a given seed.
+        # A fresh sub-stream per epoch: re-iterating reshuffles instead of
+        # replaying one fixed permutation, yet stays reproducible per seed.
         rng = np.random.default_rng(seed_seq.spawn(1)[0])
         it = chunk_source()
-        carry: np.ndarray | None = None  # leftover (< batch_size) from last fill
+        carry: np.ndarray | None = None
         exhausted = False
-        # Accumulate at least one full batch's worth even when buffer_size <
-        # batch_size: otherwise the inner loop would break early with fewer than
-        # batch_size rows and the `have < batch_size` guard below would silently
-        # discard the entire stream.
+        # Accumulate at least one batch even when buffer_size < batch_size,
+        # otherwise the guard below would silently discard the whole stream.
         target = max(buffer_size, batch_size)
         while not exhausted:
             bufs: list[np.ndarray] = []
@@ -606,12 +522,12 @@ def shuffle_buffer(
                 if have >= target:
                     break
             else:
-                exhausted = True  # for-loop ran to completion: source is done
+                exhausted = True
             if have < batch_size:
                 # Only reachable once the source is exhausted: drop the final
-                # sub-batch remainder (it cannot form a full batch).
+                # partial batch.
                 return
-            buf = np.concatenate(bufs, axis=0)  # always a fresh, owned copy
+            buf = np.concatenate(bufs, axis=0)
             rng.shuffle(buf)
             n_full = buf.shape[0] // batch_size
             for i in range(n_full):
@@ -619,12 +535,8 @@ def shuffle_buffer(
             rem = buf.shape[0] - n_full * batch_size
             carry = buf[n_full * batch_size :].copy() if rem else None
 
-    # Forward a known row count (e.g. parquet_source's .n_rows from Parquet
-    # metadata) to the wrapped factory, so
-    # ``DataLoader(source, shuffle=True, total_size="auto")`` resolves N for free
-    # instead of doing a counting pass. The only discrepancy is the single dropped
-    # trailing partial batch (< batch_size rows), well within the auto-size
-    # sanity tolerance.
+    # Forward a known row count so total_size="auto" stays metadata-cheap
+    # through the shuffle wrapper.
     source_n_rows = getattr(chunk_source, "n_rows", None)
     if source_n_rows is not None:
         factory.n_rows = source_n_rows  # type: ignore[attr-defined]
@@ -669,7 +581,6 @@ def _rebatch(
         rem = merged.shape[0] - n_full * batch_size
         buf = [merged[n_full * batch_size :].copy()] if rem else []
         have = rem
-    # stream ended: the (< batch_size) remainder in buf is dropped
 
 
 def _make_factory(
@@ -683,9 +594,8 @@ def _make_factory(
     forwarded onto the returned factory so ``total_size="auto"`` stays cheap.
     """
     if callable(source) and not isinstance(source, Iterator):
-        # A factory may return any iterable (a list of batches, a generator, ...),
-        # not only an iterator; normalize so ``__next__`` always has an iterator to
-        # pull from (a bare ``list`` would otherwise fail ``next(...)``).
+        # A factory may return any iterable (a list of batches, a generator, ...);
+        # normalize so the loader always pulls from a true iterator.
         def _factory() -> Iterator[np.ndarray]:
             return iter(source())  # type: ignore[operator]
 
@@ -695,8 +605,9 @@ def _make_factory(
         def _factory() -> Iterator[np.ndarray]:
             if consumed["done"]:
                 raise RuntimeError(
-                    "source is a bare iterator and cycle=True was requested; pass a "
-                    "zero-arg factory or a re-iterable instead"
+                    "source is a bare iterator and was already consumed; the loader "
+                    "restarts the stream each epoch, so pass a zero-arg factory or a "
+                    "re-iterable instead"
                 )
             consumed["done"] = True
             return source
@@ -727,8 +638,6 @@ def _auto_total_size(
     """
     n = getattr(source, "n_rows", None)
     if n is None:
-        # The user's source may not carry .n_rows even when the (shuffle-wrapped)
-        # factory does; fall back to the factory's own forwarded count.
         n = getattr(factory, "n_rows", None)
     if n is not None:
         if not _is_positive_int(n):
@@ -749,14 +658,13 @@ def _auto_total_size(
     count = 0
     for chunk in first_iter:
         a = np.asarray(chunk)
-        # A yield of shape exactly `sample_shape` is ONE sample (e.g. one row of a
-        # raw array), not a block of a.shape[0] rows; count it as a single row.
+        # A yield of shape exactly `sample_shape` is ONE sample, not a block.
         count += 1 if a.shape == sample_shape else int(a.shape[0])
     if count <= 0:
         raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
     if factory() is first_iter:
-        # A genuine factory yields a FRESH iterator each call; one that returns the
-        # same (now-exhausted) iterator would leave advance() with nothing to pull.
+        # A genuine factory yields a fresh iterator each call; one that returns the
+        # same exhausted iterator would leave the loader with nothing to stream.
         raise ValueError(
             "total_size='auto' got a factory that returns the same one-shot iterator "
             "each call; pass a factory that creates a fresh iterator each call, or "

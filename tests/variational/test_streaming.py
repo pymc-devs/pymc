@@ -32,85 +32,46 @@ def _chunks(data, size):
     return factory
 
 
-def test_advance_shape_and_counters():
-    data = np.arange(40, dtype="float64").reshape(20, 2)
-    ds = DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(2,), total_size=20)
-    assert ds.batches_seen == 0
-    ds.advance()
-    assert ds.as_tensor().get_value().shape == (4, 2)
-    assert ds.batches_seen == 1 and ds.rows_streamed == 4
-    ds.advance()
-    assert ds.batches_seen == 2 and ds.rows_streamed == 8
-
-
 def test_plain_loader_rebatches_arbitrary_blocks():
-    # blocks of 3 with batch_size=4: re-batched in order; the trailing 2 rows that
-    # cannot fill a final batch are dropped (drop_last semantics).
+    """Blocks of 3 with batch_size=4 are re-batched in order; the trailing rows
+    that cannot fill a final batch are dropped (drop_last semantics)."""
     data = np.arange(20, dtype="float64").reshape(10, 2)
     ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
     batches = list(ds)
     assert [b.shape for b in batches] == [(4, 2), (4, 2)]
-    np.testing.assert_array_equal(np.concatenate(batches), data[:8])  # order preserved
+    np.testing.assert_array_equal(np.concatenate(batches), data[:8])
 
 
 def test_raw_array_source_like_vi_rework_sketch():
-    # the VI-rework sketch usage: Dataloader(<raw array>, batch_size=...); rows are
-    # yielded one sample at a time and the loader re-batches them.
+    """A raw array works directly, as in the VI-rework sketch
+    ``Dataloader(np.random.normal(...), batch_size=...)``: rows are yielded one
+    sample at a time, re-batched, and counted as rows by total_size='auto'."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
     with pytest.warns(UserWarning, match="counting pass"):
         ds = DataLoader(data, batch_size=8, sample_shape=(2,), total_size="auto")
-    assert ds.total_size == 20  # counted as 20 rows, not 40 flattened elements
+    assert ds.total_size == 20
     batches = list(ds)
-    assert [b.shape for b in batches] == [(8, 2), (8, 2)]  # trailing 4 rows dropped
+    assert [b.shape for b in batches] == [(8, 2), (8, 2)]
     np.testing.assert_array_equal(np.concatenate(batches), data[:16])
 
 
 def test_wrong_sample_shape_rejected():
-    data = np.zeros((12, 3))  # 3 columns, but the loader declares 2
+    """A source whose trailing shape does not match sample_shape raises."""
+    data = np.zeros((12, 3))
     ds = DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(2,), total_size=12)
     with pytest.raises(ValueError, match="source yielded shape"):
-        ds.advance()
-
-
-def test_cycle_true_empty_restart_raises_clear_error():
-    calls = {"n": 0}
-
-    def factory():
-        calls["n"] += 1
-        if calls["n"] == 1:
-            yield np.zeros((4, 1))
-        # second epoch: nothing (an exhausted/empty source cannot be cycled)
-
-    ds = DataLoader(factory, batch_size=4, sample_shape=(1,), total_size=4)
-    ds.advance()
-    with pytest.raises(RuntimeError, match="restart"):
-        ds.advance()
+        next(iter(ds))
 
 
 def test_total_size_none_warns_at_construction():
+    """total_size=None disables the N/batch_size rescaling, so it warns."""
     data = np.zeros((8, 1))
     with pytest.warns(UserWarning, match="total_size=None"):
         DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(1,))
 
 
-def test_cycle_true_restarts_source():
-    data = np.arange(8, dtype="float64").reshape(8, 1)
-    ds = DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=8, cycle=True)
-    for _ in range(4):  # two epochs worth
-        ds.advance()
-    assert ds.batches_seen == 4
-
-
-def test_cycle_false_raises_when_exhausted():
-    data = np.arange(8, dtype="float64").reshape(8, 1)
-    ds = DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=8, cycle=False)
-    ds.advance()
-    ds.advance()
-    with pytest.raises(StopIteration):
-        ds.advance()
-
-
 def test_preprocess_fn_applied():
+    """preprocess_fn transforms each batch before it is yielded."""
     data = np.ones((8, 1))
     ds = DataLoader(
         _chunks(data, 4),
@@ -119,33 +80,32 @@ def test_preprocess_fn_applied():
         total_size=8,
         preprocess_fn=lambda b: b * 3.0,
     )
-    ds.advance()
-    np.testing.assert_array_equal(ds.as_tensor().get_value(), np.full((4, 1), 3.0))
+    np.testing.assert_array_equal(next(iter(ds)), np.full((4, 1), 3.0))
 
 
-def test_shuffle_buffer_conserves_rows_non_dividing():
-    # buffer_size and chunk size deliberately do NOT divide batch_size: the
-    # carry-over must not lose or duplicate any row (regression for the drop bug).
+def test_shuffle_buffer_conserves_rows_with_non_dividing_chunks():
+    """Chunk and buffer sizes that do not divide batch_size must not lose or
+    duplicate rows; the remainder is carried into the next buffer fill."""
     data = np.arange(140, dtype="float64").reshape(140, 1)
     src = shuffle_buffer(_chunks(data, 7), buffer_size=55, batch_size=10, seed=0)
     batches = list(src())
     assert all(b.shape == (10, 1) for b in batches)
     seen = np.sort(np.concatenate([b.ravel() for b in batches]))
-    # 140 rows, batch 10 -> 14 full batches, nothing dropped (140 % 10 == 0)
     np.testing.assert_array_equal(seen, data.ravel())
 
 
 def test_shuffle_buffer_does_not_mutate_source():
+    """Shuffling happens on an owned copy, never in place on the source arrays."""
     data = np.arange(100, dtype="float64").reshape(100, 1)
     original = data.copy()
     src = shuffle_buffer(_chunks(data, 25), buffer_size=40, batch_size=10, seed=1)
     list(src())
-    np.testing.assert_array_equal(data, original)  # source untouched
+    np.testing.assert_array_equal(data, original)
 
 
 def test_dataloader_shuffle_true_yields_full_batches():
-    # shuffle=True wraps the source in a bounded shuffle_buffer internally; batches
-    # are full and rows are conserved (nothing dropped when N % batch_size == 0).
+    """shuffle=True wraps the source in a bounded shuffle_buffer; one epoch yields
+    full batches and conserves every row when N divides batch_size."""
     data = np.arange(120, dtype="float64").reshape(120, 1)
     ds = DataLoader(
         _chunks(data, 8),
@@ -155,32 +115,30 @@ def test_dataloader_shuffle_true_yields_full_batches():
         seed=0,
         sample_shape=(1,),
         total_size=120,
-        cycle=False,
     )
-    seen = []
-    for _ in range(12):  # 120 / 10
-        ds.advance()
-        seen.append(ds.as_tensor().get_value().copy())
-    assert all(b.shape == (10, 1) for b in seen)
-    np.testing.assert_array_equal(np.sort(np.concatenate([b.ravel() for b in seen])), data.ravel())
+    batches = list(ds)
+    assert all(b.shape == (10, 1) for b in batches)
+    np.testing.assert_array_equal(
+        np.sort(np.concatenate([b.ravel() for b in batches])), data.ravel()
+    )
 
 
 def test_total_size_rescales_logp_like_minibatch():
-    # observed=buf[:, k] + total_size=N must scale the observed log-likelihood by
-    # N / batch_size via the existing create_minibatch_rv path -- pin this without
-    # training anything.
+    """total_size=len(loader) scales the observed minibatch log-likelihood by
+    exactly N / batch_size, through the same create_minibatch_rv mechanism as
+    pm.Minibatch: logp(scaled) == logp(plain) * N / batch_size."""
     rng = np.random.default_rng(0)
     N, bs = 1000, 16
     data = rng.normal(size=(bs, 1))
-    ds = DataLoader(lambda: iter([data]), batch_size=bs, sample_shape=(1,), total_size=N)
-    ds.advance()
+    loader = DataLoader(lambda: iter([data]), batch_size=bs, sample_shape=(1,), total_size=N)
 
     with pm.Model() as scaled:
         mu = pm.Normal("mu", 0, 1)
-        pm.Normal("y", mu, 1, observed=ds.as_tensor()[:, 0], total_size=ds.total_size)
+        batch = pm.Data("batch", data)
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
     with pm.Model() as plain:
         mu = pm.Normal("mu", 0, 1)
-        pm.Normal("y", mu, 1, observed=data[:, 0])  # no total_size
+        pm.Normal("y", mu, 1, observed=data[:, 0])
 
     point = {"mu": np.array(0.3)}
     obs_scaled = scaled.compile_logp(scaled.observed_RVs)(point)
@@ -191,8 +149,9 @@ def test_total_size_rescales_logp_like_minibatch():
 def test_trainer_end_to_end_matches_in_ram_minibatch():
     """End-to-end: Trainer-driven streaming ADVI reproduces in-RAM pm.Minibatch ADVI.
 
-    Exercises the whole blueprint API: a pm.Data placeholder + total_size=len(loader),
-    and a Trainer that streams minibatches into it with set_data -- no user callbacks.
+    Exercises the whole API: a pm.Data placeholder, total_size=len(loader), and a
+    Trainer that streams minibatches into the placeholder with set_data while the
+    user writes no callbacks. Runs long enough to cycle the loader across epochs.
     """
     seed = 0
     rng = np.random.default_rng(seed)
@@ -226,12 +185,12 @@ def test_trainer_end_to_end_matches_in_ram_minibatch():
     )
     with pm.Model() as model:
         b = pm.Normal("b", 0, 3, shape=3)
-        batch = pm.Data("batch", np.zeros((bs, 3)))  # placeholder; full data stays out of RAM
+        batch = pm.Data("batch", np.zeros((bs, 3)))
         pm.Bernoulli(
             "o",
             logit_p=b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1],
             observed=batch[:, 2],
-            total_size=len(loader),  # N comes from the loader, PyTorch-style
+            total_size=len(loader),
         )
         ap = Trainer(
             method="advi",
@@ -245,9 +204,9 @@ def test_trainer_end_to_end_matches_in_ram_minibatch():
 
 
 def test_trainer_streams_into_placeholder():
-    # The Trainer seeds the pm.Data placeholder before step 0 (pm.fit runs callbacks
-    # AFTER each step) and overwrites it each step; after fitting it holds a real
-    # batch, not the zero seed -- with the user writing no callbacks.
+    """The Trainer seeds the pm.Data placeholder before step 0 (pm.fit runs
+    callbacks after each step) and overwrites it each step; after fitting it holds
+    a real batch, not the zero seed."""
     data = np.ones((4, 1))
     loader = DataLoader(lambda: iter([data] * 100), batch_size=4, sample_shape=(1,), total_size=4)
     with pm.Model() as model:
@@ -257,24 +216,46 @@ def test_trainer_streams_into_placeholder():
         Trainer(method="advi", dataloader=loader, data_name="batch").fit(
             5, progressbar=False, random_seed=0
         )
-    np.testing.assert_array_equal(model["batch"].get_value(), data)  # not the zero seed
+    np.testing.assert_array_equal(model["batch"].get_value(), data)
+
+
+def test_trainer_raises_when_loader_cannot_restart():
+    """A source that streams one epoch and then comes back empty cannot be cycled;
+    the Trainer surfaces a clear error instead of training on stale data."""
+    calls = {"n": 0}
+
+    def factory():
+        calls["n"] += 1
+        if calls["n"] == 1:
+            yield np.zeros((4, 1))
+
+    loader = DataLoader(factory, batch_size=4, sample_shape=(1,), total_size=4)
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((4, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        with pytest.raises(RuntimeError, match="yielded no batches"):
+            Trainer(method="advi", dataloader=loader, data_name="batch").fit(
+                5, progressbar=False, random_seed=0
+            )
 
 
 def test_trainer_rejects_non_dataloader():
-    # the isinstance guard fires before any model lookup, so no context is needed.
+    """The isinstance guard fires before any model lookup."""
     with pytest.raises(TypeError, match="DataLoader"):
         Trainer(method="advi", dataloader=object()).fit(10)
 
 
 def test_len_returns_total_size():
+    """len(loader) is the dataset row count N, the value total_size needs."""
     data = np.zeros((40, 1))
     loader = DataLoader(_chunks(data, 8), batch_size=8, sample_shape=(1,), total_size=40)
     assert len(loader) == 40
 
 
 def test_len_raises_when_total_size_none():
-    # len(loader) IS N; with total_size=None there is no N to hand the model, so it
-    # raises rather than silently skipping the N/batch_size rescaling.
+    """With total_size=None there is no N to hand the model, so len() raises
+    rather than silently skipping the N/batch_size rescaling."""
     data = np.ones((4, 1))
     with pytest.warns(UserWarning, match="total_size=None"):
         loader = DataLoader(lambda: iter([data] * 5), batch_size=4, sample_shape=(1,))
@@ -283,44 +264,41 @@ def test_len_raises_when_total_size_none():
 
 
 def test_iter_yields_clean_batches_and_reiterates():
-    # __iter__ yields validated (batch_size, *sample_shape) batches and can be
-    # re-iterated for another epoch -- this is the stream the Trainer consumes.
+    """__iter__ yields validated (batch_size, *sample_shape) batches and can be
+    re-iterated for another epoch."""
     data = np.arange(40, dtype="float64").reshape(40, 1)
     loader = DataLoader(_chunks(data, 10), batch_size=10, sample_shape=(1,), total_size=40)
     e1 = list(loader)
-    e2 = list(loader)  # re-iterable
+    e2 = list(loader)
     assert len(e1) == 4 and all(b.shape == (10, 1) for b in e1)
     np.testing.assert_array_equal(np.sort(np.concatenate([b.ravel() for b in e1])), data.ravel())
     np.testing.assert_array_equal(np.sort(np.concatenate([b.ravel() for b in e2])), data.ravel())
 
 
 def test_total_size_zero_raises():
-    # total_size=0 is falsy: it slips a None-only check and the model's truthy
-    # `if total_size:` guard, silently skipping the N/batch_size rescaling.
+    """total_size=0 is falsy and would silently skip the rescaling, so it raises."""
     data = np.zeros((8, 1))
     with pytest.raises(ValueError, match="positive integer"):
         DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=0)
 
 
 def test_total_size_negative_raises():
-    # negative total_size is truthy but yields a negative scaling coefficient
-    # (the data log-likelihood's sign flips, so VI maximizes mis-fit).
+    """A negative total_size would flip the sign of the data log-likelihood."""
     data = np.zeros((8, 1))
     with pytest.raises(ValueError, match="positive integer"):
         DataLoader(_chunks(data, 4), batch_size=4, sample_shape=(1,), total_size=-100)
 
 
 def test_shuffle_buffer_small_buffer_conserves_rows():
-    # buffer_size < batch_size must NOT silently discard the dataset: the buffer
-    # accumulates to at least batch_size before emitting (regression for the
-    # early-return data-loss bug).
+    """buffer_size < batch_size must not silently discard the dataset: the buffer
+    accumulates to at least batch_size before emitting."""
     data = np.arange(120, dtype="float64").reshape(120, 1)
     src = shuffle_buffer(_chunks(data, 7), buffer_size=3, batch_size=10, seed=0)
     batches = list(src())
-    assert batches, "buffer_size < batch_size silently produced zero batches"
+    assert batches
     assert all(b.shape == (10, 1) for b in batches)
     seen = np.sort(np.concatenate([b.ravel() for b in batches]))
-    np.testing.assert_array_equal(seen, data.ravel())  # 120 % 10 == 0, nothing dropped
+    np.testing.assert_array_equal(seen, data.ravel())
 
 
 def test_shuffle_buffer_rejects_nonpositive_sizes():
@@ -332,32 +310,31 @@ def test_shuffle_buffer_rejects_nonpositive_sizes():
 
 
 def test_accepts_numpy_integer_sizes_rejects_bool():
-    # the positive-int check uses numbers.Integral: numpy ints are valid, bool is not.
+    """The positive-int check uses numbers.Integral: numpy ints pass, bool does not."""
     data = np.zeros((8, 1))
     ds = DataLoader(
         _chunks(data, 4), batch_size=np.int64(4), sample_shape=(1,), total_size=np.int64(8)
     )
-    ds.advance()
+    assert next(iter(ds)).shape == (4, 1)
     assert ds.batch_size == 4
     with pytest.raises(ValueError):
         DataLoader(_chunks(data, 4), batch_size=True, sample_shape=(1,), total_size=8)
 
 
-def test_shuffle_buffer_reshuffles_across_epochs():
-    # a seeded buffer must NOT replay one fixed permutation every epoch (that
-    # would weaken shuffling under cycle=True); each epoch reshuffles, but rows
-    # are conserved.
+def test_shuffle_buffer_draws_fresh_permutation_each_epoch():
+    """A seeded buffer must not replay one fixed permutation every epoch; each
+    epoch reshuffles while conserving rows."""
     data = np.arange(60, dtype="float64").reshape(60, 1)
     factory = shuffle_buffer(_chunks(data, 10), buffer_size=60, batch_size=10, seed=0)
     epoch1 = np.concatenate([b.ravel() for b in factory()])
     epoch2 = np.concatenate([b.ravel() for b in factory()])
-    assert not np.array_equal(epoch1, epoch2)  # different order across epochs
-    np.testing.assert_array_equal(np.sort(epoch1), data.ravel())  # but conserves rows
+    assert not np.array_equal(epoch1, epoch2)
+    np.testing.assert_array_equal(np.sort(epoch1), data.ravel())
     np.testing.assert_array_equal(np.sort(epoch2), data.ravel())
 
 
 def test_shuffle_buffer_seed_reproducible_across_runs():
-    # same seed => identical first-epoch order across independent constructions.
+    """The same seed gives an identical first-epoch order across constructions."""
     data = np.arange(60, dtype="float64").reshape(60, 1)
     a = np.concatenate(
         [
@@ -375,8 +352,8 @@ def test_shuffle_buffer_seed_reproducible_across_runs():
 
 
 def test_sizes_normalized_to_python_int():
-    # numpy integer sizes must be stored as plain Python ints so ds.total_size is
-    # accepted downstream by create_minibatch_rv (regression for the np.int64 trap).
+    """Numpy integer sizes are stored as plain Python ints so total_size is
+    accepted downstream by create_minibatch_rv."""
     data = np.zeros((8, 1))
     ds = DataLoader(
         _chunks(data, 4), batch_size=np.int64(4), sample_shape=(1,), total_size=np.int64(8)
@@ -386,30 +363,30 @@ def test_sizes_normalized_to_python_int():
 
 
 def test_numpy_total_size_accepted_by_observed_rv():
-    # a stored np.int64 total_size used to reach create_minibatch_rv and raise
-    # "Invalid type for total_size"; it must now build a valid observed RV.
+    """A numpy-integer total_size used to reach create_minibatch_rv and raise; the
+    normalized value must build and compile a valid observed RV."""
     data = np.zeros((4, 1), dtype="float64")
-    ds = DataLoader(lambda: iter([data]), batch_size=4, sample_shape=(1,), total_size=np.int64(4))
-    ds.advance()
+    loader = DataLoader(
+        lambda: iter([data]), batch_size=4, sample_shape=(1,), total_size=np.int64(4)
+    )
     with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
-        pm.Normal("y", mu, 1, observed=ds.as_tensor()[:, 0], total_size=ds.total_size)
-    # compiling the observed logp exercises the create_minibatch_rv scaling path
+        batch = pm.Data("batch", data)
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=loader.total_size)
     model.compile_logp(model.observed_RVs)({"mu": np.array(0.0)})
 
 
 def test_factory_returning_reiterable_is_accepted():
-    # a zero-arg factory may return ANY iterable (e.g. a list), not just an
-    # iterator; advance() used to crash with "'list' object is not an iterator".
+    """A zero-arg factory may return any iterable (e.g. a list), not just an
+    iterator."""
     data = [np.zeros((4, 1), dtype="float64")]
     ds = DataLoader(lambda: data, batch_size=4, sample_shape=(1,), total_size=4)
-    ds.advance()
-    assert ds.as_tensor().get_value().shape == (4, 1)
+    assert next(iter(ds)).shape == (4, 1)
 
 
 def test_scalar_samples_are_batched():
-    # with sample_shape=() a 0-D yield is ONE scalar sample (exactly what iterating
-    # a raw 1-D array produces); the loader batches scalars instead of erroring.
+    """With sample_shape=() a 0-D yield is one scalar sample, exactly what
+    iterating a raw 1-D array produces; the loader batches scalars."""
     data = np.arange(6, dtype="float64")
     ds = DataLoader(data, batch_size=3, sample_shape=(), total_size=6)
     batches = list(ds)
@@ -418,9 +395,10 @@ def test_scalar_samples_are_batched():
 
 
 def test_trainer_appends_user_callbacks_and_streams_distinct_batches():
-    # user callbacks (e.g. convergence trackers) must compose with the internal
-    # advance callback, not collide with it on the `callbacks` keyword; and the
-    # placeholder must hold a DIFFERENT batch on successive steps.
+    """User callbacks (e.g. convergence trackers) compose with the internal
+    advance callback instead of colliding on the keyword, and the placeholder
+    holds a different batch on successive steps. Also exercises the default
+    data_name ("batch")."""
     blocks = [np.full((4, 1), float(i)) for i in range(60)]
     loader = DataLoader(lambda: iter(blocks), batch_size=4, sample_shape=(1,), total_size=240)
     seen = []
@@ -428,15 +406,14 @@ def test_trainer_appends_user_callbacks_and_streams_distinct_batches():
         x = pm.Normal("x", 0.0, 1.0)
         batch = pm.Data("batch", np.zeros((4, 1)))
         pm.Normal("y", x, 1.0, observed=batch[:, 0], total_size=len(loader))
-        # no data_name passed: the default ("batch") must match this placeholder
         Trainer(method="advi", dataloader=loader).fit(
             5, callbacks=[lambda *_: seen.append(float(model["batch"].get_value()[0, 0]))]
         )
-    assert len(seen) == 5  # the user callback ran every step
-    assert len(set(seen)) > 1  # the placeholder advanced to new batches
+    assert len(seen) == 5
+    assert len(set(seen)) > 1
 
 
 def test_iterable_dataset_base_is_abstract():
-    # the base class is a contract: __iter__ must be overridden.
+    """The base class is a contract: __iter__ must be overridden."""
     with pytest.raises(NotImplementedError):
         iter(IterableDataset())
