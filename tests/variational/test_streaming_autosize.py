@@ -48,9 +48,9 @@ def test_auto_uses_n_rows_fast_path():
     """A source-advertised .n_rows is trusted without a counting pass."""
     data = np.zeros((8, 1))
     f = _factory(data, 4)
-    f.n_rows = 999
+    f.n_rows = 1000
     ds = DataLoader(f, batch_size=4, sample_shape=(1,), total_size="auto")
-    assert ds.total_size == 999
+    assert ds.total_size == 1000
 
 
 def test_auto_rejects_one_shot_iterator():
@@ -231,10 +231,12 @@ def test_stream_batches_updates_counters_and_warns_on_wrong_total_size():
 
 
 def test_sanity_silent_when_drop_last_truncates():
-    """An exactly-correct total_size does not warn when batch_size does not
-    divide N: the trailing partial batch is dropped by design."""
+    """An exactly-correct total_size does not warn at the epoch boundary when
+    batch_size does not divide N: the trailing partial batch is dropped by
+    design (the fixed-order construction warning is separate)."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
-    ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
+    with pytest.warns(UserWarning, match="dropped every pass"):
+        ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
@@ -243,11 +245,104 @@ def test_sanity_silent_when_drop_last_truncates():
 def test_sanity_silent_for_auto_resolved_non_divisible_n():
     """total_size='auto' must not warn against the N it just resolved."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
-    with pytest.warns(UserWarning, match="counting pass"):
+    with (
+        pytest.warns(UserWarning, match="counting pass"),
+        pytest.warns(UserWarning, match="dropped every pass"),
+    ):
         ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size="auto")
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
+
+
+def test_sanity_check_counts_the_completed_pass_not_cumulative_rows():
+    """A partially consumed stray stream must not inflate the epoch-boundary
+    check: with a correct total_size, the next full pass stays silent."""
+    data = np.arange(100, dtype="float64").reshape(100, 1)
+    ds = DataLoader(_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=100)
+    stray = ds._stream_batches()
+    for _ in range(3):
+        next(stray)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        list(ds._stream_batches())
+
+
+def test_sanity_check_not_fooled_by_cumulative_rows_matching_total_size():
+    """The converse: a wrong total_size that happens to equal the cumulative
+    row counter must still warn after a true full pass."""
+    data = np.arange(100, dtype="float64").reshape(100, 1)
+    ds = DataLoader(_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=130)
+    stray = ds._stream_batches()
+    for _ in range(3):
+        next(stray)
+    with pytest.warns(UserWarning, match="disagrees with"):
+        list(ds._stream_batches())
+
+
+def test_fixed_order_non_divisible_total_size_warns_at_construction():
+    """shuffle=False with batch_size not dividing N would drop the same trailing
+    rows every pass, so the loader says so up front."""
+    data = np.arange(25, dtype="float64").reshape(25, 1)
+    with pytest.warns(UserWarning, match="dropped every pass"):
+        DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
+
+
+def test_shuffled_non_divisible_total_size_is_silent_at_construction():
+    """With shuffle=True the dropped remainder is re-drawn each epoch, so the
+    fixed-tail warning does not apply."""
+    data = np.arange(25, dtype="float64").reshape(25, 1)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        DataLoader(
+            _factory(data, 5),
+            batch_size=10,
+            shuffle=True,
+            buffer_size=20,
+            seed=0,
+            sample_shape=(1,),
+            total_size=25,
+        )
+
+
+def test_auto_rejects_factory_closing_over_consumed_iterator():
+    """A generator function over a one-shot iterator returns a new (so not
+    identical) but empty stream after the counting pass; the re-read probe
+    catches it at construction."""
+    data = np.zeros((20, 1))
+    underlying = iter([data[i : i + 4] for i in range(0, 20, 4)])
+
+    def gen():
+        yield from underlying
+
+    with (
+        pytest.warns(UserWarning, match="counting pass"),
+        pytest.raises(ValueError, match="fresh iterator"),
+    ):
+        DataLoader(gen, batch_size=4, sample_shape=(1,), total_size="auto")
+
+
+def test_parquet_source_freezes_column_order_across_permuted_shards(tmp_path):
+    """A shard whose schema permutes the columns is read back in the first
+    shard's order instead of silently swapping features."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"a": [1.0, 1.0], "b": [10.0, 10.0]}), f"{tmp_path}/p0.parquet")
+    pq.write_table(pa.table({"b": [20.0, 20.0], "a": [2.0, 2.0]}), f"{tmp_path}/p1.parquet")
+    blocks = list(parquet_source(str(tmp_path)))
+    np.testing.assert_array_equal(blocks[0], [[1.0, 10.0], [1.0, 10.0]])
+    np.testing.assert_array_equal(blocks[1], [[2.0, 20.0], [2.0, 20.0]])
+
+
+def test_parquet_source_streams_row_groups_not_whole_files(tmp_path):
+    """A multi-row-group file is yielded one row group at a time, so peak read
+    memory is a row group rather than the whole file."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"a": np.arange(30.0)}), f"{tmp_path}/p.parquet", row_group_size=10)
+    blocks = list(parquet_source(str(tmp_path)))
+    assert [b.shape for b in blocks] == [(10, 1), (10, 1), (10, 1)]
+    np.testing.assert_array_equal(np.concatenate(blocks).ravel(), np.arange(30.0))
 
 
 def test_parquet_source_rejects_unknown_columns(tmp_path):
