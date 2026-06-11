@@ -34,9 +34,11 @@ def _chunks(data, size):
 
 def test_plain_loader_rebatches_arbitrary_blocks():
     """Blocks of 3 with batch_size=4 are re-batched in order; the trailing rows
-    that cannot fill a final batch are dropped (drop_last semantics)."""
+    that cannot fill a final batch are dropped (drop_last semantics), which the
+    unshuffled loader warns about up front."""
     data = np.arange(20, dtype="float64").reshape(10, 2)
-    ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
+    with pytest.warns(UserWarning, match="dropped every pass"):
+        ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
     batches = list(ds)
     assert [b.shape for b in batches] == [(4, 2), (4, 2)]
     np.testing.assert_array_equal(np.concatenate(batches), data[:8])
@@ -47,7 +49,10 @@ def test_raw_array_source_like_vi_rework_sketch():
     ``Dataloader(np.random.normal(...), batch_size=...)``: rows are yielded one
     sample at a time, re-batched, and counted as rows by total_size='auto'."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
-    with pytest.warns(UserWarning, match="counting pass"):
+    with (
+        pytest.warns(UserWarning, match="counting pass"),
+        pytest.warns(UserWarning, match="dropped every pass"),
+    ):
         ds = DataLoader(data, batch_size=8, sample_shape=(2,), total_size="auto")
     assert ds.total_size == 20
     batches = list(ds)
@@ -128,7 +133,7 @@ def test_total_size_rescales_logp_like_minibatch():
     exactly N / batch_size, through the same create_minibatch_rv mechanism as
     pm.Minibatch: logp(scaled) == logp(plain) * N / batch_size."""
     rng = np.random.default_rng(0)
-    N, bs = 1000, 16
+    N, bs = 1000, 20
     data = rng.normal(size=(bs, 1))
     loader = DataLoader(lambda: iter([data]), batch_size=bs, sample_shape=(1,), total_size=N)
 
@@ -449,7 +454,10 @@ def test_raw_2d_array_infers_sample_shape():
     VI-rework sketch ``DataLoader(arr, batch_size=...)`` batches rows instead of
     flattening them into scalars."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
-    with pytest.warns(UserWarning, match="counting pass"):
+    with (
+        pytest.warns(UserWarning, match="counting pass"),
+        pytest.warns(UserWarning, match="dropped every pass"),
+    ):
         ds = DataLoader(data, batch_size=8, total_size="auto")
     assert ds.total_size == 20
     batches = list(ds)
@@ -500,6 +508,35 @@ def test_constructor_fit_kwargs_take_random_seed():
     a = fit_with({"random_seed": 7}, {})
     b = fit_with({"random_seed": 0}, {"random_seed": 7})
     np.testing.assert_array_equal(a.hist, b.hist)
+
+
+def test_fit_consumes_exactly_n_batches():
+    """fit(n) consumes exactly n minibatches: one seeds the placeholder before
+    step 0 and the advance after the final step is skipped, so an (n+1)-th
+    batch is never fetched."""
+    blocks = [np.full((2, 1), float(i)) for i in range(2)]
+    loader = DataLoader(lambda: iter(blocks), batch_size=2, sample_shape=(1,), total_size=4)
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((2, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        Trainer(method="advi", dataloader=loader).fit(3, random_seed=0)
+    assert loader.batches_seen == 3
+    assert loader.rows_streamed == 6
+
+
+def test_fit_one_step_on_single_batch_one_shot_source():
+    """A finite stream with exactly the batches needed must not be over-consumed:
+    fit(1) on a one-batch, one-shot source trains and returns instead of failing
+    on a post-final restart."""
+    loader = DataLoader(iter([np.ones((2, 1))]), batch_size=2, sample_shape=(1,), total_size=2)
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((2, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        approx = Trainer(method="advi", dataloader=loader).fit(1, random_seed=0)
+    assert len(approx.hist) == 1
+    assert loader.batches_seen == 1
 
 
 def test_unknown_data_name_raises_before_consuming():

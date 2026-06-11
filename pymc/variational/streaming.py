@@ -33,11 +33,12 @@ The API follows PyTorch's ``torch.utils.data``:
   ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
   model's ``pm.Data`` placeholder with ``set_data``.
 
-With an out-of-core source the full data never enters RAM. The model graph
-observes only a ``(batch_size, *sample_shape)`` ``pm.Data`` placeholder that the
-``Trainer`` overwrites with the next minibatch every step. Passing a directory
-of Parquet shards far larger than RAM still gives a model whose resident
-footprint is one batch.
+With bounded source chunks the full data never sits in RAM at once. The model
+graph observes only a ``(batch_size, *sample_shape)`` ``pm.Data`` placeholder
+that the ``Trainer`` overwrites with the next minibatch every step. Passing a
+directory of Parquet shards far larger than RAM still gives a model whose
+resident footprint is one batch (:func:`parquet_source` reads one row group at
+a time).
 
 The unbiased-gradient rescaling is the same as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
@@ -46,11 +47,18 @@ observed log-likelihood must be scaled by ``N / batch_size`` through the existin
 model passes ``total_size=len(loader)``. (Folding that scaling into the inference
 step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 
+Batches have exactly ``batch_size`` rows, so each pass drops the final
+``N mod batch_size`` rows (torch's ``drop_last``). With ``shuffle=True`` that
+remainder is re-drawn every epoch, so all rows participate across epochs; with
+a source that replays a fixed order, the same rows would be dropped every pass,
+and the loader warns at construction.
+
 One difference from ``pm.Minibatch`` is shuffling.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
 minibatches are i.i.d. by construction.  A streaming source is only as well
 mixed as the order it yields rows in: reading time/row-ordered data through a
-bounded buffer is merely a block-shuffle and biases the variational posterior.
+bounded buffer is merely a block-shuffle, and the resulting non-representative
+minibatches can bias the variational posterior.
 Pre-shuffle the data once on disk (or interleave shards) and/or pass
 ``shuffle=True``.
 
@@ -147,7 +155,9 @@ class DataLoader:
         re-batches them, in order, to exactly ``batch_size`` rows. Trailing rows
         that do not fill a final batch are dropped at the end of a pass, like
         ``drop_last=True`` in PyTorch (required here because the model observes a
-        fixed-shape placeholder).
+        fixed-shape placeholder). With ``shuffle=True`` the dropped remainder
+        differs per epoch; with a fixed replay order it is the same rows every
+        pass (warned at construction).
     batch_size : int
         Leading dimension of every yielded minibatch.
     shuffle : bool, default False
@@ -158,7 +168,8 @@ class DataLoader:
         docstring).
     buffer_size : int, optional
         Shuffle-buffer size in rows when ``shuffle=True``. Defaults to
-        ``50 * batch_size``. Ignored when ``shuffle=False``.
+        ``50 * batch_size``. Ignored when ``shuffle=False``. A buffer at least
+        as large as the dataset holds all of it in memory (a full shuffle).
     seed : int, optional
         Seed for the shuffle buffer (ignored when ``shuffle=False``).
     sample_shape : tuple of int, optional
@@ -244,6 +255,21 @@ class DataLoader:
                 f"{total_size!r}."
             )
 
+        if total_size is not None and not shuffle and int(total_size) % int(batch_size):
+            # Exact-size batches drop the tail of every pass (drop_last). Without
+            # shuffling the drop is not re-randomized, so a source that replays
+            # the same order would never show those rows to the fit at all.
+            warnings.warn(
+                f"shuffle=False with total_size={int(total_size)} not divisible by "
+                f"batch_size={int(batch_size)}: the trailing "
+                f"{int(total_size) % int(batch_size)} rows are dropped every pass, and "
+                f"if the source replays the same order each epoch they are never seen "
+                f"by the fit. Pass shuffle=True (the dropped remainder is then re-drawn "
+                f"each epoch) or choose a batch_size that divides the dataset size.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # Plain Python ints: create_minibatch_rv rejects np.int64 for total_size.
         self._batch_size = int(batch_size)
         self._sample_shape = sample_shape
@@ -311,12 +337,14 @@ class DataLoader:
         the epoch boundary. :meth:`__iter__` stays side-effect-free so plain
         iteration does not mutate counters.
         """
+        seen_this_pass = 0
         for batch in self._rebatched():
             prepared = self._prepare(batch)
             self._batches_seen += 1
             self._rows_streamed += int(prepared.shape[0])
+            seen_this_pass += int(prepared.shape[0])
             yield prepared
-        self._maybe_warn_total_size()
+        self._maybe_warn_total_size(seen_this_pass)
 
     def _prepare(self, batch: np.ndarray) -> np.ndarray:
         """Preprocess, validate, and return an owned copy of one batch.
@@ -329,17 +357,19 @@ class DataLoader:
         self._validate(batch)
         return np.array(batch, dtype=self._dtype)
 
-    def _maybe_warn_total_size(self) -> None:
-        """Warn once if ``total_size`` is inconsistent with the rows seen in one pass.
+    def _maybe_warn_total_size(self, seen: int) -> None:
+        """Warn once if ``total_size`` is inconsistent with the rows of one full pass.
 
-        A correct ``N`` satisfies ``seen <= N < seen + batch_size`` after a full
-        pass (the trailing partial batch is dropped), so that window never warns;
-        outside it a 10% slack absorbs sources that are only approximately sized.
+        ``seen`` is the row count of the pass that just completed (not the
+        cumulative :attr:`rows_streamed`, which keeps growing across partial
+        streams and earlier fits). A correct ``N`` satisfies
+        ``seen <= N < seen + batch_size`` after a full pass (the trailing partial
+        batch is dropped), so that window never warns; outside it a 10% slack
+        absorbs sources that are only approximately sized.
         """
         if self._warned_size or self._total_size is None:
             return
         self._warned_size = True
-        seen = self._rows_streamed
         if not seen or seen <= self._total_size < seen + self._batch_size:
             return
         if abs(self._total_size - seen) > 0.1 * seen:
@@ -441,9 +471,11 @@ class Trainer:
     def fit(self, n: int = 10_000, **kwargs):
         """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
 
-        Keyword arguments are forwarded to :func:`pymc.fit` on top of the
-        constructor's ``fit_kwargs`` (per-call wins); ``progressbar`` defaults to
-        ``False`` unless either sets it.
+        Exactly ``n`` minibatches are consumed: the first seeds the placeholder
+        before step 0, and the advance after the final step is skipped. Keyword
+        arguments are forwarded to :func:`pymc.fit` on top of the constructor's
+        ``fit_kwargs`` (per-call wins); ``progressbar`` defaults to ``False``
+        unless either sets it.
 
         Returns
         -------
@@ -478,8 +510,16 @@ class Trainer:
         # so without this the first step would train on the placeholder's contents.
         model.set_data(self.data_name, next(batches))
 
+        steps_done = 0
+
         def _advance(*_):
-            model.set_data(self.data_name, next(batches))
+            # pm.fit fires callbacks after every step including the last; skip the
+            # advance there so exactly n batches are consumed (an (n+1)-th would be
+            # fetched, never trained on, and could exhaust a finite source).
+            nonlocal steps_done
+            steps_done += 1
+            if steps_done < n:
+                model.set_data(self.data_name, next(batches))
 
         merged = {**self._fit_kwargs, **kwargs}
         merged.setdefault("progressbar", False)
@@ -522,7 +562,9 @@ def shuffle_buffer(
     shuffling (so a ``buffer_size`` smaller than ``batch_size`` still yields full
     batches; the final fill stops at whatever the source has left), and the chunk
     that crosses the threshold is kept whole, so the buffer holds fewer than
-    ``max(buffer_size, batch_size)`` plus one chunk's rows.
+    ``max(buffer_size, batch_size)`` plus one chunk's rows. Concatenating a fill
+    into one shuffleable array transiently allocates a second copy of those
+    rows, so peak allocation is about twice that bound.
 
     Each epoch (each call of the returned factory) draws a fresh permutation from
     a sub-stream of ``seed``, so the shuffle order differs across epochs while
@@ -724,13 +766,17 @@ def _auto_total_size(
         count += 1 if a.shape == sample_shape else int(a.shape[0])
     if count <= 0:
         raise ValueError("total_size='auto' counted 0 rows (empty or non-re-readable source).")
-    if factory() is first_iter:
-        # A genuine factory yields a fresh iterator each call; one that returns the
-        # same exhausted iterator would leave the loader with nothing to stream.
+    # A genuine factory yields a fresh, non-empty stream each call; one that
+    # returns the same exhausted iterator (or a new generator over consumed
+    # state) would leave the loader with nothing to stream. The probe costs one
+    # chunk, which the counting pass has already dwarfed.
+    second_iter = factory()
+    if second_iter is first_iter or next(second_iter, None) is None:
         raise ValueError(
-            "total_size='auto' got a factory that returns the same one-shot iterator "
-            "each call; pass a factory that creates a fresh iterator each call, or "
-            "total_size=N explicitly."
+            "total_size='auto' counted rows but the factory's next stream was empty "
+            "(it returns the same one-shot iterator, or closes over an already-"
+            "consumed one); pass a factory that creates a fresh iterator each call, "
+            "or total_size=N explicitly."
         )
     return count
 
@@ -738,11 +784,13 @@ def _auto_total_size(
 class _ParquetDataset(IterableDataset):
     """An :class:`IterableDataset` over a directory of Parquet shards.
 
-    Yields one ``(rows, n_columns)`` array per file and exposes
-    :attr:`n_rows` read from Parquet metadata (no data scan).
+    Yields one ``(rows, n_columns)`` array per row group (so peak read memory is
+    one row group, not one file), in the fixed column order chosen at
+    construction, and exposes :attr:`n_rows` read from Parquet metadata (no data
+    scan).
     """
 
-    def __init__(self, paths: list[str], columns: list[str] | None, n_rows: int):
+    def __init__(self, paths: list[str], columns: list[str], n_rows: int):
         self._paths = paths
         self._columns = columns
         self.n_rows = n_rows
@@ -751,8 +799,12 @@ class _ParquetDataset(IterableDataset):
         import pyarrow.parquet as pq
 
         for path in self._paths:
-            table = pq.read_table(path, columns=self._columns)
-            yield np.column_stack([table.column(c).to_numpy() for c in table.column_names])
+            file = pq.ParquetFile(path)
+            for i in range(file.metadata.num_row_groups):
+                table = file.read_row_group(i, columns=self._columns)
+                # Stack by the frozen column names, not the file's own order, so
+                # a shard with a permuted schema cannot silently swap features.
+                yield np.column_stack([table.column(c).to_numpy() for c in self._columns])
 
 
 def parquet_source(
@@ -763,8 +815,12 @@ def parquet_source(
 ) -> _ParquetDataset:
     """An :class:`IterableDataset` over a directory of Parquet files.
 
-    Yields one ``(rows, n_columns)`` array per file, and carries an
-    ``n_rows`` attribute read from Parquet metadata (no data scan) so that
+    Yields one ``(rows, n_columns)`` array per row group (one or more per file),
+    so peak read memory is one row group, not one file. The column order is
+    frozen at construction — ``columns`` if given, else the first file's schema
+    order — and every shard is read in that order, so a shard with a permuted
+    schema cannot silently reorder features mid-stream. Carries an ``n_rows``
+    attribute read from Parquet metadata (no data scan) so that
     ``DataLoader(parquet_source(dir), ..., total_size="auto")`` resolves the
     dataset size for free. Pass ``shuffle=True`` to the :class:`DataLoader` (or
     wrap in :func:`shuffle_buffer`) to get shuffled batches.
@@ -775,12 +831,14 @@ def parquet_source(
     paths = sorted(glob.glob(os.path.join(directory, pattern)))
     if not paths:
         raise ValueError(f"no Parquet files match {os.path.join(directory, pattern)!r}")
-    if columns is not None:
-        available = set(pq.read_schema(paths[0]).names)
-        missing = sorted(set(columns) - available)
+    schema_names = list(pq.read_schema(paths[0]).names)
+    if columns is None:
+        columns = schema_names
+    else:
+        missing = sorted(set(columns) - set(schema_names))
         if missing:
             raise ValueError(
-                f"columns {missing} not found in {paths[0]!r}; available: {sorted(available)}"
+                f"columns {missing} not found in {paths[0]!r}; available: {sorted(schema_names)}"
             )
     n_rows = sum(pq.read_metadata(p).num_rows for p in paths)
     return _ParquetDataset(paths, columns, n_rows)
