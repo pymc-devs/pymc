@@ -18,8 +18,7 @@ peak memory is therefore O(N) in the dataset size. This module instead streams
 minibatches from an out-of-core source into a ``pm.Data`` placeholder, so peak
 memory is O(batch) plus, if used, the shuffle buffer, independent of N.
 
-The API mirrors PyTorch's ``torch.utils.data`` so the mental model transfers
-directly:
+The API follows PyTorch's ``torch.utils.data``:
 
 * :class:`IterableDataset`: a re-iterable, out-of-core source of rows
   (e.g. :func:`parquet_source` over a directory of shards). It never loads the
@@ -46,7 +45,7 @@ observed log-likelihood must be scaled by ``N / batch_size`` through the existin
 model passes ``total_size=len(loader)``. (Folding that scaling into the inference
 step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 
-The one extra obligation relative to ``pm.Minibatch`` is shuffling.
+One difference from ``pm.Minibatch`` is shuffling.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
 minibatches are i.i.d. by construction.  A streaming source is only as well
 mixed as the order it yields rows in: reading time/row-ordered data through a
@@ -103,7 +102,7 @@ def _is_positive_int(value: object) -> bool:
 
 
 class IterableDataset:
-    """A re-iterable, out-of-core source of rows, the analogue of ``torch.utils.data.IterableDataset``.
+    """A re-iterable, out-of-core source of rows, like ``torch.utils.data.IterableDataset``.
 
     Subclass and implement :meth:`__iter__` to yield ``np.ndarray`` blocks of rows
     (shape ``(rows, *sample_shape)``); :class:`DataLoader` re-batches those blocks
@@ -129,7 +128,7 @@ class IterableDataset:
 class DataLoader:
     """Turn an out-of-core dataset into fixed-size minibatches for variational inference.
 
-    The analogue of ``torch.utils.data.DataLoader``: it batches (and optionally
+    Like ``torch.utils.data.DataLoader``, it batches (and optionally
     shuffles) an :class:`IterableDataset` into the minibatch stream that
     :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
     is the dataset size ``N``). The full dataset never enters memory; only one
@@ -220,7 +219,7 @@ class DataLoader:
             )
         elif not _is_positive_int(total_size):
             # 0 is falsy (the rescaling would be silently skipped) and a negative
-            # value flips the sign of the data log-likelihood; reject both loudly.
+            # value flips the sign of the data log-likelihood; raise on both.
             raise ValueError(
                 "total_size must be a positive integer (the true dataset size N) so "
                 "the minibatch log-likelihood is rescaled by N / batch_size; got "
@@ -311,7 +310,7 @@ class DataLoader:
         return np.array(batch, dtype=self._dtype)
 
     def _maybe_warn_total_size(self) -> None:
-        """Warn once if total_size grossly disagrees with the rows seen in one pass."""
+        """Warn once if total_size differs from the rows seen in one pass by more than 10%."""
         if self._warned_size or self._total_size is None:
             return
         self._warned_size = True
@@ -353,7 +352,7 @@ class Trainer:
     :class:`DataLoader` owns batching (and ``len(dataloader)`` is the dataset size
     ``N``), and the model owns the math. The model exposes a ``pm.Data`` placeholder;
     the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
-    step, so the user wires up no callbacks.
+    step; no user callbacks are needed.
 
     Parameters
     ----------
