@@ -553,7 +553,6 @@ def shuffle_buffer(
     return factory
 
 
-
 def _promote_to_block(a: np.ndarray, sample_shape: tuple[int, ...]) -> np.ndarray:
     """Return ``a`` as a ``(rows, *sample_shape)`` block; a single sample becomes one row."""
     if a.shape == sample_shape:
