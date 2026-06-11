@@ -132,8 +132,7 @@ class DataLoader:
     Like ``torch.utils.data.DataLoader``, it batches (and optionally
     shuffles) an :class:`IterableDataset` into the minibatch stream that
     :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
-    is the dataset size ``N``). The full dataset never enters memory; only one
-    ``(batch_size, *sample_shape)`` batch does.
+    is the dataset size ``N``). The full dataset never enters memory.
 
     Parameters
     ----------
@@ -199,8 +198,13 @@ class DataLoader:
         if shuffle:
             if buffer_size is None:
                 buffer_size = 50 * int(batch_size)
+            # shuffle_buffer concatenates yields along the leading axis, so single
+            # samples must be promoted to one-row blocks before shuffling.
             source_factory = shuffle_buffer(
-                raw_factory, buffer_size=buffer_size, batch_size=batch_size, seed=seed
+                _block_factory(raw_factory, tuple(sample_shape)),
+                buffer_size=buffer_size,
+                batch_size=batch_size,
+                seed=seed,
             )
         self._source_factory = source_factory
 
@@ -490,8 +494,8 @@ def shuffle_buffer(
     buffer always accumulates at least ``max(buffer_size, batch_size)`` rows before
     emitting (so a ``buffer_size`` smaller than ``batch_size`` still yields full
     batches instead of silently dropping the stream), and a single chunk larger
-    than that is taken whole, so peak buffer memory is
-    ``max(buffer_size, batch_size, largest_chunk_rows)``.
+    than that is taken whole, so the buffer holds at most
+    ``max(buffer_size, batch_size, largest_chunk_rows)`` rows.
 
     Each epoch (each call of the returned factory) draws a fresh permutation from
     a sub-stream of ``seed``, so the shuffle order differs across epochs while
@@ -549,6 +553,40 @@ def shuffle_buffer(
     return factory
 
 
+
+def _promote_to_block(a: np.ndarray, sample_shape: tuple[int, ...]) -> np.ndarray:
+    """Return ``a`` as a ``(rows, *sample_shape)`` block; a single sample becomes one row."""
+    if a.shape == sample_shape:
+        return a[None, ...]
+    if a.ndim != len(sample_shape) + 1 or a.shape[1:] != sample_shape:
+        raise ValueError(
+            f"source yielded shape {a.shape}; expected a single sample of shape "
+            f"{sample_shape} or a block of shape (rows, *{sample_shape})"
+        )
+    return a
+
+
+def _block_factory(
+    factory: Callable[[], Iterator[np.ndarray]],
+    sample_shape: tuple[int, ...],
+) -> Callable[[], Iterator[np.ndarray]]:
+    """Wrap ``factory`` so every yield is a block, promoting single samples.
+
+    :func:`shuffle_buffer` counts and concatenates yields along the leading axis,
+    so single-sample yields (e.g. the rows of a raw array) must be promoted to
+    one-row blocks before shuffling. A known ``.n_rows`` is forwarded.
+    """
+
+    def f() -> Iterator[np.ndarray]:
+        for arr in factory():
+            yield _promote_to_block(np.asarray(arr), sample_shape)
+
+    n_rows = getattr(factory, "n_rows", None)
+    if n_rows is not None:
+        f.n_rows = n_rows  # type: ignore[attr-defined]
+    return f
+
+
 def _rebatch(
     blocks: Iterable[np.ndarray],
     batch_size: int,
@@ -567,14 +605,7 @@ def _rebatch(
     buf: list[np.ndarray] = []
     have = 0
     for arr in blocks:
-        a = np.asarray(arr)
-        if a.shape == sample_shape:  # a single sample, not a block
-            a = a[None, ...]
-        elif a.ndim != len(sample_shape) + 1 or a.shape[1:] != sample_shape:
-            raise ValueError(
-                f"source yielded shape {a.shape}; expected a single sample of shape "
-                f"{sample_shape} or a block of shape (rows, *{sample_shape})"
-            )
+        a = _promote_to_block(np.asarray(arr), sample_shape)
         buf.append(a)
         have += a.shape[0]
         if have < batch_size:
@@ -681,7 +712,7 @@ def _auto_total_size(
 class _ParquetDataset(IterableDataset):
     """An :class:`IterableDataset` over a directory of Parquet shards.
 
-    Yields one ``(rows, n_columns)`` ``float64`` array per file and exposes
+    Yields one ``(rows, n_columns)`` array per file and exposes
     :attr:`n_rows` read from Parquet metadata (no data scan).
     """
 
@@ -706,7 +737,7 @@ def parquet_source(
 ) -> _ParquetDataset:
     """An :class:`IterableDataset` over a directory of Parquet files.
 
-    Yields one ``(rows, n_columns)`` ``float64`` array per file, and carries an
+    Yields one ``(rows, n_columns)`` array per file, and carries an
     ``n_rows`` attribute read from Parquet metadata (no data scan) so that
     ``DataLoader(parquet_source(dir), ..., total_size="auto")`` resolves the
     dataset size for free. Pass ``shuffle=True`` to the :class:`DataLoader` (or
