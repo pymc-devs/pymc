@@ -108,7 +108,10 @@ def test_auto_rejects_factory_returning_same_one_shot_iterator():
     re-readable; the counting pass detects and refuses it."""
     data = np.zeros((20, 1))
     one_shot = (data[i : i + 4] for i in range(0, 20, 4))
-    with pytest.raises(ValueError, match="fresh iterator"):
+    with (
+        pytest.warns(UserWarning, match="counting pass"),
+        pytest.raises(ValueError, match="fresh iterator"),
+    ):
         DataLoader(lambda: one_shot, batch_size=4, sample_shape=(1,), total_size="auto")
 
 
@@ -225,3 +228,33 @@ def test_stream_batches_updates_counters_and_warns_on_wrong_total_size():
     assert len(batches) == 4
     assert ds.batches_seen == 4
     assert ds.rows_streamed == 20
+
+
+def test_sanity_silent_when_drop_last_truncates():
+    """An exactly-correct total_size does not warn when batch_size does not
+    divide N: the trailing partial batch is dropped by design."""
+    data = np.arange(25, dtype="float64").reshape(25, 1)
+    ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        list(ds._stream_batches())
+
+
+def test_sanity_silent_for_auto_resolved_non_divisible_n():
+    """total_size='auto' must not warn against the N it just resolved."""
+    data = np.arange(25, dtype="float64").reshape(25, 1)
+    with pytest.warns(UserWarning, match="counting pass"):
+        ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size="auto")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        list(ds._stream_batches())
+
+
+def test_parquet_source_rejects_unknown_columns(tmp_path):
+    """A typo in columns= raises a clear ValueError at construction instead of a
+    pyarrow error at first iteration."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"a": [1.0], "b": [2.0]}), f"{tmp_path}/p.parquet")
+    with pytest.raises(ValueError, match="not found"):
+        parquet_source(str(tmp_path), columns=["a", "nope"])
