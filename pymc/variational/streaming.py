@@ -16,7 +16,8 @@
 ``pm.Minibatch`` random-indexes an array that is fully resident in memory; its
 peak memory is therefore O(N) in the dataset size. This module instead streams
 minibatches from an out-of-core source into a ``pm.Data`` placeholder, so peak
-memory is O(batch) plus, if used, the shuffle buffer, independent of N.
+memory is set by the batch, the source chunk, and the optional shuffle buffer,
+independent of N.
 
 The API follows PyTorch's ``torch.utils.data``:
 
@@ -72,7 +73,7 @@ Examples
 
     with pm.Model() as model:
         b = pm.Normal("b", 0.0, 3.0, shape=4)
-        batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder, the only data in RAM
+        batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder for one minibatch
         logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
         pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
 
