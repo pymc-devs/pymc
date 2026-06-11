@@ -385,6 +385,30 @@ def test_factory_returning_reiterable_is_accepted():
     assert next(iter(ds)).shape == (4, 1)
 
 
+def test_raw_array_with_shuffle_true():
+    """A raw array source composes with shuffle=True: rows are promoted to
+    one-row blocks before the shuffle buffer instead of being flattened by it."""
+    data = np.arange(40, dtype="float64").reshape(20, 2)
+    ds = DataLoader(
+        data, batch_size=8, shuffle=True, buffer_size=16, seed=0, sample_shape=(2,), total_size=20
+    )
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(8, 2), (8, 2)]
+    rows = {tuple(r) for b in batches for r in b}
+    assert len(rows) == 16 and rows <= {tuple(r) for r in data}
+
+
+def test_scalar_raw_array_with_shuffle_true():
+    """Scalar samples from a raw 1-D array compose with shuffle=True."""
+    data = np.arange(12, dtype="float64")
+    ds = DataLoader(
+        data, batch_size=4, shuffle=True, buffer_size=6, seed=0, sample_shape=(), total_size=12
+    )
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(4,), (4,), (4,)]
+    np.testing.assert_array_equal(np.sort(np.concatenate(batches)), data)
+
+
 def test_scalar_samples_are_batched():
     """With sample_shape=() a 0-D yield is one scalar sample, exactly what
     iterating a raw 1-D array produces; the loader batches scalars."""
