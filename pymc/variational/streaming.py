@@ -33,11 +33,11 @@ The API follows PyTorch's ``torch.utils.data``:
   ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
   model's ``pm.Data`` placeholder with ``set_data``.
 
-The full data never enters RAM. The model graph observes only a
-``(batch_size, *sample_shape)`` ``pm.Data`` placeholder that the ``Trainer``
-overwrites with the next minibatch every step. Passing a directory of Parquet
-shards far larger than RAM still gives a model whose resident footprint is one
-batch.
+With an out-of-core source the full data never enters RAM. The model graph
+observes only a ``(batch_size, *sample_shape)`` ``pm.Data`` placeholder that the
+``Trainer`` overwrites with the next minibatch every step. Passing a directory
+of Parquet shards far larger than RAM still gives a model whose resident
+footprint is one batch.
 
 The unbiased-gradient rescaling is the same as for ``pm.Minibatch``: the
 observed log-likelihood must be scaled by ``N / batch_size`` through the existing
@@ -84,7 +84,9 @@ Examples
 
 from __future__ import annotations
 
+import glob
 import numbers
+import os
 import warnings
 
 from collections.abc import Callable, Iterable, Iterator
@@ -92,6 +94,7 @@ from collections.abc import Callable, Iterable, Iterator
 import numpy as np
 
 from pymc.model import modelcontext
+from pymc.variational.inference import Inference
 from pymc.variational.inference import fit as _fit
 
 __all__ = ["DataLoader", "IterableDataset", "Trainer", "parquet_source", "shuffle_buffer"]
@@ -158,9 +161,11 @@ class DataLoader:
         ``50 * batch_size``. Ignored when ``shuffle=False``.
     seed : int, optional
         Seed for the shuffle buffer (ignored when ``shuffle=False``).
-    sample_shape : tuple of int, default ()
+    sample_shape : tuple of int, optional
         Trailing shape of a single observation. ``()`` for scalar observations,
         ``(k,)`` to stream ``k`` columns (e.g. features + the observed column).
+        Defaults to ``dataset.shape[1:]`` for a raw ``np.ndarray`` source (its
+        rows are the samples, like torch's ``TensorDataset``), else ``()``.
     dtype : str, default "float64"
         Dtype each prepared batch is cast to; match the dtype of the ``pm.Data``
         placeholder the batches are streamed into.
@@ -174,7 +179,10 @@ class DataLoader:
         warns at construction and a non-positive value raises (it would otherwise
         silently disable or invert the rescaling).
     preprocess_fn : callable, optional
-        Pure transform applied to each batch before it is yielded.
+        Pure transform applied to each batch before validation (e.g.
+        normalization). It must preserve the row count and ``sample_shape``;
+        to select columns, do it at the source instead
+        (``parquet_source(columns=...)``).
     """
 
     def __init__(
@@ -185,13 +193,18 @@ class DataLoader:
         shuffle: bool = False,
         buffer_size: int | None = None,
         seed: int | None = None,
-        sample_shape: tuple[int, ...] = (),
+        sample_shape: tuple[int, ...] | None = None,
         dtype: str = "float64",
         total_size: int | str | None = None,
         preprocess_fn: Callable[[np.ndarray], np.ndarray] | None = None,
     ):
         if not _is_positive_int(batch_size):
             raise ValueError(f"batch_size must be a positive integer, got {batch_size!r}")
+        if sample_shape is None:
+            # A raw array is rows-of-samples; without this default a 2-D array
+            # would be read as blocks of scalars and silently flattened.
+            sample_shape = dataset.shape[1:] if isinstance(dataset, np.ndarray) else ()
+        sample_shape = tuple(sample_shape)
 
         raw_factory = _make_factory(dataset)
         source_factory = raw_factory
@@ -201,7 +214,7 @@ class DataLoader:
             # shuffle_buffer concatenates yields along the leading axis, so single
             # samples must be promoted to one-row blocks before shuffling.
             source_factory = shuffle_buffer(
-                _block_factory(raw_factory, tuple(sample_shape)),
+                _block_factory(raw_factory, sample_shape),
                 buffer_size=buffer_size,
                 batch_size=batch_size,
                 seed=seed,
@@ -213,7 +226,7 @@ class DataLoader:
                 raise ValueError(f"total_size string must be 'auto', got {total_size!r}")
             # Count the unshuffled source: the shuffle wrapper drops the trailing
             # partial batch, so counting through it would undercount N.
-            total_size = _auto_total_size(raw_factory, dataset, tuple(sample_shape))
+            total_size = _auto_total_size(raw_factory, dataset, sample_shape)
         elif total_size is None:
             warnings.warn(
                 "DataLoader created with total_size=None: the minibatch "
@@ -233,7 +246,7 @@ class DataLoader:
 
         # Plain Python ints: create_minibatch_rv rejects np.int64 for total_size.
         self._batch_size = int(batch_size)
-        self._sample_shape = tuple(sample_shape)
+        self._sample_shape = sample_shape
         self._dtype = dtype
         self._total_size = None if total_size is None else int(total_size)
         self._preprocess_fn = preprocess_fn
@@ -267,8 +280,10 @@ class DataLoader:
     def __iter__(self) -> Iterator[np.ndarray]:
         """Yield one epoch of validated ``(batch_size, *sample_shape)`` minibatches.
 
-        This is the stream :class:`Trainer` pushes into the model's ``pm.Data``
-        placeholder via ``set_data``. Re-iterate the loader for another epoch.
+        The same batches the :class:`Trainer` streams into the model's ``pm.Data``
+        placeholder (it consumes them through an accounting wrapper, so plain
+        iteration leaves the counters untouched). Re-iterate the loader for
+        another epoch.
         """
         for batch in self._rebatched():
             yield self._prepare(batch)
@@ -278,8 +293,8 @@ class DataLoader:
 
         ``total_size=len(loader)`` is how the model gets the ``N / batch_size``
         rescaling. Note this returns the row count ``N``, not the batch count
-        (``ceil(N / batch_size)``) that ``torch.utils.data.DataLoader.__len__``
-        returns; ``total_size`` needs ``N``. :attr:`total_size` is the same value.
+        that ``torch.utils.data.DataLoader.__len__`` returns; ``total_size``
+        needs ``N``. :attr:`total_size` is the same value.
         """
         if self._total_size is None:
             raise TypeError(
@@ -315,17 +330,24 @@ class DataLoader:
         return np.array(batch, dtype=self._dtype)
 
     def _maybe_warn_total_size(self) -> None:
-        """Warn once if total_size differs from the rows seen in one pass by more than 10%."""
+        """Warn once if ``total_size`` is inconsistent with the rows seen in one pass.
+
+        A correct ``N`` satisfies ``seen <= N < seen + batch_size`` after a full
+        pass (the trailing partial batch is dropped), so that window never warns;
+        outside it a 10% slack absorbs sources that are only approximately sized.
+        """
         if self._warned_size or self._total_size is None:
             return
         self._warned_size = True
         seen = self._rows_streamed
-        if seen and abs(self._total_size - seen) > 0.1 * seen:
+        if not seen or seen <= self._total_size < seen + self._batch_size:
+            return
+        if abs(self._total_size - seen) > 0.1 * seen:
             warnings.warn(
                 f"total_size={self._total_size} disagrees with the {seen} rows streamed "
                 f"in one full pass; the N/batch_size rescaling, and therefore the "
-                f"posterior width, is likely wrong. Pass the true dataset size, or "
-                f"total_size='auto'.",
+                f"posterior width, is likely wrong. Pass the true dataset size (or, if "
+                f"'auto' resolved it from the source's n_rows, fix that attribute).",
                 UserWarning,
                 stacklevel=3,
             )
@@ -352,8 +374,8 @@ class DataLoader:
 class Trainer:
     """Drive variational inference over a :class:`DataLoader` without user callbacks.
 
-    Follows the design in PyMC's variational-inference rework (Grabowski, *VI
-    Overview*) and PyTorch Lightning: the ``Trainer`` owns the training loop, the
+    Follows the design in PyMC's variational-inference rework and PyTorch
+    Lightning: the ``Trainer`` owns the training loop, the
     :class:`DataLoader` owns batching (and ``len(dataloader)`` is the dataset size
     ``N``), and the model owns the math. The model exposes a ``pm.Data`` placeholder;
     the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
@@ -361,10 +383,12 @@ class Trainer:
 
     Parameters
     ----------
-    method : str, default "advi"
-        Variational method, forwarded to :func:`pymc.fit` (``"advi"``,
-        ``"fullrank_advi"``, ...). Once the VI rework lands this will also accept
-        an inference instance (e.g. ``ADVI()``); a string drives today's ``pm.fit``.
+    method : str or Inference, default "advi"
+        Variational method, forwarded to :func:`pymc.fit`: a name (``"advi"``,
+        ``"fullrank_advi"``, ...) or an :class:`~pymc.variational.inference.Inference`
+        instance. ``pm.fit`` applies ``model`` and ``random_seed`` only to a name;
+        an instance is already bound to a model, so configure it at construction
+        (e.g. ``ADVI(random_seed=...)``).
     dataloader : DataLoader
         The minibatch source. ``len(dataloader)`` is ``N``; the model should pass
         it to the observed distribution's ``total_size``.
@@ -402,7 +426,7 @@ class Trainer:
     def __init__(
         self,
         *,
-        method: str = "advi",
+        method: str | Inference = "advi",
         dataloader: DataLoader,
         model=None,
         data_name: str = "batch",
@@ -414,15 +438,12 @@ class Trainer:
         self.data_name = data_name
         self._fit_kwargs = fit_kwargs
 
-    def fit(
-        self,
-        n: int = 10_000,
-        *,
-        random_seed: int | None = None,
-        progressbar: bool = False,
-        **kwargs,
-    ):
+    def fit(self, n: int = 10_000, **kwargs):
         """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
+
+        Keyword arguments are forwarded to :func:`pymc.fit` on top of the
+        constructor's ``fit_kwargs`` (per-call wins); ``progressbar`` defaults to
+        ``False`` unless either sets it.
 
         Returns
         -------
@@ -435,6 +456,13 @@ class Trainer:
                 f"Trainer needs a DataLoader for `dataloader`, got {type(loader).__name__}."
             )
         model = modelcontext(self.model)
+        if self.data_name not in model:
+            # Checked before the stream starts so no batch is consumed (and no
+            # counter advances) on a typo.
+            raise KeyError(
+                f"data_name {self.data_name!r} is not a variable in the model; it "
+                f"must name the pm.Data placeholder the minibatches are streamed into."
+            )
 
         def _stream() -> Iterator[np.ndarray]:
             while True:
@@ -454,6 +482,7 @@ class Trainer:
             model.set_data(self.data_name, next(batches))
 
         merged = {**self._fit_kwargs, **kwargs}
+        merged.setdefault("progressbar", False)
         # User callbacks (e.g. convergence trackers) are appended after the
         # internal advance instead of colliding with it on the keyword.
         user_callbacks = merged.pop("callbacks", None) or []
@@ -461,8 +490,6 @@ class Trainer:
             n,
             method=self.method,
             model=model,
-            random_seed=random_seed,
-            progressbar=progressbar,
             callbacks=[_advance, *user_callbacks],
             **merged,
         )
@@ -490,12 +517,12 @@ def shuffle_buffer(
 
     It does not by itself fix a strongly time/row-ordered stream (a bounded
     buffer only block-shuffles such data); pre-shuffle on disk, or interleave
-    shards into ``chunk_source``, for that. ``buffer_size`` is a lower bound: the
-    buffer always accumulates at least ``max(buffer_size, batch_size)`` rows before
-    emitting (so a ``buffer_size`` smaller than ``batch_size`` still yields full
-    batches instead of silently dropping the stream), and a single chunk larger
-    than that is taken whole, so the buffer holds at most
-    ``max(buffer_size, batch_size, largest_chunk_rows)`` rows.
+    shards into ``chunk_source``, for that. ``buffer_size`` is a lower bound:
+    each fill accumulates at least ``max(buffer_size, batch_size)`` rows before
+    shuffling (so a ``buffer_size`` smaller than ``batch_size`` still yields full
+    batches; the final fill stops at whatever the source has left), and the chunk
+    that crosses the threshold is kept whole, so the buffer holds fewer than
+    ``max(buffer_size, batch_size)`` plus one chunk's rows.
 
     Each epoch (each call of the returned factory) draws a fresh permutation from
     a sub-stream of ``seed``, so the shuffle order differs across epochs while
@@ -742,13 +769,18 @@ def parquet_source(
     dataset size for free. Pass ``shuffle=True`` to the :class:`DataLoader` (or
     wrap in :func:`shuffle_buffer`) to get shuffled batches.
     """
-    import glob as _glob
-    import os
-
+    # pyarrow is an optional dependency, so it is imported on use.
     import pyarrow.parquet as pq
 
-    paths = sorted(_glob.glob(os.path.join(directory, pattern)))
+    paths = sorted(glob.glob(os.path.join(directory, pattern)))
     if not paths:
         raise ValueError(f"no Parquet files match {os.path.join(directory, pattern)!r}")
+    if columns is not None:
+        available = set(pq.read_schema(paths[0]).names)
+        missing = sorted(set(columns) - available)
+        if missing:
+            raise ValueError(
+                f"columns {missing} not found in {paths[0]!r}; available: {sorted(available)}"
+            )
     n_rows = sum(pq.read_metadata(p).num_rows for p in paths)
     return _ParquetDataset(paths, columns, n_rows)

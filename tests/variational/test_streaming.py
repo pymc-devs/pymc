@@ -442,3 +442,75 @@ def test_iterable_dataset_base_is_abstract():
     """The base class is a contract: __iter__ must be overridden."""
     with pytest.raises(NotImplementedError):
         iter(IterableDataset())
+
+
+def test_raw_2d_array_infers_sample_shape():
+    """A raw 2-D array defaults sample_shape to its trailing shape, so the
+    VI-rework sketch ``DataLoader(arr, batch_size=...)`` batches rows instead of
+    flattening them into scalars."""
+    data = np.arange(40, dtype="float64").reshape(20, 2)
+    with pytest.warns(UserWarning, match="counting pass"):
+        ds = DataLoader(data, batch_size=8, total_size="auto")
+    assert ds.total_size == 20
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(8, 2), (8, 2)]
+    np.testing.assert_array_equal(np.concatenate(batches), data[:16])
+
+
+def test_explicit_sample_shape_overrides_inference():
+    """An explicit sample_shape=() reads each row of a 2-D array as a block of
+    scalar samples, the pre-inference behavior."""
+    data = np.arange(40, dtype="float64").reshape(20, 2)
+    ds = DataLoader(data, batch_size=8, sample_shape=(), total_size=40)
+    batches = list(ds)
+    assert [b.shape for b in batches] == [(8,)] * 5
+
+
+def test_trainer_accepts_inference_instance():
+    """An Inference instance is forwarded to pm.fit unchanged; it is bound to
+    the model it was built under, so the Trainer only streams the batches."""
+    data = np.ones((4, 1))
+    loader = DataLoader(lambda: iter([data] * 50), batch_size=4, sample_shape=(1,), total_size=4)
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((4, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        approx = Trainer(method=pm.ADVI(random_seed=0), dataloader=loader).fit(5)
+    assert len(approx.hist) == 5
+    np.testing.assert_array_equal(model["batch"].get_value(), data)
+
+
+def test_constructor_fit_kwargs_take_random_seed():
+    """random_seed works as a constructor default, as the docstring promises,
+    and a per-call value overrides the constructor's."""
+    data = np.ones((4, 1))
+
+    def fit_with(ctor_kwargs, fit_kwargs):
+        loader = DataLoader(
+            lambda: iter([data] * 50), batch_size=4, sample_shape=(1,), total_size=4
+        )
+        with pm.Model():
+            mu = pm.Normal("mu", 0, 1)
+            batch = pm.Data("batch", np.zeros((4, 1)))
+            pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+            return Trainer(method="advi", dataloader=loader, data_name="batch", **ctor_kwargs).fit(
+                5, **fit_kwargs
+            )
+
+    a = fit_with({"random_seed": 7}, {})
+    b = fit_with({"random_seed": 0}, {"random_seed": 7})
+    np.testing.assert_array_equal(a.hist, b.hist)
+
+
+def test_unknown_data_name_raises_before_consuming():
+    """A data_name that is not in the model raises a guided KeyError before any
+    batch is pulled from the loader."""
+    loader = DataLoader(
+        lambda: iter([np.zeros((4, 1))] * 3), batch_size=4, sample_shape=(1,), total_size=4
+    )
+    with pm.Model():
+        pm.Normal("mu", 0, 1)
+        with pytest.raises(KeyError, match="pm.Data placeholder"):
+            Trainer(method="advi", dataloader=loader, data_name="nope").fit(2)
+    assert loader.batches_seen == 0
+    assert loader.rows_streamed == 0
