@@ -302,6 +302,7 @@ def test_shuffle_buffer_small_buffer_conserves_rows():
 
 
 def test_shuffle_buffer_rejects_nonpositive_sizes():
+    """Zero or negative buffer/batch sizes raise at construction."""
     data = np.zeros((10, 1))
     with pytest.raises(ValueError, match="buffer_size"):
         shuffle_buffer(_chunks(data, 5), buffer_size=0, batch_size=4)

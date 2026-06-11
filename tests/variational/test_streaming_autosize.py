@@ -113,6 +113,7 @@ def test_auto_rejects_factory_returning_same_one_shot_iterator():
 
 
 def test_auto_rejects_bad_n_rows():
+    """A non-positive source .n_rows is rejected instead of trusted."""
     f = _factory(np.zeros((8, 1)), 4)
     f.n_rows = 0
     with pytest.raises(ValueError, match="n_rows must be a positive integer"):
@@ -181,6 +182,7 @@ def test_parquet_source_columns_and_shard_order(tmp_path):
 
 
 def test_parquet_source_empty_dir_raises(tmp_path):
+    """A directory with no matching Parquet files raises a clear error."""
     pytest.importorskip("pyarrow")
     with pytest.raises(ValueError, match="no Parquet files match"):
         parquet_source(str(tmp_path))
