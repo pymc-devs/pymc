@@ -34,11 +34,9 @@ def _chunks(data, size):
 
 def test_plain_loader_rebatches_arbitrary_blocks():
     """Blocks of 3 with batch_size=4 are re-batched in order; the trailing rows
-    that cannot fill a final batch are dropped (drop_last semantics), which the
-    unshuffled loader warns about up front."""
+    that cannot fill a final batch are dropped (drop_last semantics)."""
     data = np.arange(20, dtype="float64").reshape(10, 2)
-    with pytest.warns(UserWarning, match="dropped every pass"):
-        ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
+    ds = DataLoader(_chunks(data, 3), batch_size=4, sample_shape=(2,), total_size=10)
     batches = list(ds)
     assert [b.shape for b in batches] == [(4, 2), (4, 2)]
     np.testing.assert_array_equal(np.concatenate(batches), data[:8])
@@ -49,10 +47,7 @@ def test_raw_array_source_like_vi_rework_sketch():
     ``Dataloader(np.random.normal(...), batch_size=...)``: rows are yielded one
     sample at a time, re-batched, and counted as rows by total_size='auto'."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
-    with (
-        pytest.warns(UserWarning, match="counting pass"),
-        pytest.warns(UserWarning, match="dropped every pass"),
-    ):
+    with pytest.warns(UserWarning, match="counting pass"):
         ds = DataLoader(data, batch_size=8, sample_shape=(2,), total_size="auto")
     assert ds.total_size == 20
     batches = list(ds)
@@ -454,10 +449,7 @@ def test_raw_2d_array_infers_sample_shape():
     VI-rework sketch ``DataLoader(arr, batch_size=...)`` batches rows instead of
     flattening them into scalars."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
-    with (
-        pytest.warns(UserWarning, match="counting pass"),
-        pytest.warns(UserWarning, match="dropped every pass"),
-    ):
+    with pytest.warns(UserWarning, match="counting pass"):
         ds = DataLoader(data, batch_size=8, total_size="auto")
     assert ds.total_size == 20
     batches = list(ds)
@@ -537,6 +529,66 @@ def test_fit_one_step_on_single_batch_one_shot_source():
         approx = Trainer(method="advi", dataloader=loader).fit(1, random_seed=0)
     assert len(approx.hist) == 1
     assert loader.batches_seen == 1
+
+
+def test_refine_after_fit_keeps_streaming():
+    """Inference.refine replays pm.fit's saved callbacks; the internal advance
+    skips only fit's own final step, so refine keeps streaming fresh batches
+    instead of going permanently dead and retraining on one batch."""
+    data = np.ones((4, 1))
+    loader = DataLoader(lambda: iter([data] * 50), batch_size=4, sample_shape=(1,), total_size=4)
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((4, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        inference = pm.ADVI(random_seed=0)
+        Trainer(method=inference, dataloader=loader).fit(3)
+        assert loader.batches_seen == 3
+        inference.refine(4, progressbar=False)
+    assert loader.batches_seen == 7
+
+
+def test_total_size_check_fires_when_fit_ends_at_pass_boundary():
+    """fit(n) with n exactly the batches in one pass still runs the total_size
+    sanity check: the stream is kept one batch ahead, so stopping at the
+    boundary does not abandon the check right before it would fire."""
+    data = np.zeros((40, 1))
+    loader = DataLoader(_chunks(data, 10), batch_size=10, sample_shape=(1,), total_size=400)
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((10, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        with pytest.warns(UserWarning, match="disagrees with"):
+            Trainer(method="advi", dataloader=loader).fit(4, random_seed=0)
+
+
+def test_fit_rejects_nonpositive_n():
+    """fit consumes the seed batch before pm.fit could reject n itself, so a
+    non-positive n is refused up front, before touching the stream."""
+    loader = DataLoader(
+        lambda: iter([np.zeros((2, 1))]), batch_size=2, sample_shape=(1,), total_size=2
+    )
+    with pm.Model():
+        mu = pm.Normal("mu", 0, 1)
+        batch = pm.Data("batch", np.zeros((2, 1)))
+        pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        with pytest.raises(ValueError, match="positive integer"):
+            Trainer(method="advi", dataloader=loader).fit(0)
+    assert loader.batches_seen == 0
+
+
+def test_shuffle_buffer_accepts_factory_returning_reiterable():
+    """A factory returning a re-iterable (which _make_factory tolerates for the
+    loader) must not restart per buffer fill and loop forever; the stream is
+    normalized to a single iterator."""
+    data = np.arange(120, dtype="float64").reshape(120, 1)
+    chunks = [data[i : i + 20] for i in range(0, 120, 20)]
+    src = shuffle_buffer(lambda: chunks, buffer_size=50, batch_size=10, seed=0)
+    batches = list(src())
+    assert len(batches) == 12
+    np.testing.assert_array_equal(
+        np.sort(np.concatenate([b.ravel() for b in batches])), data.ravel()
+    )
 
 
 def test_unknown_data_name_raises_before_consuming():

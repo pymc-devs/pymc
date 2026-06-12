@@ -231,12 +231,10 @@ def test_stream_batches_updates_counters_and_warns_on_wrong_total_size():
 
 
 def test_sanity_silent_when_drop_last_truncates():
-    """An exactly-correct total_size does not warn at the epoch boundary when
-    batch_size does not divide N: the trailing partial batch is dropped by
-    design (the fixed-order construction warning is separate)."""
+    """An exactly-correct total_size does not warn when batch_size does not
+    divide N: the trailing partial batch is dropped by design."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
-    with pytest.warns(UserWarning, match="dropped every pass"):
-        ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
+    ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
@@ -245,10 +243,7 @@ def test_sanity_silent_when_drop_last_truncates():
 def test_sanity_silent_for_auto_resolved_non_divisible_n():
     """total_size='auto' must not warn against the N it just resolved."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
-    with (
-        pytest.warns(UserWarning, match="counting pass"),
-        pytest.warns(UserWarning, match="dropped every pass"),
-    ):
+    with pytest.warns(UserWarning, match="counting pass"):
         ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size="auto")
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
@@ -278,31 +273,6 @@ def test_sanity_check_not_fooled_by_cumulative_rows_matching_total_size():
         next(stray)
     with pytest.warns(UserWarning, match="disagrees with"):
         list(ds._stream_batches())
-
-
-def test_fixed_order_non_divisible_total_size_warns_at_construction():
-    """shuffle=False with batch_size not dividing N would drop the same trailing
-    rows every pass, so the loader says so up front."""
-    data = np.arange(25, dtype="float64").reshape(25, 1)
-    with pytest.warns(UserWarning, match="dropped every pass"):
-        DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
-
-
-def test_shuffled_non_divisible_total_size_is_silent_at_construction():
-    """With shuffle=True the dropped remainder is re-drawn each epoch, so the
-    fixed-tail warning does not apply."""
-    data = np.arange(25, dtype="float64").reshape(25, 1)
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", UserWarning)
-        DataLoader(
-            _factory(data, 5),
-            batch_size=10,
-            shuffle=True,
-            buffer_size=20,
-            seed=0,
-            sample_shape=(1,),
-            total_size=25,
-        )
 
 
 def test_auto_rejects_factory_closing_over_consumed_iterator():
@@ -343,6 +313,31 @@ def test_parquet_source_streams_row_groups_not_whole_files(tmp_path):
     blocks = list(parquet_source(str(tmp_path)))
     assert [b.shape for b in blocks] == [(10, 1), (10, 1), (10, 1)]
     np.testing.assert_array_equal(np.concatenate(blocks).ravel(), np.arange(30.0))
+
+
+def test_parquet_source_rejects_non_numeric_columns(tmp_path):
+    """A string column cannot be streamed into a float batch; the default
+    all-columns freeze rejects it at construction, naming the column and the
+    columns= remedy, instead of failing later at the batch cast."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"x": [1.0, 2.0], "id": ["a", "b"]}), f"{tmp_path}/p.parquet")
+    with pytest.raises(ValueError, match="not numeric"):
+        parquet_source(str(tmp_path))
+    src = parquet_source(str(tmp_path), columns=["x"])
+    np.testing.assert_array_equal(next(iter(src)), [[1.0], [2.0]])
+
+
+def test_parquet_source_names_the_shard_missing_a_column(tmp_path):
+    """read_row_group silently drops unknown column names, so a later shard
+    missing a frozen column must raise an error that names that shard."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"a": [1.0], "b": [2.0]}), f"{tmp_path}/p0.parquet")
+    pq.write_table(pa.table({"a": [3.0]}), f"{tmp_path}/p1.parquet")
+    src = parquet_source(str(tmp_path))
+    with pytest.raises(ValueError, match="p1.parquet"):
+        list(src)
 
 
 def test_parquet_source_rejects_unknown_columns(tmp_path):
