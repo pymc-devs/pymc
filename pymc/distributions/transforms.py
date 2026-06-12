@@ -57,6 +57,7 @@ def _default_transform(op: Op, rv: TensorVariable):
 
 class LogExpM1(Transform):
     name = "log_exp_m1"
+    ndim_supp = 0
 
     def backward(self, value, *inputs):
         return pt.softplus(value)
@@ -84,6 +85,7 @@ class Ordered(Transform):
     """
 
     name = "ordered"
+    ndim_supp = 1
 
     def __init__(self, positive=False, ascending=True):
         self.positive = positive
@@ -124,6 +126,7 @@ class SumTo1(Transform):
     """
 
     name = "sumto1"
+    ndim_supp = 1
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
@@ -179,6 +182,7 @@ class CholeskyCorrTransform(Transform):
     """
 
     name = "cholesky_corr"
+    ndim_supp = 1
 
     def __init__(self, n, upper: bool = False):
         """
@@ -425,6 +429,7 @@ class CholeskyCovPacked(Transform):
     """Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the log scale."""
 
     name = "cholesky-cov-packed"
+    ndim_supp = 1
 
     def __init__(self, n):
         """Create a CholeskyCovPack object.
@@ -494,6 +499,7 @@ class CholeskyCovTransform(Transform):
     """
 
     name = "cholesky-cov"
+    ndim_supp = 1
 
     def __init__(self, n):
         """Create a CholeskyCovTransform.
@@ -649,6 +655,7 @@ class ZeroSumTransform(Transform):
 
     def __init__(self, zerosum_axes):
         self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
+        self.ndim_supp = len(self.zerosum_axes)
 
     @staticmethod
     def extend_axis(array, axis):
