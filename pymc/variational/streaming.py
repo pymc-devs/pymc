@@ -50,8 +50,8 @@ step, so it drops out of the model body, is the next step in PyMC's VI rework.)
 Batches have exactly ``batch_size`` rows, so each pass drops the final
 ``N mod batch_size`` rows (torch's ``drop_last``). With ``shuffle=True`` that
 remainder is re-drawn every epoch, so all rows participate across epochs; with
-a source that replays a fixed order, the same rows would be dropped every pass,
-and the loader warns at construction.
+a source that replays a fixed order, the same rows are dropped every pass (after
+a one-time on-disk pre-shuffle that fixed remainder is a random subset).
 
 One difference from ``pm.Minibatch`` is shuffling.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
@@ -127,7 +127,7 @@ class IterableDataset:
 
     A plain zero-arg factory (``Callable[[], Iterator[np.ndarray]]``) or any
     re-iterable is also accepted directly by :class:`DataLoader`; this base class
-    is only needed when you want to attach behaviour or ``n_rows`` to a custom
+    is only needed when you want to attach behavior or ``n_rows`` to a custom
     source.
     """
 
@@ -157,7 +157,7 @@ class DataLoader:
         ``drop_last=True`` in PyTorch (required here because the model observes a
         fixed-shape placeholder). With ``shuffle=True`` the dropped remainder
         differs per epoch; with a fixed replay order it is the same rows every
-        pass (warned at construction).
+        pass.
     batch_size : int
         Leading dimension of every yielded minibatch.
     shuffle : bool, default False
@@ -255,21 +255,6 @@ class DataLoader:
                 f"{total_size!r}."
             )
 
-        if total_size is not None and not shuffle and int(total_size) % int(batch_size):
-            # Exact-size batches drop the tail of every pass (drop_last). Without
-            # shuffling the drop is not re-randomized, so a source that replays
-            # the same order would never show those rows to the fit at all.
-            warnings.warn(
-                f"shuffle=False with total_size={int(total_size)} not divisible by "
-                f"batch_size={int(batch_size)}: the trailing "
-                f"{int(total_size) % int(batch_size)} rows are dropped every pass, and "
-                f"if the source replays the same order each epoch they are never seen "
-                f"by the fit. Pass shuffle=True (the dropped remainder is then re-drawn "
-                f"each epoch) or choose a batch_size that divides the dataset size.",
-                UserWarning,
-                stacklevel=2,
-            )
-
         # Plain Python ints: create_minibatch_rv rejects np.int64 for total_size.
         self._batch_size = int(batch_size)
         self._sample_shape = sample_shape
@@ -333,18 +318,26 @@ class DataLoader:
         """One epoch of prepared minibatches, with accounting (the Trainer's path).
 
         Like :meth:`__iter__` but it updates :attr:`batches_seen` /
-        :attr:`rows_streamed` and runs the one-shot ``total_size`` sanity check at
-        the epoch boundary. :meth:`__iter__` stays side-effect-free so plain
-        iteration does not mutate counters.
+        :attr:`rows_streamed` and runs the one-shot ``total_size`` sanity check on
+        the pass's final batch. The rebatcher is kept one batch ahead so the check
+        still fires when a fit stops exactly at the pass boundary; without the
+        lookahead the generator would be abandoned right before its epilogue.
+        :meth:`__iter__` stays side-effect-free so plain iteration does not mutate
+        counters.
         """
         seen_this_pass = 0
-        for batch in self._rebatched():
+        it = self._rebatched()
+        batch = next(it, None)
+        while batch is not None:
+            following = next(it, None)
             prepared = self._prepare(batch)
             self._batches_seen += 1
             self._rows_streamed += int(prepared.shape[0])
             seen_this_pass += int(prepared.shape[0])
+            if following is None:
+                self._maybe_warn_total_size(seen_this_pass)
             yield prepared
-        self._maybe_warn_total_size(seen_this_pass)
+            batch = following
 
     def _prepare(self, batch: np.ndarray) -> np.ndarray:
         """Preprocess, validate, and return an owned copy of one batch.
@@ -482,6 +475,8 @@ class Trainer:
         :class:`Approximation`
             The fitted approximation, as returned by :func:`pymc.fit`.
         """
+        if not _is_positive_int(n):
+            raise ValueError(f"n must be a positive integer (the number of fit steps), got {n!r}")
         loader = self.dataloader
         if not isinstance(loader, DataLoader):
             raise TypeError(
@@ -514,11 +509,12 @@ class Trainer:
 
         def _advance(*_):
             # pm.fit fires callbacks after every step including the last; skip the
-            # advance there so exactly n batches are consumed (an (n+1)-th would be
-            # fetched, never trained on, and could exhaust a finite source).
+            # advance on this fit's final step so exactly n batches are consumed.
+            # Only that one call is skipped (not every call past n): Inference.refine
+            # replays the saved callbacks and must keep streaming fresh batches.
             nonlocal steps_done
             steps_done += 1
-            if steps_done < n:
+            if steps_done != n:
                 model.set_data(self.data_name, next(batches))
 
         merged = {**self._fit_kwargs, **kwargs}
@@ -580,7 +576,9 @@ def shuffle_buffer(
         # A fresh sub-stream per epoch: re-iterating reshuffles instead of
         # replaying one fixed permutation, yet stays reproducible per seed.
         rng = np.random.default_rng(seed_seq.spawn(1)[0])
-        it = chunk_source()
+        # A factory may return a re-iterable (a list of chunks, ...); normalize so
+        # each buffer fill continues one stream instead of restarting it forever.
+        it = iter(chunk_source())
         carry: np.ndarray | None = None
         exhausted = False
         # Accumulate at least one batch even when buffer_size < batch_size,
@@ -628,8 +626,9 @@ def _promote_to_block(a: np.ndarray, sample_shape: tuple[int, ...]) -> np.ndarra
         return a[None, ...]
     if a.ndim != len(sample_shape) + 1 or a.shape[1:] != sample_shape:
         raise ValueError(
-            f"source yielded shape {a.shape}; expected a single sample of shape "
-            f"{sample_shape} or a block of shape (rows, *{sample_shape})"
+            f"source yielded shape {a.shape}; expected one sample of shape "
+            f"{sample_shape} or a (rows, *sample_shape) block; if the source is "
+            f"right, declare its trailing shape with DataLoader(sample_shape=...)"
         )
     return a
 
@@ -800,6 +799,12 @@ class _ParquetDataset(IterableDataset):
 
         for path in self._paths:
             file = pq.ParquetFile(path)
+            missing = [c for c in self._columns if c not in file.schema_arrow.names]
+            if missing:
+                # read_row_group(columns=...) silently drops unknown names, so a
+                # malformed shard must be named here, not surface as a bare
+                # KeyError with no path.
+                raise ValueError(f"columns {missing} not found in {path!r}")
             for i in range(file.metadata.num_row_groups):
                 table = file.read_row_group(i, columns=self._columns)
                 # Stack by the frozen column names, not the file's own order, so
@@ -826,19 +831,36 @@ def parquet_source(
     wrap in :func:`shuffle_buffer`) to get shuffled batches.
     """
     # pyarrow is an optional dependency, so it is imported on use.
+    import pyarrow as pa
     import pyarrow.parquet as pq
 
     paths = sorted(glob.glob(os.path.join(directory, pattern)))
     if not paths:
         raise ValueError(f"no Parquet files match {os.path.join(directory, pattern)!r}")
-    schema_names = list(pq.read_schema(paths[0]).names)
+    schema = pq.read_schema(paths[0])
     if columns is None:
-        columns = schema_names
+        columns = list(schema.names)
     else:
-        missing = sorted(set(columns) - set(schema_names))
+        missing = sorted(set(columns) - set(schema.names))
         if missing:
             raise ValueError(
-                f"columns {missing} not found in {paths[0]!r}; available: {sorted(schema_names)}"
+                f"columns {missing} not found in {paths[0]!r}; available: {sorted(schema.names)}"
             )
+    non_numeric = [
+        c
+        for c in columns
+        if not (
+            pa.types.is_integer(schema.field(c).type)
+            or pa.types.is_floating(schema.field(c).type)
+            or pa.types.is_boolean(schema.field(c).type)
+        )
+    ]
+    if non_numeric:
+        # A string/dictionary column would turn whole chunks object-dtype and only
+        # fail later at the batch cast, without naming the column.
+        raise ValueError(
+            f"columns {non_numeric} in {paths[0]!r} are not numeric and cannot be "
+            f"streamed into a float batch; select numeric columns with columns=."
+        )
     n_rows = sum(pq.read_metadata(p).num_rows for p in paths)
     return _ParquetDataset(paths, columns, n_rows)
