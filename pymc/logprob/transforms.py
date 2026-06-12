@@ -128,7 +128,7 @@ from pymc.math import logdiffexp
 
 
 class Transform(abc.ABC):
-    ndim_supp = None
+    ndim_supp: int | None = None
 
     @abc.abstractmethod
     def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
@@ -744,6 +744,7 @@ class ErfcxTransform(Transform):
 
 class LocTransform(Transform):
     name = "loc"
+    ndim_supp = 0
 
     def __init__(self, transform_args_fn):
         self.transform_args_fn = transform_args_fn
@@ -762,6 +763,7 @@ class LocTransform(Transform):
 
 class ScaleTransform(Transform):
     name = "scale"
+    ndim_supp = 0
 
     def __init__(self, transform_args_fn):
         self.transform_args_fn = transform_args_fn
@@ -781,6 +783,7 @@ class ScaleTransform(Transform):
 
 class LogTransform(Transform):
     name = "log"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.log(value)
@@ -794,6 +797,7 @@ class LogTransform(Transform):
 
 class ExpTransform(Transform):
     name = "exp"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.exp(value)
@@ -807,6 +811,7 @@ class ExpTransform(Transform):
 
 class AbsTransform(Transform):
     name = "abs"
+    ndim_supp = 0
 
     def forward(self, value, *inputs):
         return pt.abs(value)
@@ -821,6 +826,7 @@ class AbsTransform(Transform):
 
 class PowerTransform(Transform):
     name = "power"
+    ndim_supp = 0
 
     def __init__(self, power=None):
         if not isinstance(power, int | float):
@@ -864,6 +870,7 @@ class PowerTransform(Transform):
 
 class IntervalTransform(Transform):
     name = "interval"
+    ndim_supp = 0
 
     def __init__(self, args_fn: Callable[..., tuple[Variable | None, Variable | None]]):
         """Create the IntervalTransform object.
@@ -972,6 +979,7 @@ class IntervalTransform(Transform):
 
 class LogOddsTransform(Transform):
     name = "logodds"
+    ndim_supp = 0
 
     def backward(self, value, *inputs):
         return pt.expit(value)
@@ -986,6 +994,7 @@ class LogOddsTransform(Transform):
 
 class SimplexTransform(Transform):
     name = "simplex"
+    ndim_supp = 1
 
     def forward(self, value, *inputs):
         value = pt.as_tensor(value)
@@ -1013,6 +1022,7 @@ class SimplexTransform(Transform):
 
 class CircularTransform(Transform):
     name = "circular"
+    ndim_supp = 0
 
     def backward(self, value, *inputs):
         return pt.arctan2(pt.sin(value), pt.cos(value))
@@ -1029,6 +1039,8 @@ class ChainedTransform(Transform):
 
     def __init__(self, transform_list):
         self.transform_list = transform_list
+        ndims_supp = [transform.ndim_supp for transform in transform_list]
+        self.ndim_supp = max(ndims_supp) if None not in ndims_supp else None
 
     def forward(self, value, *inputs):
         for transform in self.transform_list:
