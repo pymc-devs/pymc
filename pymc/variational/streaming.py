@@ -55,7 +55,7 @@ a one-time on-disk pre-shuffle that fixed remainder is a random subset).
 
 One difference from ``pm.Minibatch`` is shuffling.
 ``pm.Minibatch`` draws a fresh uniform index over all N rows every step, so its
-minibatches are i.i.d. by construction.  A streaming source is only as well
+minibatches are i.i.d. by construction. A streaming source is only as well
 mixed as the order it yields rows in: reading time/row-ordered data through a
 bounded buffer is merely a block-shuffle, and the resulting non-representative
 minibatches can bias the variational posterior.
@@ -143,7 +143,8 @@ class DataLoader:
     Like ``torch.utils.data.DataLoader``, it batches (and optionally
     shuffles) an :class:`IterableDataset` into the minibatch stream that
     :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
-    is the dataset size ``N``). The full dataset never enters memory.
+    is the dataset size ``N``). With bounded source chunks the full dataset is
+    never resident at once.
 
     Parameters
     ----------
