@@ -465,8 +465,11 @@ class Trainer:
     def fit(self, n: int = 10_000, **kwargs):
         """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
 
-        Exactly ``n`` minibatches are consumed: the first seeds the placeholder
-        before step 0, and the advance after the final step is skipped. Keyword
+        Exactly ``n`` minibatches are fed to the model: the first seeds the
+        placeholder before step 0, and the advance after the final step is skipped.
+        The accounting stream reads one batch ahead so the pass-size check can fire
+        at a pass boundary, so a re-readable source (the only kind the loader
+        accepts) may be read one batch past the ``n`` the model uses. Keyword
         arguments are forwarded to :func:`pymc.fit` on top of the constructor's
         ``fit_kwargs`` (per-call wins); ``progressbar`` defaults to ``False``
         unless either sets it.
@@ -796,16 +799,35 @@ class _ParquetDataset(IterableDataset):
         self.n_rows = n_rows
 
     def __iter__(self) -> Iterator[np.ndarray]:
+        import pyarrow as pa
         import pyarrow.parquet as pq
 
         for path in self._paths:
             file = pq.ParquetFile(path)
-            missing = [c for c in self._columns if c not in file.schema_arrow.names]
+            schema = file.schema_arrow
+            missing = [c for c in self._columns if c not in schema.names]
             if missing:
                 # read_row_group(columns=...) silently drops unknown names, so a
                 # malformed shard must be named here, not surface as a bare
                 # KeyError with no path.
                 raise ValueError(f"columns {missing} not found in {path!r}")
+            non_numeric = [
+                c
+                for c in self._columns
+                if not (
+                    pa.types.is_integer(schema.field(c).type)
+                    or pa.types.is_floating(schema.field(c).type)
+                    or pa.types.is_boolean(schema.field(c).type)
+                )
+            ]
+            if non_numeric:
+                # parquet_source validates types against the first shard only; a
+                # later shard whose column turned non-numeric would otherwise
+                # become an object array and fail at the batch cast with no path.
+                raise ValueError(
+                    f"columns {non_numeric} in {path!r} are not numeric and cannot be "
+                    f"streamed into a float batch; select numeric columns with columns=."
+                )
             for i in range(file.metadata.num_row_groups):
                 table = file.read_row_group(i, columns=self._columns)
                 # Stack by the frozen column names, not the file's own order, so
