@@ -531,20 +531,34 @@ def test_fit_one_step_on_single_batch_one_shot_source():
     assert loader.batches_seen == 1
 
 
-def test_refine_after_fit_keeps_streaming():
-    """Inference.refine replays pm.fit's saved callbacks; the internal advance
-    skips only fit's own final step, so refine keeps streaming fresh batches
-    instead of going permanently dead and retraining on one batch."""
-    data = np.ones((4, 1))
-    loader = DataLoader(lambda: iter([data] * 50), batch_size=4, sample_shape=(1,), total_size=4)
-    with pm.Model():
+def test_refine_after_fit_resumes_the_stream():
+    """Inference.refine replays pm.fit's saved callbacks. Because the advance
+    skips only fit's own final step (and not every step past n), refine resumes
+    advancing the stream instead of going permanently dead on the last batch.
+
+    refine does not re-seed, so its first step still trains on the batch fit left
+    in the placeholder; this pins that resume-not-reseed behavior with distinct
+    batch markers rather than claiming every refine step is fresh.
+    """
+    blocks = [np.full((4, 1), float(i)) for i in range(50)]
+    loader = DataLoader(lambda: iter(blocks), batch_size=4, sample_shape=(1,), total_size=4)
+    sets = []
+    with pm.Model() as model:
         mu = pm.Normal("mu", 0, 1)
         batch = pm.Data("batch", np.zeros((4, 1)))
         pm.Normal("y", mu, 1, observed=batch[:, 0], total_size=len(loader))
+        original = model.set_data
+        model.set_data = lambda name, values, *a, **k: (  # type: ignore[method-assign]
+            sets.append(float(np.asarray(values)[0, 0])),
+            original(name, values, *a, **k),
+        )[1]
         inference = pm.ADVI(random_seed=0)
         Trainer(method=inference, dataloader=loader).fit(3)
-        assert loader.batches_seen == 3
+        assert sets == [0.0, 1.0, 2.0]  # fit seeds 0, advances to 1 and 2, skips its last
+        sets.clear()
         inference.refine(4, progressbar=False)
+    # refine resumes from where the stream stopped (3, 4, 5, ...), not stuck on 2
+    assert sets == [3.0, 4.0, 5.0, 6.0]
     assert loader.batches_seen == 7
 
 

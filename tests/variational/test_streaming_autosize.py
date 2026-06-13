@@ -315,6 +315,19 @@ def test_parquet_source_streams_row_groups_not_whole_files(tmp_path):
     np.testing.assert_array_equal(np.concatenate(blocks).ravel(), np.arange(30.0))
 
 
+def test_parquet_source_names_a_later_shard_with_a_non_numeric_column(tmp_path):
+    """parquet_source type-checks only the first shard at construction; a later
+    shard whose same-named column turned non-numeric is caught at iteration with
+    that shard's path, not as an opaque float-cast error downstream."""
+    pa = pytest.importorskip("pyarrow")
+    pq = pytest.importorskip("pyarrow.parquet")
+    pq.write_table(pa.table({"a": [1.0, 2.0]}), f"{tmp_path}/p0.parquet")
+    pq.write_table(pa.table({"a": ["bad", "worse"]}), f"{tmp_path}/p1.parquet")
+    src = parquet_source(str(tmp_path))  # construction sees only the numeric p0
+    with pytest.raises(ValueError, match=r"p1\.parquet.*not numeric"):
+        list(src)
+
+
 def test_parquet_source_rejects_non_numeric_columns(tmp_path):
     """A string column cannot be streamed into a float batch; the default
     all-columns freeze rejects it at construction, naming the column and the
