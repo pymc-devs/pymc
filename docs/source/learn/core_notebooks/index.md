@@ -9,6 +9,7 @@ model_comparison
 posterior_predictive
 dimensionality
 pymc_pytensor
+pytensor_compilation
 dims_module
 GLM_linear
 Gaussian_Processes
