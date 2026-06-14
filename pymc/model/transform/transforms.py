@@ -106,8 +106,8 @@ def _eval_transform_graph(
         batch_inputs.append(batch_inp)
     outputs_vec = xvectorize_graph(outputs, replacements, new_tensor_dims=tuple(sample_dims))
     fn = function(
-        [pytensor.In(bi, borrow=True) for bi in batch_inputs],  # type: ignore[list-item]
-        [pytensor.Out(ov, borrow=True) for ov in outputs_vec],  # type: ignore[list-item]
+        [pytensor.In(bi, borrow=True) for bi in batch_inputs],  # type: ignore[misc]
+        [pytensor.Out(ov, borrow=True) for ov in outputs_vec],  # type: ignore[misc]
         trust_input=True,
         **(compile_kwargs or {}),
     )
@@ -209,8 +209,8 @@ def _points_to_natural_scale(points: list[PointType], model: Model) -> list[Poin
     """
     inputs, outputs = _build_transform_graph(model, forward=False)
     fn = function(
-        [pytensor.In(inp, borrow=True) for inp in inputs],  # type: ignore[list-item]
-        [pytensor.Out(out, borrow=True) for out in outputs],  # type: ignore[list-item]
+        [pytensor.In(inp, borrow=True) for inp in inputs],  # type: ignore[misc]
+        [pytensor.Out(out, borrow=True) for out in outputs],  # type: ignore[misc]
         mode="FAST_COMPILE",
     )
     result = []
