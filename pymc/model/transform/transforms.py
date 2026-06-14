@@ -78,7 +78,7 @@ def _eval_transform_graph(
 ):
     model = modelcontext(model)
 
-    if missing := (set(sample_dims) - set(dataset.dims)):
+    if missing := (set(sample_dims) - set(dataset.dims)):  # type: ignore[arg-type]
         raise ValueError(f"sample dims {sorted(missing)} missing from dataset")
 
     constrained_names = [rv.name for rv in model.free_RVs]
@@ -98,7 +98,7 @@ def _eval_transform_graph(
     batch_inputs = []
     for inp in inputs:
         batch_inp = pt.tensor(
-            inp.name + "_batch",
+            inp.name + "_batch",  # type: ignore[operator]
             shape=(None,) * len(sample_dims) + inp.type.shape,
             dtype=inp.type.dtype,
         )
@@ -106,8 +106,8 @@ def _eval_transform_graph(
         batch_inputs.append(batch_inp)
     outputs_vec = xvectorize_graph(outputs, replacements, new_tensor_dims=tuple(sample_dims))
     fn = function(
-        [pytensor.In(bi, borrow=True) for bi in batch_inputs],
-        [pytensor.Out(ov, borrow=True) for ov in outputs_vec],
+        [pytensor.In(bi, borrow=True) for bi in batch_inputs],  # type: ignore[list-item]
+        [pytensor.Out(ov, borrow=True) for ov in outputs_vec],  # type: ignore[list-item]
         trust_input=True,
         **(compile_kwargs or {}),
     )
@@ -209,8 +209,8 @@ def _points_to_natural_scale(points: list[PointType], model: Model) -> list[Poin
     """
     inputs, outputs = _build_transform_graph(model, forward=False)
     fn = function(
-        [pytensor.In(inp, borrow=True) for inp in inputs],
-        [pytensor.Out(out, borrow=True) for out in outputs],
+        [pytensor.In(inp, borrow=True) for inp in inputs],  # type: ignore[list-item]
+        [pytensor.Out(out, borrow=True) for out in outputs],  # type: ignore[list-item]
         mode="FAST_COMPILE",
     )
     result = []
