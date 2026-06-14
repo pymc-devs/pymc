@@ -220,3 +220,9 @@ def _points_to_natural_scale(points: list[PointType], model: Model) -> list[Poin
             {rv.name: np.asarray(v) for rv, v in zip(model.free_RVs, values, strict=True)}
         )
     return result
+
+
+__all__ = (
+    "constrain_values",
+    "unconstrain_values",
+)
