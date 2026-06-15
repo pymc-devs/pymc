@@ -1484,6 +1484,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         if var.name is None:
             raise ValueError("Variable is unnamed.")
+        if var.name in {"draw", "chain", "__sample__"}:
+            raise ValueError(
+                f"Variable can not be named '{var.name}', as it is reserved for use in `InferenceData`."
+            )
         if self.named_vars.tree_contains(var.name):
             raise ValueError(f"Variable name {var.name} already exists.")
         if var.name in self.coords:
