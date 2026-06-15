@@ -257,7 +257,8 @@ def drop_warning_stat(dt: DataTree) -> DataTree:
             warning_vars = [
                 name
                 for name in ds.data_vars
-                if name == "warning" or re.match(r"sampler_\d+__warning", str(name))
+                if name in ("warning", "divergence_message")
+                or re.match(r"sampler_\d+__warning", str(name))
             ]
             ds = ds.drop_vars(names=[*warning_vars, "warning_dim_0"], errors="ignore")
 
