@@ -24,30 +24,23 @@ from pymc.variational.streaming import (
     parquet_source,
     shuffle_buffer,
 )
-
-
-def _factory(data, size):
-    """A re-readable zero-arg factory yielding `size`-row chunks of `data`."""
-
-    def f():
-        for i in range(0, len(data), size):
-            yield data[i : i + size]
-
-    return f
+from tests.variational.streaming_helpers import chunked_factory
 
 
 def test_auto_counts_finite_source():
     """Without .n_rows, 'auto' does one counting pass and resolves the true N."""
     data = np.arange(60, dtype="float64").reshape(60, 1)
     with pytest.warns(UserWarning, match="counting pass"):
-        ds = DataLoader(_factory(data, 7), batch_size=10, sample_shape=(1,), total_size="auto")
+        ds = DataLoader(
+            chunked_factory(data, 7), batch_size=10, sample_shape=(1,), total_size="auto"
+        )
     assert ds.total_size == 60
 
 
 def test_auto_uses_n_rows_fast_path():
     """A source-advertised .n_rows is trusted without a counting pass."""
     data = np.zeros((8, 1))
-    f = _factory(data, 4)
+    f = chunked_factory(data, 4)
     f.n_rows = 1000
     ds = DataLoader(f, batch_size=4, sample_shape=(1,), total_size="auto")
     assert ds.total_size == 1000
@@ -65,7 +58,7 @@ def test_shuffle_buffer_forwards_n_rows_for_auto():
     """shuffle_buffer forwards a known .n_rows so total_size='auto' works through
     an explicit shuffle_buffer(parquet_source(...)) composition without counting."""
     data = np.arange(40, dtype="float64").reshape(40, 1)
-    src = _factory(data, 8)
+    src = chunked_factory(data, 8)
     src.n_rows = 40
     wrapped = shuffle_buffer(src, buffer_size=20, batch_size=10, seed=0)
     assert wrapped.n_rows == 40
@@ -80,7 +73,7 @@ def test_dataloader_shuffle_auto_resolves_via_n_rows():
     """DataLoader(shuffle=True, total_size='auto') resolves N from the source's
     .n_rows without a counting pass, even though shuffle wraps the source."""
     data = np.arange(40, dtype="float64").reshape(40, 1)
-    src = _factory(data, 8)
+    src = chunked_factory(data, 8)
     src.n_rows = 40
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
@@ -99,7 +92,7 @@ def test_dataloader_shuffle_auto_resolves_via_n_rows():
 def test_shuffle_buffer_without_n_rows_has_no_attribute():
     """A source without .n_rows must not gain a bogus one through the wrapper."""
     data = np.arange(40, dtype="float64").reshape(40, 1)
-    wrapped = shuffle_buffer(_factory(data, 8), buffer_size=20, batch_size=10, seed=0)
+    wrapped = shuffle_buffer(chunked_factory(data, 8), buffer_size=20, batch_size=10, seed=0)
     assert not hasattr(wrapped, "n_rows")
 
 
@@ -117,7 +110,7 @@ def test_auto_rejects_factory_returning_same_one_shot_iterator():
 
 def test_auto_rejects_bad_n_rows():
     """A non-positive source .n_rows is rejected instead of trusted."""
-    f = _factory(np.zeros((8, 1)), 4)
+    f = chunked_factory(np.zeros((8, 1)), 4)
     f.n_rows = 0
     with pytest.raises(ValueError, match="n_rows must be a positive integer"):
         DataLoader(f, batch_size=4, sample_shape=(1,), total_size="auto")
@@ -127,7 +120,7 @@ def test_sanity_warns_on_grossly_wrong_total_size():
     """A hand-passed total_size that grossly disagrees with the rows actually
     streamed in one pass triggers the one-shot warning at the epoch boundary."""
     data = np.arange(20, dtype="float64").reshape(20, 1)
-    ds = DataLoader(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=100)
+    ds = DataLoader(chunked_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=100)
     with pytest.warns(UserWarning, match="disagrees with"):
         list(ds._stream_batches())
 
@@ -135,7 +128,7 @@ def test_sanity_warns_on_grossly_wrong_total_size():
 def test_sanity_silent_when_total_size_matches():
     """No warning when total_size matches the rows streamed in one pass."""
     data = np.arange(20, dtype="float64").reshape(20, 1)
-    ds = DataLoader(_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=20)
+    ds = DataLoader(chunked_factory(data, 4), batch_size=4, sample_shape=(1,), total_size=20)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
@@ -198,7 +191,7 @@ def test_auto_counts_unshuffled_source_when_shuffling_non_divisible():
     data = np.arange(125, dtype="float64").reshape(125, 1)
     with pytest.warns(UserWarning, match="counting pass"):
         ds = DataLoader(
-            _factory(data, 125),
+            chunked_factory(data, 125),
             batch_size=10,
             shuffle=True,
             buffer_size=30,
@@ -210,12 +203,12 @@ def test_auto_counts_unshuffled_source_when_shuffling_non_divisible():
 
 
 def test_stream_batches_updates_counters_and_warns_on_wrong_total_size():
-    """The accounting stream the Trainer iterates updates the public counters and
-    fires the one-shot total_size sanity check at the epoch boundary, while plain
-    __iter__ stays side-effect-free."""
+    """The accounting stream (``DataLoader._stream_batches``) updates the public
+    counters and fires the one-shot total_size sanity check at the epoch boundary,
+    while plain __iter__ stays side-effect-free."""
     data = np.arange(40, dtype="float64").reshape(20, 2)
     ds = DataLoader(
-        _factory(data, 5),
+        chunked_factory(data, 5),
         batch_size=5,
         sample_shape=(2,),
         total_size=10_000,
@@ -234,7 +227,7 @@ def test_sanity_silent_when_drop_last_truncates():
     """An exactly-correct total_size does not warn when batch_size does not
     divide N: the trailing partial batch is dropped by design."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
-    ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
+    ds = DataLoader(chunked_factory(data, 5), batch_size=10, sample_shape=(1,), total_size=25)
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
@@ -244,7 +237,9 @@ def test_sanity_silent_for_auto_resolved_non_divisible_n():
     """total_size='auto' must not warn against the N it just resolved."""
     data = np.arange(25, dtype="float64").reshape(25, 1)
     with pytest.warns(UserWarning, match="counting pass"):
-        ds = DataLoader(_factory(data, 5), batch_size=10, sample_shape=(1,), total_size="auto")
+        ds = DataLoader(
+            chunked_factory(data, 5), batch_size=10, sample_shape=(1,), total_size="auto"
+        )
     with warnings.catch_warnings():
         warnings.simplefilter("error", UserWarning)
         list(ds._stream_batches())
@@ -254,7 +249,7 @@ def test_sanity_check_counts_the_completed_pass_not_cumulative_rows():
     """A partially consumed stray stream must not inflate the epoch-boundary
     check: with a correct total_size, the next full pass stays silent."""
     data = np.arange(100, dtype="float64").reshape(100, 1)
-    ds = DataLoader(_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=100)
+    ds = DataLoader(chunked_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=100)
     stray = ds._stream_batches()
     for _ in range(3):
         next(stray)
@@ -267,7 +262,7 @@ def test_sanity_check_not_fooled_by_cumulative_rows_matching_total_size():
     """The converse: a wrong total_size that happens to equal the cumulative
     row counter must still warn after a true full pass."""
     data = np.arange(100, dtype="float64").reshape(100, 1)
-    ds = DataLoader(_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=130)
+    ds = DataLoader(chunked_factory(data, 10), batch_size=10, sample_shape=(1,), total_size=130)
     stray = ds._stream_batches()
     for _ in range(3):
         next(stray)

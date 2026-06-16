@@ -28,14 +28,10 @@ The API follows PyTorch's ``torch.utils.data``:
   minibatches; it is iterable (the minibatch stream) and sized. Note ``len(loader)``
   is the row count ``N`` (what the observed distribution needs for ``total_size``),
   not the batch count ``torch.utils.data.DataLoader.__len__`` returns.
-* :class:`Trainer`: drives variational inference (ADVI, ...) over a
-  ``DataLoader`` with no user-facing callbacks;
-  ``Trainer(method=..., dataloader=...).fit(n)`` streams each minibatch into the
-  model's ``pm.Data`` placeholder with ``set_data``.
 
 With bounded source chunks the full data never sits in RAM at once. The model
 graph observes only a ``(batch_size, *sample_shape)`` ``pm.Data`` placeholder
-that the ``Trainer`` overwrites with the next minibatch every step. Passing a
+that is overwritten with the next minibatch every step. Passing a
 directory of Parquet shards far larger than RAM still gives a model whose
 resident footprint is one batch (:func:`parquet_source` reads one row group at
 a time).
@@ -68,7 +64,7 @@ Examples
 
     import numpy as np
     import pymc as pm
-    from pymc.variational.streaming import DataLoader, Trainer, parquet_source
+    from pymc.variational.streaming import DataLoader, parquet_source
 
     # The data was pre-shuffled on disk once (see the module note on shuffling),
     # so the loader streams it sequentially. The full table stays on disk.
@@ -85,9 +81,13 @@ Examples
         logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
         pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
 
-    # No callbacks: the Trainer streams each minibatch into "batch" with set_data.
+    # The loader is sized (len(loader) == N, what total_size needs) and iterable:
+    # each epoch yields validated (batch_size, *sample_shape) minibatches. Stream
+    # each into the "batch" placeholder with model.set_data before a step.
     with model:
-        approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
+        for minibatch in loader:
+            model.set_data("batch", minibatch)
+            ...  # one variational step over this minibatch
 """
 
 from __future__ import annotations
@@ -101,11 +101,7 @@ from collections.abc import Callable, Iterable, Iterator
 
 import numpy as np
 
-from pymc.model import modelcontext
-from pymc.variational.inference import Inference
-from pymc.variational.inference import fit as _fit
-
-__all__ = ["DataLoader", "IterableDataset", "Trainer", "parquet_source", "shuffle_buffer"]
+__all__ = ["DataLoader", "IterableDataset", "parquet_source", "shuffle_buffer"]
 
 
 def _is_positive_int(value: object) -> bool:
@@ -141,10 +137,9 @@ class DataLoader:
     """Turn an out-of-core dataset into fixed-size minibatches for variational inference.
 
     Like ``torch.utils.data.DataLoader``, it batches (and optionally
-    shuffles) an :class:`IterableDataset` into the minibatch stream that
-    :class:`Trainer` feeds to the model. It is iterable and sized (``len(loader)``
-    is the dataset size ``N``). With bounded source chunks the full dataset is
-    never resident at once.
+    shuffles) an :class:`IterableDataset` into a minibatch stream for variational
+    inference. It is iterable and sized (``len(loader)`` is the dataset size
+    ``N``). With bounded source chunks the full dataset is never resident at once.
 
     Parameters
     ----------
@@ -292,10 +287,10 @@ class DataLoader:
     def __iter__(self) -> Iterator[np.ndarray]:
         """Yield one epoch of validated ``(batch_size, *sample_shape)`` minibatches.
 
-        The same batches the :class:`Trainer` streams into the model's ``pm.Data``
-        placeholder (it consumes them through an accounting wrapper, so plain
-        iteration leaves the counters untouched). Re-iterate the loader for
-        another epoch.
+        Stream each into the model's ``pm.Data`` placeholder with ``model.set_data``
+        before a step. Plain iteration leaves :attr:`batches_seen` /
+        :attr:`rows_streamed` untouched (it does not run the internal accounting
+        path); re-iterate the loader for another epoch.
         """
         for batch in self._rebatched():
             yield self._prepare(batch)
@@ -316,7 +311,7 @@ class DataLoader:
         return self._total_size
 
     def _stream_batches(self) -> Iterator[np.ndarray]:
-        """One epoch of prepared minibatches, with accounting (the Trainer's path).
+        """One epoch of prepared minibatches, with accounting (the consumer's path).
 
         Like :meth:`__iter__` but it updates :attr:`batches_seen` /
         :attr:`rows_streamed` and runs the one-shot ``total_size`` sanity check on
@@ -393,146 +388,6 @@ class DataLoader:
                 f"batch sample-shape {batch.shape[1:]} does not match declared "
                 f"sample_shape={self._sample_shape}"
             )
-
-
-class Trainer:
-    """Drive variational inference over a :class:`DataLoader` without user callbacks.
-
-    Follows the design in PyMC's variational-inference rework and PyTorch
-    Lightning: the ``Trainer`` owns the training loop, the
-    :class:`DataLoader` owns batching (and ``len(dataloader)`` is the dataset size
-    ``N``), and the model owns the math. The model exposes a ``pm.Data`` placeholder;
-    the ``Trainer`` streams minibatches into it with ``model.set_data`` once per
-    step; no user callbacks are needed.
-
-    Parameters
-    ----------
-    method : str or Inference, default "advi"
-        Variational method, forwarded to :func:`pymc.fit`: a name (``"advi"``,
-        ``"fullrank_advi"``, ...) or an :class:`~pymc.variational.inference.Inference`
-        instance. ``pm.fit`` applies ``model`` and ``random_seed`` only to a name;
-        an instance is already bound to a model, so configure it at construction
-        (e.g. ``ADVI(random_seed=...)``).
-    dataloader : DataLoader
-        The minibatch source. ``len(dataloader)`` is ``N``; the model should pass
-        it to the observed distribution's ``total_size``.
-    model : pymc.Model, optional
-        Defaults to the model on the context stack.
-    data_name : str, default "batch"
-        Name of the ``pm.Data`` placeholder minibatches are streamed into. Must
-        match the name used for ``pm.Data(name, ...)`` in the model.
-    **fit_kwargs
-        Default keyword arguments forwarded to :func:`pymc.fit` (e.g.
-        ``obj_optimizer``); per-call kwargs to :meth:`fit` override them.
-
-    Notes
-    -----
-    The per-step ``set_data`` currently lives in the ``Trainer``. Once the VI
-    rework's ``Inference.step(batch)`` lands it moves there, at which point the
-    ``total_size`` rescaling can be derived from ``len(dataloader)`` and dropped
-    from the model body entirely.
-
-    Examples
-    --------
-    .. code-block:: python
-
-        loader = DataLoader(
-            parquet_source("shuffled/"), batch_size=4096, sample_shape=(4,), total_size="auto"
-        )
-        with pm.Model() as model:
-            b = pm.Normal("b", 0.0, 3.0, shape=4)
-            batch = pm.Data("batch", np.zeros((4096, 4)))  # placeholder
-            logit = b[0] + b[1] * batch[:, 0] + b[2] * batch[:, 1] + b[3] * batch[:, 2]
-            pm.Bernoulli("y", logit_p=logit, observed=batch[:, 3], total_size=len(loader))
-            approx = Trainer(method="advi", dataloader=loader, data_name="batch").fit(20_000)
-    """
-
-    def __init__(
-        self,
-        *,
-        method: str | Inference = "advi",
-        dataloader: DataLoader,
-        model=None,
-        data_name: str = "batch",
-        **fit_kwargs,
-    ):
-        self.method = method
-        self.dataloader = dataloader
-        self.model = model
-        self.data_name = data_name
-        self._fit_kwargs = fit_kwargs
-
-    def fit(self, n: int = 10_000, **kwargs):
-        """Fit for ``n`` steps, streaming minibatches into the model's placeholder.
-
-        Exactly ``n`` minibatches are fed to the model: the first seeds the
-        placeholder before step 0, and the advance after the final step is skipped.
-        The accounting stream reads one batch ahead so the pass-size check can fire
-        at a pass boundary, so a re-readable source (the only kind the loader
-        accepts) may be read one batch past the ``n`` the model uses. Keyword
-        arguments are forwarded to :func:`pymc.fit` on top of the constructor's
-        ``fit_kwargs`` (per-call wins); ``progressbar`` defaults to ``False``
-        unless either sets it.
-
-        Returns
-        -------
-        :class:`Approximation`
-            The fitted approximation, as returned by :func:`pymc.fit`.
-        """
-        if not _is_positive_int(n):
-            raise ValueError(f"n must be a positive integer (the number of fit steps), got {n!r}")
-        loader = self.dataloader
-        if not isinstance(loader, DataLoader):
-            raise TypeError(
-                f"Trainer needs a DataLoader for `dataloader`, got {type(loader).__name__}."
-            )
-        model = modelcontext(self.model)
-        if self.data_name not in model:
-            # Checked before the stream starts so no batch is consumed (and no
-            # counter advances) on a typo.
-            raise KeyError(
-                f"data_name {self.data_name!r} is not a variable in the model; it "
-                f"must name the pm.Data placeholder the minibatches are streamed into."
-            )
-
-        def _stream() -> Iterator[np.ndarray]:
-            while True:
-                empty = True
-                for batch in loader._stream_batches():
-                    empty = False
-                    yield batch
-                if empty:
-                    raise RuntimeError("dataloader yielded no batches")
-
-        batches = _stream()
-        # Seed the placeholder before step 0: pm.fit runs callbacks after each step,
-        # so without this the first step would train on the placeholder's contents.
-        model.set_data(self.data_name, next(batches))
-
-        steps_done = 0
-
-        def _advance(*_):
-            # pm.fit fires callbacks after every step including the last; skip the
-            # advance on this fit's final step so exactly n batches are consumed.
-            # Only that one call is skipped (not every call past n): Inference.refine
-            # replays the saved callbacks and must keep streaming fresh batches.
-            nonlocal steps_done
-            steps_done += 1
-            if steps_done != n:
-                model.set_data(self.data_name, next(batches))
-
-        merged = {**self._fit_kwargs, **kwargs}
-        merged.setdefault("progressbar", False)
-        # User callbacks (e.g. convergence trackers) are appended after the
-        # internal advance instead of colliding with it on the keyword.
-        user_callbacks = merged.pop("callbacks", None) or []
-        return _fit(
-            n,
-            method=self.method,
-            model=model,
-            callbacks=[_advance, *user_callbacks],
-            **merged,
-        )
 
 
 def shuffle_buffer(
