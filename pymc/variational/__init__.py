@@ -47,6 +47,7 @@ from pymc.variational.stein import Stein
 from pymc.variational.streaming import (
     DataLoader,
     IterableDataset,
+    Trainer,
     parquet_source,
     shuffle_buffer,
 )
@@ -77,6 +78,7 @@ __all__ = (
     "Group",
     "IterableDataset",
     "MeanField",
+    "Trainer",
     "adadelta",
     "adagrad",
     "adagrad_window",

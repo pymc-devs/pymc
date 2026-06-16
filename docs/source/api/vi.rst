@@ -79,6 +79,7 @@ memory (see :mod:`pymc.variational.streaming`).
 
    DataLoader
    IterableDataset
+   Trainer
    shuffle_buffer
    parquet_source
 
