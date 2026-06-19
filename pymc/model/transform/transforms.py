@@ -14,18 +14,15 @@
 
 from collections.abc import Sequence
 
-import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import xarray as xr
 
-from pytensor import function
 from pytensor.graph.basic import Variable
 from pytensor.xtensor.vectorization import vectorize_graph as xvectorize_graph
 
-from pymc.blocking import PointType
 from pymc.model import Model, modelcontext
-from pymc.pytensorf import replace_vars_in_graphs
+from pymc.pytensorf import compile, replace_vars_in_graphs
 
 
 def _build_transform_graph(
@@ -105,7 +102,7 @@ def _eval_transform_graph(
         replacements[inp] = batch_inp
         batch_inputs.append(batch_inp)
     outputs_vec = xvectorize_graph(outputs, replacements, new_tensor_dims=tuple(sample_dims))
-    fn = function(
+    fn = compile(
         [pytensor.In(bi, borrow=True) for bi in batch_inputs],  # type: ignore[misc]
         [pytensor.Out(ov, borrow=True) for ov in outputs_vec],  # type: ignore[misc]
         trust_input=True,
@@ -199,27 +196,6 @@ def constrain_values(
         sample_dims=sample_dims,
         compile_kwargs=compile_kwargs,
     )
-
-
-def _points_to_natural_scale(points: list[PointType], model: Model) -> list[PointType]:
-    """Convert transformed-scale points to natural-scale, keyed by the RV name.
-
-    Avoids ``pm.sample`` re-invoking ``transform.backward`` on numpy arrays,
-    which is broken for shape-changing transforms (ZeroSum, Simplex, etc.).
-    """
-    inputs, outputs = _build_transform_graph(model, forward=False)
-    fn = function(
-        [pytensor.In(inp, borrow=True) for inp in inputs],  # type: ignore[misc]
-        [pytensor.Out(out, borrow=True) for out in outputs],  # type: ignore[misc]
-        mode="FAST_COMPILE",
-    )
-    result = []
-    for point in points:
-        values = fn(*[point[model.rvs_to_values[rv].name] for rv in model.free_RVs])
-        result.append(
-            {rv.name: np.asarray(v) for rv, v in zip(model.free_RVs, values, strict=True)}
-        )
-    return result
 
 
 __all__ = (
