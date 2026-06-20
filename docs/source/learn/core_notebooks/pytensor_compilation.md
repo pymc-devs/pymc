@@ -1,24 +1,26 @@
 (pytensor_compilation)=
-# Understanding PyTensor compilation
+# PyTensor, WTF?
 
-:::{seealso}
-This page is a companion to {ref}`pymc_pytensor`. That notebook explains *how* a PyMC model becomes a PyTensor graph; this one picks up where it leaves off and explains what PyTensor then *does* with that graph to make sampling fast.
-:::
+**Author:** [Benjamin Vincent](https://github.com/drbenvincent)
 
-:::{note}
-This page is deliberately *opinionated* and slightly broader in scope than a pure PyTensor reference: it explains PyTensor from the vantage point of someone who arrives at it **through PyMC** rather than using PyTensor directly. That framing is intentional — a large share of PyTensor users meet it at the top of the stack, via PyMC — but it does mean this guide makes some simplifications and value judgements.
-:::
+In your day-to-day modeling work, it is possible to write models exclusively in PyMC and never know about, or write any, PyTensor code. But PyTensor is a _crucial_ part of the modeling stack, and does a lot of work on your behalf every time you sample. Understanding what it is and how it works can help  explain two things PyMC users often wonder about:
 
-If you build models with PyMC, you don't usually call PyTensor yourself. But PyTensor is doing a lot of work on your behalf every time you sample, and understanding *what* it does helps explain two things PyMC users often wonder about:
-
-- **Why does sampling sometimes take a while to even start?** (That's compilation.)
-- **Why is the first run slow but later runs faster?** (That's caching.)
+- **Why does sampling sometimes take a while to even start?** That's compilation.
+- **Why is the first run slow but later runs faster?** That's caching.
 
 This guide gives you a mental model of the pipeline and the choices available, without assuming you've ever written a line of PyTensor.
 
 ## The one-sentence mental model
 
-When PyMC samples your model, it asks PyTensor to turn the model's math (the log-probability and its gradient) into a fast, callable function. PyTensor does this in **two stages**: it first **rewrites** the symbolic math into a better form, then **links** that form into something executable using a chosen **backend**.
+When PyMC samples your model, it asks PyTensor to turn the model's math (the log-probability and its gradient) into a fast, callable function. 
+
+$$
+\theta \to \big(\log(p(\theta)), \nabla \log(p(\theta))\big)
+$$
+
+PyTensor does this in two stages: it first rewrites the symbolic math into a better form, then links that form into something executable using a chosen backend.
+
+
 
 ## The pipeline at a glance
 
@@ -44,7 +46,7 @@ Two things are worth holding onto before we look at the individual edits:
 - **It all happens in plain Python**, and the bigger your model, the longer it takes. This editing pass is a large part of the "why does sampling take a while to *start*?" pause. A big hierarchical model is a big draft, and a big draft takes longer to edit.
 - **It happens the same way regardless of backend.** Whether you'll eventually run on Numba, C, JAX, PyTorch, or MLX, almost all of this rewriting happens first, in exactly the same way.
 
-The subsections below walk through each editing pass, in the order they run — matching the "Stage 1" lane in the diagram. Each one ends with a foldable **"Under the hood"** note that points at the exact PyTensor code, in case you ever want to go spelunking. You can safely skip those folds and still understand the whole pipeline.
+The subsections below walk through each editing pass, in the order they run — matching the "Stage 1" lane in the diagram. For a full catalogue of every available rewrite, see the {ref}`graph rewrites reference <pytensor:optimizations>`.
 
 #### The to-do list of edits
 
@@ -120,14 +122,14 @@ Here's the lay of the land before we dig in:
 
 | Backend | How it turns the recipe into a program | Needs a system compiler? | Good to know |
 |---|---|---|---|
-| **Numba** *(default)* | Converts the recipe to Python, then compiles it to fast machine code the first time you run it (via LLVM) | No (ships ready-to-use) | Why `pip install pymc` "just works" without conda. First run is slow; results are cached on disk. |
-| **C / CVM** | Writes out C++ source and compiles it with `g++`/`clang++` | Yes | Historically the default; very strong on-disk cache. Now opt-in. |
+| **Numba** *(default)* | Converts the recipe to Python, then compiles it to fast machine code the first time you run it (via LLVM) | No (ships ready-to-use) | Why `pip install pymc` "just works" (from PyMC 6.0 onwards) without conda. First run is slow; results are cached on disk. |
+| **C / CVM** | Writes out C++ source and compiles it with `g++`/`clang++` | Yes | Historically the default (pre PyMC 6.0); very strong on-disk cache. Now opt-in. |
 | **JAX** | Converts to JAX, compiles via `jax.jit` → XLA | No | The path to GPU/TPU. |
 | **PyTorch** | Converts to PyTorch, compiles via `torch.compile` | No | Runs on PyTorch's CPU/GPU devices. |
 | **MLX** | Converts to MLX, compiles via `mx.compile` | No | Targets the GPU in Apple Silicon Macs. |
 | **Python VM** | Just runs each operation in plain Python — no compiling | No | Slowest to run, instant to "build". Great for debugging. |
 
-The default backend is **Numba** (it's what `config.linker = "auto"` resolves to).
+The default backend is **Numba** (it's what `config.linker = "auto"` resolves to). For a deeper treatment of how modes and linkers work, see {ref}`modes and linkers <pytensor:using_modes>`.
 
 #### How the backend gets chosen
 
@@ -161,7 +163,14 @@ pytensor.config.linker = "jax"
 f = pytensor.function([x], y, mode="NUMBA")
 ```
 
-The two choices — backend and sampler — are made at different points in the pipeline (see the two blue decision diamonds in the diagram), and as noted below they're mostly independent. The exception is that JAX-based samplers force the JAX backend.
+The two choices — backend and sampler — are made at different points in the pipeline (see the two blue decision diamonds in the diagram), and they're mostly independent. You pick the engine with `pm.sample(nuts_sampler=...)`:
+
+- **`"pymc"`** — PyMC's built-in NUTS. The loop is pure Python and calls a PyTensor callable from any CPU backend (typically C or Numba).
+- **`"nutpie"`** — runs the NUTS loop in Rust (via [`nuts-rs`](https://github.com/pymc-devs/nutpie)). It calls a PyTensor callable compiled to either the **Numba** or the **JAX** backend. This is the default when nutpie is installed.
+- **`"numpyro"`** — NumPyro's NUTS, whose loop runs in **JAX**. It requires the **JAX** backend.
+- **`"blackjax"`** — BlackJAX's NUTS, also a **JAX** loop requiring the **JAX** backend.
+
+The one coupling to be aware of: the JAX-based engines (`numpyro`, `blackjax`, and `nutpie` in JAX mode) need PyTensor to have compiled the callable to JAX. PyMC handles wiring this up for you.
 
 #### The one idea behind (almost) every backend
 
@@ -230,15 +239,6 @@ Functionally, the compiled callable is a map from a **point in parameter space**
 An MCMC sampler calls this function many times, proposing new parameter points and reading back `logp` and its gradient to decide where to go next. Time spent *here* is sampling time, which is separate from the compilation time described above — speeding up compilation does not speed up sampling, and vice versa.
 
 **This is the key boundary.** Everything above the compiled callable in the diagram is *PyTensor* turning your model's math into a function. Everything below it is a *sampler engine* repeatedly calling that function. The sampler is a separate piece of software with its own loop; PyTensor's job is finished once the callable exists.
-
-You pick the engine with `pm.sample(nuts_sampler=...)`. The options are:
-
-- **`"pymc"`** — PyMC's built-in NUTS. The loop is pure Python and calls a PyTensor callable from any CPU backend (typically C or Numba).
-- **`"nutpie"`** — runs the NUTS loop in Rust (via [`nuts-rs`](https://github.com/pymc-devs/nutpie)). It calls a PyTensor callable compiled to either the **Numba** or the **JAX** backend. This is the default when nutpie is installed.
-- **`"numpyro"`** — NumPyro's NUTS, whose loop runs in **JAX**. It requires the **JAX** backend.
-- **`"blackjax"`** — BlackJAX's NUTS, also a **JAX** loop requiring the **JAX** backend.
-
-So the engine and the PyTensor backend are *mostly* an independent choice, with one important coupling: the JAX-based engines (`numpyro`, `blackjax`, and `nutpie` in JAX mode) need PyTensor to have compiled the callable to JAX. PyMC handles wiring this up for you.
 
 A common misconception is worth heading off: with nutpie it's easy to assume "the fast Rust thing" is doing the compilation. It isn't — the Rust is the *sampler loop*, not a PyTensor compilation backend. PyTensor still builds the logp/gradient function that the Rust loop evaluates.
 
