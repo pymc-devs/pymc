@@ -12,7 +12,7 @@ This guide gives you a mental model of the pipeline and the choices available, w
 
 ## The one-sentence mental model
 
-When PyMC samples your model, it asks PyTensor to turn the model's math (the log-probability and its gradient) into a fast, callable function. 
+When PyMC samples your model, it asks PyTensor to turn the model's math (the log-probability and its gradient) into a fast, callable function.
 
 $$
 \theta \to \big(\log(p(\theta)), \nabla \log(p(\theta))\big)
