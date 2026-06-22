@@ -17,7 +17,7 @@ import xarray as xr
 
 import pymc as pm
 
-from pymc.model.transform.transforms import constrain_values, unconstrain_values
+from pymc.model.transform_values import constrain_values, unconstrain_values
 
 
 def test_unconstrain_roundtrip_with_rv_dependent_transform():
