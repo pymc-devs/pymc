@@ -228,6 +228,11 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus, "alpha": Rplus},
         )
+        check_icdf(
+            pm.NegativeBinomial,
+            {"p": Unit, "n": Rplus},
+            lambda q, p, n: st.nbinom.ppf(q, n, p),
+        )
 
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
@@ -266,6 +271,11 @@ class TestMatchesScipy:
             pm.Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
+        )
+        check_icdf(
+            pm.Binomial,
+            {"n": NatSmall, "p": Unit},
+            lambda q, n, p: st.binom.ppf(q, n, p),
         )
 
     def test_beta_binomial(self):
@@ -368,6 +378,11 @@ class TestMatchesScipy:
             pm.Poisson,
             Nat,
             {"mu": Rplus},
+        )
+        check_icdf(
+            pm.Poisson,
+            {"mu": Rplus},
+            st.poisson.ppf,
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])

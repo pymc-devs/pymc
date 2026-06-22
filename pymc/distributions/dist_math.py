@@ -89,6 +89,75 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
     return expr
 
 
+def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, max_iters=64):
+    """Numerically invert a discrete CDF by bisecting the (monotone) ``logcdf``.
+
+    Returns the smallest integer ``k`` in the support such that
+    ``cdf(k) >= value``, i.e. the quantile function evaluated at ``value``.
+    This is the discrete counterpart of inverting a continuous CDF with a
+    special function (e.g. ``betaincinv``), and is meant for distributions
+    whose quantile function has no closed form (e.g. ``Poisson``, ``Binomial``,
+    ``NegativeBinomial``).
+
+    The search uses fixed-length ``scan`` loops (rather than a data-dependent
+    ``while``) so that the resulting graph remains convertible to the C, Numba
+    and JAX backends. Each step is idempotent once an element has converged, so
+    running the full ``max_iters`` iterations does not change the result.
+
+    Parameters
+    ----------
+    logcdf : callable
+        Function mapping an integer-valued tensor ``k`` to ``logcdf(k)`` of the
+        target distribution.
+    value : tensor_like
+        Cumulative probabilities at which to evaluate the quantile function.
+        Assumed to lie in the open interval ``(0, 1)``; edge handling for
+        ``value`` is the responsibility of :func:`check_icdf_value`.
+    lower : tensor_like
+        Smallest value in the support of the distribution.
+    upper : tensor_like, optional
+        Largest value in the support. If ``None`` (unbounded support), a finite
+        upper bracket is first found by geometric expansion.
+    max_iters : int
+        Number of search iterations per phase. This needs to exceed ``log2`` of
+        the largest reachable quantile; the default of 64 covers the full range
+        of integers exactly representable as float64.
+    """
+    log_value = pt.log(value)
+    lower = pt.zeros_like(value) + pt.as_tensor_variable(lower, dtype="float64")
+
+    if upper is None:
+        # Phase 1: geometrically expand an upper bracket until cdf(hi) >= value.
+        def expand(lo, hi):
+            insufficient = logcdf(hi) < log_value
+            return pt.switch(insufficient, hi + 1.0, lo), pt.switch(insufficient, hi * 2.0, hi)
+
+        lo, hi = pytensor.scan(
+            expand,
+            outputs_info=[lower, lower + 1.0],
+            n_steps=max_iters,
+            return_updates=False,
+        )
+        lo, hi = lo[-1], hi[-1]
+    else:
+        lo = lower
+        hi = pt.zeros_like(value) + pt.as_tensor_variable(upper, dtype="float64")
+
+    # Phase 2: bisect [lo, hi] keeping the invariant cdf(hi) >= value > cdf(lo - 1).
+    def bisect(lo, hi):
+        mid = pt.floor((lo + hi) / 2.0)
+        covers = logcdf(mid) >= log_value
+        return pt.switch(covers, lo, mid + 1.0), pt.switch(covers, mid, hi)
+
+    lo, _ = pytensor.scan(
+        bisect,
+        outputs_info=[lo, hi],
+        n_steps=max_iters,
+        return_updates=False,
+    )
+    return lo[-1]
+
+
 def logpow(x, m):
     """Calculate log(x**m) since m*log(x) will fail when m, x = 0."""
     # return m * log(x)
