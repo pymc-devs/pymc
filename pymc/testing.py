@@ -47,6 +47,8 @@ from pymc.logprob.utils import (
     ParameterValueError,
     local_check_parameter_to_ninf_switch,
 )
+from pymc.model.core import Model
+from pymc.model.fgraph import ModelVar, fgraph_from_model
 from pymc.pytensorf import compile, floatX, inputvars, rvs_in_graph
 
 # This mode can be used for tests where model compilations takes the bulk of the runtime
@@ -1354,7 +1356,10 @@ def mock_sample_setup_and_teardown():
 
 
 def equal_computations_up_to_root(
-    xs: Sequence[Variable], ys: Sequence[Variable], ignore_rng_values=True
+    xs: Sequence[Variable],
+    ys: Sequence[Variable],
+    ignore_rng_values=True,
+    strict_dtype=True,
 ) -> bool:
     # Check if graphs are equivalent even if root variables have distinct identities
 
@@ -1375,4 +1380,55 @@ def equal_computations_up_to_root(
             if not x.type.values_eq(x.get_value(), y.get_value()):
                 return False
 
-    return equal_computations(xs, ys, in_xs=x_graph_inputs, in_ys=y_graph_inputs)  # type: ignore[arg-type]
+    return equal_computations(
+        xs,  # type: ignore[arg-type]
+        ys,  # type: ignore[arg-type]
+        in_xs=x_graph_inputs,
+        in_ys=y_graph_inputs,
+        strict_dtype=strict_dtype,
+    )
+
+
+def assert_equivalent_model(model_1: Model, model_2: Model, *, strict_dtype: bool = True) -> None:
+    """Assert that two PyMC models are equivalent.
+
+    Model variable order is incidental (it follows graph construction history); model
+    variables are uniquely named, so they are compared by name, ignoring order.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+        from pymc.testing import assert_equivalent_model
+
+        with pm.Model() as m1:
+            x = pm.Normal("x")
+            y = pm.Normal("y", x)
+
+        with pm.Model() as m2:
+            x = pm.Normal("x")
+            y = pm.Normal("y", x)
+
+        assert_equivalent_model(m1, m2)
+
+    """
+    fgraph_1, _ = fgraph_from_model(model_1)
+    fgraph_2, _ = fgraph_from_model(model_2)
+
+    def output_name(var: Variable) -> str:
+        # fgraph outputs are ModelVar nodes that carry the variable name on the Op
+        match var.owner_op:
+            case ModelVar(name=name):
+                return name
+            case _:
+                return ""
+
+    outputs_1 = sorted(fgraph_1.outputs, key=output_name)
+    outputs_2 = sorted(fgraph_2.outputs, key=output_name)
+    names_1 = [var.name for var in outputs_1]
+    names_2 = [var.name for var in outputs_2]
+    assert names_1 == names_2, f"Model variables differ: {names_1} != {names_2}"
+    assert equal_computations_up_to_root(outputs_1, outputs_2, strict_dtype=strict_dtype), (
+        "Model computations differ"
+    )
