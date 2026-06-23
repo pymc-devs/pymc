@@ -17,7 +17,7 @@ from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph
 from pytensor.graph.replace import clone_replace
 
-from pymc import Model
+from pymc.model.core import Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
 
 
@@ -62,7 +62,7 @@ def freeze_dims_and_data(
         import pymc as pm
         import pytensor.tensor as pt
 
-        from pymc.model.transform.optimization import freeze_dims_and_data
+        from pymc.model.transform import freeze_dims_and_data
 
         with pm.Model() as m:
             x = pm.Data("x", [0, 1, 2] * 1000)

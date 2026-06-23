@@ -1,7 +1,7 @@
 Deterministic Surgery
 ---------------------
 
-.. currentmodule:: pymc.model.transform.deterministic
+.. currentmodule:: pymc.model.transform
 .. autosummary::
    :toctree: generated/
 
