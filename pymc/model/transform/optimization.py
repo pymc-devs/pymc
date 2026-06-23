@@ -98,8 +98,6 @@ def freeze_dims_and_data(
     old_outs, old_coords, old_dim_lenghts = fg.outputs, fg._coords, fg._dim_lengths  # type: ignore[attr-defined]
     # Rebuild strict will force the recreation of RV nodes with updated static types
     new_outs = clone_replace(old_outs, replace=frozen_replacements, rebuild_strict=False)  # type: ignore[arg-type]
-    for old_out, new_out in zip(old_outs, new_outs):
-        new_out.name = old_out.name
     fg = FunctionGraph(outputs=new_outs, clone=False)
     fg._coords = old_coords  # type: ignore[attr-defined]
     fg._dim_lengths = {  # type: ignore[attr-defined]

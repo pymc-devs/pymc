@@ -301,7 +301,8 @@ def non_centered_rewrite():
     def non_centered_param(fgraph: FunctionGraph, node):
         """Rewrite that replaces centered normal by non-centered parametrization."""
 
-        rv, value, *dims = node.inputs
+        rv, value = node.inputs
+        name, dims = node.op.name, node.op.dims
         if not isinstance(rv.owner.op, pm.Normal):
             return
         rng, size, loc, scale = rv.owner.inputs
@@ -322,15 +323,15 @@ def non_centered_rewrite():
         if is_unit:
             return
 
+        raw_name = f"{name}_raw_"
         raw_norm = pm.Normal.dist(0, 1, size=size, rng=rng)
-        raw_norm.name = f"{rv.name}_raw_"
         raw_norm_value = raw_norm.clone()
+        raw_norm_value.name = raw_name
         fgraph.add_input(raw_norm_value)
-        raw_norm = model_free_rv(raw_norm, raw_norm_value, node.op.transform, *dims)
+        raw_norm = model_free_rv(raw_norm, raw_norm_value, node.op.transform, raw_name, *dims)
 
         new_norm = loc + raw_norm * scale
-        new_norm.name = rv.name
-        new_norm_det = model_deterministic(new_norm, *dims)
+        new_norm_det = model_deterministic(new_norm, name, *dims)
         fgraph.add_output(new_norm_det)
 
         return [new_norm]

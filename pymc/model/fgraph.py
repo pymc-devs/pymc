@@ -15,7 +15,6 @@ import warnings
 
 from copy import copy, deepcopy
 
-from pytensor.basic import as_symbolic
 from pytensor.compile import SharedVariable, ViewOp, view_op
 from pytensor.graph import Apply, FunctionGraph, Op, node_rewriter
 from pytensor.graph.basic import Variable
@@ -23,23 +22,28 @@ from pytensor.graph.rewriting.basic import out2in
 
 from pymc.logprob.transforms import Transform
 from pymc.model.core import Model
-from pymc.pytensorf import StringType, find_rng_nodes, toposort_replace
+from pymc.pytensorf import find_rng_nodes, toposort_replace
 
 
 class ModelVar(Op):
-    """A dummy Op that describes the purpose of a Model variable and contains meta-information as additional inputs (value and dims)."""
+    """A dummy Op that describes the purpose of a Model variable.
 
-    def make_node(self, rv, *dims):
+    The variable's ``name`` and ``dims`` are stored as Op properties (meta-information
+    needed to reconstruct the Model), while the wrapped variable (and value) are inputs.
+    """
+
+    __props__ = ("name", "dims")
+
+    def __init__(self, name: str, dims: tuple[str, ...] = ()):
+        dims = tuple(dims)
+        assert all(isinstance(dim, str) for dim in dims)
+        self.name = name
+        self.dims = dims
+
+    def make_node(self, rv):
         assert isinstance(rv, Variable)
-        dims = self._parse_dims(rv, *dims)
-        return Apply(self, [rv, *dims], [rv.type(name=rv.name)])
-
-    def _parse_dims(self, rv, *dims):
-        if dims:
-            dims = [as_symbolic(dim) for dim in dims]
-            assert all(isinstance(dim.type, StringType) for dim in dims)
-            assert len(dims) == rv.type.ndim
-        return dims
+        assert not self.dims or len(self.dims) == rv.type.ndim
+        return Apply(self, [rv], [rv.type(name=self.name)])
 
     def infer_shape(self, fgraph, node, inputs_shape):
         return [inputs_shape[0]]
@@ -52,21 +56,21 @@ class ModelVar(Op):
 
 
 class ModelValuedVar(ModelVar):
-    __props__ = ("transform",)
+    __props__ = ("name", "dims", "transform")
 
-    def __init__(self, transform: Transform | None = None):
+    def __init__(self, name: str, dims: tuple[str, ...] = (), transform: Transform | None = None):
         if transform is not None and not isinstance(transform, Transform):
             raise TypeError(f"transform must be None or RVTransform type, got {type(transform)}")
         self.transform = transform
-        super().__init__()
+        super().__init__(name, dims)
 
-    def make_node(self, rv, value, *dims):
+    def make_node(self, rv, value):
         assert isinstance(rv, Variable)
-        dims = self._parse_dims(rv, *dims)
+        assert not self.dims or len(self.dims) == rv.type.ndim
         if value is not None:
             assert isinstance(value, Variable)
             assert rv.type.dtype == value.type.dtype
-            return Apply(self, [rv, value, *dims], [rv.type(name=rv.name)])
+            return Apply(self, [rv, value], [rv.type(name=self.name)])
 
 
 class ModelFreeRV(ModelValuedVar):
@@ -89,14 +93,24 @@ class ModelNamed(ModelVar):
     pass
 
 
-def model_free_rv(rv, value, transform, *dims):
-    return ModelFreeRV(transform=transform)(rv, value, *dims)
+def model_free_rv(rv, value, transform, name, *dims):
+    return ModelFreeRV(name=name, dims=dims, transform=transform)(rv, value)
 
 
-model_observed_rv = ModelObservedRV()
-model_potential = ModelPotential()
-model_deterministic = ModelDeterministic()
-model_named = ModelNamed()
+def model_observed_rv(rv, value, name, *dims):
+    return ModelObservedRV(name=name, dims=dims)(rv, value)
+
+
+def model_potential(rv, name, *dims):
+    return ModelPotential(name=name, dims=dims)(rv)
+
+
+def model_deterministic(rv, name, *dims):
+    return ModelDeterministic(name=name, dims=dims)(rv)
+
+
+def model_named(rv, name, *dims):
+    return ModelNamed(name=name, dims=dims)(rv)
 
 
 @node_rewriter([ViewOp])
@@ -240,19 +254,20 @@ def fgraph_from_model(
     vars = fgraph.outputs
     new_vars = []
     for var in vars:
-        dims = named_vars_to_dims.get(var.name, ())
+        name = var.name
+        dims = named_vars_to_dims.get(name, ())
         if var in free_rvs_to_values:
             new_var = model_free_rv(
-                var, free_rvs_to_values[var], free_rvs_to_transforms[var], *dims
+                var, free_rvs_to_values[var], free_rvs_to_transforms[var], name, *dims
             )
         elif var in observed_rvs_to_values:
-            new_var = model_observed_rv(var, observed_rvs_to_values[var], *dims)
+            new_var = model_observed_rv(var, observed_rvs_to_values[var], name, *dims)
         elif var in potentials:
-            new_var = model_potential(var, *dims)
+            new_var = model_potential(var, name, *dims)
         elif var in deterministics:
-            new_var = model_deterministic(var, *dims)
+            new_var = model_deterministic(var, name, *dims)
         elif var in named_vars:
-            new_var = model_named(var, *dims)
+            new_var = model_named(var, name, *dims)
         else:
             # Unnamed value variables
             new_var = var
@@ -335,35 +350,35 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
 
     # Populate new PyMC model mappings
     for model_var in model_dummy_vars:
-        if isinstance(model_var.owner.op, ModelFreeRV):
-            var, value, *dims = model_var.owner.inputs
-            transform = model_var.owner.op.transform
+        op = model_var.owner.op
+        if isinstance(op, ModelFreeRV):
+            var, value = model_var.owner.inputs
             model.free_RVs.append(var)
             model.create_value_var(
-                var, transform=transform, default_transform=None, value_var=value
+                var, transform=op.transform, default_transform=None, value_var=value
             )
             model.set_initval(var, initval=None)
-        elif isinstance(model_var.owner.op, ModelObservedRV):
-            var, value, *dims = model_var.owner.inputs
+        elif isinstance(op, ModelObservedRV):
+            var, value = model_var.owner.inputs
             model.observed_RVs.append(var)
             model.create_value_var(var, transform=None, default_transform=None, value_var=value)
-        elif isinstance(model_var.owner.op, ModelPotential):
-            var, *dims = model_var.owner.inputs
+        elif isinstance(op, ModelPotential):
+            [var] = model_var.owner.inputs
             model.potentials.append(var)
-        elif isinstance(model_var.owner.op, ModelDeterministic):
-            var, *dims = model_var.owner.inputs
+        elif isinstance(op, ModelDeterministic):
+            [var] = model_var.owner.inputs
             # If a Deterministic is a direct view on an RV, view it
             if var in model.basic_RVs:
                 var = view_op(var)
             model.deterministics.append(var)
-        elif isinstance(model_var.owner.op, ModelNamed):
-            var, *dims = model_var.owner.inputs
+        elif isinstance(op, ModelNamed):
+            [var] = model_var.owner.inputs
             model.data_vars.append(var)
         else:
             raise TypeError(f"Unexpected ModelVar type {type(model_var)}")
 
-        var.name = model_var.name
-        dims = [dim.data for dim in dims] if dims else None
+        var.name = op.name
+        dims = list(op.dims) if op.dims else None
         model.add_named_variable(var, dims=dims)
 
     return model
@@ -397,17 +412,6 @@ def clone_model(model: Model) -> Model:
 
     """
     return model_from_fgraph(fgraph_from_model(model)[0], mutate_fgraph=True)
-
-
-def extract_dims(var) -> tuple:
-    dims = ()
-    node = var.owner
-    if node and isinstance(node.op, ModelVar):
-        if isinstance(node.op, ModelValuedVar):
-            dims = node.inputs[2:]
-        else:
-            dims = node.inputs[1:]
-    return dims
 
 
 __all__ = (
