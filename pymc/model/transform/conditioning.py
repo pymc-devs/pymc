@@ -255,7 +255,7 @@ def change_value_transforms(
 
         import pymc as pm
         from pymc.distributions.transforms import logodds
-        from pymc.model.transform.conditioning import change_value_transforms
+        from pymc.model.transform import change_value_transforms
 
         with pm.Model() as base_m:
             p = pm.Uniform("p", 0, 1, default_transform=None)
@@ -338,7 +338,7 @@ def remove_value_transforms(
     .. code-block:: python
 
         import pymc as pm
-        from pymc.model.transform.conditioning import remove_value_transforms
+        from pymc.model.transform import remove_value_transforms
 
         with pm.Model() as transformed_m:
             p = pm.Uniform("p", 0, 1)
