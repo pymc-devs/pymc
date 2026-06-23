@@ -39,14 +39,12 @@ _EXPLICIT_ROOT_NAMES = frozenset(
     {
         "compile",  # from pymc.pytensorf
         "compute_log_likelihood",  # from pymc.stats
-        "constrain_values",  # from pymc.model.transform_values
         "do",  # from pymc.model.transform.conditioning
         "find_constrained_prior",  # from pymc.func_utils
         "model_to_graphviz",  # from pymc.model_graph
         "model_to_mermaid",  # from pymc.model_graph
         "model_to_networkx",  # from pymc.model_graph
         "observe",  # from pymc.model.transform.conditioning
-        "unconstrain_values",  # from pymc.model.transform_values
     }
 )
 
