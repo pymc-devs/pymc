@@ -145,9 +145,6 @@ def fgraph_from_model(
     memo: Dict
         A dictionary mapping original model variables to the equivalent nodes in the fgraph.
     """
-    if any(v is not None for v in model.rvs_to_initial_values.values()):
-        raise NotImplementedError("Cannot convert models with non-default initial_values")
-
     if model.parent is not None:
         raise ValueError(
             "Nested sub-models cannot be converted to fgraph. Convert the parent model instead"
@@ -195,8 +192,20 @@ def fgraph_from_model(
         if var not in old_value_vars
     ]
 
+    # Variable initvals ride along as trailing outputs so the clone reaches them.
+    rvs_to_initial_values = model.rvs_to_initial_values
+    variable_initvals = [
+        iv for iv in rvs_to_initial_values.values() if isinstance(iv, Variable)
+    ]
+
     model_vars = (
-        rvs + potentials + deterministics + other_named_vars + named_value_vars + unnamed_value_vars
+        rvs
+        + potentials
+        + deterministics
+        + other_named_vars
+        + named_value_vars
+        + unnamed_value_vars
+        + variable_initvals
     )
 
     memo = {}
@@ -223,6 +232,11 @@ def fgraph_from_model(
     # Copy model meta-info to fgraph
     fgraph._coords = model._coords.copy()
     fgraph._dim_lengths = {k: memo.get(v, v) for k, v in model._dim_lengths.items()}
+    fgraph._initvals = {
+        rv.name: (memo[iv] if isinstance(iv, Variable) else iv)
+        for rv, iv in rvs_to_initial_values.items()
+        if iv is not None
+    }
 
     rvs_to_transforms = model.rvs_to_transforms
     named_vars_to_dims = model.named_vars_to_dims
@@ -237,9 +251,9 @@ def fgraph_from_model(
     deterministics = [memo[k] for k in deterministics]
     named_vars = [memo[k] for k in other_named_vars + named_value_vars]
 
-    vars = fgraph.outputs
+    model_outputs = fgraph.outputs[: len(fgraph.outputs) - len(variable_initvals)]
     new_vars = []
-    for var in vars:
+    for var in model_outputs:
         dims = named_vars_to_dims.get(var.name, ())
         if var in free_rvs_to_values:
             new_var = model_free_rv(
@@ -258,7 +272,7 @@ def fgraph_from_model(
             new_var = var
         new_vars.append(new_var)
 
-    replacements = tuple(zip(vars, new_vars))
+    replacements = tuple(zip(model_outputs, new_vars))
     toposort_replace(fgraph, replacements, reverse=True)
 
     # Reference model vars in memo
@@ -272,8 +286,10 @@ def fgraph_from_model(
         original_var = inverse_memo[var]
         memo[original_var] = model_var
 
-    # Remove the last outputs corresponding to unnamed value variables, now that they are graph inputs
-    first_idx_to_remove = len(fgraph.outputs) - len(unnamed_value_vars)
+    # Remove the last outputs corresponding to unnamed value variables
+    first_idx_to_remove = (
+        len(fgraph.outputs) - len(unnamed_value_vars) - len(variable_initvals)
+    )
     for _ in unnamed_value_vars:
         fgraph.remove_output(first_idx_to_remove)
 
@@ -308,13 +324,16 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
 
     _coords = getattr(fgraph, "_coords", {})
     _dim_lengths = getattr(fgraph, "_dim_lengths", {})
+    _initvals = getattr(fgraph, "_initvals", {})
 
     if not mutate_fgraph:
         fgraph, memo = fgraph.clone_get_equiv(check_integrity=False, attach_feature=False)
-        # Shared dim lengths are not extracted from the fgraph representation,
-        # so we need to update after we clone the fgraph
-        # TODO: Consider representing/extracting them from the fgraph!
+        # Side metadata is keyed on fgraph variables, so it must be remapped through the clone memo.
         _dim_lengths = {k: memo.get(v, v) for k, v in _dim_lengths.items()}
+        _initvals = {
+            name: (memo.get(iv, iv) if isinstance(iv, Variable) else iv)
+            for name, iv in _initvals.items()
+        }
 
     model._coords = _coords
     model._dim_lengths = _dim_lengths
@@ -342,7 +361,7 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
             model.create_value_var(
                 var, transform=transform, default_transform=None, value_var=value
             )
-            model.set_initval(var, initval=None)
+            model.set_initval(var, initval=_initvals.get(model_var.name))
         elif isinstance(model_var.owner.op, ModelObservedRV):
             var, value, *dims = model_var.owner.inputs
             model.observed_RVs.append(var)

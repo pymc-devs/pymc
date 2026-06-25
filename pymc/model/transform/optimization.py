@@ -15,6 +15,7 @@ from collections.abc import Sequence
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph
+from pytensor.graph.basic import Variable
 from pytensor.graph.replace import clone_replace
 
 from pymc import Model
@@ -96,15 +97,21 @@ def freeze_dims_and_data(
     }
 
     old_outs, old_coords, old_dim_lenghts = fg.outputs, fg._coords, fg._dim_lengths  # type: ignore[attr-defined]
+    old_initvals = fg._initvals  # type: ignore[attr-defined]
     # Rebuild strict will force the recreation of RV nodes with updated static types
     new_outs = clone_replace(old_outs, replace=frozen_replacements, rebuild_strict=False)  # type: ignore[arg-type]
     for old_out, new_out in zip(old_outs, new_outs):
         new_out.name = old_out.name
+    old_to_new = dict(zip(old_outs, new_outs))
     fg = FunctionGraph(outputs=new_outs, clone=False)
     fg._coords = old_coords  # type: ignore[attr-defined]
     fg._dim_lengths = {  # type: ignore[attr-defined]
         dim: frozen_replacements.get(dim_length, dim_length)
         for dim, dim_length in old_dim_lenghts.items()
+    }
+    fg._initvals = {  # type: ignore[attr-defined]
+        name: (old_to_new.get(iv, iv) if isinstance(iv, Variable) else iv)
+        for name, iv in old_initvals.items()
     }
 
     # Recreate value variables from new RVs to propagate static types to logp graphs
