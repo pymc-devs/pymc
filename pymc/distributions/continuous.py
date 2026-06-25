@@ -3892,11 +3892,16 @@ class Interpolated(BoundedContinuous):
 
     def logp(value, x_points, pdf_points, cdf_points):
         # x_points and pdf_points are expected to be non-symbolic arrays wrapped
-        # within a tensor.constant. We use the .data method to retrieve them
+        # within a tensor.constant. We use the .data method to retrieve them.
+        # Squeeze to 1-D in case size broadcasting prepended length-1 batch dims;
+        # the spline is always defined over a single set of points, and scipy's
+        # integral bounds must be 0-dimensional.
+        x_points_data = np.squeeze(x_points.data)
+        pdf_points_data = np.squeeze(pdf_points.data)
         interp = interpolate.InterpolatedUnivariateSpline(
-            x_points.data, pdf_points.data, k=1, ext="zeros"
+            x_points_data, pdf_points_data, k=1, ext="zeros"
         )
-        Z = interp.integral(x_points.data[..., 0], x_points.data[..., -1])
+        Z = interp.integral(x_points_data[0], x_points_data[-1])
 
         # interp and Z are converted to symbolic variables here
         interp_op = SplineWrapper(interp)
