@@ -70,8 +70,9 @@ class TestDataPyMC:
             self.model = model
             self.obj = trace
 
+    @staticmethod
     @pytest.fixture(scope="class")
-    def data(self, eight_schools_params, draws, chains):
+    def data(eight_schools_params, draws, chains):
         with pm.Model() as model:
             mu = pm.Normal("mu", mu=0, sigma=5)
             tau = pm.HalfCauchy("tau", beta=5)
@@ -90,7 +91,7 @@ class TestDataPyMC:
                     return_inferencedata=False,
                 )
 
-        return self.Data(model, trace)
+        return TestDataPyMC.Data(model, trace)
 
     def get_inference_data(self, data, eight_schools_params):
         with data.model:
