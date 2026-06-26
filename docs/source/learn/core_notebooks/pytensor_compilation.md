@@ -3,10 +3,14 @@
 
 **Author:** [Benjamin Vincent](https://github.com/drbenvincent)
 
-In your day-to-day modeling work, it is possible to write models exclusively in PyMC and never know about, or write any, PyTensor code. But PyTensor is a _crucial_ part of the modeling stack, and does a lot of work on your behalf every time you sample. Understanding what it is and how it works can help  explain two things PyMC users often wonder about:
+In your day-to-day modeling work, it is possible to write models exclusively in PyMC and never know about, or write any, PyTensor code. But PyTensor is a _crucial_ part of the modeling stack, and does a lot of work on your behalf every time you sample. Understanding what it does helps with questions like:
 
 - **Why does sampling sometimes take a while to even start?** That's compilation.
 - **Why is the first run slow but later runs faster?** That's caching.
+- **Why should I use `pm.Data` instead of passing arrays directly?** Because `pm.Data` lets you update your data without recompiling — critical for iterative workflows.
+- **Why does PyMC rarely produce `NaN` or `inf` from ordinary log-probability expressions?** Numerical rewrites fix fragile formulas before anything runs.
+- **Which backend should I choose, and what does that even mean?** This guide explains the options and when each matters.
+- **Why does writing vectorized code matter even when the backend isn't Python?** Because vectorized expressions produce simpler graphs that the rewriter can optimise and translate more effectively.
 
 This guide gives you a mental model of the pipeline and the choices available, without assuming you've ever written a line of PyTensor.
 
