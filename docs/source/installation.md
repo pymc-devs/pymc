@@ -1,14 +1,11 @@
 (installation)=
 # Installation
 
-As of PyMC v6, PyMC compiles models with the [Numba](https://numba.pydata.org/) backend by
-default, so no extra system setup (compiler or BLAS) is required, and PyMC can
-be installed with `pip`.
+PyMC can be installed with `pip`.
 
 We also recommend installing [nutpie](https://github.com/pymc-devs/nutpie), a
 fast NUTS sampler written in Rust. When nutpie is installed, PyMC selects it as
-the default NUTS sampler automatically — typically about 2x faster than PyMC's
-built-in NUTS:
+the default NUTS sampler automatically.
 
 ```console
 pip install "pymc[nutpie]"
