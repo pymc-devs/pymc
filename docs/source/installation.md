@@ -21,7 +21,7 @@ pip install pymc
 
 As an alternative, PyMC can be installed with `conda` using
 [Anaconda](https://www.anaconda.com/) or
-[Miniforge](https://github.com/conda-forge/miniforge). This is still recommended if you
+[Miniforge](https://github.com/conda-forge/miniforge). This is recommended if you
 want to use the legacy C backend or need control over the BLAS library.
 
 We recommend a fresh
