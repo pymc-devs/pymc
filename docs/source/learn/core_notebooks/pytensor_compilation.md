@@ -185,7 +185,14 @@ What the compiled callable does depends on the task:
 
 PyMC may compile several such functions for one model — log-density and gradient for sampling, plus separate functions for prior or posterior predictive draws.
 
-Data can be baked in or left as a runtime input. Observed values passed as plain NumPy arrays are folded into the compiled function as constants. Values stored in `pm.Data` containers stay mutable: updating them with `pm.set_data` does not require recompilation. If you want data and dimension lengths treated as compile-time constants (for stronger rewrites), use the `freeze_dims_and_data` model transform.
+The way observed data is handled depends on how it was declared:
+
+- **Plain NumPy arrays** are folded into the compiled function as constants. The compiler can see those values at build time and use them to simplify the graph — but if you want to update the data you have to recompile from scratch.
+- **`pm.Data` containers** are kept as *runtime inputs* that the function reads each time it is called, not at build time. The function is compiled once; you can then call `pm.set_data(...)` to swap the values in and the compiled function simply reads the new data on its next call — no recompilation needed. The trade-off is that the compiler cannot fold those values in to simplify the graph.
+
+This matters most in iterative workflows — posterior predictive checks over many data splits, or updating a model's observations between sampling runs — where recompiling each time would dominate wall time.
+
+If you want data and dimension lengths treated as compile-time constants (enabling stronger graph rewrites) without restructuring your model, use the `freeze_dims_and_data` model transform, which converts `pm.Data` containers into true constants before compilation.
 
 An MCMC sampler calls its compiled function many times, proposing new parameter points and reading back log-probability (and gradient, when needed) to decide where to go next. Time spent *here* is sampling time, which is separate from the compilation time described above — speeding up compilation does not speed up sampling, and vice versa.
 
