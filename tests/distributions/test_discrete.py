@@ -317,6 +317,11 @@ class TestMatchesScipy:
             Bool,
             {"p": Unit},
         )
+        check_icdf(
+            pm.Bernoulli,
+            {"p": Unit},
+            st.bernoulli.ppf,
+        )
 
     def test_bernoulli_wrong_arguments(self):
         m = pm.Model()

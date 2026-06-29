@@ -390,6 +390,20 @@ class Bernoulli(Discrete):
             msg="0 <= p <= 1",
         )
 
+    def icdf(value, p):
+        res = pt.switch(
+            pt.le(value, 1 - p),
+            0,
+            1,
+        ).astype("int64")
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            0 <= p,
+            p <= 1,
+            msg="0 <= p <= 1",
+        )
+
 
 class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
