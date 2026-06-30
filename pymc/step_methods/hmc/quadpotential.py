@@ -685,7 +685,7 @@ class QuadPotentialFull(QuadPotential):
 
         Parameters
         ----------
-        A: matrix, ndim = 2
+        cov: matrix, ndim = 2
             scaling matrix for the potential vector
         dtype :
             The dtype to assign to the resulting momentum
