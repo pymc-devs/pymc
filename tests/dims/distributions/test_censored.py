@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor.tensor as pt
+import pytensor.xtensor.math as ptxm
 import pytest
 
 from pytensor.xtensor import as_xtensor
@@ -20,7 +22,8 @@ from pytensor.xtensor.vectorization import XRV
 
 import pymc.distributions as regular_distributions
 
-from pymc.dims import Censored, Normal
+from pymc import draw as pm_draw
+from pymc.dims import Censored, CustomDist, Normal
 from pymc.model.core import Model
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
@@ -95,3 +98,54 @@ def test_censored_dims():
         c3_dist = c3.owner.inputs[0]
         assert isinstance(c3_dist.owner.op, XRV)
         assert c3_dist.dims == ("d", "c", "a", "b")
+
+
+def test_censored_custom_dist():
+    """Factory distributions compose with an overridden CustomDist through its Op."""
+    from scipy import stats
+
+    def normal_dist(mu, sigma, extra_dims):
+        return Normal.dist(mu, sigma, dim_lengths=extra_dims)
+
+    def normal_logp(value, mu, sigma):
+        value, mu, sigma = value.values, mu.values, sigma.values
+        return -0.5 * ((value - mu) / sigma) ** 2 - pt.log(sigma * pt.sqrt(2 * np.pi))
+
+    def normal_logcdf(value, mu, sigma):
+        value, mu, sigma = value.values, mu.values, sigma.values
+        return pt.log(pt.erf((value - mu) / (sigma * pt.sqrt(2.0))) + 1.0) - pt.log(2.0)
+
+    coords = {"city": range(5)}
+    with Model(coords=coords) as model:
+        base = CustomDist.dist(0.0, 1.0, dist=normal_dist, logp=normal_logp, logcdf=normal_logcdf)
+        # The extra dim is added by rebuilding the CustomDist through its Op
+        Censored("y", base, lower=-1.0, upper=1.0, dims="city")
+
+    draws = pm_draw(model["y"], draws=100, random_seed=1)
+    assert draws.shape == (100, 5)
+    assert ((draws >= -1) & (draws <= 1)).all()
+
+    test_value = np.array([-1.0, -0.5, 0.0, 0.5, 1.0])
+    logp_value = model.compile_logp()({"y": test_value})
+    ref = stats.norm(0, 1)
+    expected = np.log(ref.cdf(-1)) + ref.logpdf([-0.5, 0.0, 0.5]).sum() + np.log(ref.sf(1))
+    np.testing.assert_allclose(logp_value, expected)
+
+
+def test_censored_custom_dist_derived():
+    """Censored resizes a compound CustomDist without overrides through its Op."""
+
+    def logitnormal_dist(mu, sigma, extra_dims):
+        return ptxm.sigmoid(Normal.dist(mu, sigma, dim_lengths=extra_dims))
+
+    coords = {"city": range(5)}
+    with Model(coords=coords) as model:
+        base = CustomDist.dist(0.0, 1.0, dist=logitnormal_dist)
+        Censored("y", base, lower=0.2, upper=0.8, dims="city")
+
+    draws = pm_draw(model["y"], draws=100, random_seed=1)
+    assert draws.shape == (100, 5)
+    assert ((draws >= 0.2) & (draws <= 0.8)).all()
+
+    # The support point comes from the bounds, like in regular Censored
+    np.testing.assert_allclose(model.initial_point()["y"], np.full(5, 0.5))
