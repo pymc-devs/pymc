@@ -45,6 +45,13 @@ def test_censored_basic(lower, upper):
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
 
+    # Dead branches of the support point switch constant-fold -inf + inf
+    with np.errstate(invalid="ignore"):
+        np.testing.assert_allclose(
+            model.initial_point()["y"],
+            reference_model.initial_point()["y"],
+        )
+
 
 def test_censored_dims():
     """Test that both censored (and the underlying dist) have all the implied and explicit dims."""
