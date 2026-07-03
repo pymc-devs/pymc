@@ -409,7 +409,9 @@ class SupportPointRewrite(GraphRewriter):
         if not isinstance(node.op, Scan):
             return
 
-        node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+        # The Scan inner graph is frozen; work on a mutable copy
+        inner_fgraph = node.op.fgraph.unfreeze()
+        node_inputs, node_outputs = inner_fgraph.inputs, inner_fgraph.outputs
         op = node.op
 
         local_fgraph_topo = io_toposort(node_inputs, node_outputs)
@@ -462,11 +464,11 @@ def dist_support_point(op, rv, *args):
     node = rv.owner
     rv_out_idx = node.outputs.index(rv)
 
-    fgraph = op.fgraph.clone()
+    fgraph = op.fgraph.unfreeze()
     replace_support_point = SupportPointRewrite()
     replace_support_point.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
-    fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
+    fgraph.replace_all(tuple(zip(fgraph.inputs, args)), import_missing=True)
     support_point = fgraph.outputs[rv_out_idx]
     return support_point
 

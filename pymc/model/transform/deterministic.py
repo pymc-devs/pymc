@@ -149,9 +149,7 @@ def extract_deterministics(
                 # returns a Variable (mypy infers the broad Op.__call__ return type).
                 [(det_memo[i], ModelAnchor(i.name)(det_memo[i])) for i in det_inputs]  # type: ignore[arg-type, misc]
             )
-            deterministics.append(
-                FrozenFunctionGraph(inputs=det_fgraph.inputs, outputs=det_fgraph.outputs)
-            )
+            deterministics.append(det_fgraph.freeze())
         model_vars.append(model_var)
 
     fgraph.replace_all(replacements, reason="extract_deterministics")

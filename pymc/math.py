@@ -566,7 +566,7 @@ class BatchedDiag(Op):
         idx = pt.arange(gz.shape[-1])
         return [gz[..., idx, idx]]
 
-    def infer_shape(self, fgraph, nodes, shapes):
+    def infer_shape(self, nodes, shapes):
         return [(shapes[0][0],) + (shapes[0][1],) * 2]
 
 

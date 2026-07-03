@@ -37,7 +37,6 @@ import typing
 
 from pathlib import Path
 
-from numpy.lib.array_utils import normalize_axis_index
 from pytensor import tensor as pt
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
@@ -49,7 +48,6 @@ from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
 
-from pymc.exceptions import NotConstantValueError
 from pymc.logprob.abstract import (
     MeasurableOp,
     ValuedRV,
@@ -104,9 +102,10 @@ class MeasurableJoin(MeasurableOp, Join):
 
 
 @_logprob.register(MeasurableJoin)
-def logprob_join(op, values, axis, *base_rvs, **kwargs):
+def logprob_join(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `Join`."""
     (value,) = values
+    axis = op.axis
 
     base_rvs = remove_promised_valued_rvs(base_rvs)
 
@@ -137,9 +136,8 @@ def logprob_join(op, values, axis, *base_rvs, **kwargs):
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
-    # Make axis positive and adjust for multivariate logp fewer dimensions to the right
-    axis = pt.switch(axis >= 0, axis, value.ndim + axis)
-    axis = pt.minimum(axis, logps[0].ndim - 1)
+    # Adjust for multivariate logp fewer dimensions to the right
+    axis = min(axis, logps[0].ndim - 1)
     join_logprob = pt.concatenate(
         [pt.atleast_1d(logp) for logp in logps],
         axis=axis,
@@ -158,10 +156,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
 
     is_join = isinstance(node.op, Join)
 
-    if is_join:
-        axis, *base_vars = node.inputs
-    else:
-        base_vars = node.inputs
+    base_vars = node.inputs
 
     # Allow mixing potentially measurable inputs with deterministic ones.
     new_base_vars: list[TensorVariable] = []
@@ -189,7 +184,7 @@ def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     new_base_vars = temp_fgraph.outputs  # type: ignore[assignment]
 
     if is_join:
-        measurable_stack = MeasurableJoin()(axis, *new_base_vars)
+        measurable_stack = MeasurableJoin(axis=node.op.axis)(*new_base_vars)
     else:
         measurable_stack = MeasurableMakeVector(node.op.dtype)(*new_base_vars)
     assert isinstance(measurable_stack, TensorVariable)
@@ -206,20 +201,22 @@ def find_measurable_splits(fgraph, node) -> list[TensorVariable] | None:
     if isinstance(node.op, MeasurableOp):
         return None
 
-    x, axis, splits = node.inputs
+    x, splits = node.inputs
     if not filter_measurable_variables([x]):
         return None
 
-    return MeasurableSplit(node.op.len_splits).make_node(x, axis, splits).outputs
+    return MeasurableSplit(node.op.len_splits, node.op.axis).make_node(x, splits).outputs
 
 
 @_logprob.register(MeasurableSplit)
-def logprob_split(op: MeasurableSplit, values, x, axis, splits, **kwargs):
+def logprob_split(op: MeasurableSplit, values, x, splits, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableSplit`."""
     if len(values) != op.len_splits:
         # TODO: Don't rewrite the split in the first place if not all parts are linked to value variables
         # This also allows handling some cases where not all splits are used
         raise ValueError("Split logp requires the number of values to match the number of splits")
+
+    axis = op.axis
 
     # Reverse the effects of split on the value variable
     join_value = pt.join(axis, *values)
@@ -228,25 +225,14 @@ def logprob_split(op: MeasurableSplit, values, x, axis, splits, **kwargs):
 
     reduced_dims = join_value.ndim - join_logp.ndim
 
-    if reduced_dims:
-        # This happens for multivariate distributions
-        try:
-            [constant_axis] = constant_fold([axis])
-        except NotConstantValueError:
-            raise NotImplementedError("Cannot split multivariate logp with non-constant axis")
+    if reduced_dims and axis >= join_logp.ndim:
+        # If the axis is over a dimension that was reduced in the logp (multivariate logp),
+        # We cannot split it into distinct entries. The mapping between values-densities breaks.
+        # We return the weighted logp by the split sizes. This is a good solution as any?
+        split_weights = splits / pt.sum(splits)
+        return [join_logp * split_weights[i] for i in range(typing.cast(int, op.len_splits))]
 
-        constant_axis = normalize_axis_index(constant_axis, join_value.ndim)  # type: ignore[arg-type, assignment]
-        if constant_axis >= join_logp.ndim:
-            # If the axis is over a dimension that was reduced in the logp (multivariate logp),
-            # We cannot split it into distinct entries. The mapping between values-densities breaks.
-            # We return the weighted logp by the split sizes. This is a good solution as any?
-            split_weights = splits / pt.sum(splits)
-            return [join_logp * split_weights[i] for i in range(typing.cast(int, op.len_splits))]
-        else:
-            # Otherwise we can split the logp as the split were over batched dimensions
-            # We just need to be sure to use the positive axis index
-            axis = constant_axis
-
+    # Otherwise we can split the logp as if the split were over batched dimensions
     return pt.split(
         join_logp,
         splits_size=splits,
