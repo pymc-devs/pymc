@@ -275,7 +275,7 @@ class ValuedRV(Op):
         warnings.warn("ValuedVar should not be present in the final graph!")
         out[0][0] = inputs[0]
 
-    def infer_shape(self, fgraph, node, input_shapes):
+    def infer_shape(self, node, input_shapes):
         return [input_shapes[0]]
 
 
@@ -323,7 +323,7 @@ class PromisedValuedRV(Op):
     def perform(self, node, inputs, out):
         raise NotImplementedError("PromisedValuedRV should not be present in the final graph!")
 
-    def infer_shape(self, fgraph, node, input_shapes):
+    def infer_shape(self, node, input_shapes):
         return [input_shapes[0]]
 
 

@@ -38,7 +38,7 @@ from typing import cast
 
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply, Constant, Variable
+from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
@@ -62,7 +62,6 @@ from pytensor.tensor.subtensor import (
     unflatten_index_variables,
 )
 from pytensor.tensor.type import TensorType
-from pytensor.tensor.type_other import NoneConst, NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.logprob.abstract import (
@@ -85,7 +84,6 @@ from pymc.logprob.utils import (
     filter_measurable_variables,
     get_related_valued_nodes,
 )
-from pymc.pytensorf import constant_fold
 
 
 def expand_indices(
@@ -215,10 +213,12 @@ def rv_pull_down(x: TensorVariable) -> TensorVariable:
 class MixtureRV(MeasurableOp, Op):
     """A placeholder used to specify a log-likelihood for a mixture sub-graph."""
 
-    __props__ = ("indices_end_idx", "out_dtype", "out_broadcastable", "idx_list")
+    __props__ = ("join_axis", "indices_end_idx", "out_dtype", "out_broadcastable", "idx_list")
 
-    def __init__(self, indices_end_idx, out_dtype, out_broadcastable, idx_list):
+    def __init__(self, join_axis, indices_end_idx, out_dtype, out_broadcastable, idx_list):
         super().__init__()
+        # `None` when the components were stacked via `MakeVector`
+        self.join_axis = join_axis
         self.indices_end_idx = indices_end_idx
         self.out_dtype = out_dtype
         self.out_broadcastable = out_broadcastable
@@ -244,16 +244,12 @@ def get_stack_mixture_vars(
         return None, None
 
     if isinstance(joined_rvs.owner.op, MakeVector):
-        join_axis = NoneConst
+        join_axis = None
         mixture_rvs = joined_rvs.owner.inputs
 
     elif isinstance(joined_rvs.owner.op, Join):
-        join_axis = joined_rvs.owner.inputs[0]
-        # TODO: Support symbolic join axes. This will raise ValueError if it's not a constant
-        (join_axis,) = constant_fold((join_axis,), raise_not_constant=False)
-        join_axis = pt.as_tensor(join_axis, dtype="int64")
-
-        mixture_rvs = joined_rvs.owner.inputs[1:]
+        join_axis = joined_rvs.owner.op.axis
+        mixture_rvs = joined_rvs.owner.inputs
 
     # Join and MakeVector can introduce PromisedValuedRV to prevent losing interdependencies
     mixture_rvs = [
@@ -291,8 +287,7 @@ def find_measurable_index_mixture(fgraph, node):
     old_mixture_rv = node.default_output()
     mixture_rvs, join_axis = get_stack_mixture_vars(node)
 
-    # We don't support symbolic join axis
-    if mixture_rvs is None or not isinstance(join_axis, NoneTypeT | Constant):
+    if mixture_rvs is None:
         return None
 
     if set(filter_measurable_variables(mixture_rvs)) != set(mixture_rvs):
@@ -300,12 +295,13 @@ def find_measurable_index_mixture(fgraph, node):
 
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
-        1 + len(mixing_indices),
+        join_axis,
+        len(mixing_indices),
         old_mixture_rv.dtype,
         old_mixture_rv.broadcastable,
         idx_list=idx_list,
     )
-    new_mixture_rv = mix_op(join_axis, *mixing_indices, *mixture_rvs)
+    new_mixture_rv = mix_op(*mixing_indices, *mixture_rvs)
 
     return [new_mixture_rv]
 
@@ -314,8 +310,8 @@ def find_measurable_index_mixture(fgraph, node):
 def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=None, **kwargs):
     (value,) = values
 
-    join_axis = cast(Variable, inputs[0])
-    flat_indices = inputs[1 : op.indices_end_idx]
+    join_axis = op.join_axis
+    flat_indices = inputs[: op.indices_end_idx]
     comp_rvs = cast(TensorVariable, inputs[op.indices_end_idx :])
 
     assert len(flat_indices) > 0
@@ -323,8 +319,8 @@ def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=N
     # Use flat_indices (tensor variables only) for the scalar vs advanced check.
     # Slices in idx_list don't indicate advanced indexing.
     if len(flat_indices) > 1 or flat_indices[0].ndim > 0:
-        if isinstance(join_axis.type, NoneTypeT):
-            # `join_axis` will be `NoneConst` if the "join" was a `MakeVector`
+        if join_axis is None:
+            # `join_axis` is `None` if the "join" was a `MakeVector`
             # (i.e. scalar measurable variables were combined to make a vector).
             # Since some form of advanced indexing is necessarily occurring, we
             # need to reformat the MakeVector arguments so that they fit the
@@ -333,7 +329,7 @@ def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=N
             comp_rvs = [comp[None] for comp in comp_rvs]
             original_shape = (len(comp_rvs),)
         else:
-            join_axis_val = constant_fold((join_axis,))[0].item()
+            join_axis_val = join_axis
             original_shape = shape_tuple(comp_rvs[0])
 
         # Reconstruct full indices
@@ -366,7 +362,7 @@ def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=N
         # If the stacking operation expands the component RVs, we have
         # to expand the value and later squeeze the logprob for everything
         # to work correctly
-        join_axis_val = None if isinstance(join_axis.type, NoneTypeT) else join_axis.data
+        join_axis_val = join_axis
 
         if join_axis_val is not None:
             value = pt.expand_dims(value, axis=join_axis_val)

@@ -156,7 +156,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     mb_tensors = [tensor[mb_indices] for tensor in tensors]
 
     # Wrap graph in OFG so it's easily identifiable and not rewritten accidentally
-    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)
+    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)  # type: ignore[misc]
     for i, r in enumerate(mb_tensors[:-1]):
         r.name = f"minibatch.{i}"
 

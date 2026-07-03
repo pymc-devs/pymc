@@ -135,14 +135,10 @@ def test_mixture_basics():
     )
     assert np.isfinite(y_logp)
 
-    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+    # Symbolic join axes are rejected by PyTensor at graph construction
+    with pytest.raises(TypeError, match="axis of join must be a constant"):
         axis_at = pt.lscalar("axis")
-        env = create_mix_model((2,), axis_at)
-        I_rv = env["I_rv"]
-        i_vv = env["i_vv"]
-        M_rv = env["M_rv"]
-        m_vv = env["m_vv"]
-        conditional_logp({M_rv: m_vv, I_rv: i_vv})
+        create_mix_model((2,), axis_at)
 
 
 @pytest.mark.parametrize(

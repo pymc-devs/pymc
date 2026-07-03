@@ -548,8 +548,14 @@ def test_truncated_multiple_rngs():
     scan_fgraph = scan_node.op.fgraph
     rng_inner_inps = [i for i in scan_node.op.inner_inputs if isinstance(i.type, RandomType)]
     assert len(rng_inner_inps) == 3
+    destroyed_vars = {
+        node.inputs[idx]
+        for node in scan_fgraph.apply_nodes
+        for idxs in node.op.destroy_map.values()
+        for idx in idxs
+    }
     for rng_inp in rng_inner_inps:
-        assert scan_fgraph.has_destroyers([rng_inp]), (
+        assert rng_inp in destroyed_vars, (
             f"RNG input {rng_inp} is not destroyed — state won't advance between scan iterations"
         )
 

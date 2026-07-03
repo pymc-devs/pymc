@@ -117,7 +117,7 @@ def test_convert_outer_out_to_in_sit_sot():
     Y_all = Y_rv.owner.inputs[0]
     Y_all.name = "Y_all"
 
-    input_scan_args = ScanArgs.from_node(Y_rv.owner.inputs[0].owner)
+    input_scan_args = ScanArgs.from_node(Y_rv.owner.inputs[0].owner, clone=True)
 
     # TODO FIXME: Everything below needs to be replaced with explicit asserts
     # on the values in `input_scan_args`
@@ -222,7 +222,7 @@ def test_convert_outer_out_to_in_mit_sot():
     Y_obs = pt.as_tensor_variable(Y_rv.eval())
     Y_obs.name = "Y_obs"
 
-    input_scan_args = ScanArgs.from_node(Y_rv.owner.inputs[0].owner)
+    input_scan_args = ScanArgs.from_node(Y_rv.owner.inputs[0].owner, clone=True)
 
     # TODO FIXME: Everything below needs to be replaced with explicit asserts
     # on the values in `input_scan_args`

@@ -262,7 +262,7 @@ class DiracDelta(MeasurableOp, Op):
         warnings.warn("DiracDelta is a dummy Op that shouldn't be used in a compiled graph")
         z[0] = x
 
-    def infer_shape(self, fgraph, node, input_shapes):
+    def infer_shape(self, node, input_shapes):
         return input_shapes
 
 

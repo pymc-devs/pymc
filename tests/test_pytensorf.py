@@ -544,14 +544,14 @@ class TestCompile:
         rng = pytensor.shared(np.random.default_rng())
         next_rng_, x_ = pt.random.normal(size=(10,), rng=rng).owner.outputs
 
-        x = OpFromGraph([], [x_])()
+        x = OpFromGraph([rng], [x_])(rng)
         with pytest.raises(
             ValueError,
             match="No update found for at least one RNG used in OpFromGraph Op",
         ):
             collect_default_updates([x])
 
-        next_rng, x = OpFromGraph([], [next_rng_, x_])()
+        next_rng, x = OpFromGraph([rng], [next_rng_, x_])(rng)
         assert collect_default_updates([x]) == {rng: next_rng}
         fn = compile([], x, random_seed=1)
         assert not (set(fn()) & set(fn()))

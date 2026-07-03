@@ -21,7 +21,6 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply
-from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import ancestors
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
@@ -239,9 +238,7 @@ def random_walk_logp(op, values, *inputs, **kwargs):
     (value,) = values
     # Recreate RV and obtain inner graph
     rv_node = op.make_node(*inputs)
-    rv = clone_replace(op.inner_outputs, replace=dict(zip(op.inner_inputs, rv_node.inputs)))[
-        op.default_output
-    ]
+    rv = op.fgraph.bind(rv_node.inputs)[op.default_output]
     # Obtain logp of the inner graph and collapse steps dimension
     return logp(rv, value).sum(axis=-1)
 
