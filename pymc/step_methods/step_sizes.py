@@ -15,10 +15,12 @@
 
 import numpy as np
 
-from scipy import stats
+from pytensor.utils import lazy_scipy_module
 
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+
+stats = lazy_scipy_module("stats")
 
 
 @dataclass_state

@@ -54,7 +54,7 @@ with open(REQUIREMENTS_FILE) as f:
 test_reqs = ["pytest", "pytest-cov"]
 
 extras_require = {
-    "nutpie": ["nutpie>=0.16.8"],
+    "nutpie": ["nutpie>=0.16.10,<1"],
 }
 
 if __name__ == "__main__":

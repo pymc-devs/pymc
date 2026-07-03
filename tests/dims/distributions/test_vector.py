@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import math
+
 import numpy as np
 import pytensor.tensor as pt
 import pytest
@@ -29,15 +31,19 @@ pytestmark = pytest.mark.filterwarnings("error")
 def test_categorical():
     coords = {"a": range(3), "b": range(4)}
     p = pt.as_tensor([0.1, 0.2, 0.3, 0.4])
+    # logit_p values whose softmax is exactly representable in float64
+    # so that the xtensor and tensor constant-folding paths agree bit-for-bit.
+    logit_p = pt.as_tensor([0.0, 0.0, math.log(2), math.log(4)])
     p_xr = as_xtensor(p, dims=("b",))
+    logit_p_xr = as_xtensor(logit_p, dims=("b",))
 
     with Model(coords=coords) as model:
         Categorical("x", p=p_xr, core_dims="b", dims=("a",))
-        Categorical("y", logit_p=p_xr, core_dims="b", dims=("a",))
+        Categorical("y", logit_p=logit_p_xr, core_dims="b", dims=("a",))
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Categorical("x", p=p, dims=("a",))
-        regular_distributions.Categorical("y", logit_p=p, dims=("a",))
+        regular_distributions.Categorical("y", logit_p=logit_p, dims=("a",))
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)

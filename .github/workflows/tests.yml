@@ -109,7 +109,9 @@ jobs:
             tests/model/test_fgraph.py
             tests/model/transform/test_basic.py
             tests/model/transform/test_conditioning.py
+            tests/model/transform/test_deterministic.py
             tests/model/transform/test_optimization.py
+            tests/model/test_transform_values.py
             tests/test_model_graph.py
             tests/ode/test_ode.py
             tests/ode/test_utils.py
@@ -196,7 +198,7 @@ jobs:
           - tests/step_methods/test_metropolis.py tests/step_methods/test_slicer.py tests/step_methods/hmc/test_nuts.py tests/step_methods/test_compound.py tests/step_methods/hmc/test_hmc.py tests/step_methods/test_state.py
 
       fail-fast: false
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
@@ -210,6 +212,7 @@ jobs:
       - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/windows-environment-test.yml
+          micromamba-version: "2.6.0-0"
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test
@@ -348,7 +351,7 @@ jobs:
     strategy:
       matrix:
         linker: [cvm, numba]
-        os: [windows-latest]
+        os: [windows-2022]
         python-version: ["3.14"]
         test-subset:
           - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
@@ -367,6 +370,7 @@ jobs:
       - uses: mamba-org/setup-micromamba@add3a49764cedee8ee24e82dfde87f5bc2914462 # v2.0.7
         with:
           environment-file: conda-envs/windows-environment-test.yml
+          micromamba-version: "2.6.0-0"
           create-args: >-
             python=${{matrix.python-version}}
           environment-name: pymc-test

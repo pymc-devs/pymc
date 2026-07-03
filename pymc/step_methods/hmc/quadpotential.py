@@ -17,13 +17,15 @@ from __future__ import annotations
 import warnings
 
 from dataclasses import field
-from typing import Any, overload
+from typing import TYPE_CHECKING, Any, overload
 
 import numpy as np
 import pytensor
-import scipy.linalg
 
-from scipy.sparse import issparse
+from pytensor.utils import lazy_scipy_module
+
+if TYPE_CHECKING:
+    import scipy.linalg
 
 from pymc.pytensorf import floatX
 from pymc.step_methods.state import (
@@ -33,6 +35,9 @@ from pymc.step_methods.state import (
     dataclass_state,
 )
 from pymc.util import RandomGenerator, get_random_generator
+
+linalg = lazy_scipy_module("linalg")
+sparse = lazy_scipy_module("sparse")
 
 __all__ = [
     "QuadPotentialDiag",
@@ -65,7 +70,7 @@ def quad_potential(C, is_cov, rng=None):
     -------
     q: Quadpotential
     """
-    if issparse(C):
+    if sparse.issparse(C):
         if not chol_available:
             raise ImportError("Sparse mass matrices require scikits.sparse")
         elif is_cov:
@@ -645,12 +650,12 @@ class QuadPotentialFullInv(QuadPotential):
         if dtype is None:
             dtype = pytensor.config.floatX
         self.dtype = dtype
-        self.L = floatX(scipy.linalg.cholesky(A, lower=True))
+        self.L = floatX(linalg.cholesky(A, lower=True))
         self.rng = get_random_generator(rng)
 
     def velocity(self, x, out=None):
         """Compute the current velocity at a position in parameter space."""
-        vel = scipy.linalg.cho_solve((self.L, True), x)
+        vel = linalg.cho_solve((self.L, True), x)
         if out is None:
             return vel
         out[:] = vel
@@ -693,7 +698,7 @@ class QuadPotentialFull(QuadPotential):
             dtype = pytensor.config.floatX
         self.dtype = dtype
         self._cov = np.array(cov, dtype=self.dtype, copy=True)
-        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._chol = linalg.cholesky(self._cov, lower=True)
         self._n = len(self._cov)
         self.rng = get_random_generator(rng)
 
@@ -704,7 +709,7 @@ class QuadPotentialFull(QuadPotential):
     def random(self):
         """Draw random value from QuadPotential."""
         vals = self.rng.normal(size=self._n).astype(self.dtype)
-        return scipy.linalg.solve_triangular(self._chol.T, vals, overwrite_b=True)
+        return linalg.solve_triangular(self._chol.T, vals, overwrite_b=True)
 
     def energy(self, x, velocity=None):
         """Compute kinetic energy at a position in parameter space."""
@@ -792,7 +797,7 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
     def reset(self):
         self._previous_update = 0
         self._cov = np.array(self._initial_cov, dtype=self.dtype, copy=True)
-        self._chol = scipy.linalg.cholesky(self._cov, lower=True)
+        self._chol = linalg.cholesky(self._cov, lower=True)
         self._chol_error = None
         self._foreground_cov = _WeightedCovariance(
             self._n, self._initial_mean, self._initial_cov, self._initial_weight, self.dtype
@@ -803,8 +808,8 @@ class QuadPotentialFullAdapt(QuadPotentialFull):
     def _update_from_weightvar(self, weightvar):
         weightvar.current_covariance(out=self._cov)
         try:
-            self._chol = scipy.linalg.cholesky(self._cov, lower=True)
-        except (scipy.linalg.LinAlgError, ValueError) as error:
+            self._chol = linalg.cholesky(self._cov, lower=True)
+        except (linalg.LinAlgError, ValueError) as error:
             self._chol_error = error
 
     def update(self, sample, grad, tune):

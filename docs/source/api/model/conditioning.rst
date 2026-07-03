@@ -1,7 +1,7 @@
 Model Conditioning
 ------------------
 
-.. currentmodule:: pymc.model.transform.conditioning
+.. currentmodule:: pymc.model.transform
 .. autosummary::
    :toctree: generated/
 

@@ -19,9 +19,11 @@ import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.gradient import NullTypeGradError
-from scipy import optimize
+from pytensor.utils import lazy_scipy_module
 
 import pymc as pm
+
+optimize = lazy_scipy_module("optimize")
 
 __all__ = ["find_constrained_prior"]
 

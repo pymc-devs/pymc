@@ -22,7 +22,6 @@ from pytensor.graph.op import Apply, Op
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.utils import safe_signature
 from pytensor.tensor.variable import TensorVariable
-from scipy.spatial import cKDTree
 
 from pymc.distributions.distribution import Distribution, _support_point
 from pymc.logprob.abstract import _logprob
@@ -303,6 +302,8 @@ class KullbackLeibler:
     """Approximate Kullback-Leibler."""
 
     def __init__(self, obs_data):
+        from scipy.spatial import cKDTree
+
         if obs_data.ndim == 1:
             obs_data = obs_data[:, None]
         n, d = obs_data.shape
@@ -313,6 +314,8 @@ class KullbackLeibler:
         self.obs_data = obs_data
 
     def __call__(self, epsilon, obs_data, sim_data):
+        from scipy.spatial import cKDTree
+
         if sim_data.ndim == 1:
             sim_data = sim_data[:, None]
         nu_d, _ = cKDTree(sim_data).query(self.obs_data, 1)

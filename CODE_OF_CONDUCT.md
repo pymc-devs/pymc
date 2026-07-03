@@ -57,7 +57,7 @@ further defined and clarified by project maintainers.
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
 reported by contacting PyMC developer Christopher Fonnesbeck via email
 (fonnesbeck@gmail.com) or phone (615-955-0380). Alternatively, you
-may also contact NumFOCUS Executive Director Leah Silen (512-222-5449), as PyMC
+may [submit a code of conduct violation report to NumFOCUS](https://forms.monday.com/forms/f130e8cddb99568fa86cf077b8912a60?r=use1), as PyMC
 is a member of NumFOCUS and subscribes to their code of conduct as a
 precondition for continued membership. All complaints will be reviewed and
 investigated and will result in a response that is deemed necessary and

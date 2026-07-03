@@ -27,7 +27,6 @@ from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
     ModelValuedVar,
-    extract_dims,
     fgraph_from_model,
     model_deterministic,
     model_free_rv,
@@ -114,9 +113,8 @@ def observe(
         assert model_var in fgraph.variables
 
         var = model_var.owner.inputs[0]
-        var.name = model_var.name
-        dims = extract_dims(model_var)
-        model_obs_rv = model_observed_rv(var, var.type.filter_variable(obs), *dims)
+        op = model_var.owner.op
+        model_obs_rv = model_observed_rv(var, var.type.filter_variable(obs), op.name, *op.dims)
         replacements[model_var] = model_obs_rv
 
     toposort_replace(fgraph, tuple(replacements.items()))
@@ -204,22 +202,22 @@ def do(
         # Just a sanity check
         assert model_var in fgraph.variables
 
+        op = model_var.owner.op
         # If the intervention references the original variable we must give it a different name
         if model_var in ancestors([intervention]):
-            intervention.name = f"do_{model_var.name}"
+            name = f"do_{op.name}"
             warnings.warn(
-                f"Intervention expression references the variable that is being intervened: {model_var.name}. "
-                f"Intervention will be given the name: {intervention.name}"
+                f"Intervention expression references the variable that is being intervened: {op.name}. "
+                f"Intervention will be given the name: {name}"
             )
         else:
-            intervention.name = model_var.name
-        dims = extract_dims(model_var)
+            name = op.name
         # If there are any RVs in the graph we introduce the intervention as a deterministic
         if rvs_in_graph([intervention]):
-            new_var = model_deterministic(intervention.copy(name=intervention.name), *dims)
+            new_var = model_deterministic(intervention.copy(), name, *op.dims)
         # Otherwise as a named variable (Constant or Shared data)
         else:
-            new_var = model_named(intervention, *dims)
+            new_var = model_named(intervention, name, *op.dims)
 
         replacements[model_var] = new_var
 
@@ -257,7 +255,7 @@ def change_value_transforms(
 
         import pymc as pm
         from pymc.distributions.transforms import logodds
-        from pymc.model.transform.conditioning import change_value_transforms
+        from pymc.model.transform import change_value_transforms
 
         with pm.Model() as base_m:
             p = pm.Uniform("p", 0, 1, default_transform=None)
@@ -296,7 +294,7 @@ def change_value_transforms(
 
         transform = vars_to_transforms[dummy_rv]
 
-        rv, value, *dims = node.inputs
+        rv, value = node.inputs
 
         new_value = rv.type()
         try:
@@ -309,7 +307,7 @@ def change_value_transforms(
             new_name = untransformed_name
         new_value.name = new_name
 
-        new_dummy_rv = model_free_rv(rv, new_value, transform, *dims)
+        new_dummy_rv = model_free_rv(rv, new_value, transform, node.op.name, *node.op.dims)
         replacements[dummy_rv] = new_dummy_rv
 
     toposort_replace(fgraph, tuple(replacements.items()))
@@ -340,7 +338,7 @@ def remove_value_transforms(
     .. code-block:: python
 
         import pymc as pm
-        from pymc.model.transform.conditioning import remove_value_transforms
+        from pymc.model.transform import remove_value_transforms
 
         with pm.Model() as transformed_m:
             p = pm.Uniform("p", 0, 1)

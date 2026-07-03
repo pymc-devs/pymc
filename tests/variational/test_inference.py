@@ -503,3 +503,15 @@ def test_multiple_minibatch_variables():
         )
         mean_field = pm.fit(10_000, obj_optimizer=pm.adam(learning_rate=0.01), progressbar=False)
     np.testing.assert_allclose(mean_field.mean.get_value(), true_weights, rtol=1e-1)
+
+
+def test_sample_outside_model_context():
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+
+    # Fit with explicit model, then exit the model context
+    approx = pm.fit(10, method="advi", model=model, progressbar=False)
+
+    # sample() should work without an active model context
+    trace = approx.sample(50)
+    assert trace.posterior["mu"].shape == (1, 50)

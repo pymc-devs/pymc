@@ -31,7 +31,7 @@ from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 
 from pymc.model import modelcontext
-from pymc.pytensorf import convert_observed_data
+from pymc.pytensorf import convert_observed_data, resolve_shapes
 
 __all__ = [
     "change_dist_size",
@@ -484,5 +484,8 @@ def maybe_resize(a: TensorVariable, size) -> TensorVariable:
         if (missing_size_entries := a.ndim - size_len) > 0:
             # Allow expression to broadcast beyond size
             size = (*a.shape[:missing_size_entries], *size)
+        else:
+            size = tuple(size)
+        size = resolve_shapes(size)
         a = pt.alloc(a, *size)  # type: ignore[assignment]
     return a

@@ -13,3 +13,31 @@
 #   limitations under the License.
 
 """Model transforms."""
+
+from pymc.model.transform.basic import (
+    prune_vars_detached_from_observed,
+    remove_minibatched_nodes,
+)
+from pymc.model.transform.conditioning import (
+    change_value_transforms,
+    do,
+    observe,
+    remove_value_transforms,
+)
+from pymc.model.transform.deterministic import (
+    extract_deterministics,
+    insert_deterministics,
+)
+from pymc.model.transform.optimization import freeze_dims_and_data
+
+__all__ = (
+    "change_value_transforms",
+    "do",
+    "extract_deterministics",
+    "freeze_dims_and_data",
+    "insert_deterministics",
+    "observe",
+    "prune_vars_detached_from_observed",
+    "remove_minibatched_nodes",
+    "remove_value_transforms",
+)

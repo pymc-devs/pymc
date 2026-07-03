@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from contextlib import nullcontext
+from time import perf_counter
 from typing import TYPE_CHECKING, Any, Literal, Protocol, Self
 
 from rich.progress import TextColumn
@@ -65,6 +66,7 @@ class ProgressBackend(Protocol):
         failing: bool,
         stats: dict[str, Any],
         is_last: bool,
+        total: int | None = None,
     ) -> None: ...
 
 
@@ -147,7 +149,7 @@ class ProgressBarManager(ABC):
 
     def _create_backend(
         self,
-        total: int | float,
+        total: int | float | None,
         progress_columns: list,
         progress_stats: dict[str, list[Any]],
     ) -> ProgressBackend:
@@ -257,10 +259,13 @@ class MCMCProgressBarManager(ProgressBarManager):
         self.update_stats_functions = step_method._make_progressbar_update_functions()
 
         self.completed_draws = 0
-        self.total_draws = draws + tune
+        total_draws = draws + tune
+        self.total_draws = total_draws * chains if self.combined_progress else total_draws
+        self._tune_total = tune * chains if self.combined_progress else tune
 
+        progress_stats["marker_pos"] = [self._tune_total] * chains
         self._backend = self._create_backend(
-            total=self.total_draws * chains if self.combined_progress else self.total_draws,
+            total=self.total_draws,
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
@@ -320,7 +325,12 @@ class MCMCProgressBarManager(ProgressBarManager):
             chain_idx = 0
 
         failing, all_step_stats = self._extract_stats(stats)
-        all_step_stats["draw"] = draw + 1 if not self.combined_progress else draw
+
+        count = draw + 1 if not self.combined_progress else draw
+        if count <= self._tune_total:
+            all_step_stats["draw"] = count
+        else:
+            all_step_stats["draw"] = count - self._tune_total
 
         self._backend.update(
             task_id=chain_idx,
@@ -328,6 +338,7 @@ class MCMCProgressBarManager(ProgressBarManager):
             failing=failing,
             stats=all_step_stats,
             is_last=is_last,
+            total=self.total_draws,
         )
 
 
@@ -341,11 +352,23 @@ class NutpieProgressBarManager(ProgressBarManager):
 
     step_name: str = "Draw"
 
+    def __enter__(self) -> Self:
+        self._backend.__enter__()
+        # nutpie's progress callback fires from a Rust thread where marimo's
+        # cell context is absent.  Replace the backend's output function with
+        # a thread-safe version that pins the cell identity.
+        if isinstance(self._backend, MarimoProgressBackend):
+            from nutpie.sample import _mo_create_replace
+
+            replace = _mo_create_replace()
+            if replace is not None:
+                self._backend._mo_replace = replace
+        return self
+
     def __init__(
         self,
         chains: int,
         draws: int,
-        tune: int,
         progressbar: bool | ProgressBarOptions = True,
         progressbar_theme: Theme | str | None = None,
     ):
@@ -354,6 +377,10 @@ class NutpieProgressBarManager(ProgressBarManager):
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
+        # Used to compute delta draws between calls
+        self._previous_finished = [0] * chains
+        self._chain_completed = [False] * chains
+        self._draws = draws
 
         progress_columns = [
             TextColumn("{task.fields[divergences]}", table_column=Column("Divergences", ratio=1)),
@@ -363,41 +390,108 @@ class NutpieProgressBarManager(ProgressBarManager):
         progress_stats = {
             stat: [0] * chains for stat in ("divergences", "step_size", "tree_size", "draw")
         }
-
-        self._previous_finished = [0] * chains
-        total_draws = draws + tune
-
+        self._tune_total: int | None = None
         self._backend = self._create_backend(
-            total=total_draws * chains if self.combined_progress else total_draws,
+            total=None,  # Will be set on first callback
             progress_columns=progress_columns,
             progress_stats=progress_stats,
         )
+
+    def _reset_draw(self, count: int) -> int:
+        if self._tune_total and count > self._tune_total:
+            return count - self._tune_total
+        return count
 
     def update(self, chain_progresses) -> None:
         """Consume a list of ``nutpie.ChainProgress`` objects and advance each bar."""
         if not self._show_progress:
             return
 
-        for chain_idx, cp in enumerate(chain_progresses):
-            delta = cp.finished_draws - self._previous_finished[chain_idx]
-            if delta <= 0:
-                continue
-            self._previous_finished[chain_idx] = cp.finished_draws
-            is_last = cp.finished_draws >= cp.total_draws
+        if self._tune_total is None:
+            for cp in chain_progresses:
+                if cp.started:
+                    tune = cp.total_draws - self._draws
+                    self._tune_total = tune * self.n_bars if self.combined_progress else tune
+                    break
+
+        if self.combined_progress:
             stats = {
-                "divergences": cp.divergences,
-                "step_size": cp.step_size,
-                "tree_size": cp.latest_num_steps,
-                "draw": cp.finished_draws,
+                "divergences": 0,
+                "step_size": 0,
+                "tree_size": 0,
+                "draw": 0,
             }
-            task_id = 0 if self.combined_progress else chain_idx
+            delta = 0
+            for chain_idx, cp in enumerate(chain_progresses):
+                cp_finished_draws = cp.finished_draws
+                delta += cp_finished_draws - self._previous_finished[chain_idx]
+                self._previous_finished[chain_idx] = cp_finished_draws
+                stats["divergences"] += len(cp.divergent_draws)
+                stats["tree_size"] = max(stats["tree_size"], cp.latest_num_steps)
+                stats["draw"] += cp_finished_draws
+            bar_total: int = cp.total_draws * len(chain_progresses)
+            total_finished = stats["draw"]
+            stats["draw"] = self._reset_draw(total_finished)
+            if self._tune_total:
+                stats["marker_pos"] = self._tune_total
+            # Use the slowest chain's runtime as the combined bar's elapsed.
+            max_runtime_ms = max(cp.runtime_ms for cp in chain_progresses)
+            if max_runtime_ms > 0:
+                self._set_task_elapsed(0, max_runtime_ms / 1000.0)
             self._backend.update(
-                task_id=task_id,
+                task_id=0,
                 advance=delta,
-                failing=cp.divergences > 0,
+                failing=stats["divergences"] > 0,
                 stats=stats,
-                is_last=is_last,
+                is_last=total_finished >= bar_total,
+                total=bar_total,
             )
+        else:
+            for chain_idx, cp in enumerate(chain_progresses):
+                # With ``cores < chains`` queued chains haven't started yet;
+                # skip them so their bar doesn't show progress or elapsed time.
+                if not cp.started or self._chain_completed[chain_idx]:
+                    continue
+                cp_finished_draws = cp.finished_draws
+                delta = cp_finished_draws - self._previous_finished[chain_idx]
+                self._previous_finished[chain_idx] = cp_finished_draws
+                is_last = cp_finished_draws >= cp.total_draws
+                if is_last:
+                    self._chain_completed[chain_idx] = True
+                # Use nutpie's per-chain runtime as the source of truth for
+                # elapsed/speed, so reads aren't skewed by the wait time
+                # before this chain started.
+                if cp.runtime_ms > 0:
+                    self._set_task_elapsed(chain_idx, cp.runtime_ms / 1000.0)
+                stats = {
+                    "divergences": len(cp.divergent_draws),
+                    "step_size": cp.step_size,
+                    "tree_size": cp.latest_num_steps,
+                    "draw": self._reset_draw(cp_finished_draws),
+                }
+                if self._tune_total:
+                    stats["marker_pos"] = self._tune_total
+                self._backend.update(
+                    task_id=chain_idx,
+                    advance=delta,
+                    failing=bool(cp.divergent_draws),
+                    stats=stats,
+                    is_last=is_last,
+                    total=cp.total_draws,
+                )
+
+    def _set_task_elapsed(self, task_id: int, elapsed_seconds: float) -> None:
+        """Override the backend's elapsed clock to match nutpie's per-chain runtime."""
+        backend = self._backend
+        now = perf_counter()
+        if isinstance(backend, RichProgressBackend):
+            rich_task_id = backend._tasks[task_id]
+            if rich_task_id is None:
+                return
+            backend._progress.tasks[task_id].start_time = now - elapsed_seconds
+            backend._started[task_id] = True
+        elif isinstance(backend, MarimoProgressBackend):
+            backend._start_times[task_id] = now - elapsed_seconds
 
 
 class SMCProgressBarManager(ProgressBarManager):

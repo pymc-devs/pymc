@@ -13,6 +13,9 @@
 #   limitations under the License.
 """PyMC-ArviZ conversion code."""
 
+from __future__ import annotations
+
+import json
 import logging
 import warnings
 
@@ -20,17 +23,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
-    Optional,
-    Union,
     cast,
 )
 
 import numpy as np
 import xarray
 
-from arviz_base import dict_to_dataset, make_attrs, rcParams
-from arviz_base.base import requires
-from arviz_base.types import CoordSpec, DimSpec
 from pytensor.graph import ancestors
 from pytensor.tensor.sharedvar import SharedVariable
 from rich.progress import Console
@@ -42,10 +40,46 @@ import pymc
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
-from pymc.util import get_default_varnames, get_untransformed_name, is_transformed_name
+from pymc.util import get_default_varnames
 
 if TYPE_CHECKING:
+    from arviz_base.types import CoordSpec, DimSpec
+
     from pymc.backends.base import MultiTrace
+
+
+class requires:
+    """Decorator that returns None if all required attributes on the wrapped instance are None."""
+
+    def __init__(self, *props):
+        self.props = props
+
+    def __call__(self, func):
+        def wrapped(cls):
+            for prop in self.props:
+                prop_list = [prop] if isinstance(prop, str) else prop
+                if all(getattr(cls, prop_i) is None for prop_i in prop_list):
+                    return None
+            return func(cls)
+
+        return wrapped
+
+
+# Self-replacing lazy stubs. First call imports arviz_base, rebinds the module-level
+# name to the real implementation, then forwards. Subsequent calls go straight to it.
+def dict_to_dataset(*args, **kwargs):  # noqa: F811
+    global dict_to_dataset
+    from arviz_base import dict_to_dataset
+
+    return dict_to_dataset(*args, **kwargs)
+
+
+def make_attrs(*args, **kwargs):  # noqa: F811
+    global make_attrs
+    from arviz_base import make_attrs
+
+    return make_attrs(*args, **kwargs)
+
 
 ___all__ = [""]
 
@@ -100,7 +134,7 @@ def dict_to_dataset_drop_incompatible_coords(
     return ds
 
 
-def find_observations(model: "Model") -> dict[str, Var]:
+def find_observations(model: Model) -> dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
@@ -117,7 +151,7 @@ def find_observations(model: "Model") -> dict[str, Var]:
     return observations
 
 
-def find_constants(model: "Model") -> dict[str, Var]:
+def find_constants(model: Model) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     model_vars = model.basic_RVs + model.deterministics + model.potentials
     value_vars = set(model.rvs_to_values.values())
@@ -140,43 +174,18 @@ def find_constants(model: "Model") -> dict[str, Var]:
 
 def patch_nutpie_idata(
     idata: DataTree,
-    model: "Model",
-    tune: int,
+    model: Model,
     sampling_time: float,
-    include_transformed: bool = False,
 ) -> None:
     """Fix up the ``DataTree`` returned by ``nutpie.sample`` in place.
 
     Work-around for gaps in what nutpie attaches to the returned ``DataTree``:
 
-    - drops transformed variables from ``posterior`` / ``warmup_posterior``
-      (when ``include_transformed`` is ``False``) or moves them into
-      ``unconstrained_posterior`` / ``warmup_unconstrained_posterior``
-      (when ``True``). Drop once
-      https://github.com/pymc-devs/nutpie/pull/298 and
-      https://github.com/pymc-devs/nutpie/issues/78 are released;
     - attaches ``constant_data`` / ``observed_data`` groups gathered from the
       model. Drop once https://github.com/pymc-devs/nutpie/issues/74 is released;
     - stamps ``sampling_time`` / ``tuning_steps`` attrs onto the posterior.
     """
     import nutpie
-
-    for src, dst in (
-        ("posterior", "unconstrained_posterior"),
-        ("warmup_posterior", "warmup_unconstrained_posterior"),
-    ):
-        if src not in idata.children:
-            continue
-        ds = idata[src].to_dataset()
-        transformed = [v for v in ds.data_vars if is_transformed_name(v)]
-        if not transformed:
-            continue
-        idata[src] = DataTree(ds.drop_vars(transformed))
-        if include_transformed:
-            unconstrained = ds[transformed].rename(
-                {v: get_untransformed_name(v) for v in transformed}
-            )
-            idata[dst] = DataTree(unconstrained)
 
     coords, dims = coords_and_dims_for_inferencedata(model)
     idata["constant_data"] = DataTree(
@@ -198,8 +207,9 @@ def patch_nutpie_idata(
         )
     )
 
+    nutpie_settings = json.loads(idata.sample_stats.attrs["inference_library_settings"])
     attrs = make_attrs(
-        {"sampling_time": sampling_time, "tuning_steps": tune},
+        {"sampling_time": sampling_time, "tuning_steps": nutpie_settings["settings"]["num_tune"]},
         inference_library=nutpie,
     )
     for k, v in attrs.items():
@@ -294,7 +304,11 @@ class DataTreeConverter:
         save_warmup: bool | None = None,
         include_transformed: bool = False,
     ):
-        self.save_warmup = rcParams["data.save_warmup"] if save_warmup is None else save_warmup
+        if save_warmup is None:
+            from arviz_base import rcParams
+
+            save_warmup = rcParams["data.save_warmup"]
+        self.save_warmup = save_warmup
         self.include_transformed = include_transformed
         self.trace = trace
 
@@ -348,7 +362,7 @@ class DataTreeConverter:
 
         self.observations = find_observations(self.model)
 
-    def split_trace(self) -> tuple[Union[None, "MultiTrace"], Union[None, "MultiTrace"]]:
+    def split_trace(self) -> tuple[MultiTrace | None, MultiTrace | None]:
         """Split MultiTrace object into posterior and warmup.
 
         Returns
@@ -597,7 +611,7 @@ class DataTreeConverter:
 
 
 def to_inference_data(
-    trace: Optional["MultiTrace"] = None,
+    trace: MultiTrace | None = None,
     *,
     prior: Mapping[str, Any] | None = None,
     posterior_predictive: Mapping[str, Any] | None = None,
@@ -606,10 +620,10 @@ def to_inference_data(
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    model: "Model" = None,
+    model: Model = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Convert pymc data into an InferenceData object.
 
     All three of them are optional arguments, but at least one of ``trace``,
@@ -650,7 +664,7 @@ def to_inference_data(
 
     Returns
     -------
-    xarray.DataTree
+    DataTree
     """
     if isinstance(trace, DataTree):
         return trace
@@ -674,14 +688,14 @@ def to_inference_data(
 ### perhaps we should have an inplace argument?
 def predictions_to_inference_data(
     predictions,
-    posterior_trace: Optional["MultiTrace"] = None,
-    model: Optional["Model"] = None,
+    posterior_trace: MultiTrace | None = None,
+    model: Model | None = None,
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    idata_orig: xarray.DataTree | None = None,
+    idata_orig: DataTree | None = None,
     inplace: bool = False,
-) -> xarray.DataTree:
+) -> DataTree:
     """Translate out-of-sample predictions into ``DataTree``.
 
     Parameters

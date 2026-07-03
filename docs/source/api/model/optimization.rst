@@ -1,6 +1,6 @@
 Model Optimization
 ------------------
-.. currentmodule:: pymc.model.transform.optimization
+.. currentmodule:: pymc.model.transform
 .. autosummary::
    :toctree: generated/
 

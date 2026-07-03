@@ -12,21 +12,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from __future__ import annotations
+
 import contextlib
 import importlib.util
 import logging
 import multiprocessing
 import pickle
+import re
 import sys
 import time
 import warnings
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
+    TYPE_CHECKING,
     Any,
     Literal,
     TypeAlias,
-    cast,
     overload,
 )
 
@@ -44,10 +47,15 @@ from xarray import DataTree
 
 import pymc as pm
 
-from pymc.backends import RunType, TraceOrBackend, init_traces
+from pymc.backends import (
+    RunType,
+    TraceOrBackend,
+    _ZarrChainBase,
+    _ZarrTraceBase,
+    init_traces,
+)
 from pymc.backends.arviz import patch_nutpie_idata
 from pymc.backends.base import IBaseTrace, MultiTrace, _choose_chains
-from pymc.backends.zarr import ZarrChain, ZarrTrace
 from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
@@ -68,6 +76,7 @@ from pymc.stats.convergence import (
 )
 from pymc.step_methods import NUTS, STEP_METHODS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
+from pymc.step_methods.compound import flatten_steps
 from pymc.step_methods.hmc import quadpotential
 from pymc.util import (
     RandomSeed,
@@ -80,12 +89,29 @@ from pymc.util import (
 )
 from pymc.vartypes import discrete_types
 
-try:
-    from zarr.storage import MemoryStore
-except ImportError:
-    MemoryStore = type("MemoryStore", (), {})
+if TYPE_CHECKING:
+    from pymc.backends.zarr import ZarrChain, ZarrTrace
 
 NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
+NUTPIE_MIN_VERSION = (0, 16, 10)
+
+
+def _nutpie_meets_min_version() -> bool:
+    """Return True if nutpie is installed, importable, and meets the minimum version."""
+    if not NUTPIE_INSTALLED:
+        return False
+    try:
+        import nutpie
+    except ImportError:
+        return False
+    try:
+        # Strip pre-release suffixes like "rc1" from each component.
+        version_tuple = tuple(
+            int(re.match(r"\d+", p).group()) for p in nutpie.__version__.split(".")[:3]
+        )
+    except (AttributeError, ValueError):
+        return False
+    return version_tuple >= NUTPIE_MIN_VERSION
 
 
 sys.setrecursionlimit(10000)
@@ -96,6 +122,23 @@ __all__ = [
 ]
 
 Step: TypeAlias = BlockedStep | CompoundStep
+
+
+def get_default_tune_steps(step: Step, tune: int | None, default_tune_steps: int = 1000) -> int:
+    """Get the default number of tuning steps.
+
+    If ``tune`` is an explicit integer, return it directly.
+
+    If ``tune`` is ``None``, ask each step method how many tune steps it needs via its ``default_tune_steps``
+    and return the maximum. Step methods that leave ``default_tune_steps=None`` fall back to ``default_tune_steps``
+    """
+    if tune is not None:
+        return tune
+
+    tune_steps = [getattr(step, "default_tune_steps", None) for step in flatten_steps(step)]
+    return max(
+        (default_tune_steps if t is None else t for t in tune_steps), default=default_tune_steps
+    )
 
 
 class SamplingIteratorCallback(Protocol):
@@ -329,7 +372,8 @@ def all_continuous(vars):
 def _sample_external_nuts(
     sampler: Literal["nutpie", "numpyro", "blackjax"],
     draws: int,
-    tune: int,
+    *,
+    tune: int | None = None,
     chains: int,
     cores: int | None,
     random_seed: RandomState | None,
@@ -375,6 +419,13 @@ def _sample_external_nuts(
             raise ImportError(
                 "nutpie not found. Install it with conda install -c conda-forge nutpie"
             )
+        if not _nutpie_meets_min_version():
+            min_version_str = ".".join(map(str, NUTPIE_MIN_VERSION))
+            raise ImportError(
+                f"pymc requires nutpie>={min_version_str}. "
+                f"Upgrade with `pip install -U nutpie` or "
+                f"`conda install -c conda-forge 'nutpie>={min_version_str}'`."
+            )
         import nutpie
 
         if isinstance(initvals, dict):
@@ -411,7 +462,6 @@ def _sample_external_nuts(
         pb_manager = NutpieProgressBarManager(
             chains=chains,
             draws=draws,
-            tune=tune,
             progressbar=progressbar,
             progressbar_theme=progressbar_theme,
         )
@@ -426,18 +476,13 @@ def _sample_external_nuts(
                 cores=cores,
                 seed=int(random_seed[0]),
                 save_warmup=not discard_tuned_samples,
+                store_unconstrained=include_transformed,
                 progress_bar=False,
                 progress_callback=pb_manager.update,
                 **nuts_kwargs,
             )
         t_sample = time.time() - t_start
-        patch_nutpie_idata(
-            idata,
-            model,
-            tune=tune,
-            sampling_time=t_sample,
-            include_transformed=include_transformed,
-        )
+        patch_nutpie_idata(idata, model, sampling_time=t_sample)
         if log_likelihood:
             warnings.warn(
                 "Passing `log_likelihood` via `idata_kwargs` is deprecated and will be removed "
@@ -462,9 +507,10 @@ def _sample_external_nuts(
 
         jax_nuts_kwargs = dict(nuts_kwargs)
         jax_target_accept = jax_nuts_kwargs.pop("target_accept", 0.8)
+        # Don't forward tune=None: let `sample_jax_nuts`'s own default kick in.
+        tune_kwarg = {"tune": tune} if tune is not None else {}
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,
-            tune=tune,
             chains=chains,
             target_accept=jax_target_accept,
             # jax samplers take a single master seed; `random_seed` here is the
@@ -479,6 +525,7 @@ def _sample_external_nuts(
             nuts_kwargs=jax_nuts_kwargs,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
+            **tune_kwarg,
         )
         return idata
 
@@ -558,7 +605,7 @@ def sample(
 def sample(
     draws: int = 1000,
     *,
-    tune: int = 1000,
+    tune: int | None = None,
     chains: int | None = None,
     cores: int | None = None,
     random_seed: RandomState = None,
@@ -845,7 +892,11 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if not discard_tuned_samples and not return_inferencedata and not isinstance(trace, ZarrTrace):
+    if (
+        not discard_tuned_samples
+        and not return_inferencedata
+        and not isinstance(trace, _ZarrTraceBase)
+    ):
         warnings.warn(
             "Tuning samples will be included in the returned `MultiTrace` object, which can lead to"
             " complications in your downstream analysis. Please consider to switch to `InferenceData`:\n"
@@ -891,6 +942,17 @@ def sample(
             and (initvals is None or isinstance(initvals, dict))
             and isinstance(get_mode(compile_kwargs.get("mode")).linker, NumbaLinker | JAXLinker)
         )
+        if can_use_nutpie and not _nutpie_meets_min_version():
+            min_version_str = ".".join(map(str, NUTPIE_MIN_VERSION))
+            warnings.warn(
+                f"pymc requires nutpie>={min_version_str}. "
+                "Falling back to the pymc NUTS sampler. "
+                f"Upgrade with `pip install -U nutpie` or "
+                f"`conda install -c conda-forge 'nutpie>={min_version_str}'`.",
+                UserWarning,
+                stacklevel=2,
+            )
+            can_use_nutpie = False
         nuts_sampler = "nutpie" if can_use_nutpie else "pymc"
     elif nuts_sampler != "pymc" and not exclusive_nuts:
         raise ValueError(
@@ -992,6 +1054,8 @@ def sample(
         )
         if isinstance(step, list):
             step = CompoundStep(step)
+
+    tune = get_default_tune_steps(step, tune)
 
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
@@ -1098,7 +1162,7 @@ def sample(
     # into a function to make it easier to test and refactor.
     return _sample_return(
         run=run,
-        traces=trace if isinstance(trace, ZarrTrace) else traces,
+        traces=trace if isinstance(trace, _ZarrTraceBase) else traces,
         tune=tune,
         t_sampling=t_sampling,
         discard_tuned_samples=discard_tuned_samples,
@@ -1176,7 +1240,7 @@ def _sample_return(
             stacklevel=2,
         )
 
-    if isinstance(traces, ZarrTrace):
+    if isinstance(traces, _ZarrTraceBase):
         # Split warmup from posterior samples
         traces.split_warmup_groups()
 
@@ -1466,7 +1530,7 @@ def _iter_sample(
     step.set_rng(rng)
 
     point = start
-    if isinstance(trace, ZarrChain):
+    if isinstance(trace, _ZarrChainBase):
         trace.link_stepper(step)
 
     try:
@@ -1492,13 +1556,13 @@ def _iter_sample(
             yield stats
 
     except (KeyboardInterrupt, BaseException):
-        if isinstance(trace, ZarrChain):
+        if isinstance(trace, _ZarrChainBase):
             trace.record_sampling_state(step=step)
         trace.close()
         raise
 
     else:
-        if isinstance(trace, ZarrChain):
+        if isinstance(trace, _ZarrChainBase):
             trace.record_sampling_state(step=step)
         trace.close()
 
@@ -1560,8 +1624,10 @@ def _mp_sample(
     draws -= tune
     zarr_chains: list[ZarrChain] | None = None
     zarr_recording = False
-    if all(isinstance(trace, ZarrChain) for trace in traces):
-        if isinstance(cast(ZarrChain, traces[0])._posterior.store, MemoryStore):
+    if all(isinstance(trace, _ZarrChainBase) for trace in traces):
+        from zarr.storage import MemoryStore
+
+        if isinstance(traces[0]._posterior.store, MemoryStore):  # type: ignore[attr-defined]
             warnings.warn(
                 "Parallel sampling with MemoryStore zarr store wont write the processes "
                 "step method sampling state. If you wish to be able to access the step "
@@ -1569,7 +1635,7 @@ def _mp_sample(
                 "DirectoryStore or ZipStore"
             )
         else:
-            zarr_chains = cast(list[ZarrChain], traces)
+            zarr_chains = traces  # type: ignore[assignment]
             zarr_recording = True
 
     sampler = ps.ParallelSampler(
