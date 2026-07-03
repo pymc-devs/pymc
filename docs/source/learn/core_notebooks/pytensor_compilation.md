@@ -3,7 +3,7 @@
 
 **Author:** [Benjamin Vincent](https://github.com/drbenvincent)
 
-In your day-to-day modeling work, it is possible to write models exclusively in PyMC and never know about, or write any, PyTensor code. But PyTensor is a _crucial_ part of the modeling stack, and does a lot of work on your behalf every time you sample. Understanding what it does helps with questions like:
+In your day-to-day modeling work, it is possible to write models exclusively in PyMC and never know about, let alone write, PyTensor code. Despite remaining in the background, the work Pytensor does on your behalf every time you sample makes it a crucial part of modeling stack. Understanding how it works helps with questions like:
 
 - **Why does sampling sometimes take a while to even start?** That's compilation.
 - **Why is the first run slow but later runs faster?** That's caching.
