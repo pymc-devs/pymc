@@ -42,7 +42,7 @@ from pymc.distributions import (
     Truncated,
     Uniform,
 )
-from pymc.distributions.custom import CustomDist, CustomDistRV, CustomSymbolicDistRV
+from pymc.distributions.custom import CustomDist, CustomDistRV, CustomSymbolicDistRV, DensityDist
 from pymc.distributions.distribution import inline_symbolic_random_variable, support_point
 from pymc.distributions.shape_utils import change_dist_size, rv_size_is_none, to_tuple
 from pymc.distributions.transforms import log
@@ -164,6 +164,14 @@ class TestCustomDist:
                 TypeError, match="The DensityDist API has changed, you are using the old API"
             ):
                 CustomDist("a", lambda x: x)
+
+    def test_density_dist_deprecated(self):
+        with Model():
+            mu = Normal("mu", 0, 1)
+            with pytest.warns(FutureWarning, match="DensityDist has been deprecated"):
+                DensityDist("y", mu, logp=lambda value, mu: -0.5 * (value - mu) ** 2, observed=[0.0])
+            with pytest.warns(FutureWarning, match="DensityDist has been deprecated"):
+                DensityDist.dist(mu, logp=lambda value, mu: -0.5 * (value - mu) ** 2)
 
     @pytest.mark.parametrize("size", [None, (), (2,)], ids=str)
     def test_custom_dist_multivariate_logp(self, size):
