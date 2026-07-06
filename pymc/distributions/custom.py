@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools
 import re
+import warnings
 
 from collections.abc import Callable, Sequence
 
@@ -842,4 +843,27 @@ class CustomDist:
         return isinstance(out, Variable)
 
 
-DensityDist = CustomDist
+class DensityDist(CustomDist):
+    """Alias for :class:`~pymc.CustomDist`.
+
+    .. deprecated::
+        ``DensityDist`` is deprecated and will be removed in a future release.
+        Use :class:`~pymc.CustomDist` instead.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "DensityDist has been deprecated, use CustomDist instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return super().__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        warnings.warn(
+            "DensityDist has been deprecated, use CustomDist instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return super().dist(*args, **kwargs)
