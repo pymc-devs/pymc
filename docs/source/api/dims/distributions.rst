@@ -26,6 +26,7 @@ Scalar distributions
    Gamma
    InverseGamma
    Weibull
+   DiracDelta
 
 
 Vector distributions

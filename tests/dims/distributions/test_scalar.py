@@ -16,11 +16,12 @@ import pytest
 
 from pytensor.xtensor import as_xtensor
 
-from pymc import Model
+from pymc import Model, sample_prior_predictive
 from pymc import distributions as regular_distributions
 from pymc.dims import (
     Beta,
     Cauchy,
+    DiracDelta,
     Exponential,
     Flat,
     Gamma,
@@ -337,3 +338,57 @@ def test_negative_binomial():
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
+
+
+@pytest.mark.parametrize("c", [5.0, 3], ids=["float", "int"])
+def test_diracdelta(c):
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        DiracDelta("x", c, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.DiracDelta("x", c, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_diracdelta_scalar():
+    with Model() as model:
+        x = DiracDelta("x", 2.0)
+    assert x.type.dims == ()
+
+    with Model() as reference_model:
+        regular_distributions.DiracDelta("x", 2.0)
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_diracdelta_observed():
+    coords = {"a": range(3)}
+    observed = as_xtensor(np.array([1.0, 1.0, 1.0]), dims=("a",))
+    with Model(coords=coords) as model:
+        DiracDelta("x", 1.0, dims="a", observed=observed)
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.DiracDelta("x", 1.0, dims="a", observed=observed.values)
+
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_diracdelta_prior_predictive():
+    coords = {"a": range(2), "b": range(3)}
+    c = as_xtensor(np.array([1.0, 2.0, 3.0]), dims=("b",))
+    with Model(coords=coords) as model:
+        DiracDelta("scalar_c", 5.0, dims="a")
+        DiracDelta("vector_c", c, dims=("a", "b"))
+
+    prior = sample_prior_predictive(draws=10, model=model).prior
+
+    assert prior["scalar_c"].dims == ("chain", "draw", "a")
+    assert prior["vector_c"].dims == ("chain", "draw", "a", "b")
+    np.testing.assert_array_equal(prior["scalar_c"].values, 5.0)
+    np.testing.assert_array_equal(
+        prior["vector_c"].values, np.broadcast_to([1.0, 2.0, 3.0], prior["vector_c"].shape)
+    )
