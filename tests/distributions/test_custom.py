@@ -169,7 +169,9 @@ class TestCustomDist:
         with Model():
             mu = Normal("mu", 0, 1)
             with pytest.warns(FutureWarning, match="DensityDist has been deprecated"):
-                DensityDist("y", mu, logp=lambda value, mu: -0.5 * (value - mu) ** 2, observed=[0.0])
+                DensityDist(
+                    "y", mu, logp=lambda value, mu: -0.5 * (value - mu) ** 2, observed=[0.0]
+                )
             with pytest.warns(FutureWarning, match="DensityDist has been deprecated"):
                 DensityDist.dist(mu, logp=lambda value, mu: -0.5 * (value - mu) ** 2)
 
