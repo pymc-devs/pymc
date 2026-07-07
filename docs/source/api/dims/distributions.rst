@@ -26,6 +26,8 @@ Scalar distributions
    Gamma
    InverseGamma
    Weibull
+   Poisson
+   NegativeBinomial
    DiracDelta
 
 
