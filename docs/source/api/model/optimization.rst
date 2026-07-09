@@ -5,3 +5,4 @@ Model Optimization
    :toctree: generated/
 
    freeze_dims_and_data
+   freeze_model

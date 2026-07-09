@@ -65,8 +65,8 @@ class TestInitvalEvaluation:
             assert ip["B1_interval__"] == 0
             assert ip["B2_interval__"] == 0
 
-            # Modify initval of L and re-evaluate
-            pmodel.rvs_to_initial_values[U] = 9.9
+            # Modify initval of U (through the public API) and re-evaluate
+            pmodel.set_initval(U, 9.9)
             ip = pmodel.initial_point(random_seed=0)
             assert ip["B1_interval__"] < 0
             assert ip["B2_interval__"] < 0

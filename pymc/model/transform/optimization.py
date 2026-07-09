@@ -16,6 +16,7 @@ from collections.abc import Sequence
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.traversal import ancestors
 
 from pymc.model.core import Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
@@ -123,4 +124,82 @@ def freeze_dims_and_data(
     return model_from_fgraph(fg, mutate_fgraph=True)
 
 
-__all__ = ("freeze_dims_and_data",)
+def freeze_model(model: Model) -> Model:
+    """Return a frozen copy of the model that caches its compiled functions.
+
+    On the frozen model, compiled functions (``compile_fn``, ``logp_dlogp_function``,
+    ``initial_point``, and the forward-sampling function used by
+    ``sample_prior_predictive`` / ``sample_posterior_predictive``) are compiled once and
+    reused across calls, so e.g. batched posterior predictive over changing ``pm.set_data``
+    values, or repeated ``pm.sample``, do not recompile. Seeding is re-applied on every
+    call, so cached functions stay reproducible.
+
+    To keep the cache valid the frozen model cannot be mutated: graph-mutating methods
+    (``register_rv``, ``add_coord``, ``set_initval``, ...) raise, and the dims and data
+    that any free variable depends on are frozen to constants as in
+    :func:`freeze_dims_and_data`. Data (and dims) that only Deterministics and observed
+    variables depend on remain updatable through ``pm.set_data`` — values and shapes are
+    runtime inputs of the cached functions, so updates and resizes take effect without
+    recompilation.
+
+    Functions with random variables compiled to backends that detach their RNGs at compile
+    time (JAX, MLX, PyTorch) cannot be reseeded and are compiled fresh on each call.
+
+    Custom initial values are preserved on the frozen model.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+        from pymc.model.transform.optimization import freeze_model
+
+        with pm.Model() as m:
+            x = pm.Data("x", [0.0, 1.0, 2.0])
+            beta = pm.Normal("beta")
+            pm.Normal("y", mu=beta * x, observed=[1.0, 2.0, 3.0], shape=x.shape)
+            idata = pm.sample()
+
+        with freeze_model(m):
+            for x_batch in x_batches:
+                pm.set_data({"x": x_batch})
+                # Compiles on the first call only
+                pm.sample_posterior_predictive(idata, predictions=True)
+    """
+    free_rv_ancestors = set(ancestors(model.free_RVs))
+    frozen_dims = [
+        name
+        for name, length in model.dim_lengths.items()
+        if isinstance(length, SharedVariable) and length in free_rv_ancestors
+    ]
+    frozen_data = [
+        name
+        for name, var in model.named_vars.items()
+        if isinstance(var, SharedVariable) and var in free_rv_ancestors
+    ]
+
+    # freeze_dims_and_data (via fgraph_from_model) does not carry initial values through the
+    # fgraph round-trip and rejects models that have them. Initial values are model metadata,
+    # not graph structure, so clear them for the round-trip and transplant them onto the
+    # frozen model afterwards, matched by variable name.
+    initial_values = {
+        rv.name: initval
+        for rv, initval in model.rvs_to_initial_values.items()
+        if initval is not None
+    }
+    saved_initial_values = dict(model.rvs_to_initial_values)
+    try:
+        for rv in model.rvs_to_initial_values:
+            model.rvs_to_initial_values[rv] = None
+        frozen_model = freeze_dims_and_data(model, dims=frozen_dims, data=frozen_data)
+    finally:
+        model.rvs_to_initial_values.update(saved_initial_values)
+
+    for name, initval in initial_values.items():
+        frozen_model.set_initval(frozen_model[name], initval)
+
+    frozen_model._frozen = True
+    return frozen_model
+
+
+__all__ = ("freeze_dims_and_data", "freeze_model")
