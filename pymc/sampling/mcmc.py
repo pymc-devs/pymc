@@ -1057,9 +1057,7 @@ def sample(
 
     tune = get_default_tune_steps(step, tune)
 
-    for method in flatten_steps(step):
-        if hasattr(method, "setup"):
-            method.setup(tune, draws)
+    step.setup(tune, draws)
 
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
