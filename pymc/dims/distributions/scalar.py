@@ -16,6 +16,7 @@ import pytensor.xtensor as ptx
 import pytensor.xtensor.random as ptxr
 
 from pytensor.xtensor import as_xtensor
+from pytensor.xtensor.basic import xtensor_from_tensor
 
 import pymc.distributions as regular_dists
 
@@ -37,6 +38,8 @@ from pymc.distributions.continuous import (
     truncated_normal,
 )
 from pymc.distributions.discrete import NegativeBinomial as RegularNegativeBinomial
+from pymc.distributions.distribution import DiracDeltaRV
+from pymc.pytensorf import continuous_types, floatX
 from pymc.util import UNSET
 
 
@@ -315,3 +318,32 @@ class NegativeBinomial(DimDistribution):
     def dist(cls, mu=None, alpha=None, *, p=None, n=None, **kwargs):
         n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
         return super().dist([n, p], **kwargs)
+
+
+@copy_docstring(regular_dists.DiracDelta)
+class DiracDelta(DimDistribution):
+    @classmethod
+    def dist(cls, c, **kwargs):
+        c = cls._as_xtensor(c)
+        if c.type.dtype in continuous_types:
+            c = floatX(c)
+        return super().dist([c], **kwargs)
+
+    @classmethod
+    def xrv_op(self, c, core_dims=None, extra_dims=None, rng=None, return_next_rng=False, **kwargs):
+        # DiracDeltaRV has no rng, so it can't be wrapped by the XRV machinery like the
+        # other scalar distributions. We build the regular RV and wrap it in an xtensor,
+        # relying on MeasurableXTensorFromTensor (see core.py) for the logp.
+        c = as_xtensor(c)
+        extra_dims = extra_dims or {}
+        out_dims = (*extra_dims.keys(), *c.dims)
+        c_tensor = c.values
+        if extra_dims:
+            size = [*extra_dims.values(), *(c_tensor.shape[i] for i in range(c_tensor.ndim))]
+            rv = DiracDeltaRV.rv_op(c_tensor, size=size)
+        else:
+            rv = DiracDeltaRV.rv_op(c_tensor)
+        xrv = xtensor_from_tensor(rv, dims=out_dims)
+        if return_next_rng:
+            return rng, xrv
+        return xrv
