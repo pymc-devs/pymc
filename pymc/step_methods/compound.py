@@ -233,6 +233,8 @@ class BlockedStep(ABC, WithSamplingState):
     def set_rng(self, rng: RandomGenerator):
         self.rng = get_random_generator(rng, copy=False)
 
+    def setup(self, tune: int, draws: int) -> None:
+        pass
 
 def flat_statname(sampler_idx: int, sname: str) -> str:
     """Get the flat-stats name for a samplers stat."""
@@ -297,6 +299,10 @@ class CompoundStep(WithSamplingState):
             if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
 
+    def setup(self, tune: int, draws: int) -> None:
+        for method in self.methods:
+            method.setup(tune, draws)
+    
     @property
     def sampling_state(self) -> DataClassState:
         return CompoundStepState(methods=[method.sampling_state for method in self.methods])
