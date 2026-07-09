@@ -236,6 +236,7 @@ class BlockedStep(ABC, WithSamplingState):
     def setup(self, tune: int, draws: int) -> None:
         pass
 
+
 def flat_statname(sampler_idx: int, sname: str) -> str:
     """Get the flat-stats name for a samplers stat."""
     return f"sampler_{sampler_idx}__{sname}"
@@ -302,7 +303,7 @@ class CompoundStep(WithSamplingState):
     def setup(self, tune: int, draws: int) -> None:
         for method in self.methods:
             method.setup(tune, draws)
-    
+
     @property
     def sampling_state(self) -> DataClassState:
         return CompoundStepState(methods=[method.sampling_state for method in self.methods])

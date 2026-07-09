@@ -1060,7 +1060,7 @@ def sample(
     for method in flatten_steps(step):
         if hasattr(method, "setup"):
             method.setup(tune, draws)
-                
+
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
         trace_vars = model.replace_rvs_by_values(trace_vars)
