@@ -14,6 +14,7 @@
 
 """MCMC samplers."""
 
+from pymc.sampling import external
 from pymc.sampling.deterministic import compute_deterministics
 from pymc.sampling.forward import (
     compile_forward_sampling_function,
@@ -28,6 +29,7 @@ __all__ = (
     "compile_forward_sampling_function",
     "compute_deterministics",
     "draw",
+    "external",
     "init_nuts",
     "sample",
     "sample_posterior_predictive",

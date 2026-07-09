@@ -67,6 +67,7 @@ from pymc.progress_bar import (
     default_progress_theme,
 )
 from pymc.pytensorf import resolve_backend_compile_kwargs
+from pymc.sampling.external.base import ExternalSampler
 from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -549,6 +550,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -582,6 +584,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -615,6 +618,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -689,6 +693,11 @@ def sample(
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
         If ``None`` (default), "nutpie" is used if installed and can be compiled to the desired backend.
+    external_sampler : ExternalSampler, optional
+        An external sampler instance that samples the whole model, e.g.
+        ``pm.external.Blackjax("mclmc")``. Cannot be combined with ``step`` or
+        ``nuts_sampler``. Sampler-specific options are set when constructing the
+        instance, not through ``pm.sample``.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -891,6 +900,50 @@ def sample(
         )
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
+
+    if external_sampler is not None:
+        if step is not None:
+            raise ValueError("`step` and `external_sampler` cannot be used together.")
+        if nuts_sampler is not None:
+            raise ValueError("`nuts_sampler` and `external_sampler` cannot be used together.")
+        if external_sampler.model is not model:
+            raise ValueError(
+                "The model of `external_sampler` does not match the model being sampled."
+            )
+        if not return_inferencedata:
+            raise ValueError(
+                "`return_inferencedata=False` is not supported with `external_sampler`."
+            )
+        if trace is not None:
+            raise ValueError("A custom `trace` backend is not supported with `external_sampler`.")
+        if callback is not None:
+            raise ValueError("`callback` is not supported with `external_sampler`.")
+        if init != "auto":
+            warnings.warn(
+                f"`init={init!r}` is ignored by `external_sampler`; "
+                "the external sampler uses its own initialization.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if kwargs:
+            raise TypeError(
+                f"Arguments {sorted(kwargs)} are not supported together with `external_sampler`. "
+                "Configure the sampler when constructing it instead, e.g. "
+                "`pm.external.Blackjax(target_accept=0.9)`."
+            )
+        with joined_blas_limiter():
+            return external_sampler.sample(
+                tune=tune if tune is not None else 1000,
+                draws=draws,
+                chains=chains,
+                initvals=initvals,
+                random_seed=random_seed_list[0],
+                progressbar=progress_bool,
+                quiet=quiet,
+                var_names=var_names,
+                idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
+            )
 
     if (
         not discard_tuned_samples

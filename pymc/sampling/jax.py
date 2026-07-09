@@ -492,6 +492,128 @@ def _sample_numpyro_nuts(
     return raw_mcmc_samples, sample_stats, numpyro
 
 
+def _postprocess_and_build_idata(
+    *,
+    model: Model,
+    raw_mcmc_samples,
+    sample_stats: dict[str, Any],
+    library: ModuleType,
+    sampling_time: float,
+    tune: int,
+    var_names: Sequence[str] | None,
+    keep_untransformed: bool,
+    postprocessing_backend: Literal["cpu", "gpu"] | None,
+    idata_kwargs: dict | None,
+    compute_convergence_checks: bool,
+    quiet: bool,
+    postprocessing_vectorize: Literal["vmap", "scan"] = "vmap",
+) -> DataTree:
+    """Transform raw draws to the constrained space and assemble a ``DataTree``.
+
+    Shared by the JAX-based NUTS samplers and the external samplers in
+    ``pymc.sampling.external``.
+    """
+    if var_names is not None:
+        filtered_var_names = [v for v in model.unobserved_value_vars if v.name in var_names]
+    else:
+        filtered_var_names = model.unobserved_value_vars
+
+    vars_to_sample = list(
+        get_default_varnames(filtered_var_names, include_transformed=keep_untransformed)
+    )
+
+    if idata_kwargs is None:
+        idata_kwargs = {}
+    else:
+        idata_kwargs = idata_kwargs.copy()
+
+    if idata_kwargs.pop("log_likelihood", False):
+        warnings.warn(
+            "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
+            ":func:`pymc.compute_log_likelihood` instead.",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+        log_likelihood = _get_log_likelihood(
+            model,
+            raw_mcmc_samples,
+            backend=postprocessing_backend,
+            postprocessing_vectorize=postprocessing_vectorize,
+        )
+    else:
+        log_likelihood = None
+
+    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
+    result = _postprocess_samples(
+        jax_fn,
+        raw_mcmc_samples,
+        postprocessing_backend=postprocessing_backend,
+        postprocessing_vectorize=postprocessing_vectorize,
+        donate_samples=True,
+    )
+    del raw_mcmc_samples
+    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
+
+    attrs = {
+        "sampling_time": sampling_time,
+        "tuning_steps": tune,
+    }
+
+    coords, dims = coords_and_dims_for_inferencedata(model)
+    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
+    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
+    if "coords" in idata_kwargs:
+        coords.update(idata_kwargs.pop("coords"))
+    if "dims" in idata_kwargs:
+        dims.update(idata_kwargs.pop("dims"))
+    sample_dims = ["chain", "draw"]
+
+    groups = {
+        "posterior": mcmc_samples,
+        "sample_stats": sample_stats,
+    }
+
+    if log_likelihood is not None:
+        groups["log_likelihood"] = log_likelihood
+
+    observed_data = find_observations(model)
+    if observed_data is not None:
+        groups["observed_data"] = observed_data
+
+    constant_data = find_constants(model)
+    if constant_data is not None:
+        groups["constant_data"] = constant_data
+
+    if idata_kwargs:
+        warnings.warn(
+            "The arguments to `from_dict` have changed with the release of arviz 1.0. "
+            "Please refer to the arviz documentation for more details",
+            FutureWarning,
+            stacklevel=3,
+        )
+
+    attrs = {"posterior": make_attrs(attrs, inference_library=library)}
+    if "attrs" in idata_kwargs:
+        attrs.update(idata_kwargs.pop("attrs"))
+
+    az_trace = from_dict(
+        data=groups,
+        coords=coords,
+        dims=dims,
+        sample_dims=sample_dims,
+        attrs=attrs,
+        **idata_kwargs,
+    )
+
+    if compute_convergence_checks:
+        warns = run_convergence_checks(az_trace, model)
+        if not quiet:
+            log_warnings(warns)
+
+    return az_trace
+
+
 def sample_jax_nuts(
     draws: int = 1000,
     *,
@@ -602,19 +724,10 @@ def sample_jax_nuts(
     if quiet:
         progressbar = False
 
-    if var_names is not None:
-        filtered_var_names = [v for v in model.unobserved_value_vars if v.name in var_names]
-    else:
-        filtered_var_names = model.unobserved_value_vars
-
     if nuts_kwargs is None:
         nuts_kwargs = {}
     else:
         nuts_kwargs = nuts_kwargs.copy()
-
-    vars_to_sample = list(
-        get_default_varnames(filtered_var_names, include_transformed=keep_untransformed)
-    )
 
     if nuts_sampler == "numpyro":
         sampler_fn = _sample_numpyro_nuts
@@ -652,96 +765,21 @@ def sample_jax_nuts(
     )
     tic2 = datetime.now()
 
-    if idata_kwargs is None:
-        idata_kwargs = {}
-    else:
-        idata_kwargs = idata_kwargs.copy()
-
-    if idata_kwargs.pop("log_likelihood", False):
-        warnings.warn(
-            "`passing log_likelihood` is deprecated and will be removed in future versions. Use "
-            ":func:`pymc.compute_log_likelihood` instead.",
-            FutureWarning,
-            stacklevel=3,
-        )
-
-        log_likelihood = _get_log_likelihood(
-            model,
-            raw_mcmc_samples,
-            backend=postprocessing_backend,
-            postprocessing_vectorize=postprocessing_vectorize,
-        )
-    else:
-        log_likelihood = None
-
-    jax_fn = get_jaxified_graph(inputs=model.value_vars, outputs=vars_to_sample)
-    result = _postprocess_samples(
-        jax_fn,
-        raw_mcmc_samples,
+    return _postprocess_and_build_idata(
+        model=model,
+        raw_mcmc_samples=raw_mcmc_samples,
+        sample_stats=sample_stats,
+        library=library,
+        sampling_time=(tic2 - tic1).total_seconds(),
+        tune=tune,
+        var_names=var_names,
+        keep_untransformed=keep_untransformed,
         postprocessing_backend=postprocessing_backend,
         postprocessing_vectorize=postprocessing_vectorize,
-        donate_samples=True,
+        idata_kwargs=idata_kwargs,
+        compute_convergence_checks=compute_convergence_checks,
+        quiet=quiet,
     )
-    del raw_mcmc_samples
-    mcmc_samples = {v.name: r for v, r in zip(vars_to_sample, result)}
-
-    attrs = {
-        "sampling_time": (tic2 - tic1).total_seconds(),
-        "tuning_steps": tune,
-    }
-
-    coords, dims = coords_and_dims_for_inferencedata(model)
-    # Update 'coords' and 'dims' extracted from the model with user 'idata_kwargs'
-    # and drop keys 'coords' and 'dims' from 'idata_kwargs' if present.
-    if "coords" in idata_kwargs:
-        coords.update(idata_kwargs.pop("coords"))
-    if "dims" in idata_kwargs:
-        dims.update(idata_kwargs.pop("dims"))
-    sample_dims = ["chain", "draw"]
-
-    groups = {
-        "posterior": mcmc_samples,
-        "sample_stats": sample_stats,
-    }
-
-    if log_likelihood is not None:
-        groups["log_likelihood"] = log_likelihood
-
-    observed_data = find_observations(model)
-    if observed_data is not None:
-        groups["observed_data"] = observed_data
-
-    constant_data = find_constants(model)
-    if constant_data is not None:
-        groups["constant_data"] = constant_data
-
-    if idata_kwargs:
-        warnings.warn(
-            "The arguments to `from_dict` have changed with the release of arviz 1.0. "
-            "Please refer to the arviz documentation for more details",
-            FutureWarning,
-            stacklevel=3,
-        )
-
-    attrs = {"posterior": make_attrs(attrs, inference_library=library)}
-    if "attrs" in idata_kwargs:
-        attrs.update(idata_kwargs.pop("attrs"))
-
-    az_trace = from_dict(
-        data=groups,
-        coords=coords,
-        dims=dims,
-        sample_dims=sample_dims,
-        attrs=attrs,
-        **idata_kwargs,
-    )
-
-    if compute_convergence_checks:
-        warns = run_convergence_checks(az_trace, model)
-        if not quiet:
-            log_warnings(warns)
-
-    return az_trace
 
 
 sample_numpyro_nuts = partial(sample_jax_nuts, nuts_sampler="numpyro")
