@@ -899,7 +899,7 @@ def resolve_backend_compile_kwargs(backend: str | None, compile_kwargs: dict | N
 def compile(
     inputs,
     outputs,
-    random_seed: SeedSequenceSeed = None,
+    random_seed: SeedSequenceSeed | bool = None,
     mode=None,
     **kwargs,
 ) -> Function:
@@ -946,8 +946,9 @@ def compile(
         ],
     )
 
-    # We always reseed random variables as this provides RNGs with no chances of collision
-    if rng_updates:
+    # Reseed for collision-free RNGs, unless random_seed=False decouples seeding from
+    # compilation so the function can be cached and reseeded by the caller.
+    if rng_updates and random_seed is not False:
         rngs = cast(list[SharedVariable], list(rng_updates))
         reseed_rngs(rngs, random_seed)
 

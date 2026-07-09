@@ -57,11 +57,13 @@ from pymc.logprob.utils import ParameterValueError, replace_rvs_by_values
 from pymc.pytensorf import (
     PointFunc,
     SeedSequenceSeed,
+    collect_default_updates,
     compile,
     convert_observed_data,
     gradient,
     hessian,
     join_nonshared_inputs,
+    reseed_rngs,
     resolve_backend_compile_kwargs,
     rewrite_pregrad,
 )
@@ -69,9 +71,12 @@ from pymc.util import (
     UNSET,
     WithMemoization,
     _UnsetType,
+    forbid_on_frozen,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
+    makeiter,
+    memoize_on_frozen,
     treedict,
     treelist,
 )
@@ -309,6 +314,22 @@ class ContextMeta(type):
         return instance
 
 
+def _rng_detaching_linker(mode) -> bool:
+    """Whether ``mode``'s linker copies RNG shared variables at compile time.
+
+    The JAX/MLX/PyTorch linkers replace shared RNGs by detached, backend-typified copies,
+    so a compiled function cannot be reseeded afterwards. Functions with RNGs must then be
+    seeded before compilation and are not served from the compilation cache.
+    """
+    try:
+        from pytensor.compile.mode import get_mode
+
+        linker = get_mode(mode).linker
+    except Exception:
+        return False
+    return type(linker).__name__ in ("JAXLinker", "MLXLinker", "PytorchLinker")
+
+
 class Model(WithMemoization, metaclass=ContextMeta):
     """Encapsulates the variables and likelihood factors of a model.
 
@@ -428,7 +449,19 @@ class Model(WithMemoization, metaclass=ContextMeta):
             x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
 
 
+    Notes
+    -----
+    A mutable model recompiles its functions on every call. To reuse compiled functions
+    across calls — e.g. batched posterior predictive over changing ``pm.set_data`` values,
+    or repeated ``pm.sample`` — freeze the model with
+    :func:`pymc.model.transform.optimization.freeze_model`. The frozen copy caches the
+    graphs and compiled functions it builds (``logp``, ``compile_fn``,
+    ``logp_dlogp_function``, ``initial_point``, and the forward-sampling function) and
+    forbids the mutations that would make them stale.
+
     """
+
+    _frozen: bool = False
 
     def __enter__(self):
         """Enter the context manager."""
@@ -569,14 +602,28 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 if var.dtype not in continuous_types:
                     raise ValueError(f"Can only compute the gradient of continuous types: {var}")
 
+        if initial_point is None:
+            initial_point = self.initial_point(0)
+
+        # The compiled function only depends on the graph and compile args, not on the
+        # initial_point values (those just seed the runtime-settable extra variables), so
+        # cache the compilation and re-apply this call's extra values.
+        fn = self._logp_dlogp_function(
+            tuple(grad_vars), tempered=tempered, ravel_inputs=ravel_inputs, **kwargs
+        )
+        fn.set_extra_values(initial_point)
+        return fn
+
+    @memoize_on_frozen
+    def _logp_dlogp_function(self, grad_vars, *, tempered=False, ravel_inputs=None, **kwargs):
+        grad_vars = list(grad_vars)
         if tempered:
             costs = [self.varlogp, self.datalogp]
         else:
             costs = [self.logp()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        if initial_point is None:
-            initial_point = self.initial_point(0)
+        initial_point = self.initial_point(0)
         extra_vars_and_values = {
             var: initial_point[var.name]
             for var in self.value_vars
@@ -673,6 +720,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             **compile_kwargs,
         )
 
+    @memoize_on_frozen
     def logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -680,6 +728,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         sum: bool = True,
     ) -> Variable | list[Variable]:
         """Elemwise log-probability of the model.
+
+        On frozen models the returned graph is memoized (keyed on the arguments), so
+        repeated calls return the same object and ``compile_fn`` can reuse a compiled
+        function. Do not mutate it in place.
 
         Parameters
         ----------
@@ -754,6 +806,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
+    @memoize_on_frozen
     def dlogp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -793,6 +846,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         cost = rewrite_pregrad(cost)
         return gradient(cost, value_vars)
 
+    @memoize_on_frozen
     def d2logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -951,6 +1005,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
             shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
 
+    @forbid_on_frozen
     def add_coord(
         self,
         name: str,
@@ -1005,6 +1060,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._dim_lengths[name] = length
         self._coords[name] = values
 
+    @forbid_on_frozen
     def add_coords(
         self,
         coords: dict[str, Sequence | None],
@@ -1067,9 +1123,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
         ip : dict of {str : array_like}
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        fn = make_initial_point_fn(model=self, return_transformed=True)
+        fn = self._make_initial_point()
         return Point(fn(random_seed), model=self)
 
+    @memoize_on_frozen
+    def _make_initial_point(self):
+        # Compiled function takes the seed as an argument, so the cache is seed-independent.
+        return make_initial_point_fn(model=self, return_transformed=True)
+
+    @forbid_on_frozen
     def set_initval(self, rv_var, initval):
         """Set an initial value (strategy) for a random variable."""
         if initval is not None and not isinstance(initval, Variable | str):
@@ -1102,10 +1164,15 @@ class Model(WithMemoization, metaclass=ContextMeta):
         """
         shared_object = self[name]
         if not isinstance(shared_object, SharedVariable):
+            frozen_hint = (
+                " The model is frozen and only data that no free variable depends on can be set."
+                if self._frozen
+                else ""
+            )
             raise TypeError(
                 f"The variable `{name}` must be a `SharedVariable` "
                 "(created through `pm.Data()` to allow updating.) "
-                f"The current type is: {type(shared_object)}"
+                f"The current type is: {type(shared_object)}.{frozen_hint}"
             )
 
         if isinstance(values, list):
@@ -1213,6 +1280,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         shared_object.set_value(values)
 
+    @forbid_on_frozen
     def register_rv(
         self,
         rv_var: RandomVariable,
@@ -1290,6 +1358,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
+    @forbid_on_frozen
     def make_obs_var(
         self,
         rv_var: TensorVariable,
@@ -1391,6 +1460,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
+    @forbid_on_frozen
     def create_value_var(
         self,
         rv_var: TensorVariable,
@@ -1464,11 +1534,13 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
+    @forbid_on_frozen
     def register_data_var(self, data, dims=None):
         """Register a data variable with the model."""
         self.data_vars.append(data)
         self.add_named_variable(data, dims=dims)
 
+    @forbid_on_frozen
     def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.
 
@@ -1670,19 +1742,47 @@ class Model(WithMemoization, metaclass=ContextMeta):
                     "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
                 )
 
-        with self:
-            fn = compile(
-                inputs,
-                outs,
-                allow_input_downcast=True,
-                accept_inplace=True,
-                mode=mode,
-                **kwargs,
-            )
+        random_seed = kwargs.pop("random_seed", None)
+
+        if _rng_detaching_linker(mode) and collect_default_updates(
+            inputs=list(inputs), outputs=list(makeiter(outs))
+        ):
+            # These linkers detach RNGs at compile time, so a compiled function cannot be
+            # reseeded. Seed before compiling and skip the cache.
+            kwargs.setdefault("allow_input_downcast", True)
+            kwargs.setdefault("accept_inplace", True)
+            with self:
+                fn = compile(inputs, outs, mode=mode, random_seed=random_seed, **kwargs)
+        else:
+            # Compile seed-independently (cached on frozen models) and reseed on each call,
+            # in the order pytensorf.compile uses, so a cached function yields the same RNG
+            # stream as a fresh compile.
+            fn, rng_updates = self._compile_fn(outs, inputs=tuple(inputs), mode=mode, **kwargs)
+            if rng_updates:
+                reseed_rngs(rng_updates, random_seed)
 
         if point_fn:
             return PointFunc(fn)
         return fn
+
+    @memoize_on_frozen
+    def _compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        **kwargs,
+    ) -> tuple[Function, list[SharedVariable]]:
+        # random_seed=False keeps the compiled function seed-independent and cacheable;
+        # compile_fn reseeds it afterwards. The RNG variables are collected once and cached
+        # with the function so they need not be re-walked on each call.
+        kwargs.setdefault("allow_input_downcast", True)
+        kwargs.setdefault("accept_inplace", True)
+        with self:
+            fn = compile(inputs, outs, mode=mode, random_seed=False, **kwargs)
+        rng_updates = collect_default_updates(inputs=list(inputs), outputs=list(makeiter(outs)))
+        return fn, list(rng_updates)
 
     def profile(
         self,

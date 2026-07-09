@@ -266,6 +266,7 @@ def compile_forward_sampling_function(
     constant_data: dict[Variable, Any] | None = None,
     volatile_vars: set[Variable] | None = None,
     freeze_vars: set[Variable] | None = None,
+    model: Model | None = None,
     **kwargs,
 ) -> tuple[Callable[..., np.ndarray | list[np.ndarray]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
@@ -378,8 +379,17 @@ def compile_forward_sampling_function(
     # the entire graph
     list(walk(fg.outputs, expand))
 
+    if model is None:
+        fn = compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs)
+    else:
+        # Route through the model so the compiled function is cached and reused across calls
+        # (e.g. batched posterior predictive with changing pm.set_data).
+        fn = model.compile_fn(
+            fg.outputs, inputs=inputs, point_fn=False, on_unused_input="ignore", **kwargs
+        )
+
     return (
-        compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs),
+        fn,
         set(basic_rvs) & volatile_closure,  # Basic RVs that will be resampled
     )
 
@@ -568,6 +578,7 @@ def sample_prior_predictive(
         vars_in_trace=[],
         basic_rvs=model.basic_RVs,
         random_seed=random_seed,
+        model=model,
         **compile_kwargs,
     )
 
@@ -1228,6 +1239,7 @@ def sample_posterior_predictive(
             constant_data=constant_data,
             volatile_vars=volatile_vars,
             freeze_vars=frozen_vars,
+            model=model,
             **compile_kwargs,
         )
         sampler_fn = point_wrapper(_sampler_fn)

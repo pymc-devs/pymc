@@ -15,6 +15,7 @@ import logging
 import warnings
 
 from contextlib import nullcontext
+from unittest.mock import patch
 
 import numpy as np
 import numpy.random as npr
@@ -1389,6 +1390,77 @@ class TestSamplePriorPredictive:
 
 
 class TestSamplePosteriorPredictive:
+    def test_forward_function_reused_across_set_data_batches(self):
+        # On a frozen model, posterior predictive sampling in a loop with set_data must
+        # reuse the compiled forward function instead of recompiling it on every call.
+        import pytensor
+
+        from pymc.model.transform.optimization import freeze_model
+
+        rng = np.random.default_rng(0)
+        N = 30
+        with pm.Model() as m:
+            x = pm.Data("x", rng.normal(size=N))
+            a = pm.Normal("a", 0, 1)
+            b = pm.Normal("b", 0, 1)
+            pm.Normal("y", a + b * x, 1, observed=rng.normal(size=N), shape=x.shape)
+            idata = pm.sample(
+                draws=20, tune=20, chains=2, progressbar=False, compute_convergence_checks=False
+            )
+
+        frozen_m = freeze_model(m)
+        orig_function = pytensor.function
+        n_compiles = [0]
+
+        def counting_function(*args, **kwargs):
+            n_compiles[0] += 1
+            return orig_function(*args, **kwargs)
+
+        results = []
+        with patch("pytensor.function", counting_function):
+            for i in range(4):
+                with frozen_m:
+                    pm.set_data({"x": rng.normal(size=N)})
+                    pp = pm.sample_posterior_predictive(idata, progressbar=False, random_seed=i)
+                results.append(pp.posterior_predictive["y"].values.copy())
+            # A resize is also served by the cache: the data shape is a runtime input.
+            with frozen_m:
+                pm.set_data({"x": rng.normal(size=2 * N)})
+                pp = pm.sample_posterior_predictive(idata, progressbar=False, random_seed=0)
+
+        # The forward function is compiled once and replayed for the remaining batches.
+        assert n_compiles[0] == 1
+        # Reuse stays correct: new data flows through and draws are not frozen copies.
+        assert not np.allclose(results[0], results[1])
+        assert pp.posterior_predictive["y"].shape[-1] == 2 * N
+
+    def test_reused_forward_function_is_reproducible_across_seeds(self):
+        # Reusing the cached forward function must stay reproducible: it is reseeded per
+        # call, so same seed -> same draws, different seed -> different draws.
+        from pymc.model.transform.optimization import freeze_model
+
+        rng = np.random.default_rng(0)
+        N = 20
+        with pm.Model() as m:
+            x = pm.Data("x", rng.normal(size=N))
+            a = pm.Normal("a", 0, 1)
+            pm.Normal("y", a * x, 1, observed=rng.normal(size=N), shape=x.shape)
+            idata = pm.sample(
+                draws=20, tune=20, chains=2, progressbar=False, compute_convergence_checks=False
+            )
+
+        with freeze_model(m):
+            # Same seed twice -> identical (second call reuses the cache); different seed differs.
+            pp_a = pm.sample_posterior_predictive(idata, progressbar=False, random_seed=42)
+            pp_b = pm.sample_posterior_predictive(idata, progressbar=False, random_seed=42)
+            pp_c = pm.sample_posterior_predictive(idata, progressbar=False, random_seed=43)
+
+        ya = pp_a.posterior_predictive["y"].values
+        yb = pp_b.posterior_predictive["y"].values
+        yc = pp_c.posterior_predictive["y"].values
+        np.testing.assert_allclose(ya, yb)
+        assert not np.allclose(ya, yc)
+
     def test_point_list_arg_bug_spp(self, point_list_arg_bug_fixture):
         pmodel, trace = point_list_arg_bug_fixture
         with pmodel:
