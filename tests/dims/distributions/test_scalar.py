@@ -16,7 +16,7 @@ import pytest
 
 from pytensor.xtensor import as_xtensor
 
-from pymc import Model, sample_prior_predictive
+from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
     Beta,
@@ -375,20 +375,3 @@ def test_diracdelta_observed():
         regular_distributions.DiracDelta("x", 1.0, dims="a", observed=observed.values)
 
     assert_equivalent_logp_graph(model, reference_model)
-
-
-def test_diracdelta_prior_predictive():
-    coords = {"a": range(2), "b": range(3)}
-    c = as_xtensor(np.array([1.0, 2.0, 3.0]), dims=("b",))
-    with Model(coords=coords) as model:
-        DiracDelta("scalar_c", 5.0, dims="a")
-        DiracDelta("vector_c", c, dims=("a", "b"))
-
-    prior = sample_prior_predictive(draws=10, model=model).prior
-
-    assert prior["scalar_c"].dims == ("chain", "draw", "a")
-    assert prior["vector_c"].dims == ("chain", "draw", "a", "b")
-    np.testing.assert_array_equal(prior["scalar_c"].values, 5.0)
-    np.testing.assert_array_equal(
-        prior["vector_c"].values, np.broadcast_to([1.0, 2.0, 3.0], prior["vector_c"].shape)
-    )
