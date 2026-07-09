@@ -33,6 +33,7 @@ are out of scope here and raise informative errors.
 """
 
 import inspect
+import warnings
 
 from collections.abc import Callable, Sequence
 from datetime import datetime
@@ -415,7 +416,19 @@ class Blackjax(ExternalSampler):
 
         map_fn: Callable
         if self.chain_method == "parallel":
-            map_fn = jax.pmap
+            if chains > jax.local_device_count():
+                # Happens when the jax backend was initialized before pymc could
+                # request extra host devices via XLA_FLAGS.
+                warnings.warn(
+                    f"There are not enough devices to run parallel chains: expected {chains} "
+                    f"but got {jax.local_device_count()}. Chains will be drawn vectorized. "
+                    "Import pymc before running any jax computation to enable parallel chains, "
+                    "or pass chain_method='vectorized' to silence this warning.",
+                    UserWarning,
+                )
+                map_fn = jax.vmap
+            else:
+                map_fn = jax.pmap
         elif self.chain_method == "vectorized":
             map_fn = jax.vmap
         else:

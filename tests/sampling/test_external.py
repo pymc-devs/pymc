@@ -17,6 +17,13 @@ import pytest
 
 import pymc as pm
 
+pytest.importorskip("jax")
+
+# Importing pymc.sampling.jax sets XLA_FLAGS (host device count for pmap-based
+# parallel chains). It must be imported before blackjax initializes the jax
+# backend — including for the other test modules collected in this session.
+import pymc.sampling.jax
+
 blackjax = pytest.importorskip("blackjax")
 
 from pymc.sampling.external.blackjax import Blackjax  # noqa: E402
