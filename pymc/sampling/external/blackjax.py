@@ -34,7 +34,7 @@ are out of scope here and raise informative errors.
 
 import inspect
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from datetime import datetime
 from functools import partial
 from typing import Any, Literal
@@ -296,7 +296,7 @@ class Blackjax(ExternalSampler):
                 f"adaptation='mclmc' can only be used with the mclmc algorithm, "
                 f"not {self.algorithm_name!r}."
             )
-        adapted = _ADAPTED_PARAMETERS.get(adaptation, ())
+        adapted = _ADAPTED_PARAMETERS.get(adaptation, ()) if adaptation is not None else ()
         if adaptation in _WINDOW_LIKE_SCHEMES and not all(
             name in self._algorithm_params for name in adapted
         ):
@@ -413,6 +413,7 @@ class Blackjax(ExternalSampler):
         if chains == 1:
             initial_points = [np.stack(init_state) for init_state in zip(initial_points)]
 
+        map_fn: Callable
         if self.chain_method == "parallel":
             map_fn = jax.pmap
         elif self.chain_method == "vectorized":
