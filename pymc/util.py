@@ -368,41 +368,6 @@ def locally_cachedmethod(f):
     return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
 
 
-def memoize_on_frozen(f):
-    """Cache a method's return value on ``self._cache`` when the instance is frozen.
-
-    On mutable instances (``self._frozen`` falsy) the method is called directly, so no
-    cache can go stale; frozen instances forbid mutation, so no invalidation is needed.
-    """
-    cached = locally_cachedmethod(f)
-
-    @functools.wraps(f)
-    def wrapper_fn(self, *args, **kwargs):
-        if getattr(self, "_frozen", False):
-            return cached(self, *args, **kwargs)
-        return f(self, *args, **kwargs)
-
-    return wrapper_fn
-
-
-def forbid_on_frozen(f):
-    """Raise when a graph-mutating method is called on a frozen model.
-
-    Frozen models cache their compiled functions, so mutation would leave stale entries.
-    """
-
-    @functools.wraps(f)
-    def wrapper_fn(self, *args, **kwargs):
-        if getattr(self, "_frozen", False):
-            raise RuntimeError(
-                f"{f.__name__} cannot be used on a frozen model. "
-                f"Mutate the original model and freeze it again with freeze_model."
-            )
-        return f(self, *args, **kwargs)
-
-    return wrapper_fn
-
-
 def check_dist_not_registered(dist, model=None):
     """Check that a dist is not registered in the model already."""
     from pymc.model import modelcontext

@@ -5,6 +5,7 @@ Model creation and inspection
 .. autosummary::
    :toctree: generated/
 
+   FrozenModel
    Model
    modelcontext
 
