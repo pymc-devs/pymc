@@ -19,16 +19,23 @@ import pytest
 
 import pymc as pm
 
-pytest.importorskip("jax")
 
-# Importing pymc.sampling.jax sets XLA_FLAGS (host device count for pmap-based
-# parallel chains). It must be imported before blackjax initializes the jax
-# backend — including for the other test modules collected in this session.
-import pymc.sampling.jax
+# Importing jax/blackjax initializes the jax backend, which must not happen at
+# pytest collection time: it would run before pymc.sampling.jax can set
+# XLA_FLAGS (breaking pmap parallel chains in other test modules) and has been
+# observed to destabilize XLA compilation in unrelated tests. Both are instead
+# imported lazily via the `blackjax` fixture below.
+# `Blackjax` itself is safe to import: it defers all jax/blackjax imports.
+from pymc.sampling.external.blackjax import Blackjax
 
-blackjax = pytest.importorskip("blackjax")
 
-from pymc.sampling.external.blackjax import Blackjax  # noqa: E402
+@pytest.fixture(scope="module", autouse=True)
+def blackjax():
+    pytest.importorskip("jax")
+    # Sets XLA_FLAGS before the jax backend initializes
+    import pymc.sampling.jax  # noqa: F401
+
+    return pytest.importorskip("blackjax")
 
 
 @pytest.fixture(scope="module")
@@ -79,7 +86,7 @@ def test_blackjax_algorithms(gaussian_model_data, algorithm, kwargs):
             assert "diverging" in idata.sample_stats
 
 
-def test_blackjax_algorithm_object(gaussian_model_data):
+def test_blackjax_algorithm_object(gaussian_model_data, blackjax):
     model = make_model(gaussian_model_data)
     sampler = Blackjax(blackjax.nuts, model=model, chain_method="vectorized")
     assert sampler.algorithm_name == "nuts"
