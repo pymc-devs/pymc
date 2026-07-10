@@ -1251,7 +1251,9 @@ class TestFrozenModelCaching:
             x = pm.Uniform("x", 0, 10)
         fm = freeze_model(m)
 
-        assert isinstance(fm, BaseModel) and not isinstance(fm, pm.Model)
+        assert isinstance(fm, FrozenModel)
+        assert isinstance(fm, BaseModel)
+        assert not isinstance(fm, pm.Model)
         with pytest.raises(AttributeError, match="register_rv"):
             with fm:
                 pm.Normal("y")
