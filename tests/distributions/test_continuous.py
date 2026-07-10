@@ -1067,6 +1067,35 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
+        def scipy_icdf(q, mu, sigma, lower, upper):
+            return st.truncnorm.ppf(
+                q, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
+            )
+
+        check_icdf(
+            pm.TruncatedNormal,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig, "upper": Rplusbig},
+            scipy_icdf,
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        check_icdf(
+            pm.TruncatedNormal,
+            {"mu": R, "sigma": Rplusbig, "upper": Rplusbig},
+            ft.partial(scipy_icdf, lower=-np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
+        check_icdf(
+            pm.TruncatedNormal,
+            {"mu": R, "sigma": Rplusbig, "lower": -Rplusbig},
+            ft.partial(scipy_icdf, upper=np.inf),
+            decimal=select_by_precision(float64=6, float32=1),
+            skip_paramdomain_outside_edge_test=True,
+        )
+
         # This is a regression test for #6128: Check that having one out-of-bound value
         # in an input array does not set all logp values to -inf
         dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)

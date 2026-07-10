@@ -767,6 +767,32 @@ class TruncatedNormal(BoundedContinuous):
 
         return logcdf
 
+    def icdf(value, mu, sigma, lower, upper):
+        is_lower_bounded = not (
+            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
+        )
+        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+        cdf_lower = pt.exp(normal_lcdf(mu, sigma, lower)) if is_lower_bounded else 0.0
+        cdf_upper = pt.exp(normal_lcdf(mu, sigma, upper)) if is_upper_bounded else 1.0
+
+        p = cdf_lower + value * (cdf_upper - cdf_lower)
+        res = mu - sigma * np.sqrt(2.0) * pt.erfcinv(2 * p)
+        res = check_icdf_value(res, value)
+
+        if is_lower_bounded and is_upper_bounded:
+            res = check_icdf_parameters(
+                res,
+                pt.le(lower, upper),
+                msg="lower_bound <= upper_bound",
+            )
+
+        return check_icdf_parameters(
+            res,
+            sigma > 0,
+            msg="sigma > 0",
+        )
+
 
 @_default_transform.register(TruncatedNormal)
 def truncated_normal_default_transform(op, rv):
