@@ -27,6 +27,27 @@ def _constant_from_shared(shared: SharedVariable) -> Constant:
     return shared.type.constant_type(type=shared.type, data=shared.get_value(), name=shared.name)
 
 
+def _extract_initial_values(model: Model) -> dict[str, object]:
+    """Return the model's non-default initial values, keyed by variable name.
+
+    Symbolic initial values reference variables of the model's graph, which the fgraph
+    round-trip clones, so they cannot be transplanted onto the rebuilt model and are
+    rejected.
+    """
+    initial_values = {}
+    for rv, initval in model.rvs_to_initial_values.items():
+        if initval is None:
+            continue
+        if isinstance(initval, Variable) and not isinstance(initval, Constant):
+            raise NotImplementedError(
+                f"{rv.name} has a symbolic initial value, which cannot be transplanted onto "
+                "the transformed model. Only None, strategy strings and constant initial "
+                "values are supported."
+            )
+        initial_values[rv.name] = initval
+    return initial_values
+
+
 def freeze_dims_and_data(
     model: Model, dims: Sequence[str] | None = None, data: Sequence[str] | None = None
 ) -> Model:
@@ -56,6 +77,10 @@ def freeze_dims_and_data(
     Model
         A new model with the specified dimensions and data frozen.
 
+    Notes
+    -----
+    Constant and strategy-string initial values are preserved on the new model. Symbolic
+    initial values (which reference variables of the original graph) are not supported.
 
     Examples
     --------
@@ -78,7 +103,17 @@ def freeze_dims_and_data(
         print("Logp eval time (1000x): ", frozen_m.profile(frozen_m.logp()).fct_call_time)
 
     """
-    fg, memo = fgraph_from_model(model)
+    # fgraph_from_model does not carry initial values through the round-trip and rejects
+    # models that have them. Preserve them here: clear them for the round-trip and transplant
+    # them back onto the new model (matched by variable name) below.
+    initial_values = _extract_initial_values(model)
+    saved_initial_values = dict(model.rvs_to_initial_values)
+    try:
+        for rv in model.rvs_to_initial_values:
+            model.rvs_to_initial_values[rv] = None
+        fg, memo = fgraph_from_model(model)
+    finally:
+        model.rvs_to_initial_values.update(saved_initial_values)
 
     if dims is None:
         dims = tuple(model.dim_lengths.keys())
@@ -122,7 +157,10 @@ def freeze_dims_and_data(
         replacements[old_value] = new_value
     fg.replace_all(tuple(replacements.items()), import_missing=True)
 
-    return model_from_fgraph(fg, mutate_fgraph=True)
+    new_model = model_from_fgraph(fg, mutate_fgraph=True)
+    for name, initval in initial_values.items():
+        new_model.set_initval(new_model[name], initval)
+    return new_model
 
 
 def freeze_model(model: Model) -> FrozenModel:
@@ -179,33 +217,12 @@ def freeze_model(model: Model) -> FrozenModel:
         for name, var in model.named_vars.items()
         if isinstance(var, SharedVariable) and var in free_rv_ancestors
     ]
+    frozen_model = freeze_dims_and_data(model, dims=frozen_dims, data=frozen_data)
 
-    # freeze_dims_and_data (via fgraph_from_model) does not carry initial values through the
-    # fgraph round-trip and rejects models that have them. Non-symbolic initial values are
-    # model metadata, not graph structure, so clear them for the round-trip and transplant
-    # them onto the frozen model afterwards, matched by variable name. Symbolic initial
-    # values reference variables of the original graph and cannot be transplanted.
-    initial_values = {}
-    for rv, initval in model.rvs_to_initial_values.items():
-        if initval is None:
-            continue
-        if isinstance(initval, Variable) and not isinstance(initval, Constant):
-            raise NotImplementedError(
-                f"Cannot freeze model: {rv.name} has a symbolic initial value. "
-                "Only None, strategy strings and constant initial values are supported."
-            )
-        initial_values[rv.name] = initval
-    saved_initial_values = dict(model.rvs_to_initial_values)
-    try:
-        for rv in model.rvs_to_initial_values:
-            model.rvs_to_initial_values[rv] = None
-        frozen_model = freeze_dims_and_data(model, dims=frozen_dims, data=frozen_data)
-    finally:
-        model.rvs_to_initial_values.update(saved_initial_values)
-
-    for name, initval in initial_values.items():
-        frozen_model.set_initval(frozen_model[name], initval)
-
+    # Retype the rebuilt model in place as a FrozenModel. This is the standard idiom for
+    # converting an instance to a sibling class: both are pure-Python subclasses of
+    # BaseModel with the same instance layout, so only the method resolution changes
+    # (mutators become unavailable, compiled functions become cached).
     frozen_model.__class__ = FrozenModel  # type: ignore[assignment]
     return cast(FrozenModel, frozen_model)
 
