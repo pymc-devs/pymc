@@ -230,11 +230,12 @@ class BlockedStep(ABC, WithSamplingState):
         if hasattr(self, "tune"):
             self.tune = False
 
-    def set_rng(self, rng: RandomGenerator):
+    def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
+        """Prepare the step method for sampling one chain.
+        Called once per chain, right before that chain starts sampling.
+        Can be called multiple times, meaning downstream method 
+        should handle multiple, possibly repeated calls."""
         self.rng = get_random_generator(rng, copy=False)
-
-    def setup(self, tune: int, draws: int) -> None:
-        pass
 
 
 def flat_statname(sampler_idx: int, sname: str) -> str:
@@ -300,9 +301,10 @@ class CompoundStep(WithSamplingState):
             if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
 
-    def setup(self, tune: int, draws: int) -> None:
-        for method in self.methods:
-            method.setup(tune, draws)
+    def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
+        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
+        for method, _rng in zip(self.methods, _rngs):
+            method.setup_chain(_rng, tune, draws)
 
     @property
     def sampling_state(self) -> DataClassState:
@@ -319,11 +321,6 @@ class CompoundStep(WithSamplingState):
     @property
     def vars(self) -> list[Variable]:
         return [var for method in self.methods for var in method.vars]
-
-    def set_rng(self, rng: RandomGenerator):
-        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
-        for method, _rng in zip(self.methods, _rngs):
-            method.set_rng(_rng)
 
     def _progressbar_config(self, n_chains=1):
         from functools import reduce
