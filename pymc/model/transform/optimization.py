@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
+from typing import cast
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph, Variable
@@ -205,8 +206,8 @@ def freeze_model(model: Model) -> FrozenModel:
     for name, initval in initial_values.items():
         frozen_model.set_initval(frozen_model[name], initval)
 
-    frozen_model.__class__ = FrozenModel
-    return frozen_model
+    frozen_model.__class__ = FrozenModel  # type: ignore[assignment]
+    return cast(FrozenModel, frozen_model)
 
 
 __all__ = ("freeze_dims_and_data", "freeze_model")

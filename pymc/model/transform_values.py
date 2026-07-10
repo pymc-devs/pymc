@@ -21,19 +21,19 @@ import xarray as xr
 from pytensor.graph.basic import Variable
 from pytensor.xtensor.vectorization import vectorize_graph as xvectorize_graph
 
-from pymc.model import Model, modelcontext
+from pymc.model import BaseModel, modelcontext
 from pymc.pytensorf import compile, replace_vars_in_graphs
 
 
 def _build_transform_graph(
-    model: Model,
+    model: BaseModel,
     forward: bool,
 ) -> tuple[list[Variable], list[Variable]]:
     """Build a per-sample graph that applies transforms to all free RVs.
 
     Parameters
     ----------
-    model : Model
+    model : BaseModel
         PyMC model whose free RVs define the transforms.
     forward : bool
         ``True`` for natural → unconstrained, ``False`` for the inverse.
@@ -69,7 +69,7 @@ def _eval_transform_graph(
     *,
     forward: bool,
     dataset: xr.Dataset,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     compile_kwargs: dict | None = None,
 ):
@@ -133,7 +133,7 @@ def _eval_transform_graph(
 def unconstrain_values(
     values: xr.Dataset,
     *,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     compile_kwargs: dict | None = None,
 ) -> xr.Dataset:
@@ -167,7 +167,7 @@ def unconstrain_values(
 def constrain_values(
     values: xr.Dataset,
     *,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     compile_kwargs: dict | None = None,
 ) -> xr.Dataset:

@@ -37,7 +37,7 @@ from xarray import Dataset, DataTree
 
 import pymc
 
-from pymc.model import Model, modelcontext
+from pymc.model import BaseModel, modelcontext
 from pymc.progress_bar import CustomProgress, default_progress_theme
 from pymc.pytensorf import PointFunc, extract_obs_data
 from pymc.util import get_default_varnames
@@ -134,7 +134,7 @@ def dict_to_dataset_drop_incompatible_coords(
     return ds
 
 
-def find_observations(model: Model) -> dict[str, Var]:
+def find_observations(model: BaseModel) -> dict[str, Var]:
     """If there are observations available, return them as a dictionary."""
     observations = {}
     for obs in model.observed_RVs:
@@ -151,7 +151,7 @@ def find_observations(model: Model) -> dict[str, Var]:
     return observations
 
 
-def find_constants(model: Model) -> dict[str, Var]:
+def find_constants(model: BaseModel) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
     model_vars = model.basic_RVs + model.deterministics + model.potentials
     value_vars = set(model.rvs_to_values.values())
@@ -174,7 +174,7 @@ def find_constants(model: Model) -> dict[str, Var]:
 
 def patch_nutpie_idata(
     idata: DataTree,
-    model: Model,
+    model: BaseModel,
     sampling_time: float,
 ) -> None:
     """Fix up the ``DataTree`` returned by ``nutpie.sample`` in place.
@@ -216,7 +216,7 @@ def patch_nutpie_idata(
         idata.posterior.attrs[k] = v
 
 
-def coords_and_dims_for_inferencedata(model: Model) -> tuple[dict[str, Any], dict[str, Any]]:
+def coords_and_dims_for_inferencedata(model: BaseModel) -> tuple[dict[str, Any], dict[str, Any]]:
     """Parse PyMC model coords and dims format to one accepted by InferenceData."""
     coords = {
         cname: np.array(cvals) if isinstance(cvals, tuple) else cvals
@@ -283,7 +283,7 @@ class _DefaultTrace:
 class DataTreeConverter:
     """Encapsulate conventions of InferenceData schema in DataTree conversion."""
 
-    model: Model | None = None
+    model: BaseModel | None = None
     posterior_predictive: Mapping[str, np.ndarray] | None = None
     predictions: Mapping[str, np.ndarray] | None = None
     prior: Mapping[str, np.ndarray] | None = None
@@ -620,7 +620,7 @@ def to_inference_data(
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
-    model: Model = None,
+    model: BaseModel = None,
     save_warmup: bool | None = None,
     include_transformed: bool = False,
 ) -> DataTree:
@@ -652,7 +652,7 @@ def to_inference_data(
         Map of coordinate names to coordinate values
     dims : dict of {str: list of str}, optional
         Map of variable names to the coordinate names to use to index its dimensions.
-    model : Model, optional
+    model : BaseModel, optional
         Model used to generate ``trace``. It is not necessary to pass ``model`` if in
         ``with`` context.
     save_warmup : bool, optional
@@ -689,7 +689,7 @@ def to_inference_data(
 def predictions_to_inference_data(
     predictions,
     posterior_trace: MultiTrace | None = None,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     coords: CoordSpec | None = None,
     dims: DimSpec | None = None,
     sample_dims: list | None = None,
@@ -709,7 +709,7 @@ def predictions_to_inference_data(
         ``pymc.sample_posterior_predictive``. Specifically, any variable whose shape is
         a deterministic function of the shape of any predictor (explanatory, independent, etc.)
         variables must be *removed* from this trace.
-    model: Model
+    model: BaseModel
         The pymc model. It can be omitted if within a model context.
     coords: Dict[str, array-like[Any]]
         Coordinates for the variables.  Map from coordinate names to coordinate values.
