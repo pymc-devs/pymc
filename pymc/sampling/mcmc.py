@@ -1057,8 +1057,6 @@ def sample(
 
     tune = get_default_tune_steps(step, tune)
 
-    step.setup(tune, draws)
-
     if var_names is not None:
         trace_vars = [v for v in model.unobserved_RVs if v.name in var_names]
         trace_vars = model.replace_rvs_by_values(trace_vars)
@@ -1529,7 +1527,7 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    step.set_rng(rng)
+    step.setup_chain(rng, tune, draws - tune)
 
     point = start
     if isinstance(trace, _ZarrChainBase):
