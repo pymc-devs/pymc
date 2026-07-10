@@ -312,10 +312,14 @@ jobs:
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
+      # Temporary segfault probe: cap XLA CPU codegen at AVX2
+      XLA_FLAGS: --xla_cpu_max_isa=AVX2
     defaults:
       run:
         shell: bash -leo pipefail {0}
     steps:
+      - name: CPU info (segfault probe)
+        run: lscpu
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
