@@ -28,13 +28,14 @@ from pymc.model.transform.deterministic import (
     extract_deterministics,
     insert_deterministics,
 )
-from pymc.model.transform.optimization import freeze_dims_and_data
+from pymc.model.transform.optimization import freeze_dims_and_data, freeze_model
 
 __all__ = (
     "change_value_transforms",
     "do",
     "extract_deterministics",
     "freeze_dims_and_data",
+    "freeze_model",
     "insert_deterministics",
     "observe",
     "prune_vars_detached_from_observed",

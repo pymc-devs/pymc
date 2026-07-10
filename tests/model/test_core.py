@@ -59,6 +59,7 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
+from pymc.model.core import FrozenModel
 from pymc.model.transform.optimization import freeze_model
 from pymc.pytensorf import floatX, inputvars
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
@@ -1209,23 +1210,28 @@ class TestFrozenModelCaching:
         assert isinstance(fm.dim_lengths["g"], Constant)
         assert isinstance(fm["x"], SharedVariable)
         assert isinstance(fm.dim_lengths["obs"], SharedVariable)
-        assert fm._frozen and not m._frozen  # original model is untouched
+        assert isinstance(fm, FrozenModel)
+        assert not isinstance(m, FrozenModel)  # original model is untouched
 
     def test_freeze_model_preserves_initvals(self):
         # fgraph_from_model drops (and rejects) initial values; freeze_model transplants
         # them onto the frozen model without touching the original.
         with pm.Model() as m:
-            x = pm.Data("d", np.array([10.0, 20.0, 30.0]))
             pm.Uniform("u", 0, 10, initval=7.0)  # concrete
             pm.Normal("p", 0, 1, size=3, initval="prior")  # strategy string
-            pm.Normal("s", 0, 1, size=3, initval=x * 2)  # symbolic (depends on data)
 
         fm = freeze_model(m)
         assert m.rvs_to_initial_values[m["u"]] == 7.0  # original untouched
         ip = fm.initial_point(0)
         np.testing.assert_allclose(ip["u_interval__"], m.initial_point(0)["u_interval__"])
         np.testing.assert_allclose(fm.initial_point(1)["p"], m.initial_point(1)["p"])
-        np.testing.assert_allclose(ip["s"], [20.0, 40.0, 60.0])
+
+        # Symbolic initial values reference the original graph and cannot be transplanted.
+        with pm.Model() as m2:
+            x = pm.Data("d", np.array([10.0, 20.0, 30.0]))
+            pm.Normal("s", 0, 1, size=3, initval=x * 2)
+        with pytest.raises(NotImplementedError, match="symbolic initial value"):
+            freeze_model(m2)
 
     def test_compile_fn_is_cached(self):
         with pm.Model() as m:
@@ -1243,12 +1249,12 @@ class TestFrozenModelCaching:
             x = pm.Uniform("x", 0, 10)
         fm = freeze_model(m)
 
-        with pytest.raises(RuntimeError, match="frozen model"):
+        with pytest.raises(RuntimeError, match="FrozenModel"):
             with fm:
                 pm.Normal("y")
-        with pytest.raises(RuntimeError, match="frozen model"):
+        with pytest.raises(RuntimeError, match="FrozenModel"):
             fm.add_coord("new_dim", ["a", "b"])
-        with pytest.raises(RuntimeError, match="frozen model"):
+        with pytest.raises(RuntimeError, match="FrozenModel"):
             fm.set_initval(fm["x"], 5.0)
 
     def test_set_data_on_frozen_model(self):

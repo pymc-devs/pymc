@@ -71,12 +71,11 @@ from pymc.util import (
     UNSET,
     WithMemoization,
     _UnsetType,
-    forbid_on_frozen,
     get_transformed_name,
     get_value_vars_from_user_vars,
     get_var_name,
+    locally_cachedmethod,
     makeiter,
-    memoize_on_frozen,
     treedict,
     treelist,
 )
@@ -86,6 +85,7 @@ sparse = lazy_scipy_module("sparse")
 
 __all__ = [
     "Deterministic",
+    "FrozenModel",
     "Model",
     "Point",
     "Potential",
@@ -314,11 +314,18 @@ class ContextMeta(type):
         return instance
 
 
+# Linkers that replace shared RNGs by detached, backend-typified copies at compile time.
+_RNG_DETACHING_LINKERS = (
+    ("pytensor.link.jax.linker", "JAXLinker"),
+    ("pytensor.link.mlx.linker", "MLXLinker"),
+    ("pytensor.link.pytorch.linker", "PytorchLinker"),
+)
+
+
 def _rng_detaching_linker(mode) -> bool:
     """Whether ``mode``'s linker copies RNG shared variables at compile time.
 
-    The JAX/MLX/PyTorch linkers replace shared RNGs by detached, backend-typified copies,
-    so a compiled function cannot be reseeded afterwards. Functions with RNGs must then be
+    Such compiled functions cannot be reseeded afterwards, so functions with RNGs must be
     seeded before compilation and are not served from the compilation cache.
     """
     try:
@@ -327,7 +334,13 @@ def _rng_detaching_linker(mode) -> bool:
         linker = get_mode(mode).linker
     except Exception:
         return False
-    return type(linker).__name__ in ("JAXLinker", "MLXLinker", "PytorchLinker")
+    # A linker instance can only exist if its module is already imported, so this check
+    # never triggers an import of an optional backend.
+    return any(
+        (module := sys.modules.get(module_path)) is not None
+        and isinstance(linker, getattr(module, class_name))
+        for module_path, class_name in _RNG_DETACHING_LINKERS
+    )
 
 
 class Model(WithMemoization, metaclass=ContextMeta):
@@ -460,8 +473,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
     forbids the mutations that would make them stale.
 
     """
-
-    _frozen: bool = False
 
     def __enter__(self):
         """Enter the context manager."""
@@ -614,7 +625,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         fn.set_extra_values(initial_point)
         return fn
 
-    @memoize_on_frozen
     def _logp_dlogp_function(self, grad_vars, *, tempered=False, ravel_inputs=None, **kwargs):
         grad_vars = list(grad_vars)
         if tempered:
@@ -720,7 +730,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             **compile_kwargs,
         )
 
-    @memoize_on_frozen
     def logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -806,7 +815,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
-    @memoize_on_frozen
     def dlogp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -846,7 +854,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         cost = rewrite_pregrad(cost)
         return gradient(cost, value_vars)
 
-    @memoize_on_frozen
     def d2logp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -1005,7 +1012,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
 
-    @forbid_on_frozen
     def add_coord(
         self,
         name: str,
@@ -1060,7 +1066,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
         self._dim_lengths[name] = length
         self._coords[name] = values
 
-    @forbid_on_frozen
     def add_coords(
         self,
         coords: dict[str, Sequence | None],
@@ -1126,12 +1131,10 @@ class Model(WithMemoization, metaclass=ContextMeta):
         fn = self._make_initial_point()
         return Point(fn(random_seed), model=self)
 
-    @memoize_on_frozen
     def _make_initial_point(self):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
         return make_initial_point_fn(model=self, return_transformed=True)
 
-    @forbid_on_frozen
     def set_initval(self, rv_var, initval):
         """Set an initial value (strategy) for a random variable."""
         if initval is not None and not isinstance(initval, Variable | str):
@@ -1166,7 +1169,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
         if not isinstance(shared_object, SharedVariable):
             frozen_hint = (
                 " The model is frozen and only data that no free variable depends on can be set."
-                if self._frozen
+                if isinstance(self, FrozenModel)
                 else ""
             )
             raise TypeError(
@@ -1280,7 +1283,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         shared_object.set_value(values)
 
-    @forbid_on_frozen
     def register_rv(
         self,
         rv_var: RandomVariable,
@@ -1358,7 +1360,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
-    @forbid_on_frozen
     def make_obs_var(
         self,
         rv_var: TensorVariable,
@@ -1460,7 +1461,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return rv_var
 
-    @forbid_on_frozen
     def create_value_var(
         self,
         rv_var: TensorVariable,
@@ -1534,13 +1534,11 @@ class Model(WithMemoization, metaclass=ContextMeta):
 
         return value_var
 
-    @forbid_on_frozen
     def register_data_var(self, data, dims=None):
         """Register a data variable with the model."""
         self.data_vars.append(data)
         self.add_named_variable(data, dims=dims)
 
-    @forbid_on_frozen
     def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
         """Add a random graph variable to the named variables of the model.
 
@@ -1765,7 +1763,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             return PointFunc(fn)
         return fn
 
-    @memoize_on_frozen
     def _compile_fn(
         self,
         outs: Variable | Sequence[Variable],
@@ -2183,6 +2180,53 @@ class Model(WithMemoization, metaclass=ContextMeta):
             truncate_deterministic=truncate_deterministic,
             parameter_count=parameter_count,
         )
+
+
+def _forbidden_on_frozen(f):
+    """Replace a mutating ``Model`` method by one that raises on a ``FrozenModel``."""
+
+    @functools.wraps(f)
+    def frozen_method(self, *args, **kwargs):
+        raise RuntimeError(
+            f"{f.__name__} cannot be used on a FrozenModel. "
+            "Mutate the original model and freeze it again with freeze_model."
+        )
+
+    frozen_method.__doc__ = (
+        f"Raise ``RuntimeError``: ``{f.__name__}`` is not available on a ``FrozenModel``."
+    )
+    return frozen_method
+
+
+class FrozenModel(Model):
+    """A ``Model`` whose graph is immutable and whose compiled functions are cached.
+
+    Create one with :func:`pymc.model.transform.optimization.freeze_model`; this class is
+    not meant to be instantiated directly. Graph-mutating methods raise, which is what
+    makes caching safe without any invalidation. ``set_data`` remains available for data
+    that no free variable depends on — values and shapes are runtime inputs of the cached
+    functions.
+    """
+
+    # Cached graphs and compiled functions. The seed is applied outside `_compile_fn`
+    # (in `compile_fn`) and taken as an argument by the initial-point function, so all
+    # cached entries are seed-independent.
+    logp = locally_cachedmethod(Model.logp)
+    dlogp = locally_cachedmethod(Model.dlogp)
+    d2logp = locally_cachedmethod(Model.d2logp)
+    _logp_dlogp_function = locally_cachedmethod(Model._logp_dlogp_function)
+    _make_initial_point = locally_cachedmethod(Model._make_initial_point)
+    _compile_fn = locally_cachedmethod(Model._compile_fn)
+
+    # Graph mutation would stale the cache and is forbidden.
+    register_rv = _forbidden_on_frozen(Model.register_rv)
+    make_obs_var = _forbidden_on_frozen(Model.make_obs_var)
+    create_value_var = _forbidden_on_frozen(Model.create_value_var)
+    register_data_var = _forbidden_on_frozen(Model.register_data_var)
+    add_named_variable = _forbidden_on_frozen(Model.add_named_variable)
+    add_coord = _forbidden_on_frozen(Model.add_coord)
+    add_coords = _forbidden_on_frozen(Model.add_coords)
+    set_initval = _forbidden_on_frozen(Model.set_initval)
 
 
 class BlockModelAccess(Model):

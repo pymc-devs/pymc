@@ -14,11 +14,11 @@
 from collections.abc import Sequence
 
 from pytensor.compile import SharedVariable
-from pytensor.graph import Constant, FunctionGraph
+from pytensor.graph import Constant, FunctionGraph, Variable
 from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import ancestors
 
-from pymc.model.core import Model
+from pymc.model.core import FrozenModel, Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
 
 
@@ -124,7 +124,7 @@ def freeze_dims_and_data(
     return model_from_fgraph(fg, mutate_fgraph=True)
 
 
-def freeze_model(model: Model) -> Model:
+def freeze_model(model: Model) -> FrozenModel:
     """Return a frozen copy of the model that caches its compiled functions.
 
     On the frozen model, compiled functions (``compile_fn``, ``logp_dlogp_function``,
@@ -145,7 +145,8 @@ def freeze_model(model: Model) -> Model:
     Functions with random variables compiled to backends that detach their RNGs at compile
     time (JAX, MLX, PyTorch) cannot be reseeded and are compiled fresh on each call.
 
-    Custom initial values are preserved on the frozen model.
+    Constant and strategy-string initial values are preserved on the frozen model;
+    symbolic initial values are not supported.
 
     Examples
     --------
@@ -179,14 +180,20 @@ def freeze_model(model: Model) -> Model:
     ]
 
     # freeze_dims_and_data (via fgraph_from_model) does not carry initial values through the
-    # fgraph round-trip and rejects models that have them. Initial values are model metadata,
-    # not graph structure, so clear them for the round-trip and transplant them onto the
-    # frozen model afterwards, matched by variable name.
-    initial_values = {
-        rv.name: initval
-        for rv, initval in model.rvs_to_initial_values.items()
-        if initval is not None
-    }
+    # fgraph round-trip and rejects models that have them. Non-symbolic initial values are
+    # model metadata, not graph structure, so clear them for the round-trip and transplant
+    # them onto the frozen model afterwards, matched by variable name. Symbolic initial
+    # values reference variables of the original graph and cannot be transplanted.
+    initial_values = {}
+    for rv, initval in model.rvs_to_initial_values.items():
+        if initval is None:
+            continue
+        if isinstance(initval, Variable) and not isinstance(initval, Constant):
+            raise NotImplementedError(
+                f"Cannot freeze model: {rv.name} has a symbolic initial value. "
+                "Only None, strategy strings and constant initial values are supported."
+            )
+        initial_values[rv.name] = initval
     saved_initial_values = dict(model.rvs_to_initial_values)
     try:
         for rv in model.rvs_to_initial_values:
@@ -198,7 +205,7 @@ def freeze_model(model: Model) -> Model:
     for name, initval in initial_values.items():
         frozen_model.set_initval(frozen_model[name], initval)
 
-    frozen_model._frozen = True
+    frozen_model.__class__ = FrozenModel
     return frozen_model
 
 
