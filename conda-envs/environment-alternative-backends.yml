@@ -13,13 +13,11 @@ dependencies:
 - numba
 # nutpie is installed from git in the CI workflow (see tests.yml) so we can track
 # the arviz 1.0 -compatible branch until an upstream release ships.
-# Jaxlib version must not be greater than jax version!
-- jax>=0.4.28
-- jaxlib>=0.4.28
+# The JAX stack (jax, jaxlib, numpyro, blackjax) is installed from PyPI in the pip
+# section below rather than conda-forge -- see the note there.
 - libblas=*=*mkl
 - mkl-service
 - numpy>=1.25.0
-- numpyro>=0.8.0
 - pandas>=0.24.0
 - pip
 - pytensor>=3.1.2,<3.2
@@ -39,7 +37,18 @@ dependencies:
 - types-cachetools
 # blackjax now does not pull in fastprogress by default
 - fastprogress>=1.0.0
-- blackjax>=1.5
 - pip:
   - numdifftools>=0.9.40
   - mcbackend>=0.4.0
+  # conda-forge builds jaxlib from source with its own XLA/LLVM toolchain, and its
+  # 0.10.x CPU build segfaults in XLA codegen while compiling some graphs
+  # (DirichletMultinomial, MvStudentT draws) on the CI runners. The official PyPI
+  # wheels compile the same graphs fine, so install the whole JAX stack from PyPI.
+  # Jaxlib version must not be greater than jax version!
+  - jax>=0.4.28
+  - jaxlib>=0.4.28
+  - numpyro>=0.8.0
+  # blackjax 1.6 removed `window_adaptation(progress_bar=...)` and replaced
+  # `progress_bar.gen_scan_fn` with a context manager; pymc.sampling.jax still
+  # uses the old API.
+  - blackjax>=1.5,<1.6
