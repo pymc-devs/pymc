@@ -14,6 +14,7 @@
 
 from __future__ import annotations
 
+import copy
 import logging
 import time
 
@@ -300,3 +301,35 @@ class BaseHMC(GradientSharedStep):
     def set_rng(self, rng: RandomGenerator):
         self.rng = get_random_generator(rng, copy=False)
         self.potential.set_rng(self.rng.spawn(1)[0])
+
+    def fork(self, rng: RandomGenerator) -> BaseHMC:
+        """Return an independent copy of this step for a new chain/thread.
+
+        Shares the compiled logp/dlogp code and read-only data, but gives the
+        copy its own function storage, its own ``extra_vars`` shared variables,
+        and fresh adaptation state (mass matrix, step size). Intended to be
+        called *before* tuning, so the deep-copied adaptation state starts from
+        its initial values.
+        """
+        # Detach the compiled function (and the integrator that references it)
+        # before deep-copying: `copy.deepcopy` handles the pure-numpy adaptation
+        # state fine, but must not touch the pytensor Function (its composite
+        # deepcopy is unsafe for concurrent use). We re-attach an independent
+        # `fork()` of the function afterwards.
+        logp_dlogp_func = self._logp_dlogp_func
+        integrator = self.integrator
+        del self._logp_dlogp_func
+        del self.integrator
+        try:
+            new = copy.deepcopy(self)
+        finally:
+            self._logp_dlogp_func = logp_dlogp_func
+            self.integrator = integrator
+
+        forked_func = logp_dlogp_func.fork()
+        new._logp_dlogp_func = forked_func
+        # Rewire the shared-input dict to the fork's fresh shared variables so
+        # that `ArrayStepShared.step` sets extra values on this chain's copies.
+        new.shared = dict(forked_func._extra_vars_shared)
+        new.integrator = integration.CpuLeapfrogIntegrator(new.potential, forked_func)
+        return new

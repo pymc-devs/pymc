@@ -18,6 +18,7 @@ import logging
 import multiprocessing
 import multiprocessing.sharedctypes
 import platform
+import sys
 import time
 import traceback
 import warnings
@@ -83,6 +84,39 @@ class ExceptionWithTraceback:
 def rebuild_exc(exc, tb):
     exc.__cause__ = RemoteTraceback(tb)
     return exc
+
+
+#: Sentinel returned by `_initialize_parallel_context` to request thread-based
+#: (rather than process-based) multi-chain sampling.
+THREAD_CONTEXT = "thread"
+
+
+def _initialize_parallel_context(
+    mp_ctx: str | multiprocessing.context.BaseContext | None,
+    *,
+    mode=None,
+    quiet: bool = False,
+) -> multiprocessing.context.BaseContext | str:
+    """Resolve how to parallelize chains: threads or a multiprocessing context.
+
+    Returns the :data:`THREAD_CONTEXT` sentinel to run chains as threads -- when
+    the user explicitly passes ``mp_ctx="thread"``, or, on a free-threaded (no-GIL)
+    interpreter, when they have not requested a specific context. Either way we
+    respect it: the request was explicit, or we concluded threading was available.
+    Otherwise it composes :func:`_initialize_multiprocessing_context` for a real
+    process context.
+    """
+    gil_enabled = getattr(sys, "_is_gil_enabled", lambda: True)()
+    if mp_ctx == THREAD_CONTEXT or (mp_ctx is None and not gil_enabled):
+        if mp_ctx == THREAD_CONTEXT and gil_enabled and not quiet:
+            warnings.warn(
+                "mp_ctx='thread' was requested but the interpreter's GIL is "
+                "enabled, so chains will not actually run in parallel.",
+                UserWarning,
+                stacklevel=2,
+            )
+        return THREAD_CONTEXT
+    return _initialize_multiprocessing_context(mp_ctx, mode=mode, quiet=quiet)
 
 
 def _initialize_multiprocessing_context(

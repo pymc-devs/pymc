@@ -12,11 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy as np
 import pytensor
 import pytest
 
 import pymc as pm
 
+from pymc.model import modelcontext
 from pymc.step_methods import (
     NUTS,
     CompoundStep,
@@ -26,14 +28,93 @@ from pymc.step_methods import (
     Slice,
 )
 from pymc.step_methods.compound import (
+    BlockedStep,
     StatsBijection,
     flatten_steps,
     get_stats_dtypes_shapes_from_steps,
     infer_warn_stats_info,
 )
 from pymc.testing import fast_unstable_sampling_mode
+from pymc.util import get_random_generator, get_value_vars_from_user_vars
 from tests.helpers import StepMethodTester
 from tests.models import simple_2model_continuous
+
+
+class NonForkableStep(BlockedStep):
+    """A minimal custom step method that samples but never implements ``fork``.
+
+    Stands in for a third-party / user-defined sampler: it can drive ``pm.sample``
+    (a plain random-walk Metropolis), but because it does not override ``fork`` it
+    hits the ``BlockedStep.fork`` default that raises ``NotImplementedError`` --
+    which is how threaded sampling detects it must fall back to multiprocessing.
+    """
+
+    name = "nonforkable"
+    stats_dtypes_shapes: dict = {}
+
+    def __init__(self, vars, model=None, rng=None):
+        model = modelcontext(model)
+        self.vars = get_value_vars_from_user_vars(vars, model)
+        self.var_names = [v.name for v in self.vars]
+        self._logp = model.compile_logp()
+        self.rng = get_random_generator(rng)
+        self.tune = False
+
+    def set_rng(self, rng):
+        self.rng = get_random_generator(rng, copy=False)
+
+    def step(self, point):
+        proposal = dict(point)
+        for name in self.var_names:
+            proposal[name] = point[name] + self.rng.normal(scale=0.3, size=np.shape(point[name]))
+        if np.log(self.rng.uniform()) < float(self._logp(proposal)) - float(self._logp(point)):
+            return proposal, []
+        return dict(point), []
+
+
+def test_fork_fallback_for_non_forkable_step(monkeypatch, caplog):
+    """A step method that never implements ``fork`` must fail loudly so threaded
+    sampling falls back to multiprocessing instead of running an unsafe shared
+    step across threads.
+
+    Covers: the base ``fork`` raising ``NotImplementedError``, ``CompoundStep``
+    propagating it (rather than forking only some children), and ``pm.sample``
+    completing via the process path when the threaded branch is forced on.
+    """
+    import logging
+
+    # The step itself, and any CompoundStep containing it, refuse to fork.
+    with pm.Model():
+        x = pm.Normal("x", 0, 1)
+        y = pm.Normal("y", 0, 1)
+        with pytest.raises(NotImplementedError, match="NonForkableStep"):
+            NonForkableStep([x]).fork(np.random.default_rng(0))
+        with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+            compound = CompoundStep([NUTS([y]), NonForkableStep([x])])
+        with pytest.raises(NotImplementedError, match="NonForkableStep"):
+            compound.fork(np.random.default_rng(0))
+
+    # Force the free-threaded dispatch branch regardless of the actual build;
+    # sampling must still complete by falling back to multiprocessing.
+    # `sys._is_gil_enabled` only exists on Python 3.13+; create it if absent so
+    # the free-threaded branch is exercised on GIL builds too.
+    monkeypatch.setattr("pymc.sampling.mcmc.sys._is_gil_enabled", lambda: False, raising=False)
+    with pm.Model():
+        x = pm.Normal("x", 2.0, 1.0)
+        step = NonForkableStep([x])
+        with caplog.at_level(logging.WARNING, logger="pymc"):
+            idata = pm.sample(
+                step=step,
+                draws=20,
+                tune=20,
+                chains=2,
+                cores=2,
+                progressbar=False,
+                compute_convergence_checks=False,
+                random_seed=1,
+            )
+    assert "does not support threaded sampling" in caplog.text
+    assert idata.posterior["x"].shape == (2, 20)
 
 
 def test_stepmethods_do_not_require_tune_stat():

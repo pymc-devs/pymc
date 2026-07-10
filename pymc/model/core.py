@@ -13,6 +13,7 @@
 #   limitations under the License.
 from __future__ import annotations
 
+import copy
 import functools
 import sys
 import threading
@@ -274,6 +275,26 @@ class ValueGradFunction:
             raise ValueError("Extra values are not set.")
 
         return {var.name: self._extra_vars_shared[var.name].get_value() for var in self._extra_vars}
+
+    def fork(self) -> ValueGradFunction:
+        """Return an independent copy for concurrent (multi-thread) use.
+
+        The copy shares the compiled code and any read-only inputs (e.g. observed
+        data) with the original, but gets its own input/output storage and its own
+        ``extra_vars`` shared variables. This makes it safe to call and to
+        ``set_extra_values`` on from a different thread than the original.
+        """
+        new = copy.copy(self)
+        swap = {}
+        new._extra_vars_shared = {}
+        for name, shared in self._extra_vars_shared.items():
+            value = shared.get_value(borrow=False)
+            fresh = pytensor.shared(value, shared.name, shape=value.shape)
+            new._extra_vars_shared[name] = fresh
+            swap[shared] = fresh
+        new._pytensor_function = self._pytensor_function.copy(share_memory=False, swap=swap or None)
+        new._extra_are_set = False
+        return new
 
     def __call__(self, grad_vars, *, extra_vars=None):
         if extra_vars is not None:

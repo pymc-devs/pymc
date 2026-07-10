@@ -21,10 +21,12 @@ import multiprocessing
 import pickle
 import re
 import sys
+import threading
 import time
 import warnings
 
 from collections.abc import Callable, Iterator, Mapping, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -67,7 +69,13 @@ from pymc.progress_bar import (
     default_progress_theme,
 )
 from pymc.pytensorf import resolve_backend_compile_kwargs
-from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
+from pymc.sampling.parallel import (
+    THREAD_CONTEXT,
+    Draw,
+    _cpu_count,
+    _initialize_multiprocessing_context,
+    _initialize_parallel_context,
+)
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
     log_warning_stats,
@@ -745,9 +753,11 @@ def sample(
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
-    mp_ctx : multiprocessing.context.BaseContent
-        A multiprocessing context for parallel sampling.
-        See multiprocessing documentation for details.
+    mp_ctx : multiprocessing.context.BaseContext or "thread", optional
+        A multiprocessing context for parallel sampling; see the multiprocessing
+        documentation for details. Pass ``"thread"`` to run chains as threads in a
+        single process instead, which only runs in parallel on a free-threaded
+        (no-GIL) interpreter and is selected automatically there when unset.
     model : Model (optional if in ``with`` context)
         Model to sample from. The model needs to have free random variables.
     backend: str, optional.
@@ -878,9 +888,9 @@ def sample(
         chains = max(2, cores)
 
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
-    mp_ctx = _initialize_multiprocessing_context(
-        mp_ctx, mode=compile_kwargs.get("mode"), quiet=quiet
-    )
+    # `mp_ctx` may resolve to the THREAD_CONTEXT sentinel (free-threaded builds, or
+    # an explicit mp_ctx="thread"): run the chains as threads instead of processes.
+    mp_ctx = _initialize_parallel_context(mp_ctx, mode=compile_kwargs.get("mode"), quiet=quiet)
     joined_blas_limiter, cores, num_blas_cores_per_worker = setup_cores_blas_cores(
         blas_cores, chains, cores, mp_ctx
     )
@@ -1107,6 +1117,11 @@ def sample(
     )
 
     parallel = cores > 1 and chains > 1 and not has_population_samplers
+    # When the parallel context resolved to threads (free-threaded build, or an
+    # explicit mp_ctx="thread"), run the chains as threads: one shared model +
+    # compiled code, no pickling. Only attempted when the step method supports
+    # fork(); otherwise we fall back to multiprocessing below.
+    threaded = parallel and mp_ctx == THREAD_CONTEXT
     # At some point it was decided that PyMC should not set a global seed by default,
     # unless the user specified a seed. This is a symptom of the fact that PyMC samplers
     # are built around global seeding. This branch makes sure we maintain this unspoken
@@ -1121,13 +1136,34 @@ def sample(
         sample_args["rngs"] = rngs
 
     t_start = time.time()
+    sampled = False
     with _quiet_logging(quiet):
-        if parallel:
+        if threaded:
+            if not quiet:
+                _log.info(f"Threaded sampling ({chains} chains in {cores} threads)")
+                _print_step_hierarchy(step)
+            try:
+                with joined_blas_limiter():
+                    _thread_sample(**sample_args)
+                sampled = True
+            except NotImplementedError as e:
+                if not quiet:
+                    _log.warning(
+                        f"Step method does not support threaded sampling ({e}); "
+                        "falling back to multiprocessing."
+                    )
+                # Resolve a real process context in place of the "thread" sentinel.
+                mp_ctx = _initialize_multiprocessing_context(
+                    None, mode=compile_kwargs.get("mode"), quiet=quiet
+                )
+                parallel_args["mp_ctx"] = mp_ctx
+        if parallel and not sampled:
             if not quiet:
                 _log.info(f"Multiprocess sampling ({chains} chains in {cores} jobs)")
                 _print_step_hierarchy(step)
             try:
                 _mp_sample(**sample_args, **parallel_args)
+                sampled = True
             except pickle.PickleError:
                 if not quiet:
                     _log.warning("Could not pickle model, sampling singlethreaded.")
@@ -1140,7 +1176,7 @@ def sample(
                     _log.warning("Could not pickle model, sampling singlethreaded.")
                     _log.debug("Pickling error:", exc_info=True)
                 parallel = False
-        if not parallel:
+        if not sampled:
             if has_population_samplers:
                 if not quiet:
                     _log.info(f"Population sampling ({chains} chains)")
@@ -1198,11 +1234,12 @@ def setup_cores_blas_cores(
         num_blas_cores_per_worker = None
 
     elif isinstance(blas_cores, int):
-        if mp_ctx.get_start_method() == "fork":
+        if mp_ctx != THREAD_CONTEXT and mp_ctx.get_start_method() == "fork":
             # https://github.com/pymc-devs/pymc/issues/7354
             joined_blas_limiter = contextlib.nullcontext
         else:
-
+            # Threads share one process, so a single process-wide BLAS limiter
+            # (rather than a per-worker split) applies to all chains.
             def joined_blas_limiter():
                 return threadpool_limits(limits=blas_cores)
 
@@ -1420,6 +1457,111 @@ def _sample_many(
     return
 
 
+def _thread_sample(
+    *,
+    draws: int,
+    chains: int,
+    cores: int,
+    traces: Sequence[IBaseTrace],
+    start: Sequence[PointType],
+    rngs: Sequence[np.random.Generator],
+    step: Step,
+    callback: SamplingIteratorCallback | None = None,
+    **kwargs,
+):
+    """Sample all chains concurrently as threads (free-threaded / no-GIL builds).
+
+    Each chain runs on an independent ``step.fork(rng)`` so chains never share
+    mutable compiled-function storage, adaptation state, or RNG. This is the
+    in-process counterpart of :func:`_mp_sample`: it shares one model, one set of
+    compiled thunks, and the observed data across chains instead of duplicating
+    them per process.
+
+    At most ``cores`` chains run at once (via a thread pool of that size), matching
+    the multiprocessing path. ``Ctrl-C`` sets a stop flag that the workers check
+    between draws and unwind cooperatively -- worker threads never receive the
+    ``KeyboardInterrupt`` themselves.
+
+    Raises ``NotImplementedError`` if the step method has not implemented
+    ``fork``; the caller catches this and falls back to multiprocessing.
+
+    Parameters
+    ----------
+    draws : int
+        Total number of iterations per chain, including tuning.
+    chains : int
+        Number of chains to sample.
+    cores : int
+        Maximum number of chains to sample concurrently.
+    traces : list of backends
+        One trace per chain; each is written only by its own thread.
+    start : list
+        Starting point for each chain.
+    rngs : list of Generators
+        One independent Generator per chain.
+    step : Step
+        The step method for chain 0; the other chains use ``step.fork(rng)``.
+    """
+    tune = kwargs.get("tune", 0)
+    model = kwargs.get("model", None)
+
+    # Fork one independent step per chain up front, in the main thread, so all
+    # compilation/copying happens before any worker starts -- and so a step that
+    # can't fork raises here (not inside a thread) for a clean fallback.
+    steps = [step] + [step.fork(rngs[i]) for i in range(1, chains)]
+
+    progress_manager = MCMCProgressBarManager(
+        step_method=step,
+        chains=chains,
+        draws=draws - tune,
+        tune=tune,
+        progressbar=kwargs.get("progressbar", True),
+        progressbar_theme=kwargs.get("progressbar_theme", default_progress_theme),
+    )
+
+    errors: list[BaseException | None] = [None] * chains
+    progress_lock = threading.Lock()
+    stop_event = threading.Event()
+
+    def _worker(i: int) -> None:
+        if stop_event.is_set():
+            return
+        try:
+            _sample(
+                chain=i,
+                rng=rngs[i],
+                start=start[i],
+                draws=draws,
+                step=steps[i],
+                trace=traces[i],
+                tune=tune,
+                model=model,
+                callback=callback,
+                progress_manager=progress_manager,
+                progress_lock=progress_lock,
+                stop_event=stop_event,
+            )
+        except BaseException as e:
+            errors[i] = e
+
+    with progress_manager, ThreadPoolExecutor(max_workers=cores) as executor:
+        futures = [executor.submit(_worker, i) for i in range(chains)]
+        try:
+            for future in futures:
+                future.result()
+        except KeyboardInterrupt:
+            # Stop running workers at their next draw and drop chains that haven't
+            # started; the pool's shutdown waits for the in-flight ones to unwind.
+            stop_event.set()
+            for future in futures:
+                future.cancel()
+
+    for e in errors:
+        if e is not None:
+            raise e
+    return
+
+
 def _sample(
     *,
     chain: int,
@@ -1432,11 +1574,15 @@ def _sample(
     model: Model | None = None,
     callback=None,
     progress_manager: MCMCProgressBarManager,
+    progress_lock: threading.Lock | None = None,
+    stop_event: threading.Event | None = None,
     **kwargs,
 ) -> None:
-    """Sample one chain (singleprocess).
+    """Sample one chain (single process, in the calling thread).
 
-    Multiple step methods are supported via compound step methods.
+    Multiple step methods are supported via compound step methods. Used both by
+    the sequential sampler (:func:`_sample_many`) and, once per thread, by the
+    threaded sampler (:func:`_thread_sample`).
 
     Parameters
     ----------
@@ -1458,7 +1604,23 @@ def _sample(
         PyMC model. If None, the model is taken from the current context.
     progress_manager: ProgressBarManager
         Helper class used to handle progress bar styling and updates
+    progress_lock : threading.Lock, optional
+        Serializes progress-bar updates when several chains share one
+        ``progress_manager`` across threads. ``None`` (the sequential path) skips
+        locking entirely.
+    stop_event : threading.Event, optional
+        Cooperative cancellation flag checked between draws; when set, the chain
+        stops early without marking its bar complete. Used by threaded sampling to
+        unwind all chains on ``Ctrl-C``.
     """
+
+    def update(**kwargs):
+        if progress_lock is None:
+            progress_manager.update(**kwargs)
+        else:
+            with progress_lock:
+                progress_manager.update(**kwargs)
+
     sampling_gen = _iter_sample(
         draws=draws,
         step=step,
@@ -1472,17 +1634,22 @@ def _sample(
     )
     try:
         for it, stats in enumerate(sampling_gen):
-            progress_manager.update(
-                chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune
-            )
-
-        if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
-            progress_manager.update(
-                chain_idx=chain, is_last=True, draw=it, stats=stats, tuning=False
-            )
+            update(chain_idx=chain, is_last=False, draw=it, stats=stats, tuning=it < tune)
+            if stop_event is not None and stop_event.is_set():
+                break
+        else:
+            # Reached only when the chain drew every sample (no early stop). In
+            # combined-progress mode a single bar tracks all chains, so only the
+            # last chain marks it complete; otherwise each chain finalizes its own.
+            if not progress_manager.combined_progress or chain == progress_manager.chains - 1:
+                update(chain_idx=chain, is_last=True, draw=it, stats=stats, tuning=False)
 
     except KeyboardInterrupt:
         pass
+    finally:
+        # Close the generator (and thus the trace) deterministically, whether we
+        # exhausted it, broke out on the stop flag, or errored.
+        sampling_gen.close()
 
 
 def _iter_sample(

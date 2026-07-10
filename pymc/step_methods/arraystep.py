@@ -12,11 +12,14 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import copy
+
 from abc import abstractmethod
 from collections.abc import Callable
 from typing import cast
 
 import numpy as np
+import pytensor
 
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.model import modelcontext
@@ -103,6 +106,45 @@ class ArrayStepShared(BlockedStep):
         self.shared = {get_var_name(var): shared for var, shared in shared.items()}
         self.blocked = blocked
         self.rng = get_random_generator(rng)
+
+    def fork(self, rng: RandomGenerator) -> "ArrayStepShared":
+        """Return an independent copy of this step for a new chain/thread.
+
+        Gives the copy its own ``self.shared`` variables and its own storage for
+        every compiled pytensor function it holds (via ``Function.copy(swap=...)``,
+        so the compiled code is shared but not the mutable containers). Mutable
+        tuning/adaptation state is cloned independently through the
+        ``sampling_state`` round-trip.
+
+        The copy is *not* seeded from ``rng`` here: ``_iter_sample`` calls
+        ``set_rng`` on every chain's step in all sampling modes, and ``set_rng``
+        advances the passed generator (via ``spawn``). Seeding here as well would
+        consume the chain's shared RNG twice and desynchronize threaded chains
+        from the sequential/multiprocessing results.
+
+        A subclass whose extra per-chain state is not captured by ``self.shared``,
+        a compiled ``Function`` attribute, or ``sampling_state`` must override or
+        re-disable ``fork`` (raise ``NotImplementedError``) so threaded sampling
+        falls back to multiprocessing.
+        """
+        # Fresh shared containers for the extra-var shareds; swap map repoints the
+        # copied compiled functions to read this chain's private containers.
+        swap = {}
+        new_shared = {}
+        for name, shared_var in self.shared.items():
+            fresh = pytensor.shared(shared_var.get_value(borrow=False), shared_var.name)
+            swap[shared_var] = fresh
+            new_shared[name] = fresh
+
+        new = copy.copy(self)
+        new.shared = new_shared
+        for attr, value in vars(self).items():
+            if isinstance(value, pytensor.compile.Function):
+                setattr(new, attr, value.copy(share_memory=False, swap=swap or None))
+
+        # Independent mutable tuning + RNG state (deep-copied, pytensor-free).
+        new.sampling_state = self.sampling_state
+        return new
 
     def step(self, point: PointType) -> tuple[PointType, StatsType]:
         full_point = None

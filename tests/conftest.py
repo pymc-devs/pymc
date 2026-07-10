@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import sys
+import sysconfig
 import warnings
 
 import numpy as np
@@ -18,6 +20,20 @@ import pytensor
 import pytest
 
 from numba.core.errors import NumbaPerformanceWarning, NumbaWarning
+
+
+def pytest_sessionfinish(session, exitstatus):
+    # On a free-threaded build, importing a C extension that has not opted into
+    # free-threading (via the Py_mod_gil slot) makes CPython re-enable the GIL for
+    # the rest of the process. PyTensor's default (numba) backend must not do this.
+    # Checked after the whole session so it is independent of collection order.
+    if sysconfig.get_config_var("Py_GIL_DISABLED") == 1 and sys._is_gil_enabled():
+        print(  # noqa: T201
+            "\nERROR: the GIL was re-enabled during the test session; a C extension "
+            "lacking free-threading support (missing Py_MOD_GIL_NOT_USED) was imported.",
+            file=sys.stderr,
+        )
+        session.exitstatus = pytest.ExitCode.TESTS_FAILED
 
 
 @pytest.fixture(scope="function", autouse=True)

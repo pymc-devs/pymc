@@ -233,6 +233,26 @@ class BlockedStep(ABC, WithSamplingState):
     def set_rng(self, rng: RandomGenerator):
         self.rng = get_random_generator(rng, copy=False)
 
+    def fork(self, rng: RandomGenerator) -> "BlockedStep":
+        """Return an independent copy of this step for a new chain in a thread.
+
+        Threaded (free-threaded / no-GIL) multi-chain sampling runs one chain
+        per thread sharing a single model. Each chain needs a step with its own
+        mutable state -- compiled-function storage, shared variables, tuning and
+        adaptation state, and RNG -- or the chains race. ``fork`` produces such
+        an independent copy, ideally sharing read-only compiled code.
+
+        The base implementation raises ``NotImplementedError``. A step type opts
+        in to threaded sampling by overriding ``fork``; until then, a threaded
+        sampler must catch this and fall back to multiprocessing. Failing loudly
+        (rather than a generic best-effort copy) keeps unknown or third-party
+        step methods correct-by-default and lets ``fork`` be added incrementally.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not implement fork() for threaded sampling. "
+            "Fall back to multiprocessing for this step method."
+        )
+
 
 def flat_statname(sampler_idx: int, sname: str) -> str:
     """Get the flat-stats name for a samplers stat."""
@@ -317,6 +337,21 @@ class CompoundStep(WithSamplingState):
         _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
         for method, _rng in zip(self.methods, _rngs):
             method.set_rng(_rng)
+
+    def fork(self, rng: RandomGenerator) -> "CompoundStep":
+        """Fork every child step for a new chain/thread.
+
+        Propagates ``NotImplementedError`` if any child cannot fork, so the
+        caller falls back to multiprocessing for the whole compound step rather
+        than forking only some children.
+
+        Children are not seeded from ``rng`` here; ``_iter_sample`` calls
+        ``set_rng`` on the compound step once per chain, which spawns and
+        distributes an independent generator to each child. Seeding during fork
+        as well would consume the chain's RNG twice (see ``BlockedStep.fork``).
+        """
+        forked = [method.fork(rng) for method in self.methods]
+        return CompoundStep(forked)
 
     def _progressbar_config(self, n_chains=1):
         from functools import reduce

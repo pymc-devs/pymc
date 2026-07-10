@@ -41,7 +41,10 @@ def from_yaml():
         wfname = wf.rstrip(".yml")
         wfdef = yaml.safe_load(open(Path(".github", "workflows", wf)))
         for jobname, jobdef in wfdef["jobs"].items():
-            if jobname in ("float32", "all_tests"):
+            # `free_threading` runs a small curated subset (already covered by the
+            # other jobs) on a no-GIL interpreter and has no `linker` matrix, so it
+            # is excluded from the once-per-OS/linker coverage accounting.
+            if jobname in ("float32", "all_tests", "free_threading"):
                 continue
             runs_on = jobdef.get("runs-on", "unknown")
             floatX = "float32" if jobname == "float32" else "float64"
