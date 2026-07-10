@@ -33,7 +33,6 @@ are out of scope here and raise informative errors.
 """
 
 import inspect
-import sys
 import warnings
 
 from collections.abc import Callable, Sequence
@@ -47,8 +46,6 @@ from pymc.sampling.external.base import ExternalSampler, require_continuous_mode
 from pymc.util import RandomState, _get_seeds_per_chain
 
 __all__ = ["Blackjax"]
-
-print("[segfault-probe] pymc.sampling.external.blackjax imported", file=sys.stderr, flush=True)  # noqa: T201
 
 _REQUIRED = "<required>"
 
@@ -101,7 +98,6 @@ _STAT_RENAMES = {
 
 
 def _import_blackjax():
-    print("[segfault-probe] _import_blackjax called", file=sys.stderr, flush=True)  # noqa: T201
     # Importing pymc.sampling.jax first sets XLA_FLAGS so that enough host
     # devices exist for pmap-based parallel chains. This must happen before
     # anything initializes the jax backend.
@@ -565,7 +561,6 @@ def __getattr__(name: str):
     """
     if name.startswith("_"):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
-    print(f"[segfault-probe] blackjax module __getattr__({name!r})", file=sys.stderr, flush=True)  # noqa: T201
     blackjax = _import_blackjax()
     if getattr(blackjax, name, None) is not None:
         try:
