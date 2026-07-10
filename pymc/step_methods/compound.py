@@ -232,9 +232,11 @@ class BlockedStep(ABC, WithSamplingState):
 
     def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
         """Prepare the step method for sampling one chain.
+
         Called once per chain, right before that chain starts sampling.
-        Can be called multiple times, meaning downstream method 
-        should handle multiple, possibly repeated calls."""
+        Can be called multiple times, meaning downstream method
+        should handle multiple, possibly repeated calls.
+        """
         self.rng = get_random_generator(rng, copy=False)
 
 
