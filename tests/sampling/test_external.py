@@ -12,8 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import unittest.mock as mock
-
 import numpy as np
 import pytest
 
@@ -185,73 +183,6 @@ class TestBlackjaxErrors:
             sampler.sample(
                 tune=0, draws=10, chains=1, initvals=None, random_seed=1, progressbar=False
             )
-
-
-class TestAlgorithmNamespace:
-    def test_factory(self):
-        with pm.Model():
-            pm.Normal("x", shape=3)
-            sampler = pm.external.blackjax.mclmc()
-        assert isinstance(sampler, Blackjax)
-        assert sampler.algorithm_name == "mclmc"
-        assert sampler.adaptation == "mclmc"
-        assert "blackjax.mclmc" in pm.external.blackjax.mclmc.__doc__
-
-    def test_factory_kwargs(self):
-        with pm.Model():
-            pm.Normal("x", shape=3)
-            sampler = pm.external.blackjax.nuts(target_accept=0.9, max_num_doublings=8)
-        assert sampler.algorithm_kwargs == {"max_num_doublings": 8}
-
-    def test_dir_lists_algorithms(self):
-        names = dir(pm.external.blackjax)
-        assert {"nuts", "hmc", "mclmc", "mala", "barker", "Blackjax"} <= set(names)
-        assert "sgld" not in names
-
-    def test_unsupported_attribute(self):
-        with pytest.raises(AttributeError, match="minibatch gradient"):
-            pm.external.blackjax.sgld
-        with pytest.raises(AttributeError, match="variational algorithm"):
-            pm.external.blackjax.meanfield_vi
-        with pytest.raises(AttributeError, match="no attribute 'nutz'"):
-            pm.external.blackjax.nutz
-
-
-class TestSampleArgumentMapping:
-    """`pm.sample` arguments must be explicitly mapped, warned about, or rejected."""
-
-    def _capture_sample_kwargs(self, **sample_kwargs):
-        with pm.Model():
-            pm.Normal("x", shape=3)
-            sampler = Blackjax()
-            with mock.patch.object(Blackjax, "sample", return_value=None) as recorded:
-                pm.sample(external_sampler=sampler, **sample_kwargs)
-        return recorded.call_args.kwargs
-
-    def test_init_maps_to_jitter(self):
-        assert self._capture_sample_kwargs(init="adapt_diag")["jitter"] is False
-        assert self._capture_sample_kwargs(init="jitter+adapt_diag")["jitter"] is True
-        assert "jitter" not in self._capture_sample_kwargs()
-
-    def test_unmappable_init_warns(self):
-        with pytest.warns(UserWarning, match="`init='advi'` has no equivalent"):
-            kwargs = self._capture_sample_kwargs(init="advi")
-        assert "jitter" not in kwargs
-
-    def test_jitter_max_retries_forwarded(self):
-        assert self._capture_sample_kwargs(jitter_max_retries=3)["jitter_max_retries"] == 3
-
-    def test_discard_tuned_samples_warns(self):
-        with pytest.warns(UserWarning, match="do not return tuning samples"):
-            self._capture_sample_kwargs(discard_tuned_samples=False)
-
-    def test_keep_warning_stat_warns(self):
-        with pytest.warns(UserWarning, match="`keep_warning_stat` is ignored"):
-            self._capture_sample_kwargs(keep_warning_stat=True)
-
-    def test_compile_kwargs_warns(self):
-        with pytest.warns(UserWarning, match="`backend` and `compile_kwargs` are ignored"):
-            self._capture_sample_kwargs(backend="jax")
 
 
 class TestSampleExternalSamplerArg:

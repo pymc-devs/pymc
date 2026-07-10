@@ -25,12 +25,6 @@ class ExternalSampler(ABC):
 
     Unlike step methods, external samplers cannot be combined with other samplers;
     they are responsible for all free variables of the model.
-
-    Sampler-specific configuration belongs to the subclass constructor. ``sample``
-    only receives the run-level arguments that ``pm.sample`` forwards; the
-    optional ``jitter``/``jitter_max_retries`` keywords (derived from
-    ``pm.sample``'s ``init`` string) may be ignored by samplers that control
-    initialization themselves.
     """
 
     def __init__(self, model: Model | None = None):
@@ -49,8 +43,6 @@ class ExternalSampler(ABC):
         var_names: Sequence[str] | None = None,
         idata_kwargs: dict[str, Any] | None = None,
         compute_convergence_checks: bool = True,
-        jitter: bool | None = None,
-        jitter_max_retries: int = 10,
         **kwargs,
     ):
         pass
