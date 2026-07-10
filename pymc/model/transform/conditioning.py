@@ -22,7 +22,7 @@ from pytensor.graph import Constant, ancestors
 from pytensor.tensor import TensorVariable
 
 from pymc.logprob.transforms import Transform
-from pymc.model.core import Model
+from pymc.model.core import BaseModel, Model
 from pymc.model.fgraph import (
     ModelDeterministic,
     ModelFreeRV,
@@ -315,7 +315,7 @@ def change_value_transforms(
 
 
 def remove_value_transforms(
-    model: Model,
+    model: BaseModel,
     vars: Sequence[ModelVariable] | None = None,
 ) -> Model:
     r"""Remove the value variables transforms in the model.

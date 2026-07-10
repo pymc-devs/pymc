@@ -23,13 +23,13 @@ from pymc.distributions.shape_utils import (
     convert_dims,
     convert_dims_with_ellipsis,
 )
+from pymc.model.core import BaseModel, Model, modelcontext
 from pymc.model.core import Deterministic as RegularDeterministic
-from pymc.model.core import Model, modelcontext
 from pymc.model.core import Potential as RegularPotential
 
 
 def Data(
-    name: str, value, dims: Dims = None, model: Model | None = None, **kwargs
+    name: str, value, dims: Dims = None, model: BaseModel | None = None, **kwargs
 ) -> XTensorSharedVariable:
     """Wrapper around pymc.Data that returns an XtensorVariable.
 
@@ -37,6 +37,8 @@ def Data(
     These are always forwarded to the model object.
     """
     model = modelcontext(model)
+    if not isinstance(model, Model):
+        raise TypeError(f"Cannot add new data to an immutable {type(model).__name__}.")
     dims = convert_dims(dims)  # type: ignore[assignment]
     value = xtensor_shared(value, dims=dims, **kwargs, name=name)
     model.register_data_var(value, dims=value.dims)
