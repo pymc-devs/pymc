@@ -59,7 +59,7 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
-from pymc.model.core import FrozenModel
+from pymc.model.core import BaseModel, FrozenModel
 from pymc.model.transform.optimization import freeze_model
 from pymc.pytensorf import floatX, inputvars
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
@@ -1245,17 +1245,26 @@ class TestFrozenModelCaching:
         assert "_compile_fn" in fm._cache
 
     def test_mutation_forbidden_on_frozen(self):
+        # FrozenModel is a sibling of Model under BaseModel: the mutating methods do not
+        # exist on it at all.
         with pm.Model() as m:
             x = pm.Uniform("x", 0, 10)
         fm = freeze_model(m)
 
-        with pytest.raises(RuntimeError, match="FrozenModel"):
+        assert isinstance(fm, BaseModel) and not isinstance(fm, pm.Model)
+        with pytest.raises(AttributeError, match="register_rv"):
             with fm:
                 pm.Normal("y")
-        with pytest.raises(RuntimeError, match="FrozenModel"):
+        with pytest.raises(AttributeError, match="add_coord"):
             fm.add_coord("new_dim", ["a", "b"])
-        with pytest.raises(RuntimeError, match="FrozenModel"):
+        with pytest.raises(AttributeError, match="set_initval"):
             fm.set_initval(fm["x"], 5.0)
+
+    def test_abstract_and_final_classes(self):
+        with pytest.raises(TypeError, match="abstract"):
+            BaseModel()
+        with pytest.raises(TypeError, match="freeze_model"):
+            FrozenModel()
 
     def test_set_data_on_frozen_model(self):
         with pm.Model() as m:

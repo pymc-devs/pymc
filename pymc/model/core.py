@@ -84,6 +84,7 @@ from pymc.vartypes import continuous_types, discrete_types, typefilter
 sparse = lazy_scipy_module("sparse")
 
 __all__ = [
+    "BaseModel",
     "Deterministic",
     "FrozenModel",
     "Model",
@@ -106,15 +107,15 @@ class ModelManager(threading.local):
     """
 
     def __init__(self):
-        self.active_contexts: list[Model] = []
+        self.active_contexts: list[BaseModel] = []
 
     @property
-    def current_context(self) -> Model | None:
+    def current_context(self) -> BaseModel | None:
         """Return the innermost context of any current contexts."""
         return self.active_contexts[-1] if self.active_contexts else None
 
     @property
-    def parent_context(self) -> Model | None:
+    def parent_context(self) -> BaseModel | None:
         """Return the parent context to the active context, if any."""
         return self.active_contexts[-2] if len(self.active_contexts) > 1 else None
 
@@ -124,10 +125,10 @@ class ModelManager(threading.local):
 MODEL_MANAGER = ModelManager()
 
 
-def modelcontext(model: Model | None) -> Model:
+def modelcontext(model: BaseModel | None) -> BaseModel:
     """Return the given model or, if None was supplied, try to find one in the context stack."""
     if model is None:
-        model = Model.get_context(error_if_none=False)
+        model = BaseModel.get_context(error_if_none=False)
 
         if model is None:
             # TODO: This should be a ValueError, but that breaks
@@ -314,164 +315,30 @@ class ContextMeta(type):
         return instance
 
 
-# Linkers that replace shared RNGs by detached, backend-typified copies at compile time.
-_RNG_DETACHING_LINKERS = (
-    ("pytensor.link.jax.linker", "JAXLinker"),
-    ("pytensor.link.mlx.linker", "MLXLinker"),
-    ("pytensor.link.pytorch.linker", "PytorchLinker"),
-)
-
-
 def _rng_detaching_linker(mode) -> bool:
     """Whether ``mode``'s linker copies RNG shared variables at compile time.
 
     Such compiled functions cannot be reseeded afterwards, so functions with RNGs must be
     seeded before compilation and are not served from the compilation cache.
     """
-    try:
-        from pytensor.compile.mode import get_mode
+    from pytensor.compile.mode import get_mode
+    from pytensor.link.jax.linker import JAXLinker
+    from pytensor.link.mlx.linker import MLXLinker
+    from pytensor.link.pytorch.linker import PytorchLinker
 
+    try:
         linker = get_mode(mode).linker
     except Exception:
         return False
-    # A linker instance can only exist if its module is already imported, so this check
-    # never triggers an import of an optional backend.
-    return any(
-        (module := sys.modules.get(module_path)) is not None
-        and isinstance(linker, getattr(module, class_name))
-        for module_path, class_name in _RNG_DETACHING_LINKERS
-    )
+    return isinstance(linker, JAXLinker | MLXLinker | PytorchLinker)
 
 
-class Model(WithMemoization, metaclass=ContextMeta):
-    """Encapsulates the variables and likelihood factors of a model.
+class BaseModel(WithMemoization, metaclass=ContextMeta):
+    """Functionality shared by mutable and frozen models.
 
-    Model class can be used for creating class based models. To create
-    a class based model you should inherit from :class:`~pymc.Model` and
-    override the `__init__` method with arbitrary definitions (do not
-    forget to call base class :meth:`pymc.Model.__init__` first).
-
-    Parameters
-    ----------
-    name : str
-        name that will be used as prefix for names of all random
-        variables defined within model
-    coords : dict
-        Xarray-like coordinate keys and values. These coordinates can be used
-        to specify the shape of random variables and to label (but not specify)
-        the shape of Determinsitic, Potential and Data objects.
-        Other than specifying the shape of random variables, coordinates have no
-        effect on the model. They can't be used for label-based broadcasting or indexing.
-        You must use numpy-like operations for those behaviors.
-    check_bounds : bool
-        Ensure that input parameters to distributions are in a valid
-        range. If your model is built in a way where you know your
-        parameters can only take on valid values you can set this to
-        False for increased speed. This should not be used if your model
-        contains discrete variables.
-    model : PyMC model, optional
-        A parent model that this model belongs to. If not specified and the current model
-        is created inside another model's context, the parent model will be set to that model.
-        If `None` the model will not have a parent.
-
-    Examples
-    --------
-    Use context manager to define model and respective variables
-
-    .. code-block:: python
-
-        import pymc as pm
-
-        with pm.Model() as model:
-            x = pm.Normal("x")
-
-
-    Use object API to define model and respective variables
-
-    .. code-block:: python
-
-        import pymc as pm
-
-        model = pm.Model()
-        x = pm.Normal("x", model=model)
-
-
-    Use coords for defining the shape of random variables and labeling other model variables
-
-    .. code-block:: python
-
-        import pymc as pm
-        import numpy as np
-
-        coords = {
-            "feature": ["A", "B", "C"],
-            "trial": [1, 2, 3, 4, 5],
-        }
-
-        with pm.Model(coords=coords) as model:
-            # Variable will have default dim label `intercept__dim_0`
-            intercept = pm.Normal("intercept", shape=(3,))
-            # Variable will have shape (3,) and dim label `feature`
-            beta = pm.Normal("beta", dims=("feature",))
-
-            # Dims below are only used for labeling, they have no effect on shape
-            # Variable will have default dim label `idx__dim_0`
-            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))
-            x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
-            # single dim can be passed as string
-            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")
-
-            # Dims controls the shape of the variable
-            # If not specified, it would be inferred from the shape of the observations
-            y = pm.Normal("y", mu=mu, observed=[-1, 0, 0, 1, 1], dims=("trial",))
-
-
-    Define nested models, and provide name for variable name prefixing
-
-    .. code-block:: python
-
-        import pymc as pm
-
-        with pm.Model(name="root") as root:
-            x = pm.Normal("x")  # Variable wil be named "root::x"
-
-            with pm.Model(name="first") as first:
-                # Variable will belong to root and first
-                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
-
-            # Can pass parent model explicitly
-            with pm.Model(name="second", model=root) as second:
-                # Variable will belong to root and second
-                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
-
-            # Set None for standalone model
-            with pm.Model(name="third", model=None) as third:
-                # Variable will belong to third only
-                w = pm.Normal("w")  # Variable wil be named "third::w"
-
-
-    Set `check_bounds` to False for models with only continuous variables and default transformers
-    PyMC will remove the bounds check from the model logp which can speed up sampling
-
-    .. code-block:: python
-
-        import pymc as pm
-
-        with pm.Model(check_bounds=False) as model:
-            sigma = pm.HalfNormal("sigma")
-            x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
-
-
-    Notes
-    -----
-    A mutable model recompiles its functions on every call. To reuse compiled functions
-    across calls — e.g. batched posterior predictive over changing ``pm.set_data`` values,
-    or repeated ``pm.sample`` — freeze the model with
-    :func:`pymc.model.transform.optimization.freeze_model`. The frozen copy caches the
-    graphs and compiled functions it builds (``logp``, ``compile_fn``,
-    ``logp_dlogp_function``, ``initial_point``, and the forward-sampling function) and
-    forbids the mutations that would make them stale.
-
+    Abstract: instantiate :class:`~pymc.Model` (mutable), or create a
+    :class:`~pymc.FrozenModel` with
+    :func:`pymc.model.transform.optimization.freeze_model`.
     """
 
     def __enter__(self):
@@ -519,6 +386,8 @@ class Model(WithMemoization, metaclass=ContextMeta):
         *,
         model: _UnsetType | None | Model = UNSET,
     ):
+        if type(self) is BaseModel:
+            raise TypeError("BaseModel is abstract; instantiate Model instead.")
         self.name = self._validate_name(name)
         self.check_bounds = check_bounds
         self._parent = model if not isinstance(model, _UnsetType) else MODEL_MANAGER.parent_context
@@ -563,7 +432,7 @@ class Model(WithMemoization, metaclass=ContextMeta):
     @classmethod
     def get_context(
         cls, error_if_none: bool = True, allow_block_model_access: bool = False
-    ) -> Model | None:
+    ) -> BaseModel | None:
         model = MODEL_MANAGER.current_context
         if isinstance(model, BlockModelAccess) and not allow_block_model_access:
             raise BlockModelAccessError(model.error_msg_on_access)
@@ -1012,74 +881,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
             shape.extend(np.shape(self.coords[dim]))
         return tuple(shape)
 
-    def add_coord(
-        self,
-        name: str,
-        values: Sequence | np.ndarray | None = None,
-        *,
-        length: int | Variable | None = None,
-    ):
-        """Register a dimension coordinate with the model.
-
-        Parameters
-        ----------
-        name : str
-            Name of the dimension.
-            Forbidden: {"chain", "draw", "__sample__"}
-        values : optional, array_like
-            Coordinate values or ``None`` (for auto-numbering).
-            If ``None`` is passed, a ``length`` must be specified.
-        length : optional, scalar
-            A scalar of the dimensions length.
-            Defaults to ``pytensor.tensor.constant(len(values))``.
-        """
-        if name in {"draw", "chain", "__sample__"}:
-            raise ValueError(
-                "Dimensions can not be named `draw`, `chain` or `__sample__`, "
-                "as those are reserved for use in `InferenceData`."
-            )
-        if self.named_vars.tree_contains(name):
-            raise ValueError(
-                f"Dimension name '{name}' conflicts with an existing model variable name."
-            )
-        if values is None and length is None:
-            raise ValueError(
-                f"Either `values` or `length` must be specified for the '{name}' dimension."
-            )
-        if values is not None:
-            # Conversion to a tuple ensures that the coordinate values are immutable.
-            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
-            values = tuple(values)
-        if name in self.coords:
-            if not np.array_equal(values, self.coords[name]):
-                raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
-            return
-        if length is not None and not isinstance(length, int | Variable):
-            raise ValueError(
-                f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
-            )
-        if length is None:
-            length = len(values)
-        if not isinstance(length, Variable):
-            length = pytensor.shared(length, name=name)
-        assert length.type.ndim == 0
-        self._dim_lengths[name] = length
-        self._coords[name] = values
-
-    def add_coords(
-        self,
-        coords: dict[str, Sequence | None],
-        *,
-        lengths: dict[str, int | Variable | None] | None = None,
-    ):
-        """Vectorized version of ``Model.add_coord``."""
-        if coords is None:
-            return
-        lengths = lengths or {}
-
-        for name, values in coords.items():
-            self.add_coord(name, values, length=lengths.get(name, None))
-
     def set_dim(self, name: str, new_length: int, coord_values: Sequence | None = None):
         """Update a mutable dimension.
 
@@ -1134,14 +935,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
     def _make_initial_point(self):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
         return make_initial_point_fn(model=self, return_transformed=True)
-
-    def set_initval(self, rv_var, initval):
-        """Set an initial value (strategy) for a random variable."""
-        if initval is not None and not isinstance(initval, Variable | str):
-            # Convert scalars or array-like inputs to ndarrays
-            initval = rv_var.type.filter(initval)
-
-        self.rvs_to_initial_values[rv_var] = initval
 
     def set_data(
         self,
@@ -1282,301 +1075,6 @@ class Model(WithMemoization, metaclass=ContextMeta):
                 self._coords[dname] = tuple(new_coords)
 
         shared_object.set_value(values)
-
-    def register_rv(
-        self,
-        rv_var: RandomVariable,
-        name: str,
-        *,
-        observed=None,
-        total_size=None,
-        dims=None,
-        default_transform=UNSET,
-        transform=UNSET,
-        initval=None,
-    ) -> TensorVariable:
-        """Register an (un)observed random variable with the model.
-
-        Parameters
-        ----------
-        rv_var : TensorVariable
-        name : str
-            Intended name for the model variable.
-        observed : array_like, optional
-            Data values for observed variables.
-        total_size : scalar
-            upscales logp of variable with ``coef = total_size/var.shape[0]``
-        dims : tuple
-            Dimension names for the variable.
-        default_transform
-            A default transform for the random variable in log-likelihood space.
-        transform
-            Additional transform which may be applied after default transform.
-        initval
-            The initial value of the random variable.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        name = self.name_for(name)
-        rv_var.name = name
-
-        # Associate previously unknown dimension names with
-        # the length of the corresponding RV dimension.
-        if dims is not None:
-            for d, dname in enumerate(dims):
-                if not isinstance(dname, str):
-                    raise TypeError(f"Dims must be string. Got {dname} of type {type(dname)}")
-                if dname not in self.dim_lengths:
-                    self.add_coord(dname, values=None, length=rv_var.shape[d])
-
-        if observed is None:
-            if total_size is not None:
-                raise ValueError("total_size can only be passed to observed RVs")
-            self.free_RVs.append(rv_var)
-            self.create_value_var(rv_var, transform=transform, default_transform=default_transform)
-            self.add_named_variable(rv_var, dims)
-            self.set_initval(rv_var, initval)
-        else:
-            if total_size is None and isinstance(observed, TensorVariable):
-                for node in ancestors([observed]):
-                    if node.owner is not None and isinstance(node.owner.op, MinibatchOp):
-                        warnings.warn(
-                            f"total_size not provided for observed variable `{name}` that uses pm.Minibatch"
-                        )
-                        break
-            if not is_valid_observed(observed):
-                raise TypeError(
-                    "Variables that depend on other nodes cannot be used for observed data."
-                    f"The data variable was: {observed}"
-                )
-
-            # `rv_var` is potentially changed by `make_obs_var`,
-            # for example into a new graph for imputation of missing data.
-            rv_var = self.make_obs_var(
-                rv_var, observed, dims, default_transform, transform, total_size
-            )
-
-        return rv_var
-
-    def make_obs_var(
-        self,
-        rv_var: TensorVariable,
-        data: np.ndarray,
-        dims,
-        default_transform: Transform | None,
-        transform: Transform | None,
-        total_size: int | None,
-    ) -> TensorVariable:
-        """Create a `TensorVariable` for an observed random variable.
-
-        Parameters
-        ----------
-        rv_var : TensorVariable
-            The random variable that is observed.
-            Its dimensionality must be compatible with the data already.
-        data : array_like
-            The observed data.
-        dims : tuple
-            Dimension names for the variable.
-        default_transform
-            A transform for the random variable in log-likelihood space.
-        transform
-            Additional transform which may be applied after default transform.
-
-        Returns
-        -------
-        TensorVariable
-        """
-        name = rv_var.name
-        data = convert_observed_data(data).astype(rv_var.dtype)
-
-        if data.ndim != rv_var.ndim:
-            raise ShapeError(
-                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
-            )
-
-        mask = getattr(data, "mask", None)
-        if mask is not None:
-            impute_message = (
-                f"Data in {rv_var} contains missing values and"
-                " will be automatically imputed from the"
-                " sampling distribution."
-            )
-            warnings.warn(impute_message, ImputationWarning)
-
-            if total_size is not None:
-                raise ValueError("total_size is not compatible with imputed variables")
-
-            from pymc.distributions.distribution import create_partial_observed_rv
-
-            (
-                (observed_rv, observed_mask),
-                (unobserved_rv, _),
-                joined_rv,
-            ) = create_partial_observed_rv(rv_var, mask)
-            observed_data = pt.as_tensor(data.data[observed_mask])
-
-            # Register ObservedRV corresponding to observed component
-            observed_rv.name = f"{name}_observed"
-            self.create_value_var(
-                observed_rv, transform=transform, default_transform=None, value_var=observed_data
-            )
-            self.add_named_variable(observed_rv)
-            self.observed_RVs.append(observed_rv)
-
-            # Register FreeRV corresponding to unobserved components
-            self.register_rv(
-                unobserved_rv,
-                f"{name}_unobserved",
-                transform=transform,
-                default_transform=default_transform,
-            )
-
-            # Register Deterministic that combines observed and missing
-            # Note: This can widely increase memory consumption during sampling for large datasets
-            rv_var = Deterministic(name, joined_rv, self, dims)
-
-        else:
-            if sparse.issparse(data):
-                import pytensor.sparse as pt_sparse
-
-                data = pt_sparse.basic.as_sparse(data, name=name)
-            elif not isinstance(data, Variable):
-                data = pt.as_tensor_variable(data, name=name)
-
-            if total_size:
-                from pymc.variational.minibatch_rv import create_minibatch_rv
-
-                rv_var = create_minibatch_rv(rv_var, total_size)
-                rv_var.name = name
-
-            rv_var.tag.observations = data
-            self.create_value_var(
-                rv_var, transform=transform, default_transform=None, value_var=data
-            )
-            self.add_named_variable(rv_var, dims)
-            self.observed_RVs.append(rv_var)
-
-        return rv_var
-
-    def create_value_var(
-        self,
-        rv_var: TensorVariable,
-        *,
-        default_transform: Transform,
-        transform: Transform,
-        value_var: Variable | None = None,
-    ) -> TensorVariable:
-        """Create a ``TensorVariable`` that will be used as the random variable's "value" in log-likelihood graphs.
-
-        In general, we'll call this type of variable the "value" variable.
-
-        In all other cases, the role of the value variable is taken by
-        observed data. That's why value variables are only referenced in
-        this branch of the conditional.
-
-        Parameters
-        ----------
-        rv_var : TensorVariable
-
-        default_transform: Transform
-            A transform for the random variable in log-likelihood space.
-
-        transform: Transform
-            Additional transform which may be applied after default transform.
-
-        value_var : Variable, optional
-
-        Returns
-        -------
-        TensorVariable
-        """
-        from pymc.distributions.transforms import ChainedTransform, _default_transform
-
-        # Make the value variable a transformed value variable,
-        # if there's an applicable transform
-        if transform is None and default_transform is UNSET:
-            default_transform = None
-            warnings.warn(
-                "To disable default transform, please use default_transform=None"
-                " instead of transform=None. Setting transform to None will"
-                " not have any effect in future.",
-                UserWarning,
-            )
-
-        if default_transform is UNSET:
-            if rv_var.owner is None:
-                default_transform = None
-            else:
-                default_transform = _default_transform(rv_var.owner.op, rv_var)
-
-        if transform is UNSET:
-            transform = default_transform
-        elif transform is not None and default_transform is not None:
-            transform = ChainedTransform([default_transform, transform])
-
-        if value_var is None:
-            if transform is None:
-                # Create value variable with the same type as the RV
-                value_var = rv_var.type()
-                value_var.name = rv_var.name
-            else:
-                # Create value variable with the same type as the transformed RV
-                value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
-                value_var.name = f"{rv_var.name}_{transform.name}__"
-                value_var.tag.transform = transform
-
-        self.rvs_to_transforms[rv_var] = transform
-        self.rvs_to_values[rv_var] = value_var
-        self.values_to_rvs[value_var] = rv_var
-
-        return value_var
-
-    def register_data_var(self, data, dims=None):
-        """Register a data variable with the model."""
-        self.data_vars.append(data)
-        self.add_named_variable(data, dims=dims)
-
-    def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
-        """Add a random graph variable to the named variables of the model.
-
-        This can include several types of variables such basic_RVs, Data, Deterministics,
-        and Potentials.
-
-        Parameters
-        ----------
-        var
-
-        dims : tuple, optional
-
-        """
-        if var.name is None:
-            raise ValueError("Variable is unnamed.")
-        if self.named_vars.tree_contains(var.name):
-            raise ValueError(f"Variable name {var.name} already exists.")
-        if var.name in self.coords:
-            raise ValueError(
-                f"Variable name '{var.name}' conflicts with an existing dimension name."
-            )
-
-        if dims is not None:
-            if isinstance(dims, str):
-                dims = (dims,)
-            for dim in dims:
-                if dim not in self.coords and dim is not None:
-                    raise ValueError(f"Dimension {dim} is not specified in `coords`.")
-            # This check implicitly states that only vars with .ndim attribute can have dims
-            if var.ndim != len(dims):
-                raise ValueError(
-                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
-                )
-            self.named_vars_to_dims[var.name] = dims
-
-        self.named_vars[var.name] = var
-        if not hasattr(self, self.name_of(var.name)):
-            setattr(self, self.name_of(var.name), var)
 
     @property
     def prefix(self) -> str:
@@ -2182,51 +1680,534 @@ class Model(WithMemoization, metaclass=ContextMeta):
         )
 
 
-def _forbidden_on_frozen(f):
-    """Replace a mutating ``Model`` method by one that raises on a ``FrozenModel``."""
+class Model(BaseModel):
+    """Encapsulates the variables and likelihood factors of a model.
 
-    @functools.wraps(f)
-    def frozen_method(self, *args, **kwargs):
-        raise RuntimeError(
-            f"{f.__name__} cannot be used on a FrozenModel. "
-            "Mutate the original model and freeze it again with freeze_model."
-        )
+    Model class can be used for creating class based models. To create
+    a class based model you should inherit from :class:`~pymc.Model` and
+    override the `__init__` method with arbitrary definitions (do not
+    forget to call base class :meth:`pymc.Model.__init__` first).
 
-    frozen_method.__doc__ = (
-        f"Raise ``RuntimeError``: ``{f.__name__}`` is not available on a ``FrozenModel``."
-    )
-    return frozen_method
+    Parameters
+    ----------
+    name : str
+        name that will be used as prefix for names of all random
+        variables defined within model
+    coords : dict
+        Xarray-like coordinate keys and values. These coordinates can be used
+        to specify the shape of random variables and to label (but not specify)
+        the shape of Determinsitic, Potential and Data objects.
+        Other than specifying the shape of random variables, coordinates have no
+        effect on the model. They can't be used for label-based broadcasting or indexing.
+        You must use numpy-like operations for those behaviors.
+    check_bounds : bool
+        Ensure that input parameters to distributions are in a valid
+        range. If your model is built in a way where you know your
+        parameters can only take on valid values you can set this to
+        False for increased speed. This should not be used if your model
+        contains discrete variables.
+    model : PyMC model, optional
+        A parent model that this model belongs to. If not specified and the current model
+        is created inside another model's context, the parent model will be set to that model.
+        If `None` the model will not have a parent.
+
+    Examples
+    --------
+    Use context manager to define model and respective variables
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model() as model:
+            x = pm.Normal("x")
 
 
-class FrozenModel(Model):
-    """A ``Model`` whose graph is immutable and whose compiled functions are cached.
+    Use object API to define model and respective variables
 
-    Create one with :func:`pymc.model.transform.optimization.freeze_model`; this class is
-    not meant to be instantiated directly. Graph-mutating methods raise, which is what
-    makes caching safe without any invalidation. ``set_data`` remains available for data
-    that no free variable depends on — values and shapes are runtime inputs of the cached
-    functions.
+    .. code-block:: python
+
+        import pymc as pm
+
+        model = pm.Model()
+        x = pm.Normal("x", model=model)
+
+
+    Use coords for defining the shape of random variables and labeling other model variables
+
+    .. code-block:: python
+
+        import pymc as pm
+        import numpy as np
+
+        coords = {
+            "feature": ["A", "B", "C"],
+            "trial": [1, 2, 3, 4, 5],
+        }
+
+        with pm.Model(coords=coords) as model:
+            # Variable will have default dim label `intercept__dim_0`
+            intercept = pm.Normal("intercept", shape=(3,))
+            # Variable will have shape (3,) and dim label `feature`
+            beta = pm.Normal("beta", dims=("feature",))
+
+            # Dims below are only used for labeling, they have no effect on shape
+            # Variable will have default dim label `idx__dim_0`
+            idx = pm.Data("idx", np.array([0, 1, 1, 2, 2]))
+            x = pm.Data("x", np.random.normal(size=(5, 3)), dims=("trial", "feature"))
+            # single dim can be passed as string
+            mu = pm.Deterministic("mu", intercept[idx] + beta @ x, dims="trial")
+
+            # Dims controls the shape of the variable
+            # If not specified, it would be inferred from the shape of the observations
+            y = pm.Normal("y", mu=mu, observed=[-1, 0, 0, 1, 1], dims=("trial",))
+
+
+    Define nested models, and provide name for variable name prefixing
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(name="root") as root:
+            x = pm.Normal("x")  # Variable wil be named "root::x"
+
+            with pm.Model(name="first") as first:
+                # Variable will belong to root and first
+                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+
+            # Can pass parent model explicitly
+            with pm.Model(name="second", model=root) as second:
+                # Variable will belong to root and second
+                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+
+            # Set None for standalone model
+            with pm.Model(name="third", model=None) as third:
+                # Variable will belong to third only
+                w = pm.Normal("w")  # Variable wil be named "third::w"
+
+
+    Set `check_bounds` to False for models with only continuous variables and default transformers
+    PyMC will remove the bounds check from the model logp which can speed up sampling
+
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model(check_bounds=False) as model:
+            sigma = pm.HalfNormal("sigma")
+            x = pm.Normal("x", sigma=sigma)  # No bounds check will be performed on `sigma`
+
+
+    Notes
+    -----
+    A mutable model recompiles its functions on every call. To reuse compiled functions
+    across calls — e.g. batched posterior predictive over changing ``pm.set_data`` values,
+    or repeated ``pm.sample`` — freeze the model with
+    :func:`pymc.model.transform.optimization.freeze_model`. The frozen copy caches the
+    graphs and compiled functions it builds (``logp``, ``compile_fn``,
+    ``logp_dlogp_function``, ``initial_point``, and the forward-sampling function) and
+    forbids the mutations that would make them stale.
+
     """
+
+    def add_coord(
+        self,
+        name: str,
+        values: Sequence | np.ndarray | None = None,
+        *,
+        length: int | Variable | None = None,
+    ):
+        """Register a dimension coordinate with the model.
+
+        Parameters
+        ----------
+        name : str
+            Name of the dimension.
+            Forbidden: {"chain", "draw", "__sample__"}
+        values : optional, array_like
+            Coordinate values or ``None`` (for auto-numbering).
+            If ``None`` is passed, a ``length`` must be specified.
+        length : optional, scalar
+            A scalar of the dimensions length.
+            Defaults to ``pytensor.tensor.constant(len(values))``.
+        """
+        if name in {"draw", "chain", "__sample__"}:
+            raise ValueError(
+                "Dimensions can not be named `draw`, `chain` or `__sample__`, "
+                "as those are reserved for use in `InferenceData`."
+            )
+        if self.named_vars.tree_contains(name):
+            raise ValueError(
+                f"Dimension name '{name}' conflicts with an existing model variable name."
+            )
+        if values is None and length is None:
+            raise ValueError(
+                f"Either `values` or `length` must be specified for the '{name}' dimension."
+            )
+        if values is not None:
+            # Conversion to a tuple ensures that the coordinate values are immutable.
+            # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
+            values = tuple(values)
+        if name in self.coords:
+            if not np.array_equal(values, self.coords[name]):
+                raise ValueError(f"Duplicate and incompatible coordinate: {name}.")
+            return
+        if length is not None and not isinstance(length, int | Variable):
+            raise ValueError(
+                f"The `length` passed for the '{name}' coord must be an int, PyTensor Variable or None."
+            )
+        if length is None:
+            length = len(values)
+        if not isinstance(length, Variable):
+            length = pytensor.shared(length, name=name)
+        assert length.type.ndim == 0
+        self._dim_lengths[name] = length
+        self._coords[name] = values
+
+    def add_coords(
+        self,
+        coords: dict[str, Sequence | None],
+        *,
+        lengths: dict[str, int | Variable | None] | None = None,
+    ):
+        """Vectorized version of ``Model.add_coord``."""
+        if coords is None:
+            return
+        lengths = lengths or {}
+
+        for name, values in coords.items():
+            self.add_coord(name, values, length=lengths.get(name, None))
+
+    def set_initval(self, rv_var, initval):
+        """Set an initial value (strategy) for a random variable."""
+        if initval is not None and not isinstance(initval, Variable | str):
+            # Convert scalars or array-like inputs to ndarrays
+            initval = rv_var.type.filter(initval)
+
+        self.rvs_to_initial_values[rv_var] = initval
+
+    def register_rv(
+        self,
+        rv_var: RandomVariable,
+        name: str,
+        *,
+        observed=None,
+        total_size=None,
+        dims=None,
+        default_transform=UNSET,
+        transform=UNSET,
+        initval=None,
+    ) -> TensorVariable:
+        """Register an (un)observed random variable with the model.
+
+        Parameters
+        ----------
+        rv_var : TensorVariable
+        name : str
+            Intended name for the model variable.
+        observed : array_like, optional
+            Data values for observed variables.
+        total_size : scalar
+            upscales logp of variable with ``coef = total_size/var.shape[0]``
+        dims : tuple
+            Dimension names for the variable.
+        default_transform
+            A default transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
+        initval
+            The initial value of the random variable.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        name = self.name_for(name)
+        rv_var.name = name
+
+        # Associate previously unknown dimension names with
+        # the length of the corresponding RV dimension.
+        if dims is not None:
+            for d, dname in enumerate(dims):
+                if not isinstance(dname, str):
+                    raise TypeError(f"Dims must be string. Got {dname} of type {type(dname)}")
+                if dname not in self.dim_lengths:
+                    self.add_coord(dname, values=None, length=rv_var.shape[d])
+
+        if observed is None:
+            if total_size is not None:
+                raise ValueError("total_size can only be passed to observed RVs")
+            self.free_RVs.append(rv_var)
+            self.create_value_var(rv_var, transform=transform, default_transform=default_transform)
+            self.add_named_variable(rv_var, dims)
+            self.set_initval(rv_var, initval)
+        else:
+            if total_size is None and isinstance(observed, TensorVariable):
+                for node in ancestors([observed]):
+                    if node.owner is not None and isinstance(node.owner.op, MinibatchOp):
+                        warnings.warn(
+                            f"total_size not provided for observed variable `{name}` that uses pm.Minibatch"
+                        )
+                        break
+            if not is_valid_observed(observed):
+                raise TypeError(
+                    "Variables that depend on other nodes cannot be used for observed data."
+                    f"The data variable was: {observed}"
+                )
+
+            # `rv_var` is potentially changed by `make_obs_var`,
+            # for example into a new graph for imputation of missing data.
+            rv_var = self.make_obs_var(
+                rv_var, observed, dims, default_transform, transform, total_size
+            )
+
+        return rv_var
+
+    def make_obs_var(
+        self,
+        rv_var: TensorVariable,
+        data: np.ndarray,
+        dims,
+        default_transform: Transform | None,
+        transform: Transform | None,
+        total_size: int | None,
+    ) -> TensorVariable:
+        """Create a `TensorVariable` for an observed random variable.
+
+        Parameters
+        ----------
+        rv_var : TensorVariable
+            The random variable that is observed.
+            Its dimensionality must be compatible with the data already.
+        data : array_like
+            The observed data.
+        dims : tuple
+            Dimension names for the variable.
+        default_transform
+            A transform for the random variable in log-likelihood space.
+        transform
+            Additional transform which may be applied after default transform.
+
+        Returns
+        -------
+        TensorVariable
+        """
+        name = rv_var.name
+        data = convert_observed_data(data).astype(rv_var.dtype)
+
+        if data.ndim != rv_var.ndim:
+            raise ShapeError(
+                "Dimensionality of data and RV don't match.", actual=data.ndim, expected=rv_var.ndim
+            )
+
+        mask = getattr(data, "mask", None)
+        if mask is not None:
+            impute_message = (
+                f"Data in {rv_var} contains missing values and"
+                " will be automatically imputed from the"
+                " sampling distribution."
+            )
+            warnings.warn(impute_message, ImputationWarning)
+
+            if total_size is not None:
+                raise ValueError("total_size is not compatible with imputed variables")
+
+            from pymc.distributions.distribution import create_partial_observed_rv
+
+            (
+                (observed_rv, observed_mask),
+                (unobserved_rv, _),
+                joined_rv,
+            ) = create_partial_observed_rv(rv_var, mask)
+            observed_data = pt.as_tensor(data.data[observed_mask])
+
+            # Register ObservedRV corresponding to observed component
+            observed_rv.name = f"{name}_observed"
+            self.create_value_var(
+                observed_rv, transform=transform, default_transform=None, value_var=observed_data
+            )
+            self.add_named_variable(observed_rv)
+            self.observed_RVs.append(observed_rv)
+
+            # Register FreeRV corresponding to unobserved components
+            self.register_rv(
+                unobserved_rv,
+                f"{name}_unobserved",
+                transform=transform,
+                default_transform=default_transform,
+            )
+
+            # Register Deterministic that combines observed and missing
+            # Note: This can widely increase memory consumption during sampling for large datasets
+            rv_var = Deterministic(name, joined_rv, self, dims)
+
+        else:
+            if sparse.issparse(data):
+                import pytensor.sparse as pt_sparse
+
+                data = pt_sparse.basic.as_sparse(data, name=name)
+            elif not isinstance(data, Variable):
+                data = pt.as_tensor_variable(data, name=name)
+
+            if total_size:
+                from pymc.variational.minibatch_rv import create_minibatch_rv
+
+                rv_var = create_minibatch_rv(rv_var, total_size)
+                rv_var.name = name
+
+            rv_var.tag.observations = data
+            self.create_value_var(
+                rv_var, transform=transform, default_transform=None, value_var=data
+            )
+            self.add_named_variable(rv_var, dims)
+            self.observed_RVs.append(rv_var)
+
+        return rv_var
+
+    def create_value_var(
+        self,
+        rv_var: TensorVariable,
+        *,
+        default_transform: Transform,
+        transform: Transform,
+        value_var: Variable | None = None,
+    ) -> TensorVariable:
+        """Create a ``TensorVariable`` that will be used as the random variable's "value" in log-likelihood graphs.
+
+        In general, we'll call this type of variable the "value" variable.
+
+        In all other cases, the role of the value variable is taken by
+        observed data. That's why value variables are only referenced in
+        this branch of the conditional.
+
+        Parameters
+        ----------
+        rv_var : TensorVariable
+
+        default_transform: Transform
+            A transform for the random variable in log-likelihood space.
+
+        transform: Transform
+            Additional transform which may be applied after default transform.
+
+        value_var : Variable, optional
+
+        Returns
+        -------
+        TensorVariable
+        """
+        from pymc.distributions.transforms import ChainedTransform, _default_transform
+
+        # Make the value variable a transformed value variable,
+        # if there's an applicable transform
+        if transform is None and default_transform is UNSET:
+            default_transform = None
+            warnings.warn(
+                "To disable default transform, please use default_transform=None"
+                " instead of transform=None. Setting transform to None will"
+                " not have any effect in future.",
+                UserWarning,
+            )
+
+        if default_transform is UNSET:
+            if rv_var.owner is None:
+                default_transform = None
+            else:
+                default_transform = _default_transform(rv_var.owner.op, rv_var)
+
+        if transform is UNSET:
+            transform = default_transform
+        elif transform is not None and default_transform is not None:
+            transform = ChainedTransform([default_transform, transform])
+
+        if value_var is None:
+            if transform is None:
+                # Create value variable with the same type as the RV
+                value_var = rv_var.type()
+                value_var.name = rv_var.name
+            else:
+                # Create value variable with the same type as the transformed RV
+                value_var = transform.forward(rv_var, *rv_var.owner.inputs).type()
+                value_var.name = f"{rv_var.name}_{transform.name}__"
+                value_var.tag.transform = transform
+
+        self.rvs_to_transforms[rv_var] = transform
+        self.rvs_to_values[rv_var] = value_var
+        self.values_to_rvs[value_var] = rv_var
+
+        return value_var
+
+    def register_data_var(self, data, dims=None):
+        """Register a data variable with the model."""
+        self.data_vars.append(data)
+        self.add_named_variable(data, dims=dims)
+
+    def add_named_variable(self, var, dims: tuple[str | None, ...] | None = None):
+        """Add a random graph variable to the named variables of the model.
+
+        This can include several types of variables such basic_RVs, Data, Deterministics,
+        and Potentials.
+
+        Parameters
+        ----------
+        var
+
+        dims : tuple, optional
+
+        """
+        if var.name is None:
+            raise ValueError("Variable is unnamed.")
+        if self.named_vars.tree_contains(var.name):
+            raise ValueError(f"Variable name {var.name} already exists.")
+        if var.name in self.coords:
+            raise ValueError(
+                f"Variable name '{var.name}' conflicts with an existing dimension name."
+            )
+
+        if dims is not None:
+            if isinstance(dims, str):
+                dims = (dims,)
+            for dim in dims:
+                if dim not in self.coords and dim is not None:
+                    raise ValueError(f"Dimension {dim} is not specified in `coords`.")
+            # This check implicitly states that only vars with .ndim attribute can have dims
+            if var.ndim != len(dims):
+                raise ValueError(
+                    f"{var} has {var.ndim} dims but {len(dims)} dim labels were provided."
+                )
+            self.named_vars_to_dims[var.name] = dims
+
+        self.named_vars[var.name] = var
+        if not hasattr(self, self.name_of(var.name)):
+            setattr(self, self.name_of(var.name), var)
+
+
+class FrozenModel(BaseModel):
+    """A model whose graph is immutable and whose compiled functions are cached.
+
+    Create one with :func:`pymc.model.transform.optimization.freeze_model`; this class
+    cannot be instantiated directly. Graph-mutating methods do not exist on it, which is
+    what makes caching safe without any invalidation. ``set_data`` remains available for
+    data that no free variable depends on — values and shapes are runtime inputs of the
+    cached functions.
+    """
+
+    def __init__(self, *args, **kwargs):
+        raise TypeError(
+            "FrozenModel cannot be instantiated directly. "
+            "Create one from an existing model with freeze_model."
+        )
 
     # Cached graphs and compiled functions. The seed is applied outside `_compile_fn`
     # (in `compile_fn`) and taken as an argument by the initial-point function, so all
     # cached entries are seed-independent.
-    logp = locally_cachedmethod(Model.logp)
-    dlogp = locally_cachedmethod(Model.dlogp)
-    d2logp = locally_cachedmethod(Model.d2logp)
-    _logp_dlogp_function = locally_cachedmethod(Model._logp_dlogp_function)
-    _make_initial_point = locally_cachedmethod(Model._make_initial_point)
-    _compile_fn = locally_cachedmethod(Model._compile_fn)
-
-    # Graph mutation would stale the cache and is forbidden.
-    register_rv = _forbidden_on_frozen(Model.register_rv)
-    make_obs_var = _forbidden_on_frozen(Model.make_obs_var)
-    create_value_var = _forbidden_on_frozen(Model.create_value_var)
-    register_data_var = _forbidden_on_frozen(Model.register_data_var)
-    add_named_variable = _forbidden_on_frozen(Model.add_named_variable)
-    add_coord = _forbidden_on_frozen(Model.add_coord)
-    add_coords = _forbidden_on_frozen(Model.add_coords)
-    set_initval = _forbidden_on_frozen(Model.set_initval)
+    logp = locally_cachedmethod(BaseModel.logp)
+    dlogp = locally_cachedmethod(BaseModel.dlogp)
+    d2logp = locally_cachedmethod(BaseModel.d2logp)
+    _logp_dlogp_function = locally_cachedmethod(BaseModel._logp_dlogp_function)
+    _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
+    _compile_fn = locally_cachedmethod(BaseModel._compile_fn)
 
 
 class BlockModelAccess(Model):
