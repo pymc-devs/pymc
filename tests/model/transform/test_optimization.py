@@ -74,6 +74,26 @@ def test_freeze_dims_nothing_to_change():
     assert m.point_logps() == freeze_dims_and_data(m).point_logps()
 
 
+def test_freeze_dims_and_data_preserves_initvals():
+    # fgraph_from_model drops (and rejects) initial values; freeze_dims_and_data preserves
+    # constant and strategy-string ones on the rebuilt model without touching the original.
+    with Model() as m:
+        Normal("u", initval=7.0)  # concrete
+        Normal("p", shape=3, initval="prior")  # strategy string
+
+    frozen_m = freeze_dims_and_data(m)
+    assert m.rvs_to_initial_values[m["u"]] == 7.0  # original untouched
+    np.testing.assert_allclose(frozen_m.initial_point(0)["u"], m.initial_point(0)["u"])
+    np.testing.assert_allclose(frozen_m.initial_point(1)["p"], m.initial_point(1)["p"])
+
+    # Symbolic initial values reference the original graph and cannot be transplanted.
+    with Model() as m2:
+        d = Data("d", [1.0, 2.0])
+        Normal("s", shape=2, initval=d * 2)
+    with pytest.raises(NotImplementedError, match="symbolic initial value"):
+        freeze_dims_and_data(m2)
+
+
 def test_freeze_dims_and_data_subset():
     with Model(coords={"dim1": range(3), "dim2": range(5)}) as m:
         data1 = Data("data1", [1, 2, 3], dims="dim1")
