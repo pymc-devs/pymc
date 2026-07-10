@@ -149,11 +149,10 @@ class MarkerProgressBar(ProgressBar):
 class CustomBarColumn(BarColumn):
     """Bar column that recolors on divergences and renders a separator marker."""
 
-    def __init__(self, *args, failing_color: str = "red", **kwargs):
-        from matplotlib.colors import to_rgb
-
-        self.failing_color = failing_color
-        self.failing_rgb = [int(x * 255) for x in to_rgb(self.failing_color)]
+    def __init__(self, *args, failing_style: Style | None = None, **kwargs):
+        self.failing_style = (
+            failing_style if failing_style is not None else Style.parse("rgb(214,39,40)")
+        )
 
         super().__init__(*args, **kwargs)
 
@@ -163,8 +162,8 @@ class CustomBarColumn(BarColumn):
     def callbacks(self, task: Task):
         """Update bar color based on failure state."""
         if task.fields["failing"]:
-            self.complete_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
-            self.finished_style = Style.parse("rgb({},{},{})".format(*self.failing_rgb))
+            self.complete_style = self.failing_style
+            self.finished_style = self.failing_style
         else:
             self.complete_style = self.default_complete_style
             self.finished_style = self.default_finished_style
@@ -264,7 +263,6 @@ class RichProgressBackend:
             CustomBarColumn(
                 bar_width=None,
                 table_column=Column("Progress", ratio=2),
-                failing_color="tab:red",
                 complete_style=Style.parse("rgb(31,119,180)"),
                 finished_style=Style.parse("rgb(31,119,180)"),
             ),

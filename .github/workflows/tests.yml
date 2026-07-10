@@ -345,6 +345,57 @@ jobs:
           name: Alternative backends py${{ matrix.python-version }} linker=${{ matrix.linker }}
           fail_ci_if_error: false
 
+  free_threading:
+    needs: changes
+    if: ${{ needs.changes.outputs.changes == 'true' }}
+    strategy:
+      matrix:
+        # A small, sampling-focused subset that exercises the thread-based parallel
+        # sampling path used on free-threaded (no-GIL) builds. The GIL-stays-disabled
+        # check is a pytest_sessionfinish hook in tests/conftest.py.
+        test-subset:
+          - |
+            tests/sampling/test_parallel.py
+            tests/step_methods/test_compound.py
+      fail-fast: false
+    runs-on: ubuntu-latest
+    env:
+      TEST_SUBSET: ${{ matrix.test-subset }}
+      # Disable the C backend (cxx=""). Its single-phase-init C extensions (e.g.
+      # lazylinker_ext) re-enable the GIL on a free-threaded build; with no C
+      # compiler PyTensor uses the free-threading-safe numba/Python backend.
+      PYTENSOR_FLAGS: cxx=
+      # Intentionally leave PYTHON_GIL unset. Setting it to 0 would force the GIL
+      # off and hide a dependency that fails to support free-threading; leaving it
+      # unset lets such a dependency re-enable the GIL, which the conftest
+      # pytest_sessionfinish hook asserts against.
+    defaults:
+      run:
+        shell: bash -leo pipefail {0}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
+        with:
+          python-version: "3.14t"
+      - name: Install pymc and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # Install from PyPI (free-threaded wheels), not conda-forge. numba is
+          # included as the free-threading-safe PyTensor backend.
+          pip install -e . numba pytest pytest-cov
+          # Free-threaded sampling needs the (still unreleased) PyTensor
+          # free-threading support (pymc-devs/pytensor#2286); track its branch
+          # until it is released.
+          pip install "pytensor @ git+https://github.com/ricardoV94/pytensor@free_threaded"
+          python --version
+          python -c "import sys, sysconfig; print('Py_GIL_DISABLED =', sysconfig.get_config_var('Py_GIL_DISABLED'), '| gil_enabled =', sys._is_gil_enabled())"
+          pip list
+      - name: Run tests
+        run: |
+          python -m pytest -vv --durations=25 $TEST_SUBSET
+
   float32:
     needs: changes
     if: ${{ needs.changes.outputs.changes == 'true' }}
@@ -395,7 +446,7 @@ jobs:
   all_tests:
     if: ${{ always() }}
     runs-on: ubuntu-latest
-    needs: [changes, ubuntu, windows, macos, alternative_backends, float32]
+    needs: [changes, ubuntu, windows, macos, alternative_backends, free_threading, float32]
     steps:
       - name: Check build matrix status
         if: ${{ needs.changes.outputs.changes == 'true' &&
@@ -403,5 +454,6 @@ jobs:
           needs.windows.result != 'success' ||
           needs.macos.result != 'success' ||
           needs.alternative_backends.result != 'success' ||
+          needs.free_threading.result != 'success' ||
           needs.float32.result != 'success' ) }}
         run: exit 1

@@ -15,6 +15,7 @@ import multiprocessing
 import os
 import platform
 import sys
+import sysconfig
 import warnings
 
 import cloudpickle
@@ -27,6 +28,7 @@ from pytensor.compile.ops import as_op
 from pytensor.tensor.type import TensorType
 
 import pymc as pm
+import pymc.sampling.mcmc as mcmc
 import pymc.sampling.parallel as ps
 
 from pymc.pytensorf import floatX
@@ -285,3 +287,48 @@ def test_sampling_with_random_generator_matches(cores):
         post2 = pm.sample(random_seed=np.random.default_rng(42), **kwargs).posterior
 
     assert post1.equals(post2), (post1["x"].mean().item(), post2["x"].mean().item())
+
+
+@pytest.mark.skipif(
+    sysconfig.get_config_var("Py_GIL_DISABLED") != 1,
+    reason="requires a free-threaded (no-GIL) build",
+)
+def test_thread_parallel_sampling_matches_sequential(monkeypatch):
+    # On a free-threaded build `mp_ctx="thread"` runs chains as threads (the path this
+    # test targets); `nuts_sampler="pymc"` keeps it on PyMC's stepper instead of
+    # dispatching to nutpie. The conftest `pytest_sessionfinish` hook separately guards
+    # that no import re-enabled the GIL during the run.
+    #
+    # Spy on `_thread_sample`, recording success only *after* it returns, so the threaded
+    # path is proven to have run and not silently fallen back to multiprocessing (which
+    # would produce the same draws and hide a regression).
+    thread_sampled = False
+    real_thread_sample = mcmc._thread_sample
+
+    def spy(**kwargs):
+        nonlocal thread_sampled
+        result = real_thread_sample(**kwargs)
+        thread_sampled = True
+        return result
+
+    monkeypatch.setattr(mcmc, "_thread_sample", spy)
+
+    kwargs = {
+        "draws": 50,
+        "tune": 50,
+        "chains": 2,
+        "nuts_sampler": "pymc",
+        "progressbar": False,
+        "compute_convergence_checks": False,
+        "random_seed": 1,
+    }
+    with pm.Model():
+        pm.Normal("x", 0.0, 1.0)
+        pm.Normal("y", pm.Normal("mu", 0.0, 1.0), 1.0, shape=3)
+        threaded = pm.sample(cores=2, mp_ctx="thread", **kwargs)
+        sequential = pm.sample(cores=1, **kwargs)
+
+    assert thread_sampled, "sampling did not run through the threaded path"
+    # Same seed => each chain's RNG is seeded once and identically regardless of
+    # execution mode, so threaded sampling reproduces sequential draws bit-for-bit.
+    assert threaded.posterior.equals(sequential.posterior)
