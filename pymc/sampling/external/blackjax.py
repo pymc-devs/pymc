@@ -377,6 +377,8 @@ class Blackjax(ExternalSampler):
         idata_kwargs: dict | None = None,
         compute_convergence_checks: bool = True,
         quiet: bool = False,
+        jitter: bool | None = None,
+        jitter_max_retries: int = 10,
         **kwargs,
     ):
         if kwargs:
@@ -408,7 +410,8 @@ class Blackjax(ExternalSampler):
             chains=chains,
             initvals=initvals,
             random_seed=random_seed,
-            jitter=self.jitter,
+            jitter=self.jitter if jitter is None else jitter,
+            jitter_max_retries=jitter_max_retries,
             logp_fn=logp_fn,
         )
         if chains == 1:
@@ -530,3 +533,51 @@ class Blackjax(ExternalSampler):
         scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
         _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
         return samples, stats
+
+
+def _make_algorithm_factory(name: str, algorithm) -> Callable[..., Blackjax]:
+    def factory(**kwargs) -> Blackjax:
+        return Blackjax(algorithm, **kwargs)
+
+    factory.__name__ = name
+    factory.__qualname__ = name
+    default_adaptation = _DEFAULT_ADAPTATION.get(name)
+    factory.__doc__ = (
+        f"Create a :class:`~pymc.sampling.external.blackjax.Blackjax` external sampler "
+        f"that draws with ``blackjax.{name}`` (default adaptation: {default_adaptation!r}).\n\n"
+        "Keyword arguments are routed to the algorithm or the adaptation procedure; "
+        "call ``.get_kwargs()`` on the returned sampler to list them all.\n\n"
+        f"Usage: ``pm.sample(external_sampler=pm.external.blackjax.{name}(...))``"
+    )
+    return factory
+
+
+def __getattr__(name: str):
+    """Expose every supported blackjax algorithm as a per-algorithm factory.
+
+    ``pm.external.blackjax.mclmc(**kwargs)`` is equivalent to
+    ``pm.external.Blackjax("mclmc", **kwargs)``. The available names are
+    enumerated dynamically from the installed blackjax version.
+    """
+    if name.startswith("_"):
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    blackjax = _import_blackjax()
+    if getattr(blackjax, name, None) is not None:
+        try:
+            resolved_name, resolved = _resolve_algorithm(name)
+        except ValueError as err:
+            raise AttributeError(str(err)) from None
+        return _make_algorithm_factory(resolved_name, resolved)
+    raise AttributeError(
+        f"module {__name__!r} has no attribute {name!r}. "
+        f"Available blackjax algorithms: {_available_algorithms(blackjax)}"
+    )
+
+
+def __dir__() -> list[str]:
+    names = list(globals())
+    try:
+        names += _available_algorithms(_import_blackjax())
+    except ImportError:
+        pass
+    return sorted(set(names))
