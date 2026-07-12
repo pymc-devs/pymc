@@ -224,8 +224,8 @@ class TestAlgorithmNamespace:
             pm.external.blackjax.nutz
 
 
-class TestSampleArgumentMapping:
-    """`pm.sample` arguments must be explicitly mapped, warned about, or rejected."""
+class TestSampleArgumentForwarding:
+    """`pm.sample` forwards its arguments verbatim; the sampler decides each disposition."""
 
     def _capture_sample_kwargs(self, **sample_kwargs):
         with pm.Model():
@@ -235,30 +235,90 @@ class TestSampleArgumentMapping:
                 pm.sample(external_sampler=sampler, **sample_kwargs)
         return recorded.call_args.kwargs
 
-    def test_init_maps_to_jitter(self):
-        assert self._capture_sample_kwargs(init="adapt_diag")["jitter"] is False
-        assert self._capture_sample_kwargs(init="jitter+adapt_diag")["jitter"] is True
-        assert "jitter" not in self._capture_sample_kwargs()
+    def test_arguments_forwarded_verbatim(self):
+        kwargs = self._capture_sample_kwargs(
+            init="adapt_diag", jitter_max_retries=3, discard_tuned_samples=False
+        )
+        assert kwargs["init"] == "adapt_diag"
+        assert kwargs["jitter_max_retries"] == 3
+        assert kwargs["discard_tuned_samples"] is False
+        assert kwargs["keep_warning_stat"] is False
+        assert kwargs["compile_kwargs"] == {}
 
-    def test_unmappable_init_warns(self):
+    def test_no_var_keyword_escape_hatch(self):
+        import inspect
+
+        parameters = inspect.signature(Blackjax.sample).parameters
+        assert all(p.kind is not inspect.Parameter.VAR_KEYWORD for p in parameters.values())
+        assert {"init", "compile_kwargs", "discard_tuned_samples"} <= set(parameters)
+
+
+class TestBlackjaxArgumentDispositions:
+    """Each forwarded `pm.sample` argument has an explicit, argued disposition."""
+
+    def test_init_reduces_to_jitter(self):
+        resolve = Blackjax._resolve_initial_point_jitter
+        assert resolve("auto", None) is True
+        assert resolve("jitter+adapt_diag", None) is True
+        assert resolve("adapt_diag", None) is False
+        assert resolve("adapt_full", None) is False
+        # explicit control wins over the init string
+        assert resolve("adapt_diag", True) is True
         with pytest.warns(UserWarning, match="`init='advi'` has no equivalent"):
-            kwargs = self._capture_sample_kwargs(init="advi")
-        assert "jitter" not in kwargs
+            assert resolve("advi", None) is True
 
-    def test_jitter_max_retries_forwarded(self):
-        assert self._capture_sample_kwargs(jitter_max_retries=3)["jitter_max_retries"] == 3
+    def test_compile_kwargs_non_jax_mode_raises(self):
+        with pm.Model():
+            pm.Normal("x", shape=3)
+            sampler = Blackjax()
+        with pytest.raises(ValueError, match="always compiles the model with the jax backend"):
+            sampler._validate_compile_kwargs({"mode": "NUMBA"})
+        with pytest.raises(ValueError, match=r"\['random_state'\] are not supported"):
+            sampler._validate_compile_kwargs({"mode": "JAX", "random_state": 1})
+        # jax mode and no request at all are fine
+        sampler._validate_compile_kwargs({"mode": "JAX"})
+        sampler._validate_compile_kwargs(None)
+        sampler._validate_compile_kwargs({})
 
-    def test_discard_tuned_samples_warns(self):
-        with pytest.warns(UserWarning, match="do not return tuning samples"):
-            self._capture_sample_kwargs(discard_tuned_samples=False)
+    def test_backend_through_pm_sample_raises(self):
+        with pm.Model():
+            pm.Normal("x", shape=3)
+            sampler = Blackjax()
+            with pytest.raises(ValueError, match="always compiles the model with the jax backend"):
+                pm.sample(external_sampler=sampler, backend="numba")
 
-    def test_keep_warning_stat_warns(self):
-        with pytest.warns(UserWarning, match="`keep_warning_stat` is ignored"):
-            self._capture_sample_kwargs(keep_warning_stat=True)
+    @pytest.mark.parametrize(
+        "sample_kwargs,warning_match",
+        [
+            ({"discard_tuned_samples": False}, "discards warmup draws"),
+            ({"keep_warning_stat": True}, "does not emit"),
+        ],
+    )
+    def test_unsupported_run_options_warn(self, sample_kwargs, warning_match):
+        with pm.Model():
+            pm.Normal("x", shape=3)
+            sampler = Blackjax()
+        # Abort right after the argument dispositions ran
+        with (
+            mock.patch(
+                "pymc.sampling.external.blackjax._get_seeds_per_chain",
+                side_effect=RuntimeError("stop"),
+            ),
+            pytest.warns(UserWarning, match=warning_match),
+            pytest.raises(RuntimeError, match="stop"),
+        ):
+            sampler.sample(progressbar=False, **sample_kwargs)
 
-    def test_compile_kwargs_warns(self):
-        with pytest.warns(UserWarning, match="`backend` and `compile_kwargs` are ignored"):
-            self._capture_sample_kwargs(backend="jax")
+
+def test_sampler_keeps_its_model():
+    with pm.Model() as model:
+        pm.Normal("x", shape=3)
+        sampler = pm.external.blackjax.nuts()
+
+    with pm.Model():
+        pm.Normal("y", shape=3)
+
+    assert sampler.model is model
 
 
 class TestSampleExternalSamplerArg:

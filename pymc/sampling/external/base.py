@@ -26,11 +26,17 @@ class ExternalSampler(ABC):
     Unlike step methods, external samplers cannot be combined with other samplers;
     they are responsible for all free variables of the model.
 
-    Sampler-specific configuration belongs to the subclass constructor. ``sample``
-    only receives the run-level arguments that ``pm.sample`` forwards; the
-    optional ``jitter``/``jitter_max_retries`` keywords (derived from
-    ``pm.sample``'s ``init`` string) may be ignored by samplers that control
-    initialization themselves.
+    Sampler-specific configuration belongs to the subclass constructor.
+    ``pm.sample(external_sampler=...)`` forwards its run-level arguments to
+    ``sample`` verbatim, after enforcing only sampler-independent constraints
+    (no ``step``/``nuts_sampler``, no custom ``trace``/``callback``,
+    ``return_inferencedata=True``). The meaning of the remaining arguments is
+    sampler-specific — ``init`` describes NUTS initialization strategies,
+    ``compile_kwargs`` names a compilation backend not every sampler supports —
+    so no shared interpretation is imposed by ``pm.sample``. Instead, each
+    subclass must give every argument of ``sample`` an explicit disposition:
+    honor it, reinterpret it (documenting how), warn that it has no
+    equivalent, or raise if silently proceeding would mislead the user.
     """
 
     def __init__(self, model: Model | None = None):
@@ -46,13 +52,19 @@ class ExternalSampler(ABC):
         initvals: dict[str, Any] | Sequence[dict[str, Any] | None] | None,
         random_seed: RandomState,
         progressbar: bool,
+        quiet: bool = False,
         var_names: Sequence[str] | None = None,
         idata_kwargs: dict[str, Any] | None = None,
         compute_convergence_checks: bool = True,
-        jitter: bool | None = None,
+        init: str = "auto",
         jitter_max_retries: int = 10,
-        **kwargs,
+        discard_tuned_samples: bool = True,
+        keep_warning_stat: bool = False,
+        compile_kwargs: dict[str, Any] | None = None,
     ):
+        # Deliberately no **kwargs: the forwarded argument set is a closed
+        # contract. If `pm.sample` grows a new forwarded argument, every
+        # sampler must explicitly decide its disposition.
         pass
 
 

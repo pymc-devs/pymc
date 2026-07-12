@@ -235,8 +235,6 @@ class Blackjax(ExternalSampler):
         Where to compute the transformation of draws to the constrained space.
     keep_untransformed : bool, default False
         Include unconstrained values in the returned posterior.
-    jitter : bool, default True
-        Add jitter to the initial points.
     **kwargs
         Additional keyword arguments are routed automatically — based on the
         blackjax function signatures — either to the algorithm (e.g.
@@ -269,7 +267,6 @@ class Blackjax(ExternalSampler):
         chain_method: Literal["parallel", "vectorized"] = "parallel",
         postprocessing_backend: Literal["cpu", "gpu"] | None = None,
         keep_untransformed: bool = False,
-        jitter: bool = True,
         **kwargs,
     ):
         super().__init__(model)
@@ -345,7 +342,6 @@ class Blackjax(ExternalSampler):
         self.chain_method = chain_method
         self.postprocessing_backend = postprocessing_backend
         self.keep_untransformed = keep_untransformed
-        self.jitter = jitter
 
     def get_kwargs(self) -> dict[str, dict[str, Any]]:
         """Return all accepted keyword arguments and their (current) values.
@@ -365,6 +361,53 @@ class Blackjax(ExternalSampler):
             },
         }
 
+    @staticmethod
+    def _resolve_initial_point_jitter(init: str, jitter_initial_points: bool | None) -> bool:
+        """Reduce ``pm.sample``'s NUTS-specific ``init`` string to what applies here.
+
+        Blackjax algorithms use their own adaptation (or explicit parameters),
+        so of PyMC's initialization strategies only the choice between jittered
+        and non-jittered initial points carries over.
+        """
+        if jitter_initial_points is not None:
+            return jitter_initial_points
+        if init == "auto" or init.startswith("jitter+"):
+            return True
+        if init in ("adapt_diag", "adapt_diag_grad", "adapt_full"):
+            return False
+        warnings.warn(
+            f"`init={init!r}` has no equivalent for the Blackjax sampler and is ignored. "
+            "Use `jitter_initial_points` to control initial point jittering.",
+            UserWarning,
+            stacklevel=3,
+        )
+        return True
+
+    @staticmethod
+    def _validate_compile_kwargs(compile_kwargs: dict | None) -> None:
+        """Reject compilation requests this sampler cannot honor.
+
+        The model logp is always compiled with the jax backend, so a different
+        requested mode would be silently overridden — raise instead. nutpie-style
+        samplers, by contrast, consume these options.
+        """
+        if not compile_kwargs:
+            return
+        from pytensor.compile.mode import get_mode
+        from pytensor.link.jax.linker import JAXLinker
+
+        unsupported = sorted(set(compile_kwargs) - {"mode"})
+        if unsupported:
+            raise ValueError(
+                f"`compile_kwargs` {unsupported} are not supported by the Blackjax sampler."
+            )
+        if not isinstance(get_mode(compile_kwargs["mode"]).linker, JAXLinker):
+            raise ValueError(
+                "The Blackjax sampler always compiles the model with the jax backend; "
+                f"`compile_kwargs['mode']={compile_kwargs['mode']!r}` (or the equivalent "
+                "`backend` argument) is not supported."
+            )
+
     def sample(
         self,
         *,
@@ -374,18 +417,58 @@ class Blackjax(ExternalSampler):
         initvals=None,
         random_seed: RandomState = None,
         progressbar: bool = True,
+        quiet: bool = False,
         var_names: Sequence[str] | None = None,
         idata_kwargs: dict | None = None,
         compute_convergence_checks: bool = True,
-        quiet: bool = False,
-        jitter: bool | None = None,
+        init: str = "auto",
+        jitter_initial_points: bool | None = None,
         jitter_max_retries: int = 10,
-        **kwargs,
+        discard_tuned_samples: bool = True,
+        keep_warning_stat: bool = False,
+        compile_kwargs: dict | None = None,
     ):
-        if kwargs:
-            raise TypeError(
-                f"Unsupported arguments {sorted(kwargs)}. The Blackjax external sampler "
-                "is configured at construction, e.g. `pm.external.Blackjax(target_accept=0.9)`."
+        """Run the configured BlackJAX algorithm.
+
+        Algorithm and adaptation options belong to the constructor; this method
+        only takes run-level arguments. ``pm.sample(external_sampler=...)``
+        forwards its arguments here verbatim, and each has an explicit
+        disposition for this sampler:
+
+        - ``tune``, ``draws``, ``chains``, ``initvals``, ``random_seed``,
+          ``progressbar``, ``quiet``, ``var_names``, ``idata_kwargs``,
+          ``compute_convergence_checks``, ``jitter_max_retries``: honored.
+        - ``init``: reinterpreted. PyMC's init strings select a NUTS
+          initialization strategy; blackjax algorithms run their own
+          adaptation, so only the jitter/no-jitter part applies to the initial
+          points (``"jitter+..."`` jitters, ``"adapt_..."`` does not). Other
+          strategies (``"advi..."``, ``"map"``) have no equivalent and warn.
+          ``jitter_initial_points`` sets the same thing directly and takes
+          precedence.
+        - ``compile_kwargs``: validated. The model logp is always compiled
+          with the jax backend here, so requesting a different ``mode`` (e.g.
+          via ``pm.sample(backend="numba")``) raises instead of being
+          silently ignored; other compilation options are not supported.
+        - ``discard_tuned_samples=False``: warns. The inference loop discards
+          warmup draws (and filters adaptation info) to bound memory.
+        - ``keep_warning_stat=True``: warns. Blackjax does not emit PyMC's
+          ``SamplerWarning`` stat.
+        """
+        jitter = self._resolve_initial_point_jitter(init, jitter_initial_points)
+        self._validate_compile_kwargs(compile_kwargs)
+        if not discard_tuned_samples:
+            warnings.warn(
+                "`discard_tuned_samples=False` is ignored: the Blackjax sampler discards "
+                "warmup draws to bound memory use.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if keep_warning_stat:
+            warnings.warn(
+                "`keep_warning_stat` is ignored: the Blackjax sampler does not emit the "
+                "`warning` sampler stat.",
+                UserWarning,
+                stacklevel=2,
             )
         if tune == 0 and self.adaptation is not None:
             raise ValueError(
@@ -411,7 +494,7 @@ class Blackjax(ExternalSampler):
             chains=chains,
             initvals=initvals,
             random_seed=random_seed,
-            jitter=self.jitter if jitter is None else jitter,
+            jitter=jitter,
             jitter_max_retries=jitter_max_retries,
             logp_fn=logp_fn,
         )
