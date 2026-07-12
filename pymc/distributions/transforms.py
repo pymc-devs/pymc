@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
@@ -45,7 +47,7 @@ __all__ = [
     "logodds",
     "ordered",
     "simplex",
-    "sum_to_1",
+    "sum_to_1",  # noqa: F822  (deprecated; served lazily via module __getattr__)
 ]
 
 
@@ -123,6 +125,10 @@ class SumTo1(Transform):
     Transforms K - 1 dimensional simplex space (K values in [0, 1] that sum to 1) to a K - 1 vector of values in [0, 1].
 
     This transformation operates on the last dimension of the input tensor.
+
+    .. warning::
+        SumTo1 is deprecated and will be removed in a future release.
+        Use :data:`~pymc.distributions.transforms.simplex` instead.
     """
 
     name = "sumto1"
@@ -709,12 +715,27 @@ log.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
-sum_to_1 = SumTo1()
-sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
-for use in the ``transform`` argument of a random variable."""
-
 circular = CircularTransform()
 circular.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""
+
+
+def __getattr__(name):
+    if name == "sum_to_1":
+        # `sum_to_1` is deprecated (see #7009). It is served lazily via this module
+        # `__getattr__` so that importing PyMC stays silent; accessing the attribute
+        # emits the warning.
+        warnings.warn(
+            "sum_to_1 is deprecated and will be removed in a future release. "
+            "Use the simplex transform instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        sum_to_1 = SumTo1()
+        sum_to_1.__doc__ = """
+Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+for use in the ``transform`` argument of a random variable."""
+        return sum_to_1
+
+    raise AttributeError(f"module {__name__} has no attribute {name}")
