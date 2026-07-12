@@ -67,6 +67,7 @@ from pymc.progress_bar import (
     default_progress_theme,
 )
 from pymc.pytensorf import resolve_backend_compile_kwargs
+from pymc.sampling.external.base import ExternalSampler
 from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
 from pymc.stats.convergence import (
@@ -549,6 +550,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -582,6 +584,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -615,6 +618,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    external_sampler: ExternalSampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -689,6 +693,18 @@ def sample(
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
         If ``None`` (default), "nutpie" is used if installed and can be compiled to the desired backend.
+    external_sampler : ExternalSampler, optional
+        An external sampler instance that samples the whole model, e.g.
+        ``pm.external.Blackjax("mclmc")`` or ``pm.external.blackjax.mclmc()``.
+        Cannot be combined with ``step`` or ``nuts_sampler``. Sampler-specific
+        options are set when constructing the instance, not through ``pm.sample``.
+        Of the remaining arguments, ``draws``/``tune``/``chains``, ``initvals``,
+        ``random_seed``, ``progressbar``, ``quiet``, ``var_names``,
+        ``idata_kwargs``, ``compute_convergence_checks`` and
+        ``jitter_max_retries`` are forwarded; ``init`` only determines whether
+        initial points are jittered; arguments without an external equivalent
+        are ignored with a warning; ``trace``, ``callback`` and
+        ``return_inferencedata=False`` raise.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -891,6 +907,93 @@ def sample(
         )
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
+
+    if external_sampler is not None:
+        # `pm.sample` promises many arguments that only make sense for the built-in
+        # step samplers. Every argument is deliberately mapped, warned about, or
+        # rejected here, so external samplers never silently misbehave:
+        # - forwarded: draws/tune/chains, initvals, random_seed, progressbar, quiet,
+        #   var_names, idata_kwargs, compute_convergence_checks, jitter_max_retries,
+        #   and the jitter/no-jitter part of `init`
+        # - warned & ignored: non-mappable `init` strings,
+        #   `discard_tuned_samples=False`, `keep_warning_stat`,
+        #   `backend`/`compile_kwargs`
+        # - rejected: step, nuts_sampler, trace, callback,
+        #   `return_inferencedata=False`, and NUTS/sampler kwargs (those are
+        #   sampler construction arguments)
+        if step is not None:
+            raise ValueError("`step` and `external_sampler` cannot be used together.")
+        if nuts_sampler is not None:
+            raise ValueError("`nuts_sampler` and `external_sampler` cannot be used together.")
+        if external_sampler.model is not model:
+            raise ValueError(
+                "The model of `external_sampler` does not match the model being sampled."
+            )
+        if not return_inferencedata:
+            raise ValueError(
+                "`return_inferencedata=False` is not supported with `external_sampler`."
+            )
+        if trace is not None:
+            raise ValueError("A custom `trace` backend is not supported with `external_sampler`.")
+        if callback is not None:
+            raise ValueError("`callback` is not supported with `external_sampler`.")
+        if kwargs:
+            raise TypeError(
+                f"Arguments {sorted(kwargs)} are not supported together with `external_sampler`. "
+                "Configure the sampler when constructing it instead, e.g. "
+                "`pm.external.Blackjax(target_accept=0.9)`."
+            )
+
+        external_kwargs: dict[str, Any] = {"jitter_max_retries": jitter_max_retries}
+        if init != "auto":
+            if init.startswith("jitter+") or init in (
+                "adapt_diag",
+                "adapt_diag_grad",
+                "adapt_full",
+            ):
+                # Only the jitter/no-jitter part of `init` is meaningful for external
+                # samplers, which use their own mass matrix adaptation (see #8352).
+                external_kwargs["jitter"] = init.startswith("jitter+")
+            else:
+                warnings.warn(
+                    f"`init={init!r}` has no equivalent for `external_sampler` and is ignored.",
+                    UserWarning,
+                    stacklevel=2,
+                )
+        if not discard_tuned_samples:
+            warnings.warn(
+                "`discard_tuned_samples=False` is ignored: external samplers do not "
+                "return tuning samples.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if keep_warning_stat:
+            warnings.warn(
+                "`keep_warning_stat` is ignored by `external_sampler`.",
+                UserWarning,
+                stacklevel=2,
+            )
+        if backend is not None or compile_kwargs:
+            warnings.warn(
+                "`backend` and `compile_kwargs` are ignored by `external_sampler`; "
+                "configure compilation when constructing the sampler.",
+                UserWarning,
+                stacklevel=2,
+            )
+        with joined_blas_limiter():
+            return external_sampler.sample(
+                tune=tune if tune is not None else 1000,
+                draws=draws,
+                chains=chains,
+                initvals=initvals,
+                random_seed=random_seed_list[0],
+                progressbar=progress_bool,
+                quiet=quiet,
+                var_names=var_names,
+                idata_kwargs=idata_kwargs,
+                compute_convergence_checks=compute_convergence_checks,
+                **external_kwargs,
+            )
 
     if (
         not discard_tuned_samples
