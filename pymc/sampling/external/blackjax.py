@@ -42,8 +42,9 @@ from typing import Any, Literal
 
 import numpy as np
 
-from pymc.sampling.external.base import ExternalSampler, require_continuous_model
+from pymc.model.core import modelcontext
 from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.vartypes import discrete_types
 
 __all__ = ["Blackjax"]
 
@@ -96,6 +97,14 @@ _STAT_RENAMES = {
     "num_integration_steps": "n_steps",
     "logdensity": "lp",
 }
+
+
+def _require_continuous_model(model) -> None:
+    """Raise if the model has discrete free random variables."""
+    if any(var.dtype in discrete_types for var in model.free_RVs):
+        raise ValueError(
+            "The Blackjax sampler can only sample models where all free variables are continuous."
+        )
 
 
 def _import_blackjax():
@@ -155,7 +164,7 @@ def _resolve_algorithm(algorithm) -> tuple[str, Any]:
     if isinstance(obj, blackjax.GenerateVariationalAPI | blackjax.GeneratePathfinderAPI):
         raise ValueError(
             f"blackjax.{name} is a variational algorithm, not an MCMC sampler, "
-            "and cannot be used with `pm.sample`."
+            "and cannot be used by this sampling driver."
         )
     if name in _UNSUPPORTED_ALGORITHMS:
         raise ValueError(f"blackjax.{name} is not supported: {_UNSUPPORTED_ALGORITHMS[name]}.")
@@ -208,7 +217,7 @@ def _extract_stats(state, info) -> dict[str, Any]:
     return stats
 
 
-class Blackjax(ExternalSampler):
+class Blackjax:
     """Sample a PyMC model with any BlackJAX MCMC algorithm.
 
     Parameters
@@ -235,8 +244,6 @@ class Blackjax(ExternalSampler):
         Where to compute the transformation of draws to the constrained space.
     keep_untransformed : bool, default False
         Include unconstrained values in the returned posterior.
-    jitter : bool, default True
-        Add jitter to the initial points.
     **kwargs
         Additional keyword arguments are routed automatically — based on the
         blackjax function signatures — either to the algorithm (e.g.
@@ -256,7 +263,7 @@ class Blackjax(ExternalSampler):
             x = pm.Normal("x", shape=3)
             y = pm.Normal("y", mu=x.sum(), observed=1.0)
 
-            idata = pm.sample(external_sampler=pm.external.Blackjax("mclmc"))
+            idata = pm.external.blackjax.mclmc().sample()
     """
 
     def __init__(
@@ -269,11 +276,10 @@ class Blackjax(ExternalSampler):
         chain_method: Literal["parallel", "vectorized"] = "parallel",
         postprocessing_backend: Literal["cpu", "gpu"] | None = None,
         keep_untransformed: bool = False,
-        jitter: bool = True,
         **kwargs,
     ):
-        super().__init__(model)
-        require_continuous_model(self.model, sampler_name="Blackjax")
+        self.model = modelcontext(model)
+        _require_continuous_model(self.model)
         blackjax = _import_blackjax()
 
         self.algorithm_name, self._algorithm = _resolve_algorithm(algorithm)
@@ -345,7 +351,6 @@ class Blackjax(ExternalSampler):
         self.chain_method = chain_method
         self.postprocessing_backend = postprocessing_backend
         self.keep_untransformed = keep_untransformed
-        self.jitter = jitter
 
     def get_kwargs(self) -> dict[str, dict[str, Any]]:
         """Return all accepted keyword arguments and their (current) values.
@@ -378,15 +383,16 @@ class Blackjax(ExternalSampler):
         idata_kwargs: dict | None = None,
         compute_convergence_checks: bool = True,
         quiet: bool = False,
-        jitter: bool | None = None,
+        jitter_initial_points: bool = True,
         jitter_max_retries: int = 10,
-        **kwargs,
     ):
-        if kwargs:
-            raise TypeError(
-                f"Unsupported arguments {sorted(kwargs)}. The Blackjax external sampler "
-                "is configured at construction, e.g. `pm.external.Blackjax(target_accept=0.9)`."
-            )
+        """Run the configured BlackJAX algorithm.
+
+        Algorithm and adaptation options belong to the constructor. This method
+        contains only controls for this sampling run; in particular,
+        ``jitter_initial_points`` controls PyMC's initial-point generation and is
+        not inferred from the NUTS-specific ``pm.sample(init=...)`` argument.
+        """
         if tune == 0 and self.adaptation is not None:
             raise ValueError(
                 "tune=0 is incompatible with adaptation. Pass explicit algorithm "
@@ -411,7 +417,7 @@ class Blackjax(ExternalSampler):
             chains=chains,
             initvals=initvals,
             random_seed=random_seed,
-            jitter=self.jitter if jitter is None else jitter,
+            jitter=jitter_initial_points,
             jitter_max_retries=jitter_max_retries,
             logp_fn=logp_fn,
         )
@@ -548,7 +554,7 @@ def _make_algorithm_factory(name: str, algorithm) -> Callable[..., Blackjax]:
         f"that draws with ``blackjax.{name}`` (default adaptation: {default_adaptation!r}).\n\n"
         "Keyword arguments are routed to the algorithm or the adaptation procedure; "
         "call ``.get_kwargs()`` on the returned sampler to list them all.\n\n"
-        f"Usage: ``pm.sample(external_sampler=pm.external.blackjax.{name}(...))``"
+        f"Usage: ``pm.external.blackjax.{name}(...).sample()``"
     )
     return factory
 

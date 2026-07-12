@@ -12,7 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import unittest.mock as mock
+import inspect
 
 import numpy as np
 import pytest
@@ -66,8 +66,7 @@ def make_model(data):
 def test_blackjax_algorithms(gaussian_model_data, algorithm, kwargs):
     model = make_model(gaussian_model_data)
     with model:
-        idata = pm.sample(
-            external_sampler=Blackjax(algorithm, chain_method="vectorized", **kwargs),
+        idata = Blackjax(algorithm, chain_method="vectorized", **kwargs).sample(
             chains=2,
             tune=700,
             draws=500,
@@ -96,8 +95,7 @@ def test_blackjax_algorithm_object(gaussian_model_data, blackjax):
 def test_blackjax_stat_renames(gaussian_model_data):
     model = make_model(gaussian_model_data)
     with model:
-        idata = pm.sample(
-            external_sampler=Blackjax(chain_method="vectorized"),
+        idata = Blackjax(chain_method="vectorized").sample(
             chains=1,
             tune=300,
             draws=100,
@@ -224,63 +222,20 @@ class TestAlgorithmNamespace:
             pm.external.blackjax.nutz
 
 
-class TestSampleArgumentMapping:
-    """`pm.sample` arguments must be explicitly mapped, warned about, or rejected."""
+def test_sampler_keeps_its_model():
+    with pm.Model() as model:
+        pm.Normal("x", shape=3)
+        sampler = pm.external.blackjax.nuts()
 
-    def _capture_sample_kwargs(self, **sample_kwargs):
-        with pm.Model():
-            pm.Normal("x", shape=3)
-            sampler = Blackjax()
-            with mock.patch.object(Blackjax, "sample", return_value=None) as recorded:
-                pm.sample(external_sampler=sampler, **sample_kwargs)
-        return recorded.call_args.kwargs
+    with pm.Model():
+        pm.Normal("y", shape=3)
 
-    def test_init_maps_to_jitter(self):
-        assert self._capture_sample_kwargs(init="adapt_diag")["jitter"] is False
-        assert self._capture_sample_kwargs(init="jitter+adapt_diag")["jitter"] is True
-        assert "jitter" not in self._capture_sample_kwargs()
-
-    def test_unmappable_init_warns(self):
-        with pytest.warns(UserWarning, match="`init='advi'` has no equivalent"):
-            kwargs = self._capture_sample_kwargs(init="advi")
-        assert "jitter" not in kwargs
-
-    def test_jitter_max_retries_forwarded(self):
-        assert self._capture_sample_kwargs(jitter_max_retries=3)["jitter_max_retries"] == 3
-
-    def test_discard_tuned_samples_warns(self):
-        with pytest.warns(UserWarning, match="do not return tuning samples"):
-            self._capture_sample_kwargs(discard_tuned_samples=False)
-
-    def test_keep_warning_stat_warns(self):
-        with pytest.warns(UserWarning, match="`keep_warning_stat` is ignored"):
-            self._capture_sample_kwargs(keep_warning_stat=True)
-
-    def test_compile_kwargs_warns(self):
-        with pytest.warns(UserWarning, match="`backend` and `compile_kwargs` are ignored"):
-            self._capture_sample_kwargs(backend="jax")
+    assert sampler.model is model
 
 
-class TestSampleExternalSamplerArg:
-    def test_clashes(self):
-        with pm.Model() as model:
-            pm.Normal("x", shape=3)
-            sampler = Blackjax()
-
-            with pytest.raises(ValueError, match="`step` and `external_sampler`"):
-                pm.sample(external_sampler=sampler, step=pm.NUTS())
-            with pytest.raises(ValueError, match="`nuts_sampler` and `external_sampler`"):
-                pm.sample(external_sampler=sampler, nuts_sampler="blackjax")
-            with pytest.raises(TypeError, match="Configure the sampler when constructing it"):
-                pm.sample(external_sampler=sampler, target_accept=0.9)
-            with pytest.raises(ValueError, match="return_inferencedata=False"):
-                pm.sample(external_sampler=sampler, return_inferencedata=False)
-
-    def test_model_mismatch(self):
-        with pm.Model():
-            pm.Normal("x", shape=3)
-            sampler = Blackjax()
-        with pm.Model():
-            pm.Normal("y", shape=3)
-            with pytest.raises(ValueError, match="does not match the model being sampled"):
-                pm.sample(external_sampler=sampler)
+def test_run_arguments_are_explicit():
+    parameters = inspect.signature(Blackjax.sample).parameters
+    assert "jitter_initial_points" in parameters
+    assert "init" not in parameters
+    assert "backend" not in parameters
+    assert all(parameter.kind.name != "VAR_KEYWORD" for parameter in parameters.values())
