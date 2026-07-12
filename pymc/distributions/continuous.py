@@ -1072,6 +1072,17 @@ class Wald(PositiveContinuous):
             msg="mu > 0, lam > 0, alpha >= 0",
         )
 
+    def icdf(value, mu, lam, alpha):
+        res = pt.as_tensor_variable(pt.nan) + value * 0
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            mu > 0,
+            lam > 0,
+            alpha >= 0,
+            msg="mu > 0, lam > 0, alpha >= 0",
+        )
+
 
 class BetaClippedRV(BetaRV):
     @classmethod
