@@ -233,6 +233,12 @@ class TestMatchesScipy:
             {"p": Unit, "n": Rplus},
             lambda q, p, n: st.nbinom.ppf(q, n, p),
         )
+        # Large mean, where the icdf search relies on the mean-seeded bracket
+        q = np.array([0.001, 0.5, 0.999])
+        np.testing.assert_array_equal(
+            icdf(pm.NegativeBinomial.dist(n=10, p=1e-3), q).eval(),
+            st.nbinom.ppf(q, 10, 1e-3),
+        )
 
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
@@ -383,6 +389,14 @@ class TestMatchesScipy:
             pm.Poisson,
             {"mu": Rplus},
             st.poisson.ppf,
+        )
+        # Large mu, where the icdf search relies on the mean-seeded bracket.
+        # mu is kept at 1e4 because the C implementation of gammaincc (used by
+        # logcdf inside the search) loses precision for larger arguments.
+        q = np.array([0.001, 0.5, 0.999])
+        np.testing.assert_array_equal(
+            icdf(pm.Poisson.dist(mu=1e4), q).eval(),
+            st.poisson.ppf(q, 1e4),
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])

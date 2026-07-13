@@ -638,6 +638,7 @@ class Poisson(Discrete):
             lambda k: logcdf(dist, k),
             value,
             lower=0,
+            start=mu,
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
@@ -800,6 +801,7 @@ class NegativeBinomial(Discrete):
             lambda k: logcdf(dist, k),
             value,
             lower=0,
+            start=n * (1 - p) / p,
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(

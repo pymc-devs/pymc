@@ -89,7 +89,7 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
     return expr
 
 
-def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, max_iters=64):
+def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, start=None, max_iters=64):
     """Numerically invert a discrete CDF by bisecting the (monotone) ``logcdf``.
 
     Returns the smallest integer ``k`` in the support such that
@@ -118,6 +118,13 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, max_iters=64):
     upper : tensor_like, optional
         Largest value in the support. If ``None`` (unbounded support), a finite
         upper bracket is first found by geometric expansion.
+    start : tensor_like, optional
+        Initial guess for the upper bracket when ``upper`` is ``None``,
+        typically the distribution mean. The geometric expansion starts from
+        ``max(floor(start), lower + 1)`` instead of ``lower + 1``, so that
+        elements whose quantile is near or below the guess converge in fewer
+        effective iterations. The guess does not need to be accurate for the
+        result to be exact. Ignored when ``upper`` is given.
     max_iters : int
         Number of search iterations per phase. This needs to exceed ``log2`` of
         the largest reachable quantile; the default of 64 covers the full range
@@ -127,6 +134,11 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, max_iters=64):
     lower = pt.zeros_like(value) + pt.as_tensor_variable(lower, dtype="float64")
 
     if upper is None:
+        hi_init = lower + 1.0
+        if start is not None:
+            start = pt.zeros_like(value) + pt.as_tensor_variable(start, dtype="float64")
+            hi_init = pt.maximum(pt.floor(start), hi_init)
+
         # Phase 1: geometrically expand an upper bracket until cdf(hi) >= value.
         def expand(lo, hi):
             insufficient = logcdf(hi) < log_value
@@ -134,7 +146,7 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, max_iters=64):
 
         lo, hi = pytensor.scan(
             expand,
-            outputs_info=[lower, lower + 1.0],
+            outputs_info=[lower, hi_init],
             n_steps=max_iters,
             return_updates=False,
         )
