@@ -124,7 +124,9 @@ class TruncatedRV(SymbolicRandomVariable):
                 size=rv_.shape,
                 return_next_rng=True,
             )
-            truncated_rv_ = icdf(rv_, uniform_, warn_rvs=False)
+            # icdf graphs are always float-typed (they use nan for invalid values),
+            # so restore the base RV dtype for discrete distributions
+            truncated_rv_ = icdf(rv_, uniform_, warn_rvs=False).astype(rv_.type.dtype)
             return TruncatedRV(
                 base_rv_op=dist.owner.op,
                 inputs=graph_inputs_,
