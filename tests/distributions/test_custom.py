@@ -50,7 +50,7 @@ from pymc.exceptions import BlockModelAccessError
 from pymc.logprob import conditional_logp, logcdf, logp
 from pymc.model import Deterministic, Model
 from pymc.pytensorf import collect_default_updates
-from pymc.sampling import draw, sample, sample_posterior_predictive
+from pymc.sampling import StepSampler, draw, sample, sample_posterior_predictive
 from pymc.step_methods import Metropolis
 from pymc.testing import assert_support_point_is_expected
 
@@ -153,7 +153,7 @@ class TestCustomDist:
                 warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
                 # nutpie can't handle RNG in deterministics
                 # https://github.com/pymc-devs/nutpie/issues/4
-                sample(draws=5, tune=1, mp_ctx="spawn", nuts_sampler="pymc")
+                sample(draws=5, tune=1, sampler=StepSampler(mp_ctx="spawn"))
 
         cloudpickle.loads(cloudpickle.dumps(y))
         cloudpickle.loads(cloudpickle.dumps(y_dist))

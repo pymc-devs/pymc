@@ -132,6 +132,10 @@ class TestSamplerFunnel:
             self._capture_run_kwargs(n_init=1000)
         with pytest.raises(ValueError, match="`jitter_max_retries` is not supported"):
             self._capture_run_kwargs(jitter_max_retries=3)
+        with pytest.raises(ValueError, match="`mp_ctx` is not supported"):
+            self._capture_run_kwargs(mp_ctx="spawn")
+        with pytest.raises(ValueError, match="`progressbar_theme` is not supported"):
+            self._capture_run_kwargs(progressbar_theme="theme")
 
     def test_clashes(self):
         with pm.Model():

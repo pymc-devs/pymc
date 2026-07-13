@@ -897,6 +897,7 @@ def sample(
         chains = max(2, cores)
 
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
+    user_supplied_mp_ctx = mp_ctx is not None
     mp_ctx = _initialize_multiprocessing_context(
         mp_ctx, mode=compile_kwargs.get("mode"), quiet=quiet
     )
@@ -929,6 +930,16 @@ def sample(
             raise ValueError("A custom `trace` backend is not supported with `sampler`.")
         if callback is not None:
             raise ValueError("`callback` is not supported with `sampler`.")
+        if user_supplied_mp_ctx:
+            raise ValueError(
+                "`mp_ctx` is not supported with `sampler`. Configure it when "
+                "constructing the sampler, e.g. `pm.StepSampler(mp_ctx=...)`."
+            )
+        if progressbar_theme is not None:
+            raise ValueError(
+                "`progressbar_theme` is not supported with `sampler`. Configure it "
+                "when constructing the sampler."
+            )
         if init != "auto":
             raise ValueError(
                 "`init` is NUTS-specific and is not supported with `sampler`. "
