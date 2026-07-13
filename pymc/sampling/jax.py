@@ -510,8 +510,8 @@ def _postprocess_and_build_idata(
 ) -> DataTree:
     """Transform raw draws to the constrained space and assemble a ``DataTree``.
 
-    Shared by the JAX-based NUTS samplers and the external samplers in
-    ``pymc.sampling.external``.
+    Shared by the JAX-based NUTS samplers and the samplers in
+    ``pymc.sampling.samplers``.
     """
     if var_names is not None:
         filtered_var_names = [v for v in model.unobserved_value_vars if v.name in var_names]

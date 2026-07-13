@@ -42,7 +42,7 @@ from typing import Any, Literal
 
 import numpy as np
 
-from pymc.sampling.external.base import ExternalSampler, require_continuous_model
+from pymc.sampling.samplers.base import ExternalSampler, require_continuous_model
 from pymc.util import RandomState, _get_seeds_per_chain
 
 __all__ = ["Blackjax"]
@@ -108,8 +108,7 @@ def _import_blackjax():
         import blackjax
     except ImportError as err:
         raise ImportError(
-            "The Blackjax external sampler requires blackjax. Install it with "
-            "`pip install blackjax`."
+            "The Blackjax sampler requires blackjax. Install it with `pip install blackjax`."
         ) from err
     return blackjax
 
@@ -227,8 +226,10 @@ class Blackjax(ExternalSampler):
         algorithms without a standard tuner).
     target_accept : float, optional
         Target acceptance rate for adaptation schemes that support it.
-    model : Model, optional
-        Model to sample from. Taken from the model context if not provided.
+    jitter_initial_points : bool, default True
+        Add jitter to the initial points.
+    jitter_max_retries : int, default 10
+        Maximum retries when jittered initial points have invalid logp.
     chain_method : "parallel" or "vectorized", default "parallel"
         Whether chains run under ``jax.pmap`` or ``jax.vmap``.
     postprocessing_backend : "cpu" or "gpu", optional
@@ -244,6 +245,13 @@ class Blackjax(ExternalSampler):
         :meth:`get_kwargs` to discover all accepted parameters and their
         defaults. Parameters passed explicitly override adapted values.
 
+    Notes
+    -----
+    The constructor is algorithm configuration only and does not touch the
+    model; the model and run configuration arrive at sample time. Prefer the
+    per-algorithm entry points: ``pm.blackjax.mclmc(...)`` constructs this
+    class, and ``pm.blackjax.mclmc.sample(...)`` samples in a single call.
+
     Examples
     --------
     .. code-block:: python
@@ -254,8 +262,12 @@ class Blackjax(ExternalSampler):
             x = pm.Normal("x", shape=3)
             y = pm.Normal("y", mu=x.sum(), observed=1.0)
 
-            idata = pm.sample(external_sampler=pm.external.Blackjax("mclmc"))
+            idata = pm.sample(sampler=pm.blackjax.mclmc())
+            # or, equivalently, in one flat call:
+            idata = pm.blackjax.mclmc.sample(model=model)
     """
+
+    package = "blackjax"
 
     def __init__(
         self,
@@ -263,14 +275,14 @@ class Blackjax(ExternalSampler):
         *,
         adaptation: str | None | Literal["auto"] = "auto",
         target_accept: float | None = None,
-        model=None,
+        jitter_initial_points: bool = True,
+        jitter_max_retries: int = 10,
         chain_method: Literal["parallel", "vectorized"] = "parallel",
         postprocessing_backend: Literal["cpu", "gpu"] | None = None,
         keep_untransformed: bool = False,
         **kwargs,
     ):
-        super().__init__(model)
-        require_continuous_model(self.model, sampler_name="Blackjax")
+        super().__init__()
         blackjax = _import_blackjax()
 
         self.algorithm_name, self._algorithm = _resolve_algorithm(algorithm)
@@ -336,9 +348,11 @@ class Blackjax(ExternalSampler):
             raise ValueError(
                 f"blackjax.{self.algorithm_name} with adaptation={adaptation!r} "
                 f"requires explicit values for {missing}, e.g. "
-                f"`pm.external.Blackjax({self.algorithm_name!r}, {missing[0]}=...)`."
+                f"`pm.blackjax.{self.algorithm_name}({missing[0]}=...)`."
             )
 
+        self.jitter_initial_points = jitter_initial_points
+        self.jitter_max_retries = jitter_max_retries
         self.chain_method = chain_method
         self.postprocessing_backend = postprocessing_backend
         self.keep_untransformed = keep_untransformed
@@ -360,28 +374,6 @@ class Blackjax(ExternalSampler):
                 for name, default in self._adaptation_params.items()
             },
         }
-
-    @staticmethod
-    def _resolve_initial_point_jitter(init: str, jitter_initial_points: bool | None) -> bool:
-        """Reduce ``pm.sample``'s NUTS-specific ``init`` string to what applies here.
-
-        Blackjax algorithms use their own adaptation (or explicit parameters),
-        so of PyMC's initialization strategies only the choice between jittered
-        and non-jittered initial points carries over.
-        """
-        if jitter_initial_points is not None:
-            return jitter_initial_points
-        if init == "auto" or init.startswith("jitter+"):
-            return True
-        if init in ("adapt_diag", "adapt_diag_grad", "adapt_full"):
-            return False
-        warnings.warn(
-            f"`init={init!r}` has no equivalent for the Blackjax sampler and is ignored. "
-            "Use `jitter_initial_points` to control initial point jittering.",
-            UserWarning,
-            stacklevel=3,
-        )
-        return True
 
     @staticmethod
     def _validate_compile_kwargs(compile_kwargs: dict | None) -> None:
@@ -408,43 +400,34 @@ class Blackjax(ExternalSampler):
                 "`backend` argument) is not supported."
             )
 
-    def sample(
+    def sample_from_init(
         self,
         *,
-        tune: int = 1000,
+        model=None,
         draws: int = 1000,
+        tune: int = 1000,
         chains: int = 4,
+        cores: int | None = None,
         initvals=None,
         random_seed: RandomState = None,
         progressbar: bool = True,
         quiet: bool = False,
+        discard_tuned_samples: bool = True,
+        keep_warning_stat: bool = False,
         var_names: Sequence[str] | None = None,
         idata_kwargs: dict | None = None,
         compute_convergence_checks: bool = True,
-        init: str = "auto",
-        jitter_initial_points: bool | None = None,
-        jitter_max_retries: int = 10,
-        discard_tuned_samples: bool = True,
-        keep_warning_stat: bool = False,
         compile_kwargs: dict | None = None,
     ):
-        """Run the configured BlackJAX algorithm.
+        """Run the configured BlackJAX algorithm on ``model``.
 
-        Algorithm and adaptation options belong to the constructor; this method
-        only takes run-level arguments. ``pm.sample(external_sampler=...)``
-        forwards its arguments here verbatim, and each has an explicit
-        disposition for this sampler:
+        Algorithm and adaptation options belong to the constructor; this
+        method takes the shared run configuration (see
+        :meth:`Sampler.sample_from_init`), which ``pm.sample(sampler=...)``
+        forwards verbatim. Dispositions specific to this sampler:
 
-        - ``tune``, ``draws``, ``chains``, ``initvals``, ``random_seed``,
-          ``progressbar``, ``quiet``, ``var_names``, ``idata_kwargs``,
-          ``compute_convergence_checks``, ``jitter_max_retries``: honored.
-        - ``init``: reinterpreted. PyMC's init strings select a NUTS
-          initialization strategy; blackjax algorithms run their own
-          adaptation, so only the jitter/no-jitter part applies to the initial
-          points (``"jitter+..."`` jitters, ``"adapt_..."`` does not). Other
-          strategies (``"advi..."``, ``"map"``) have no equivalent and warn.
-          ``jitter_initial_points`` sets the same thing directly and takes
-          precedence.
+        - ``cores``: unused. Chain parallelism is governed by the available
+          jax devices and the ``chain_method`` constructor argument.
         - ``compile_kwargs``: validated. The model logp is always compiled
           with the jax backend here, so requesting a different ``mode`` (e.g.
           via ``pm.sample(backend="numba")``) raises instead of being
@@ -454,7 +437,10 @@ class Blackjax(ExternalSampler):
         - ``keep_warning_stat=True``: warns. Blackjax does not emit PyMC's
           ``SamplerWarning`` stat.
         """
-        jitter = self._resolve_initial_point_jitter(init, jitter_initial_points)
+        from pymc.model.core import modelcontext
+
+        model = modelcontext(model)
+        require_continuous_model(model, sampler_name="Blackjax")
         self._validate_compile_kwargs(compile_kwargs)
         if not discard_tuned_samples:
             warnings.warn(
@@ -488,14 +474,14 @@ class Blackjax(ExternalSampler):
 
         (random_seed,) = _get_seeds_per_chain(random_seed, 1)
 
-        logp_fn = get_jaxified_logp(self.model)
+        logp_fn = get_jaxified_logp(model)
         initial_points = _get_batched_jittered_initial_points(
-            model=self.model,
+            model=model,
             chains=chains,
             initvals=initvals,
             random_seed=random_seed,
-            jitter=jitter,
-            jitter_max_retries=jitter_max_retries,
+            jitter=self.jitter_initial_points,
+            jitter_max_retries=self.jitter_max_retries,
             logp_fn=logp_fn,
         )
         if chains == 1:
@@ -537,7 +523,7 @@ class Blackjax(ExternalSampler):
         tic2 = datetime.now()
 
         return _postprocess_and_build_idata(
-            model=self.model,
+            model=model,
             raw_mcmc_samples=raw_mcmc_samples,
             sample_stats=sample_stats,
             library=blackjax,
@@ -619,29 +605,94 @@ class Blackjax(ExternalSampler):
         return samples, stats
 
 
-def _make_algorithm_factory(name: str, algorithm) -> Callable[..., Blackjax]:
-    def factory(**kwargs) -> Blackjax:
-        return Blackjax(algorithm, **kwargs)
+class AlgorithmEntry:
+    """Both user surfaces of one blackjax algorithm in a single object.
 
-    factory.__name__ = name
-    factory.__qualname__ = name
-    default_adaptation = _DEFAULT_ADAPTATION.get(name)
-    factory.__doc__ = (
-        f"Create a :class:`~pymc.sampling.external.blackjax.Blackjax` external sampler "
-        f"that draws with ``blackjax.{name}`` (default adaptation: {default_adaptation!r}).\n\n"
-        "Keyword arguments are routed to the algorithm or the adaptation procedure; "
-        "call ``.get_kwargs()`` on the returned sampler to list them all.\n\n"
-        f"Usage: ``pm.sample(external_sampler=pm.external.blackjax.{name}(...))``"
-    )
-    return factory
+    Calling the entry configures a sampler for the ``pm.sample`` funnel::
+
+        pm.sample(sampler=pm.blackjax.nuts(target_accept=0.9))
+
+    Calling ``.sample`` is the flat entry point — algorithm and run arguments
+    in one call::
+
+        pm.blackjax.nuts.sample(model=model, target_accept=0.9, draws=1000)
+
+    The flat entry point is defined in terms of the first, so the two
+    surfaces cannot disagree.
+    """
+
+    def __init__(self, name: str, algorithm):
+        self._name = name
+        self._algorithm = algorithm
+        default_adaptation = _DEFAULT_ADAPTATION.get(name)
+        self.__doc__ = (
+            f"Sample with ``blackjax.{name}`` "
+            f"(default adaptation: {default_adaptation!r}).\n\n"
+            f"``pm.blackjax.{name}(**algorithm_kwargs)`` returns a configured "
+            f":class:`Blackjax` sampler for ``pm.sample(sampler=...)``; "
+            f"``pm.blackjax.{name}.sample(...)`` draws in a single flat call. "
+            "Keyword arguments are routed to the algorithm or the adaptation "
+            "procedure; call ``.get_kwargs()`` on a configured sampler to "
+            "list them all."
+        )
+
+    def __repr__(self) -> str:
+        return f"<pymc.blackjax.{self._name}>"
+
+    def __call__(self, **algorithm_kwargs) -> Blackjax:
+        return Blackjax(self._algorithm, **algorithm_kwargs)
+
+    def sample(
+        self,
+        *,
+        model=None,
+        draws: int = 1000,
+        tune: int = 1000,
+        chains: int = 4,
+        cores: int | None = None,
+        initvals=None,
+        random_seed: RandomState = None,
+        progressbar: bool = True,
+        quiet: bool = False,
+        discard_tuned_samples: bool = True,
+        keep_warning_stat: bool = False,
+        var_names: Sequence[str] | None = None,
+        idata_kwargs: dict | None = None,
+        compute_convergence_checks: bool = True,
+        compile_kwargs: dict | None = None,
+        **algorithm_kwargs,
+    ):
+        """Configure and run the algorithm in one flat call.
+
+        Keyword arguments beyond the shared run configuration are passed to
+        the :class:`Blackjax` constructor (algorithm parameters, adaptation
+        options, ``target_accept``, ``jitter_initial_points``, ...).
+        """
+        return self(**algorithm_kwargs).sample_from_init(
+            model=model,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=cores,
+            initvals=initvals,
+            random_seed=random_seed,
+            progressbar=progressbar,
+            quiet=quiet,
+            discard_tuned_samples=discard_tuned_samples,
+            keep_warning_stat=keep_warning_stat,
+            var_names=var_names,
+            idata_kwargs=idata_kwargs,
+            compute_convergence_checks=compute_convergence_checks,
+            compile_kwargs=compile_kwargs,
+        )
 
 
 def __getattr__(name: str):
-    """Expose every supported blackjax algorithm as a per-algorithm factory.
+    """Expose every supported blackjax algorithm as an :class:`AlgorithmEntry`.
 
-    ``pm.external.blackjax.mclmc(**kwargs)`` is equivalent to
-    ``pm.external.Blackjax("mclmc", **kwargs)``. The available names are
-    enumerated dynamically from the installed blackjax version.
+    ``pm.blackjax.mclmc(**kwargs)`` configures a :class:`Blackjax` sampler;
+    ``pm.blackjax.mclmc.sample(...)`` samples in one flat call. The available
+    names are enumerated dynamically from the installed blackjax version.
     """
     if name.startswith("_"):
         raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
@@ -651,7 +702,7 @@ def __getattr__(name: str):
             resolved_name, resolved = _resolve_algorithm(name)
         except ValueError as err:
             raise AttributeError(str(err)) from None
-        return _make_algorithm_factory(resolved_name, resolved)
+        return AlgorithmEntry(resolved_name, resolved)
     raise AttributeError(
         f"module {__name__!r} has no attribute {name!r}. "
         f"Available blackjax algorithms: {_available_algorithms(blackjax)}"

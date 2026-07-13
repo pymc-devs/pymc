@@ -67,9 +67,9 @@ from pymc.progress_bar import (
     default_progress_theme,
 )
 from pymc.pytensorf import resolve_backend_compile_kwargs
-from pymc.sampling.external.base import ExternalSampler
 from pymc.sampling.parallel import Draw, _cpu_count, _initialize_multiprocessing_context
 from pymc.sampling.population import _sample_population
+from pymc.sampling.samplers.base import Sampler
 from pymc.stats.convergence import (
     log_warning_stats,
     log_warnings,
@@ -550,7 +550,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
-    external_sampler: ExternalSampler | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -584,7 +584,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
-    external_sampler: ExternalSampler | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -618,7 +618,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
-    external_sampler: ExternalSampler | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -693,16 +693,17 @@ def sample(
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
         If ``None`` (default), "nutpie" is used if installed and can be compiled to the desired backend.
-    external_sampler : ExternalSampler, optional
-        An external sampler instance that samples the whole model, e.g.
-        ``pm.external.Blackjax("mclmc")`` or ``pm.external.blackjax.mclmc()``.
-        Cannot be combined with ``step`` or ``nuts_sampler``. Sampler-specific
-        options are set when constructing the instance, not through ``pm.sample``.
-        ``trace``, ``callback`` and ``return_inferencedata=False`` are not
-        supported. All other arguments are forwarded to the sampler, which
-        documents per argument whether it is honored, reinterpreted, ignored
-        with a warning, or rejected — see the ``sample`` method of the
-        external sampler class for its argument dispositions.
+    sampler : Sampler, optional
+        A configured sampler instance that samples the whole model, e.g.
+        ``pm.blackjax.mclmc()``. Cannot be combined with ``step`` or
+        ``nuts_sampler``. The constructor takes the algorithm configuration;
+        ``pm.sample`` contributes only the shared run configuration, which it
+        forwards to the sampler's ``sample_from_init`` method. NUTS-specific
+        arguments (``init``, ``n_init``, ``jitter_max_retries``) and
+        ``trace``/``callback``/``return_inferencedata=False`` are rejected.
+        Equivalent to the sampler's flat entry point (e.g.
+        ``pm.blackjax.mclmc.sample(...)``), which combines algorithm and run
+        arguments in a single call.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -906,52 +907,60 @@ def sample(
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
 
-    if external_sampler is not None:
-        # Only sampler-independent constraints are enforced here. All other
-        # `pm.sample` arguments are forwarded verbatim: each external sampler
-        # decides per argument whether to honor, reinterpret, warn about, or
-        # reject it (see `ExternalSampler.sample`), because their meaning is
-        # sampler-specific (e.g. `init` describes NUTS initialization; nutpie
-        # consumes `compile_kwargs` while jax-based samplers only accept jax).
+    if sampler is not None:
+        # `pm.sample(sampler=...)` is sugar over the sampler's own
+        # `sample_from_init`: only sampler-independent constraints are
+        # enforced here, and only the shared run-level configuration is
+        # forwarded. Sampler-specific arguments — including the NUTS-specific
+        # `init`, `n_init` and `jitter_max_retries` — belong to the sampler's
+        # constructor (e.g. `pm.blackjax.nuts(jitter_initial_points=False)`)
+        # and are rejected rather than forwarded for reinterpretation.
         if step is not None:
-            raise ValueError("`step` and `external_sampler` cannot be used together.")
+            raise ValueError("`step` and `sampler` cannot be used together.")
         if nuts_sampler is not None:
-            raise ValueError("`nuts_sampler` and `external_sampler` cannot be used together.")
-        if external_sampler.model is not model:
-            raise ValueError(
-                "The model of `external_sampler` does not match the model being sampled."
-            )
+            raise ValueError("`nuts_sampler` and `sampler` cannot be used together.")
         if not return_inferencedata:
-            raise ValueError(
-                "`return_inferencedata=False` is not supported with `external_sampler`."
-            )
+            raise ValueError("`return_inferencedata=False` is not supported with `sampler`.")
         if trace is not None:
-            raise ValueError("A custom `trace` backend is not supported with `external_sampler`.")
+            raise ValueError("A custom `trace` backend is not supported with `sampler`.")
         if callback is not None:
-            raise ValueError("`callback` is not supported with `external_sampler`.")
+            raise ValueError("`callback` is not supported with `sampler`.")
+        if init != "auto":
+            raise ValueError(
+                "`init` is NUTS-specific and is not supported with `sampler`. "
+                "Configure initialization when constructing the sampler, e.g. "
+                "`pm.blackjax.nuts(jitter_initial_points=False)`."
+            )
+        if n_init != 200_000:
+            raise ValueError("`n_init` is NUTS-specific and is not supported with `sampler`.")
+        if jitter_max_retries != 10:
+            raise ValueError(
+                "`jitter_max_retries` is not supported with `sampler`. "
+                "Configure it when constructing the sampler."
+            )
         if kwargs:
             raise TypeError(
-                f"Arguments {sorted(kwargs)} are not supported together with `external_sampler`. "
+                f"Arguments {sorted(kwargs)} are not supported together with `sampler`. "
                 "Configure the sampler when constructing it instead, e.g. "
-                "`pm.external.Blackjax(target_accept=0.9)`."
+                "`pm.blackjax.nuts(target_accept=0.9)`."
             )
 
         with joined_blas_limiter():
-            return external_sampler.sample(
-                tune=tune if tune is not None else 1000,
+            return sampler.sample_from_init(
+                model=model,
                 draws=draws,
+                tune=tune if tune is not None else 1000,
                 chains=chains,
+                cores=cores,
                 initvals=initvals,
                 random_seed=random_seed_list[0],
-                progressbar=progress_bool,
+                progressbar=progressbar,
                 quiet=quiet,
+                discard_tuned_samples=discard_tuned_samples,
+                keep_warning_stat=keep_warning_stat,
                 var_names=var_names,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
-                init=init,
-                jitter_max_retries=jitter_max_retries,
-                discard_tuned_samples=discard_tuned_samples,
-                keep_warning_stat=keep_warning_stat,
                 compile_kwargs=compile_kwargs,
             )
 

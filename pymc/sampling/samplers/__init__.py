@@ -11,12 +11,12 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-"""External whole-model samplers that can be passed to ``pm.sample(external_sampler=...)``.
+"""Whole-model samplers that can be passed to ``pm.sample(sampler=...)``.
 
 Based on the API drafted in https://github.com/pymc-devs/pymc/pull/7880.
 """
 
-from pymc.sampling.external.base import ExternalSampler
-from pymc.sampling.external.blackjax import Blackjax
+from pymc.sampling.samplers.base import ExternalSampler, Sampler
+from pymc.sampling.samplers.blackjax import Blackjax
 
-__all__ = ["Blackjax", "ExternalSampler"]
+__all__ = ["Blackjax", "ExternalSampler", "Sampler"]
