@@ -45,7 +45,7 @@ class Sampler(ABC):
         *,
         model: Model | None = None,
         draws: int = 1000,
-        tune: int = 1000,
+        tune: int | None = 1000,
         chains: int | None = None,
         cores: int | None = None,
         initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -120,7 +120,7 @@ class SamplerEntry:
         *,
         model: Model | None = None,
         draws: int = 1000,
-        tune: int = 1000,
+        tune: int | None = 1000,
         chains: int | None = None,
         cores: int | None = None,
         initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -132,14 +132,19 @@ class SamplerEntry:
         var_names: Sequence[str] | None = None,
         idata_kwargs: dict[str, Any] | None = None,
         compute_convergence_checks: bool = True,
+        backend: str | None = None,
         compile_kwargs: dict[str, Any] | None = None,
         **algorithm_kwargs,
     ):
         """Configure and run the sampler in one flat call.
 
         Keyword arguments beyond the shared run configuration are passed to
-        the sampler's constructor.
+        the sampler's constructor. ``backend`` is resolved into
+        ``compile_kwargs["mode"]``, exactly as in ``pm.sample``.
         """
+        from pymc.pytensorf import resolve_backend_compile_kwargs
+
+        compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
         return self(**algorithm_kwargs).sample_from_init(
             model=model,
             draws=draws,

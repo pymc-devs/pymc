@@ -24,7 +24,7 @@ from pymc.sampling.samplers.base import (
     SamplerEntry,
     require_continuous_model,
 )
-from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.util import RandomState, get_random_generator
 
 __all__ = ["Nutpie", "nuts"]
 
@@ -53,7 +53,7 @@ class Nutpie(ExternalSampler):
         *,
         model=None,
         draws: int = 1000,
-        tune: int = 1000,
+        tune: int | None = 1000,
         chains: int | None = None,
         cores: int | None = None,
         initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -89,8 +89,12 @@ class Nutpie(ExternalSampler):
             chains = 4
         if cores is None:
             cores = min(4, chains)
+        if tune is None:
+            tune = 1000
 
-        (seed,) = _get_seeds_per_chain(random_seed, 1)
+        # Derive one master seed without reinterpreting array-like input as a
+        # per-chain seed list (which pm.sample accepts and documents).
+        seed = int(get_random_generator(random_seed).integers(2**30))
         return _sample_external_nuts(
             sampler="nutpie",
             draws=draws,
@@ -101,7 +105,7 @@ class Nutpie(ExternalSampler):
             initvals=initvals,
             model=model,
             var_names=var_names,
-            progressbar=progressbar,
+            progressbar=False if quiet else progressbar,
             progressbar_theme=self.progressbar_theme,
             quiet=quiet,
             compute_convergence_checks=compute_convergence_checks,

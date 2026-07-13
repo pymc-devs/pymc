@@ -177,7 +177,9 @@ class TestSamplerFunnel:
             name for name, p in entry_params.items() if p.kind is inspect.Parameter.VAR_KEYWORD
         ]
         assert var_keyword == ["algorithm_kwargs"]
-        assert set(entry_params) - {"algorithm_kwargs"} == set(run_params)
+        # `backend` is deliberate extra surface: the flat entry resolves it
+        # into compile_kwargs like pm.sample does
+        assert set(entry_params) - {"algorithm_kwargs", "backend"} == set(run_params)
 
 
 class TestDeprecations:
@@ -225,6 +227,71 @@ class TestDeprecations:
                     random_seed=1,
                     compute_convergence_checks=False,
                 )
+
+
+class TestAPIEquivalenceRegressions:
+    """Replacements must accept what the deprecated pm.sample arguments accepted."""
+
+    def test_array_like_random_seed(self):
+        pytest.importorskip("numpyro")
+        with pm.Model() as model:
+            pm.Normal("x", shape=3)
+        captured = {}
+        with mock.patch(
+            "pymc.sampling.jax.sample_jax_nuts", side_effect=lambda **kw: captured.update(kw)
+        ):
+            pm.numpyro.nuts().sample_from_init(model=model, chains=2, random_seed=[1, 2])
+        assert isinstance(captured["random_seed"], int)
+
+        from pymc.sampling.samplers.nutpie import Nutpie
+
+        pytest.importorskip("nutpie")
+        captured.clear()
+        with mock.patch(
+            "pymc.sampling.mcmc._sample_external_nuts",
+            side_effect=lambda **kw: captured.update(kw),
+        ):
+            Nutpie().sample_from_init(model=model, chains=2, random_seed=[1, 2])
+        assert isinstance(captured["random_seed"][0], int)
+
+    def test_tune_none_reaches_step_defaults(self):
+        with pm.Model() as model:
+            pm.Normal("x", shape=3)
+        captured = {}
+        with mock.patch(
+            "pymc.sampling.mcmc._sample_with_step_methods",
+            side_effect=lambda **kw: captured.update(kw),
+        ):
+            StepSampler().sample_from_init(model=model, tune=None)
+            assert captured["tune"] is None
+            with model:
+                pm.sample(sampler=StepSampler())  # pm.sample's tune default is None
+            assert captured["tune"] is None
+
+    def test_flat_entry_resolves_backend(self):
+        pytest.importorskip("numpyro")
+        from pymc.sampling.samplers.jax_nuts import NumpyroNUTS
+
+        with pm.Model() as model:
+            pm.Normal("x", shape=3)
+        with mock.patch.object(NumpyroNUTS, "sample_from_init", return_value=None) as recorded:
+            pm.numpyro.nuts.sample(model=model, backend="jax", target_accept=0.9)
+        compile_kwargs = recorded.call_args.kwargs["compile_kwargs"]
+        assert "mode" in compile_kwargs
+
+    def test_nutpie_quiet_disables_progressbar(self):
+        pytest.importorskip("nutpie")
+        from pymc.sampling.samplers.nutpie import Nutpie
+
+        with pm.Model() as model:
+            pm.Normal("x", shape=3)
+        captured = {}
+        with mock.patch(
+            "pymc.sampling.mcmc._sample_external_nuts",
+            side_effect=lambda **kw: captured.update(kw),
+        ):
+            Nutpie().sample_from_init(model=model, quiet=True)
+        assert captured["progressbar"] is False
 
 
 class TestExternalSamplerDependencies:

@@ -93,7 +93,7 @@ class StepSampler(Sampler):
         *,
         model=None,
         draws: int = 1000,
-        tune: int = 1000,
+        tune: int | None = 1000,
         chains: int | None = None,
         cores: int | None = None,
         initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -132,8 +132,8 @@ class StepSampler(Sampler):
             cores = min(4, _cpu_count())
         if chains is None:
             chains = max(2, cores)
-        if tune is None:
-            tune = 1000
+        # tune=None is forwarded: the engine resolves it per step method
+        # via `get_default_tune_steps`.
 
         compile_kwargs = resolve_backend_compile_kwargs(None, compile_kwargs)
         mp_ctx = _initialize_multiprocessing_context(

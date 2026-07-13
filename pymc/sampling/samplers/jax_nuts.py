@@ -20,7 +20,7 @@ from typing import Any, Literal
 
 from pymc.initial_point import StartDict
 from pymc.sampling.samplers.base import ExternalSampler, require_continuous_model
-from pymc.util import RandomState, _get_seeds_per_chain
+from pymc.util import RandomState, get_random_generator
 
 __all__ = ["BlackjaxNUTS", "NumpyroNUTS"]
 
@@ -92,7 +92,7 @@ class _JAXNUTS(ExternalSampler):
         *,
         model=None,
         draws: int = 1000,
-        tune: int = 1000,
+        tune: int | None = 1000,
         chains: int | None = None,
         cores: int | None = None,
         initvals: StartDict | Sequence[StartDict | None] | None = None,
@@ -141,7 +141,9 @@ class _JAXNUTS(ExternalSampler):
 
         from pymc.sampling.jax import sample_jax_nuts
 
-        (seed,) = _get_seeds_per_chain(random_seed, 1)
+        # Derive one master seed without reinterpreting array-like input as a
+        # per-chain seed list (which pm.sample accepts and documents).
+        seed = int(get_random_generator(random_seed).integers(2**30))
         return sample_jax_nuts(
             draws=draws,
             tune=tune,
