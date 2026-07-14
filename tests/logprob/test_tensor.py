@@ -45,6 +45,8 @@ from pytensor.graph import RewriteDatabaseQuery
 from pytensor.tensor.random.type import random_generator_type
 from scipy import stats as st
 
+import pymc as pm
+
 from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.testing import assert_no_rvs
@@ -764,4 +766,125 @@ class TestMeasurableIdentityOps:
         np.testing.assert_allclose(
             logp(y, y_vv).eval({y_vv: 0.7}),
             st.norm(0.5, 1).logpdf(0.7),
+        )
+
+
+class TestMeasurableJoinSplitDims:
+    def test_join_dims(self):
+        rng = np.random.default_rng(163)
+        x = pt.random.normal(pt.arange(6).reshape((2, 3)), 1, size=(2, 3))
+        y = pt.join_dims(x)
+        y_vv = y.clone()
+
+        y_test = rng.normal(size=6)
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm(np.arange(6), 1).logpdf(y_test),
+        )
+
+    def test_split_dims(self):
+        rng = np.random.default_rng(164)
+        x = pt.random.normal(pt.arange(6), 1, size=(6,))
+        y = pt.split_dims(x, shape=(2, 3), axis=0)
+        y_vv = y.clone()
+
+        y_test = rng.normal(size=(2, 3))
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm(np.arange(6).reshape((2, 3)), 1).logpdf(y_test),
+        )
+
+    @pytest.mark.parametrize("transform_first", (False, True))
+    def test_elemwise_chain(self, transform_first):
+        rng = np.random.default_rng(165)
+        x = pt.random.normal(pt.arange(6).reshape((2, 3)), 1, size=(2, 3))
+        y = pt.join_dims(pt.exp(x)) if transform_first else pt.exp(pt.join_dims(x))
+        y_vv = y.clone()
+
+        y_test = np.abs(rng.normal(size=6)) + 0.1
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm(np.arange(6), 1).logpdf(np.log(y_test)) - np.log(y_test),
+        )
+
+    def test_multivariate_directly_valued(self):
+        rng = np.random.default_rng(166)
+
+        # The joined region extends into the support dimension consumed by the logp,
+        # so only the remaining batch dimension is re-joined
+        x = pt.random.dirichlet(pt.ones(3), size=(2,))
+        y = pt.join_dims(x)
+        y_vv = y.clone()
+        y_test = rng.dirichlet(np.ones(3), size=2).ravel()
+        y_logp = logp(y, y_vv).eval({y_vv: y_test})
+        assert y_logp.shape == (2,)
+        np.testing.assert_allclose(
+            y_logp,
+            st.dirichlet(np.ones(3)).logpdf(y_test.reshape((2, 3)).T),
+        )
+
+        # The split dimension is the support dimension itself
+        x2 = pt.random.dirichlet(pt.ones(6))
+        y2 = pt.split_dims(x2, shape=(2, 3), axis=0)
+        y2_vv = y2.clone()
+        y2_test = rng.dirichlet(np.ones(6)).reshape((2, 3))
+        y2_logp = logp(y2, y2_vv).eval({y2_vv: y2_test})
+        assert y2_logp.shape == ()
+        np.testing.assert_allclose(
+            y2_logp,
+            st.dirichlet(np.ones(6)).logpdf(y2_test.ravel()),
+        )
+
+    def test_multivariate_indirect_join_within_batch(self):
+        # A join contained in the batch axes leaves the support axes rightmost,
+        # so it is measurable even behind other operations
+        rng = np.random.default_rng(168)
+        x = pt.random.dirichlet(pt.ones(3), size=(2, 2))
+        y = pt.exp(pt.join_dims(x, start_axis=0, n_axes=2))
+        y_vv = y.clone()
+        y_test = np.exp(rng.dirichlet(np.ones(3), size=(2, 2)).reshape((4, 3)))
+        y_logp = logp(y, y_vv).eval({y_vv: y_test})
+        assert y_logp.shape == (4,)
+        np.testing.assert_allclose(
+            y_logp,
+            st.dirichlet(np.ones(3)).logpdf(np.log(y_test).T) - np.log(y_test).sum(-1),
+        )
+
+    def test_multivariate_indirect_join_within_support(self):
+        # A join contained in the support axes just deflates them into fewer
+        # rightmost axes, so it is measurable even behind other operations
+        rng = np.random.default_rng(169)
+        x = pm.MatrixNormal.dist(mu=np.zeros((2, 3)), rowcov=np.eye(2), colcov=np.eye(3))
+        y = pt.exp(pt.join_dims(x, start_axis=0, n_axes=2))
+        y_vv = y.clone()
+        y_test = np.exp(rng.normal(size=6))
+        # With identity covariances the matrix normal entries are iid standard normal
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm.logpdf(np.log(y_test)).sum() - np.log(y_test).sum(),
+        )
+
+    # batch size 1 is the treacherous case: if the straddling join were wrongly
+    # claimed, the truncated logp would silently broadcast against the fused value
+    # dimension instead of raising a shape error
+    @pytest.mark.parametrize("batch_size", (1, 2))
+    def test_multivariate_indirect_straddling_join_not_measurable(self, batch_size):
+        # A join straddling the batch/support boundary merges batch and support axes;
+        # it is only measurable when directly valued
+        x = pt.random.dirichlet(pt.ones(3), size=(batch_size,))
+        y = pt.exp(pt.join_dims(x))
+        with pytest.raises(NotImplementedError):
+            logp(y, y.clone())
+
+    def test_multivariate_indirect_split(self):
+        # Splitting only inflates a single axis, so it is measurable even for
+        # multivariate variables behind other operations
+        rng = np.random.default_rng(167)
+        x = pt.random.dirichlet(pt.ones(6))
+        y = pt.exp(pt.split_dims(x, shape=(2, 3), axis=0))
+        y_vv = y.clone()
+        y_test = np.exp(rng.dirichlet(np.ones(6)).reshape((2, 3)))
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.dirichlet(np.ones(6)).logpdf(np.log(y_test).ravel()) - np.log(y_test).sum(),
         )
