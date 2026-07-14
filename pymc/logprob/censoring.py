@@ -38,52 +38,133 @@
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply
+from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
+from pytensor.scalar.basic import Ceil, Clip, Floor, Maximum, RoundHalfToEven
 from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
+from pytensor.tensor.math import ceil, clip, floor, maximum, minimum, round_half_to_even
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
-from pymc.logprob.abstract import MeasurableElemwise, _logccdf_helper, _logcdf, _logprob
+from pymc.logprob.abstract import (
+    MeasurableElemwise,
+    _icdf,
+    _icdf_helper,
+    _logccdf_helper,
+    _logcdf,
+    _logcdf_helper,
+    _logprob,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import CheckParameterValue, filter_measurable_variables
+from pymc.logprob.utils import (
+    CheckParameterValue,
+    check_potential_measurability,
+    filter_measurable_variables,
+)
 
 
 class MeasurableClip(MeasurableElemwise):
-    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
+    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph.
+
+    A bound that is the clipped variable itself marks that side as unbounded, which is
+    what the logprob methods read it back as.
+    """
 
     valid_scalar_types = (Clip,)
-
-
-measurable_clip = MeasurableClip(scalar_clip)
 
 
 @node_rewriter(tracks=[clip])
 def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
-    if not filter_measurable_variables(node.inputs):
-        return None
-
+    lower_bound: Variable | None
+    upper_bound: Variable | None
     base_var, lower_bound, upper_bound = node.inputs
 
-    # Replace bounds by `+-inf` if `y = clip(x, x, ?)` or `y=clip(x, ?, x)`
-    # This is used in `clip_logprob` to generate a more succinct logprob graph
-    # for one-sided clipped random variables
-    lower_bound = lower_bound if (lower_bound is not base_var) else pt.constant(-np.inf)
-    upper_bound = upper_bound if (upper_bound is not base_var) else pt.constant(np.inf)
+    # Clipping a constant by measurable bounds is an order statistic, not censoring
+    if not filter_measurable_variables([base_var]):
+        return None
 
-    clipped_rv = measurable_clip.make_node(base_var, lower_bound, upper_bound).outputs[0]
+    # A bound that is the clipped variable itself declares one-sided clipping
+    # (`y = clip(x, x, ub)`), as do literal +-inf constants
+    if lower_bound is base_var or (
+        isinstance(lower_bound, TensorConstant) and np.all(np.isneginf(lower_bound.value))
+    ):
+        lower_bound = None
+    if upper_bound is base_var or (
+        isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))
+    ):
+        upper_bound = None
+
+    # Fuse clips of clips into a single clip, so that e.g. two-sided censoring written
+    # as maximum(minimum(x, ub), lb) becomes one node. Mass pooled at an inner bound
+    # either stays there when it lies inside the outer interval, or is re-pooled at
+    # the outer bound, so the bounds combine with maximum/minimum (constant bounds
+    # fold; crossed bounds are caught by the CheckParameterValue in the logprob)
+    if isinstance(base_var.owner.op, MeasurableClip):
+        inner_base, inner_lower, inner_upper = base_var.owner.inputs
+        if inner_lower is not inner_base:
+            lower_bound = (
+                inner_lower if lower_bound is None else pt.maximum(lower_bound, inner_lower)
+            )
+        if inner_upper is not inner_base:
+            upper_bound = (
+                inner_upper if upper_bound is None else pt.minimum(upper_bound, inner_upper)
+            )
+        base_var = inner_base
+
+    # The variable itself is used as the unbounded sentinel because, unlike +-inf
+    # constants, it does not upcast discrete variables
+    if lower_bound is None:
+        lower_bound = base_var
+    if upper_bound is None:
+        upper_bound = base_var
+
+    clipped_rv = (
+        MeasurableClip(scalar_clip).make_node(base_var, lower_bound, upper_bound).outputs[0]
+    )
     return [clipped_rv]
 
 
 measurable_ir_rewrites_db.register(
     "find_measurable_clips",
     find_measurable_clips,
+    "basic",
+    "censoring",
+)
+
+
+@node_rewriter(tracks=[maximum, minimum])
+def measurable_max_min_to_clip(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
+    """Convert one-sided censoring maximum(x, c) and minimum(x, c) to clip form.
+
+    The unbounded side uses the measurable variable itself, which `find_measurable_clips`
+    understands as one-sided clipping and which preserves the dtype of discrete
+    variables. Two-sided censoring maximum(minimum(x, ub), lb) is fused into a single
+    two-sided clip by `find_measurable_clips`.
+    """
+    measurable_inputs = filter_measurable_variables(node.inputs)
+    if len(measurable_inputs) != 1:
+        return None
+
+    [measurable_input] = measurable_inputs
+    [other_input] = [inp for inp in node.inputs if inp is not measurable_input]
+
+    # If both inputs are potentially measurable this is an order statistic, not censoring
+    if check_potential_measurability([other_input]):  # type: ignore[list-item]
+        return None
+
+    if isinstance(node.op.scalar_op, Maximum):
+        return [pt.clip(measurable_input, other_input, measurable_input)]
+    else:
+        return [pt.clip(measurable_input, measurable_input, other_input)]
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_max_min_to_clip",
+    measurable_max_min_to_clip,
     "basic",
     "censoring",
 )
@@ -116,10 +197,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
         logprob.name = f"{base_rv_op}_logprob"
         logcdf.name = f"{base_rv_op}_logcdf"
 
-    is_lower_bounded, is_upper_bounded = False, False
-    if not (isinstance(upper_bound, TensorConstant) and np.all(np.isinf(upper_bound.value))):
-        is_upper_bounded = True
-
+    if upper_bound is not base_rv:
         logccdf = _logccdf_helper(base_rv, value, **kwargs)
 
         # For right clipped discrete RVs, we need to add an extra term
@@ -132,20 +210,63 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
             logccdf,
             pt.switch(pt.gt(value, upper_bound), -np.inf, logprob),
         )
-    if not (isinstance(lower_bound, TensorConstant) and np.all(np.isneginf(lower_bound.value))):
-        is_lower_bounded = True
+    if lower_bound is not base_rv:
         logprob = pt.switch(
             pt.eq(value, lower_bound),
             logcdf,
             pt.switch(pt.lt(value, lower_bound), -np.inf, logprob),
         )
 
-    if is_lower_bounded and is_upper_bounded:
+    if lower_bound is not base_rv and upper_bound is not base_rv:
         logprob = CheckParameterValue("lower_bound <= upper_bound")(
             logprob, pt.all(pt.le(lower_bound, upper_bound))
         )
 
     return logprob
+
+
+@_logcdf.register(MeasurableClip)
+def clip_logcdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
+    r"""Log-CDF of a clipped censored distribution.
+
+    .. math::
+        \begin{cases}
+            0 & \text{for } x < lower, \\
+            \text{CDF}(x, dist) & \text{for } lower <= x < upper, \\
+            1 & \text{for } x >= upper,
+        \end{cases}
+    """
+    logcdf = _logcdf_helper(base_rv, value)
+
+    if upper_bound is not base_rv:
+        logcdf = pt.switch(pt.ge(value, upper_bound), 0.0, logcdf)
+    if lower_bound is not base_rv:
+        logcdf = pt.switch(pt.lt(value, lower_bound), -np.inf, logcdf)
+
+    if lower_bound is not base_rv and upper_bound is not base_rv:
+        logcdf = CheckParameterValue("lower_bound <= upper_bound")(
+            logcdf, pt.all(pt.le(lower_bound, upper_bound))
+        )
+
+    return logcdf
+
+
+@_icdf.register(MeasurableClip)
+def clip_icdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
+    # The point masses at the bounds absorb the respective tail quantiles
+    icdf = _icdf_helper(base_rv, value)
+
+    if lower_bound is not base_rv:
+        icdf = pt.maximum(icdf, lower_bound)
+    if upper_bound is not base_rv:
+        icdf = pt.minimum(icdf, upper_bound)
+
+    if lower_bound is not base_rv and upper_bound is not base_rv:
+        icdf = CheckParameterValue("lower_bound <= upper_bound")(
+            icdf, pt.all(pt.le(lower_bound, upper_bound))
+        )
+
+    return icdf
 
 
 class MeasurableRound(MeasurableElemwise):
