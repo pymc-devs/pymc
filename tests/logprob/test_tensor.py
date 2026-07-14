@@ -43,7 +43,7 @@ from pytensor.graph import RewriteDatabaseQuery
 from pytensor.tensor.random.type import random_generator_type
 from scipy import stats as st
 
-from pymc.logprob.basic import conditional_logp, logp
+from pymc.logprob.basic import conditional_logp, icdf, logcdf, logp
 from pymc.logprob.rewriting import logprob_rewrites_db
 from pymc.testing import assert_no_rvs
 
@@ -660,3 +660,63 @@ def test_broadcast_not_measurable_behind_other_ops():
     y = pt.exp(pt.broadcast_to(x, (3,)))
     with pytest.raises(NotImplementedError):
         logp(y, y.clone())
+
+
+class TestMeasurableCast:
+    def test_float_to_float(self):
+        y = pt.cast(pt.random.normal(0.5, 1), "float32")
+        y_vv = y.clone()
+
+        y_test = np.float32(0.7)
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm(0.5, 1).logpdf(y_test),
+        )
+        np.testing.assert_allclose(
+            logcdf(y, y_vv).eval({y_vv: y_test}),
+            st.norm(0.5, 1).logcdf(y_test),
+        )
+        np.testing.assert_allclose(
+            icdf(y, 0.3).eval(),
+            st.norm(0.5, 1).ppf(0.3),
+        )
+
+    def test_discrete_to_float(self):
+        y = pt.cast(pt.random.poisson(3), "float64")
+        y_vv = y.clone()
+
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: 3.0}),
+            st.poisson(3).logpmf(3),
+        )
+        # P(cast(X) <= 3.9) = P(X <= 3)
+        np.testing.assert_allclose(
+            logcdf(y, y_vv).eval({y_vv: 3.9}),
+            st.poisson(3).logcdf(3),
+        )
+
+        bern = pt.cast(pt.random.bernoulli(0.3), "float64")
+        bern_icdf = icdf(bern, 0.8)
+        assert bern_icdf.type.dtype == "float64"
+        np.testing.assert_allclose(bern_icdf.eval(), st.bernoulli(0.3).ppf(0.8))
+
+    def test_bool_to_int(self):
+        y = pt.cast(pt.random.bernoulli(0.3), "int64")
+        y_vv = y.clone()
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: 1}),
+            st.bernoulli(0.3).logpmf(1),
+        )
+
+    @pytest.mark.parametrize("out_dtype", ["int64", "bool"])
+    def test_discretizing_cast_not_measurable(self, out_dtype):
+        y = pt.cast(pt.random.normal(), out_dtype)
+        with pytest.raises(NotImplementedError):
+            logp(y, y.clone())
+
+    def test_indirect_discrete_to_float_not_measurable(self):
+        # If the cast is not directly valued, downstream rewrites would classify the
+        # discrete base variable as continuous (e.g., applying a continuous jacobian)
+        y = pt.exp(pt.cast(pt.random.poisson(3), "float64"))
+        with pytest.raises(NotImplementedError):
+            logp(y, y.clone())
