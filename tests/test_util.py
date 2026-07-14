@@ -189,6 +189,32 @@ def test_drop_warning_stat():
         assert "warning_dim_0" not in ss
 
 
+def test_drop_divergence_message_stat():
+    # nutpie emits a string-valued "divergence_message" sample stat that breaks
+    # to_netcdf(); it must be dropped while ordinary sample stats are kept.
+    idata = arviz.from_dict(
+        {
+            "sample_stats": {
+                "diverging": np.zeros((2, 5), dtype=bool),
+                "divergence_message": np.full((2, 5), "", dtype=object),
+            },
+            "warmup_sample_stats": {
+                "diverging": np.zeros((2, 5), dtype=bool),
+                "divergence_message": np.full((2, 5), "", dtype=object),
+            },
+        },
+        save_warmup=True,
+    )
+
+    new = drop_warning_stat(idata)
+
+    for gname in ["sample_stats", "warmup_sample_stats"]:
+        ss = new[gname].dataset
+        assert isinstance(ss, xarray.Dataset), gname
+        assert "diverging" in ss
+        assert "divergence_message" not in ss
+
+
 def test_get_seeds_per_chain():
     ret = _get_seeds_per_chain(None, chains=1)
     assert len(ret) == 1 and isinstance(ret[0], int)
