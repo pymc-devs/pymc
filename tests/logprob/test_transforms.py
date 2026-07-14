@@ -335,6 +335,29 @@ class TestLocScaleRVTransform:
             sp.stats.norm(0, scale_test_val).ppf(q_test_val),
         )
 
+    @pytest.mark.parametrize(
+        "pt_transform, scale",
+        [
+            (pt.deg2rad, np.pi / 180),
+            (pt.rad2deg, 180 / np.pi),
+        ],
+    )
+    def test_deg2rad_rad2deg_transform_rv(self, pt_transform, scale):
+        y_rv = pt_transform(pt.random.normal(0.5, 1, name="base_rv"))
+        y_rv.name = "y"
+        y_vv = y_rv.clone()
+
+        logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
+        logcdf_fn = pytensor.function([y_vv], logcdf(y_rv, y_vv))
+        icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
+
+        y_test_val = 0.7
+        q_test_val = 0.3
+        ref_dist = sp.stats.norm(0.5 * scale, scale)
+        np.testing.assert_allclose(logp_fn(y_test_val), ref_dist.logpdf(y_test_val))
+        np.testing.assert_allclose(logcdf_fn(y_test_val), ref_dist.logcdf(y_test_val))
+        np.testing.assert_allclose(icdf_fn(q_test_val), ref_dist.ppf(q_test_val))
+
     def test_negated_rv_transform(self):
         x_rv = -pt.random.halfnormal()
         x_rv.name = "x"
