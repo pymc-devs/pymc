@@ -690,6 +690,11 @@ class ZeroSumTransform(Transform):
             value = self.extend_axis(value, axis=axis)
         return value
 
+    # Zero-summed axes, used by `transformed_value_logprob` to reduce the matching logp axes.
+    @property
+    def jacobian_reduce_axes(self):
+        return self.zerosum_axes
+
     def log_jac_det(self, value, *rv_inputs):
         return value.sum(self.zerosum_axes).zeros_like()
 
