@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
@@ -127,6 +129,14 @@ class SumTo1(Transform):
 
     name = "sumto1"
     ndim_supp = 1
+
+    def __init__(self):
+        warnings.warn(
+            "SumTo1 is deprecated and will be removed in a future version. "
+            "Use the Simplex transform instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
