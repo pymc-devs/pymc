@@ -42,6 +42,7 @@ import numpy as np
 from pytensor import tensor as pt
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.scalar.basic import Cast
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Alloc, Join, MakeVector, Split
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
@@ -49,10 +50,16 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
+from pytensor.tensor.rewriting.basic import elemwise_of
 
 from pymc.logprob.abstract import (
+    MeasurableElemwise,
     MeasurableOp,
     ValuedRV,
+    _icdf,
+    _icdf_helper,
+    _logcdf,
+    _logcdf_helper,
     _logprob,
     _logprob_helper,
     promised_valued_rv,
@@ -455,6 +462,76 @@ def find_measurable_broadcast(fgraph, node):
         return None
 
     return [MeasurableBroadcast()(base_rv, *shape)]
+
+
+class MeasurableCast(MeasurableElemwise):
+    """A placeholder used to specify a log-likelihood for a cast sub-graph."""
+
+    valid_scalar_types = (Cast,)
+
+
+@node_rewriter([elemwise_of(Cast)])
+def find_measurable_casts(fgraph, node) -> list[TensorVariable] | None:
+    r"""Find measurable casts that do not discretize the base variable."""
+    if isinstance(node.op, MeasurableOp):
+        return None
+
+    [base_var] = node.inputs
+    if not filter_measurable_variables([base_var]):
+        return None
+
+    [out] = node.outputs
+    # bool < integer < float; casting to a lower kind discretizes the base variable,
+    # which is not a measure-preserving identity (float -> int would need to be
+    # treated as a form of censoring)
+    kind_order = {"b": 0, "u": 1, "i": 1, "f": 2}
+    in_kind = kind_order.get(np.dtype(base_var.type.dtype).kind)
+    out_kind = kind_order.get(np.dtype(out.type.dtype).kind)
+    if in_kind is None or out_kind is None:
+        # Kinds we can't order, such as complex
+        return None
+    if out_kind < in_kind:
+        return None
+
+    if in_kind < kind_order["f"] and out_kind == kind_order["f"]:
+        # Casting a discrete variable to float hides its discreteness from other
+        # rewrites, which classify variables by dtype (e.g., a continuous jacobian
+        # would wrongly be applied to scalings of the cast variable).
+        # Only claim the cast when it is directly valued.
+        if not all(
+            client != "output" and isinstance(client.op, ValuedRV)
+            for client, _ in fgraph.clients[out]
+        ):
+            return None
+
+    return [MeasurableCast(scalar_op=node.op.scalar_op)(base_var)]  # type: ignore[list-item]
+
+
+@_logprob.register(MeasurableCast)
+def cast_logprob(op, values, base_var, **kwargs):
+    [value] = values
+    # The cast is measure-preserving; the value is passed through as is.
+    # Casting it back could silently map impossible values to possible ones
+    # (e.g., 1.5 -> 1 for an integer base variable).
+    return _logprob_helper(base_var, value)
+
+
+@_logcdf.register(MeasurableCast)
+def cast_logcdf(op, value, base_var, **kwargs):
+    if base_var.type.dtype.startswith(("int", "uint", "bool")):
+        # For a discrete base variable, P(cast(X) <= 1.5) = P(X <= 1)
+        value = pt.floor(value)
+    return _logcdf_helper(base_var, value)
+
+
+@_icdf.register(MeasurableCast)
+def cast_icdf(op, value, base_var, **kwargs):
+    return pt.cast(_icdf_helper(base_var, value), op.scalar_op.o_type.dtype)
+
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_casts", find_measurable_casts, "basic", "tensor"
+)
 
 
 measurable_ir_rewrites_db.register("dimshuffle_lift", local_dimshuffle_rv_lift, "basic", "tensor")
