@@ -52,6 +52,7 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
     local_dimshuffle_rv_lift,
 )
+from pytensor.tensor.reshape import JoinDims, SplitDims, join_dims, split_dims
 from pytensor.tensor.rewriting.basic import elemwise_of
 
 from pymc.logprob.abstract import (
@@ -79,7 +80,7 @@ from pymc.logprob.utils import (
     get_related_valued_nodes,
     replace_rvs_by_values,
 )
-from pymc.pytensorf import constant_fold
+from pymc.pytensorf import constant_fold, get_symbolic_rv_shapes
 
 
 class MeasurableMakeVector(MeasurableOp, MakeVector):
@@ -294,24 +295,26 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     return raw_logp.dimshuffle(redo_ds)
 
 
-def _elemwise_univariate_chain(fgraph, node) -> bool:
-    # Check whether only Elemwise operations connect a base univariate RV to the valued node through var.
+def _elemwise_root(var: TensorVariable) -> TensorVariable | None:
+    """Walk through dimension-preserving measurable operations to the root variable."""
     from pymc.distributions.distribution import SymbolicRandomVariable
     from pymc.logprob.transforms import MeasurableTransform
 
-    [inp] = node.inputs
+    if isinstance(var.owner.op, RandomVariable | SymbolicRandomVariable):
+        return var
+    elif isinstance(var.owner.op, MeasurableTransform):
+        return _elemwise_root(var.owner.inputs[var.owner.op.measurable_input_idx])
+    else:
+        return None
+
+
+def _elemwise_univariate_chain(fgraph, node) -> bool:
+    # Check whether only Elemwise operations connect a base univariate RV to the valued node through var.
+    inp = node.inputs[0]
     [out] = node.outputs
 
-    def elemwise_root(var: TensorVariable) -> TensorVariable | None:
-        if isinstance(var.owner.op, RandomVariable | SymbolicRandomVariable):
-            return var
-        elif isinstance(var.owner.op, MeasurableTransform):
-            return elemwise_root(var.owner.inputs[var.owner.op.measurable_input_idx])
-        else:
-            return None
-
     # Check that the root is a univariate distribution linked by only elemwise operations
-    root = elemwise_root(inp)
+    root = _elemwise_root(inp)
     if root is None:
         return False
     elif root.owner.op.ndim_supp != 0:
@@ -590,6 +593,91 @@ def identity_icdf(op, value, base_var, **kwargs):
     return _icdf_helper(base_var, value)
 
 
+class MeasurableJoinDims(MeasurableOp, JoinDims):
+    """A placeholder used to specify a log-likelihood for a join_dims sub-graph."""
+
+
+class MeasurableSplitDims(MeasurableOp, SplitDims):
+    """A placeholder used to specify a log-likelihood for a split_dims sub-graph."""
+
+
+@node_rewriter([JoinDims, SplitDims])
+def find_measurable_join_split_dims(fgraph, node) -> list[TensorVariable] | None:
+    r"""Find `JoinDims` and `SplitDims` for which a `logprob` can be computed."""
+    if isinstance(node.op, MeasurableOp):
+        return None
+
+    base_var, *other_inputs = node.inputs
+
+    if not filter_measurable_variables([base_var]):
+        return None
+
+    if check_potential_measurability(other_inputs):
+        return None
+
+    if isinstance(node.op, JoinDims):
+        # A join that straddles the batch/support boundary merges batch and support
+        # axes into a single one, breaking the assumption that support axes are the
+        # rightmost positions, which other rewrites rely on. Such joins are only valid
+        # when directly valued. Joins contained in the batch axes (or in the support
+        # axes, which simply become fewer rightmost axes) preserve the assumption and
+        # need no restriction; splitting never straddles, since it only inflates a
+        # single axis.
+        # TODO: When we include the support axis as meta information in each intermediate
+        #  MeasurableVariable, the root walk becomes unnecessary (see https://github.com/pymc-devs/pymc/issues/6360)
+        start_axis, n_axes = node.op.start_axis, node.op.n_axes
+        root = _elemwise_root(base_var)
+        if root is None:
+            straddles = True
+        else:
+            batch_ndim = base_var.type.ndim - root.owner.op.ndim_supp
+            straddles = start_axis < batch_ndim < start_axis + n_axes
+        if straddles and not any(get_related_valued_nodes(fgraph, node)):
+            return None
+        measurable_op: MeasurableOp = MeasurableJoinDims(start_axis, n_axes)
+    else:
+        measurable_op = MeasurableSplitDims(node.op.axis)
+
+    return [measurable_op(base_var, *other_inputs)]  # type: ignore[operator]
+
+
+@_logprob.register(MeasurableJoinDims)
+def logprob_join_dims(op, values, base_var, **kwargs):
+    """Compute the log-likelihood graph for a `MeasurableJoinDims`."""
+    (value,) = values
+
+    [base_shape] = get_symbolic_rv_shapes([base_var])
+    unjoined_shape = [base_shape[i] for i in op.axis_range]
+    unjoined_value = split_dims(value, shape=unjoined_shape, axis=op.start_axis)
+
+    raw_logp = _logprob_helper(base_var, unjoined_value)
+
+    # Re-join the value dimensions, ignoring any support dimensions consumed by the
+    # logprob function (assumed to be the rightmost positions). A join lying entirely
+    # within consumed support dimensions leaves nothing to re-join, but a length-zero
+    # join (expand_dims) of remaining dimensions is still re-applied.
+    if op.start_axis > raw_logp.ndim or (op.n_axes > 0 and op.start_axis >= raw_logp.ndim):
+        return raw_logp
+    return join_dims(raw_logp, op.start_axis, min(op.n_axes, raw_logp.ndim - op.start_axis))
+
+
+@_logprob.register(MeasurableSplitDims)
+def logprob_split_dims(op, values, base_var, shape, **kwargs):
+    """Compute the log-likelihood graph for a `MeasurableSplitDims`."""
+    (value,) = values
+
+    n_axes = value.type.ndim - base_var.type.ndim + 1
+    joined_value = join_dims(value, start_axis=op.axis, n_axes=n_axes)
+
+    raw_logp = _logprob_helper(base_var, joined_value)
+
+    # Re-split the value dimensions, unless the split dimension was a support dimension
+    # consumed by the logprob function (assumed to be the rightmost positions)
+    if op.axis >= raw_logp.ndim:
+        return raw_logp
+    return split_dims(raw_logp, shape=shape, axis=op.axis)
+
+
 measurable_ir_rewrites_db.register(
     "find_measurable_casts", find_measurable_casts, "basic", "tensor"
 )
@@ -598,6 +686,10 @@ measurable_ir_rewrites_db.register(
 # "find_measurable_value_identities"; the names must not collide
 measurable_ir_rewrites_db.register(
     "find_measurable_identity_ops", find_measurable_identity_ops, "basic", "tensor"
+)
+
+measurable_ir_rewrites_db.register(
+    "find_measurable_join_split_dims", find_measurable_join_split_dims, "basic", "tensor"
 )
 
 
