@@ -235,7 +235,9 @@ def test_clip_transform():
     assert np.isclose(obs_logp, exp_logp)
 
 
-@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
+@pytest.mark.parametrize(
+    "rounding_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
 def test_rounding(rounding_op):
     loc = 1
     scale = 2
@@ -250,12 +252,16 @@ def test_rounding(rounding_op):
     assert logprob is not None
 
     x_sp = st.norm(loc, scale)
-    if rounding_op == pt.round:
+    if rounding_op in (pt.round, pt.round_half_away_from_zero):
         expected_logp = np.log(x_sp.cdf(test_value + 0.5) - x_sp.cdf(test_value - 0.5))
     elif rounding_op == pt.floor:
         expected_logp = np.log(x_sp.cdf(test_value + 1.0) - x_sp.cdf(test_value))
     elif rounding_op == pt.ceil:
         expected_logp = np.log(x_sp.cdf(test_value) - x_sp.cdf(test_value - 1.0))
+    elif rounding_op == pt.trunc:
+        expected_logp = np.log(
+            x_sp.cdf(test_value + (test_value >= 0)) - x_sp.cdf(test_value - (test_value <= 0))
+        )
     else:
         raise NotImplementedError()
 
@@ -265,7 +271,7 @@ def test_rounding(rounding_op):
     )
 
 
-@pytest.mark.parametrize("rounding_op", (pt.floor, pt.ceil))
+@pytest.mark.parametrize("rounding_op", (pt.floor, pt.ceil, pt.trunc))
 def test_rounding_discrete_base(rounding_op):
     # A variable that already sits on the integers is only upcast by the rounding, so
     # its own logprob applies unchanged (`pt.round` rejects integer inputs outright)
@@ -282,8 +288,10 @@ def test_rounding_discrete_base(rounding_op):
     )
 
 
-@pytest.mark.parametrize("outer_op", (pt.round, pt.floor, pt.ceil))
-@pytest.mark.parametrize("inner_op", (pt.floor, pt.ceil))
+@pytest.mark.parametrize(
+    "outer_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
+@pytest.mark.parametrize("inner_op", (pt.floor, pt.ceil, pt.trunc))
 def test_rounding_rounded_base(outer_op, inner_op):
     # The inner rounding leaves the variable on the integers, where the outer one is an
     # identity, so the logprob is that of the inner rounding alone
@@ -303,7 +311,9 @@ def test_rounding_rounded_base(outer_op, inner_op):
     )
 
 
-@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
+@pytest.mark.parametrize(
+    "rounding_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
 def test_rounding_censored_base_not_measurable(rounding_op):
     # A clipped variable pools mass at its bounds, so it is not continuous, but its
     # float dtype does not say so and we do not infer it (see
