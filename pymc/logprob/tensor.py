@@ -40,11 +40,13 @@ from pathlib import Path
 import numpy as np
 
 from pytensor import tensor as pt
+from pytensor.assumptions.specify import SpecifyAssumptions
+from pytensor.compile.ops import DeepCopyOp
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar.basic import Cast
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.basic import Alloc, Join, MakeVector, Split
+from pytensor.tensor.basic import Alloc, Join, MakeVector, ScalarFromTensor, Split
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.rewriting import (
@@ -529,8 +531,73 @@ def cast_icdf(op, value, base_var, **kwargs):
     return pt.cast(_icdf_helper(base_var, value), op.scalar_op.o_type.dtype)
 
 
+class MeasurableScalarFromTensor(MeasurableOp, ScalarFromTensor):
+    """ScalarFromTensor of a measurable variable."""
+
+
+class MeasurableSpecifyAssumptions(MeasurableOp, SpecifyAssumptions):
+    """SpecifyAssumptions of a measurable variable."""
+
+
+class MeasurableDeepCopyOp(MeasurableOp, DeepCopyOp):
+    """DeepCopyOp of a measurable variable."""
+
+
+@node_rewriter([ScalarFromTensor, SpecifyAssumptions, DeepCopyOp])
+def find_measurable_identity_ops(fgraph, node) -> list | None:
+    r"""Find identity-like operations that leave the value of a measurable variable untouched."""
+    if isinstance(node.op, MeasurableOp):
+        return None
+
+    if not filter_measurable_variables(node.inputs):
+        return None
+
+    [base_var] = node.inputs
+    new_op: MeasurableOp
+    if isinstance(node.op, ScalarFromTensor):
+        new_op = MeasurableScalarFromTensor()
+    elif isinstance(node.op, SpecifyAssumptions):
+        new_op = MeasurableSpecifyAssumptions(dict(node.op.assumptions))
+    else:
+        new_op = MeasurableDeepCopyOp()
+    return [new_op(base_var)]
+
+
+@_logprob.register(MeasurableScalarFromTensor)
+@_logprob.register(MeasurableSpecifyAssumptions)
+@_logprob.register(MeasurableDeepCopyOp)
+def identity_logprob(op, values, base_var, **kwargs):
+    # The operation does not change the value, so the measure passes through.
+    # Note that the assumptions of a SpecifyAssumptions are NOT stamped onto the value:
+    # the value is an arbitrary query point (e.g., a sampler proposal), and a density
+    # rewritten under trusted assumptions could return a finite logp where the honest
+    # density would return -inf, just like a skipped support check.
+    [value] = values
+    return _logprob_helper(base_var, value)
+
+
+@_logcdf.register(MeasurableScalarFromTensor)
+@_logcdf.register(MeasurableSpecifyAssumptions)
+@_logcdf.register(MeasurableDeepCopyOp)
+def identity_logcdf(op, value, base_var, **kwargs):
+    return _logcdf_helper(base_var, value)
+
+
+@_icdf.register(MeasurableScalarFromTensor)
+@_icdf.register(MeasurableSpecifyAssumptions)
+@_icdf.register(MeasurableDeepCopyOp)
+def identity_icdf(op, value, base_var, **kwargs):
+    return _icdf_helper(base_var, value)
+
+
 measurable_ir_rewrites_db.register(
     "find_measurable_casts", find_measurable_casts, "basic", "tensor"
+)
+
+# Note: pymc-extras (<0.5) registers an equivalent rewrite under the name
+# "find_measurable_value_identities"; the names must not collide
+measurable_ir_rewrites_db.register(
+    "find_measurable_identity_ops", find_measurable_identity_ops, "basic", "tensor"
 )
 
 

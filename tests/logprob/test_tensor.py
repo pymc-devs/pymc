@@ -39,6 +39,8 @@ import pytensor
 import pytest
 
 from pytensor import tensor as pt
+from pytensor.assumptions import assume
+from pytensor.compile.ops import DeepCopyOp
 from pytensor.graph import RewriteDatabaseQuery
 from pytensor.tensor.random.type import random_generator_type
 from scipy import stats as st
@@ -720,3 +722,46 @@ class TestMeasurableCast:
         y = pt.exp(pt.cast(pt.random.poisson(3), "float64"))
         with pytest.raises(NotImplementedError):
             logp(y, y.clone())
+
+
+class TestMeasurableIdentityOps:
+    def test_scalar_from_tensor(self):
+        y = pt.scalar_from_tensor(pt.random.normal(0.5, 1))
+        y_vv = y.clone()
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: 0.7}),
+            st.norm(0.5, 1).logpdf(0.7),
+        )
+        np.testing.assert_allclose(
+            logcdf(y, y_vv).eval({y_vv: 0.7}),
+            st.norm(0.5, 1).logcdf(0.7),
+        )
+        np.testing.assert_allclose(
+            icdf(y, 0.3).eval(),
+            st.norm(0.5, 1).ppf(0.3),
+        )
+
+    def test_specify_assumptions(self):
+        y = assume(pt.random.normal(pt.arange(4), 1, size=(4,)), "unique_indices")
+        y_vv = y.clone()
+        y_test = np.zeros(4)
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: y_test}),
+            st.norm(np.arange(4), 1).logpdf(y_test),
+        )
+
+        # Identity ops keep composing with other measurable rewrites
+        y_exp = pt.exp(assume(pt.random.normal(0.5, 1), "diagonal"))
+        y_exp_vv = y_exp.clone()
+        np.testing.assert_allclose(
+            logp(y_exp, y_exp_vv).eval({y_exp_vv: 2.0}),
+            st.lognorm(s=1, scale=np.exp(0.5)).logpdf(2.0),
+        )
+
+    def test_deep_copy(self):
+        y = DeepCopyOp()(pt.random.normal(0.5, 1))
+        y_vv = y.clone()
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: 0.7}),
+            st.norm(0.5, 1).logpdf(0.7),
+        )
