@@ -41,10 +41,27 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar.basic import Ceil, Clip, Floor, Maximum, RoundHalfToEven
+from pytensor.scalar.basic import (
+    Ceil,
+    Clip,
+    Floor,
+    Maximum,
+    RoundHalfAwayFromZero,
+    RoundHalfToEven,
+    Trunc,
+)
 from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.math import ceil, clip, floor, maximum, minimum, round_half_to_even
+from pytensor.tensor.math import (
+    ceil,
+    clip,
+    floor,
+    maximum,
+    minimum,
+    round_half_away_from_zero,
+    round_half_to_even,
+    trunc,
+)
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
@@ -272,10 +289,10 @@ def clip_icdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
 class MeasurableRound(MeasurableElemwise):
     """A placeholder used to specify a log-likelihood for a rounded RV sub-graph."""
 
-    valid_scalar_types = (RoundHalfToEven, Floor, Ceil)
+    valid_scalar_types = (RoundHalfToEven, RoundHalfAwayFromZero, Floor, Ceil, Trunc)
 
 
-@node_rewriter(tracks=[ceil, floor, round_half_to_even])
+@node_rewriter(tracks=[ceil, floor, round_half_to_even, round_half_away_from_zero, trunc])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     if not filter_measurable_variables(node.inputs):
         return None
@@ -340,10 +357,16 @@ def round_logprob(op, values, base_rv, **kwargs):
             0 & \text{otherwise},
         \end{cases}
 
+    The probability of a distribution rounded towards zero is given by the
+    rounded-down probability for positive values and the rounded-up probability
+    for negative values, with both intervals pooled at zero.
+
     """
     (value,) = values
 
-    if isinstance(op.scalar_op, RoundHalfToEven):
+    if isinstance(op.scalar_op, RoundHalfToEven | RoundHalfAwayFromZero):
+        # The tie-breaking rule only matters on a measure-zero set of the
+        # continuous base variable, so both variants share the same intervals
         value = pt.round(value)
         value_upper = value + 0.5
         value_lower = value - 0.5
@@ -355,6 +378,13 @@ def round_logprob(op, values, base_rv, **kwargs):
         value = pt.ceil(value)
         value_upper = value
         value_lower = value - 1.0
+    elif isinstance(op.scalar_op, Trunc):
+        # Truncation rounds towards zero: [x, x+1) for x >= 0, (x-1, x] for x < 0,
+        # and (-1, 1) for x == 0 (open/closed bounds are equivalent for the
+        # continuous base variables this rewrite applies to)
+        value = pt.trunc(value)
+        value_upper = value + (value >= 0)
+        value_lower = value - (value <= 0)
     else:
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")  # pragma: no cover
 
