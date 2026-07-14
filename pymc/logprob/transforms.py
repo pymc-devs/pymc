@@ -48,13 +48,18 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar import (
     Abs,
     Add,
+    ArcCos,
     ArcCosh,
+    ArcSin,
     ArcSinh,
+    ArcTan,
     ArcTanh,
     Cosh,
     Erf,
     Erfc,
+    Erfcinv,
     Erfcx,
+    Erfinv,
     Exp,
     Exp2,
     Expm1,
@@ -76,13 +81,18 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
     abs,
     add,
+    arccos,
     arccosh,
+    arcsin,
     arcsinh,
+    arctan,
     arctanh,
     cosh,
     erf,
     erfc,
+    erfcinv,
     erfcx,
+    erfinv,
     exp,
     exp2,
     expm1,
@@ -176,12 +186,17 @@ class MeasurableTransform(MeasurableElemwise):
         Sinh,
         Cosh,
         Tanh,
+        ArcSin,
+        ArcCos,
+        ArcTan,
         ArcSinh,
         ArcCosh,
         ArcTanh,
         Erf,
         Erfc,
         Erfcx,
+        Erfinv,
+        Erfcinv,
         Sigmoid,
     )
 
@@ -232,8 +247,22 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     return pt.switch(pt.isnan(jacobian), -np.inf, input_logprob + jacobian)
 
 
-MONOTONICALLY_INCREASING_OPS = (Exp, Log, Add, Sinh, Tanh, ArcSinh, ArcCosh, ArcTanh, Erf, Sigmoid)
-MONOTONICALLY_DECREASING_OPS = (Erfc, Erfcx)
+MONOTONICALLY_INCREASING_OPS = (
+    Exp,
+    Log,
+    Add,
+    Sinh,
+    Tanh,
+    ArcSin,
+    ArcTan,
+    ArcSinh,
+    ArcCosh,
+    ArcTanh,
+    Erf,
+    Erfinv,
+    Sigmoid,
+)
+MONOTONICALLY_DECREASING_OPS = (ArcCos, Erfc, Erfcx, Erfcinv)
 
 
 @_logcdf.register(MeasurableTransform)
@@ -462,12 +491,17 @@ def measurable_power_exponent_to_exp(fgraph, node):
         sinh,
         cosh,
         tanh,
+        arcsin,
+        arccos,
+        arctan,
         arcsinh,
         arccosh,
         arctanh,
         erf,
         erfc,
         erfcx,
+        erfinv,
+        erfcinv,
     ]
 )
 def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Variable] | None:
@@ -537,12 +571,17 @@ def find_measurable_transforms(fgraph: FunctionGraph, node: Apply) -> list[Varia
             Sinh: SinhTransform,
             Cosh: CoshTransform,
             Tanh: TanhTransform,
+            ArcSin: ArcsinTransform,
+            ArcCos: ArccosTransform,
+            ArcTan: ArctanTransform,
             ArcSinh: ArcsinhTransform,
             ArcCosh: ArccoshTransform,
             ArcTanh: ArctanhTransform,
             Erf: ErfTransform,
             Erfc: ErfcTransform,
             Erfcx: ErfcxTransform,
+            Erfinv: ErfinvTransform,
+            Erfcinv: ErfcinvTransform,
         }[type(scalar_op)]()
 
     transform_op = MeasurableTransform(
@@ -695,6 +734,39 @@ class ArctanhTransform(Transform):
         return pt.tanh(value)
 
 
+class ArcsinTransform(Transform):
+    name = "arcsin"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.arcsin(value)
+
+    def backward(self, value, *inputs):
+        return pt.sin(value)
+
+
+class ArccosTransform(Transform):
+    name = "arccos"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.arccos(value)
+
+    def backward(self, value, *inputs):
+        return pt.cos(value)
+
+
+class ArctanTransform(Transform):
+    name = "arctan"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.arctan(value)
+
+    def backward(self, value, *inputs):
+        return pt.tan(value)
+
+
 class ErfTransform(Transform):
     name = "erf"
     ndim_supp = 0
@@ -715,6 +787,28 @@ class ErfcTransform(Transform):
 
     def backward(self, value, *inputs):
         return pt.erfcinv(value)
+
+
+class ErfinvTransform(Transform):
+    name = "erfinv"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.erfinv(value)
+
+    def backward(self, value, *inputs):
+        return pt.erf(value)
+
+
+class ErfcinvTransform(Transform):
+    name = "erfcinv"
+    ndim_supp = 0
+
+    def forward(self, value, *inputs):
+        return pt.erfcinv(value)
+
+    def backward(self, value, *inputs):
+        return pt.erfc(value)
 
 
 class ErfcxTransform(Transform):

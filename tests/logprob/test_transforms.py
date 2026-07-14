@@ -48,12 +48,17 @@ from pymc.distributions.discrete import Bernoulli
 from pymc.logprob.basic import conditional_logp, icdf, logccdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
+    ArccosTransform,
     ArcsinhTransform,
+    ArcsinTransform,
     ArctanhTransform,
+    ArctanTransform,
     ChainedTransform,
     CoshTransform,
+    ErfcinvTransform,
     ErfcTransform,
     ErfcxTransform,
+    ErfinvTransform,
     ErfTransform,
     ExpTransform,
     LocTransform,
@@ -182,9 +187,14 @@ class TestTransform:
             ErfTransform(),
             ErfcTransform(),
             ErfcxTransform(),
+            ErfinvTransform(),
+            ErfcinvTransform(),
             SinhTransform(),
             CoshTransform(),
             TanhTransform(),
+            ArcsinTransform(),
+            ArccosTransform(),
+            ArctanTransform(),
             ArcsinhTransform(),
             ArccoshTransform(),
             ArctanhTransform(),
@@ -525,8 +535,13 @@ def test_absolute_rv_transform(test_val):
         (pt.erf, ErfTransform()),
         (pt.erfc, ErfcTransform()),
         (pt.erfcx, ErfcxTransform()),
+        (pt.erfinv, ErfinvTransform()),
+        (pt.erfcinv, ErfcinvTransform()),
         (pt.sinh, SinhTransform()),
         (pt.tanh, TanhTransform()),
+        (pt.arcsin, ArcsinTransform()),
+        (pt.arccos, ArccosTransform()),
+        (pt.arctan, ArctanTransform()),
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
@@ -555,10 +570,12 @@ def test_extra_bijective_rv_transforms(pt_transform, transform):
     [
         (pt.erfc, ErfcTransform()),
         (pt.erfcx, ErfcxTransform()),
+        (pt.erfcinv, ErfcinvTransform()),
+        (pt.arccos, ArccosTransform()),
     ],
 )
 def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
-    """Test logcdf for monotonically decreasing transforms (Erfc, Erfcx)."""
+    """Test logcdf for monotonically decreasing transforms."""
     base_rv = pt.random.normal(0.5, 1, name="base_rv")
     rv = pt_transform(base_rv)
 
@@ -572,6 +589,30 @@ def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
     np.testing.assert_allclose(
         rv_logcdf.eval({vv: vv_test}),
         expected_logcdf.eval({vv: vv_test}),
+    )
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform, decreasing",
+    [
+        (pt.arctan, ArctanTransform(), False),
+        (pt.erfcinv, ErfcinvTransform(), True),
+    ],
+)
+def test_monotonic_transform_icdf(pt_transform, transform, decreasing):
+    base_rv = pt.random.normal(0.5, 1, name="base_rv")
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_icdf = icdf(rv, vv)
+
+    q = 1 - vv if decreasing else vv
+    expected_icdf = transform.forward(icdf(base_rv, q))
+
+    vv_test = np.array(0.3)
+    np.testing.assert_allclose(
+        rv_icdf.eval({vv: vv_test}),
+        expected_icdf.eval({vv: vv_test}),
     )
 
 
