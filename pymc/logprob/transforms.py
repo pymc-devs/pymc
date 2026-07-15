@@ -55,7 +55,6 @@ from pytensor.scalar import (
     ArcTan,
     ArcTanh,
     Cosh,
-    Deg2Rad,
     Erf,
     Erfc,
     Erfcinv,
@@ -89,7 +88,6 @@ from pytensor.tensor.math import (
     arctan,
     arctanh,
     cosh,
-    deg2rad,
     erf,
     erfc,
     erfcinv,
@@ -106,7 +104,6 @@ from pytensor.tensor.math import (
     mul,
     neg,
     pow,
-    rad2deg,
     reciprocal,
     sigmoid,
     sinh,
@@ -420,17 +417,6 @@ def measurable_neg_to_product(fgraph, node):
     return [pt.mul(inp, -1)]
 
 
-@node_rewriter([deg2rad, rad2deg])
-def measurable_deg2rad_rad2deg_to_product(fgraph, node):
-    """Convert deg2rad and rad2deg of `MeasurableVariable`s to product with a constant."""
-    if not filter_measurable_variables(node.inputs):
-        return None
-
-    [inp] = node.inputs
-    factor = np.pi / 180 if isinstance(node.op.scalar_op, Deg2Rad) else 180 / np.pi
-    return [pt.mul(inp, np.array(factor, dtype=node.outputs[0].type.dtype))]
-
-
 @node_rewriter([sub])
 def measurable_sub_to_neg(fgraph, node):
     """Convert subtraction involving `MeasurableVariable`s to addition with neg."""
@@ -634,13 +620,6 @@ measurable_ir_rewrites_db.register(
 measurable_ir_rewrites_db.register(
     "measurable_neg_to_product",
     measurable_neg_to_product,
-    "basic",
-    "transform",
-)
-
-measurable_ir_rewrites_db.register(
-    "measurable_deg2rad_rad2deg_to_product",
-    measurable_deg2rad_rad2deg_to_product,
     "basic",
     "transform",
 )

@@ -56,7 +56,6 @@ from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
     AdvancedSubtensor,
-    AdvancedSubtensor1,
     as_index_literal,
     get_canonical_form_slice,
     unflatten_index_variables,
@@ -273,7 +272,7 @@ def find_measurable_index_mixture(fgraph, node):
     idx_list = node.op.idx_list
 
     # TODO: Add check / test case for Advanced Boolean indexing
-    if isinstance(node.op, AdvancedSubtensor | AdvancedSubtensor1):
+    if isinstance(node.op, AdvancedSubtensor):
         # We don't support (non-scalar) integer array indexing as it can pick repeated values,
         # but the Mixture logprob assumes all mixture values are independent
         if any(

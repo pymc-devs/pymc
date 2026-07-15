@@ -35,8 +35,6 @@
 #   SOFTWARE.
 import typing
 
-from pathlib import Path
-
 import numpy as np
 
 from pytensor import tensor as pt
@@ -256,10 +254,6 @@ def logprob_split(op: MeasurableSplit, values, x, splits, **kwargs):
 
 class MeasurableDimShuffle(MeasurableOp, DimShuffle):
     """A placeholder used to specify a log-likelihood for a dimshuffle sub-graph."""
-
-    # Need to get the absolute path of `c_func_file`, otherwise it tries to
-    # find it locally and fails when a new `Op` is initialized
-    c_func_file = str(DimShuffle.get_path(Path(DimShuffle.c_func_file)))  # type: ignore[arg-type]
 
     def __str__(self):
         return f"Measurable{super().__str__()}"

@@ -47,7 +47,7 @@ from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.utils import lazy_scipy_module
 
@@ -162,7 +162,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
             return array_data.astype(x.type.dtype)
         if isinstance(x.owner.op, MinibatchOp):
             return extract_obs_data(x.owner.inputs[x.owner.outputs.index(x)])
-        if isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
+        if isinstance(x.owner.op, AdvancedIncSubtensor):
             array_data = extract_obs_data(x.owner.inputs[0])
             mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
             mask = np.zeros_like(array_data)
