@@ -399,6 +399,27 @@ class TestMatchesScipy:
             st.poisson.ppf(q, 1e4),
         )
 
+    def test_discrete_icdf_batched_params(self):
+        # The search state must be broadcast against the distribution
+        # parameters, not just the quantile, or scan fails / misbroadcasts
+        mu = np.array([2.0, 5.0, 20.0])
+        np.testing.assert_array_equal(
+            icdf(pm.Poisson.dist(mu=mu), 0.5).eval(),
+            st.poisson.ppf(0.5, mu),
+        )
+
+        q = np.array([[0.1], [0.5], [0.9]])
+        n = np.array([10, 40])
+        p = np.array([0.3, 0.6])  # broadcasts with q to shape (3, 2)
+        np.testing.assert_array_equal(
+            icdf(pm.Binomial.dist(n=n, p=p), q).eval(),
+            st.binom.ppf(q, n, p),
+        )
+        np.testing.assert_array_equal(
+            icdf(pm.NegativeBinomial.dist(n=n, p=p), q).eval(),
+            st.nbinom.ppf(q, n, p),
+        )
+
     @pytest.mark.parametrize("n", [2, 3, 4])
     def test_categorical(self, n):
         domain = Domain(range(n), dtype="int64", edges=(0, n))

@@ -99,10 +99,9 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, start=None, ma
     whose quantile function has no closed form (e.g. ``Poisson``, ``Binomial``,
     ``NegativeBinomial``).
 
-    The search uses fixed-length ``scan`` loops (rather than a data-dependent
-    ``while``) so that the resulting graph remains convertible to the C, Numba
-    and JAX backends. Each step is idempotent once an element has converged, so
-    running the full ``max_iters`` iterations does not change the result.
+    The search uses fixed-length ``scan`` loops rather than a data-dependent
+    ``until`` condition. Each step is idempotent once an element has converged,
+    so running the full ``max_iters`` iterations does not change the result.
 
     Parameters
     ----------
@@ -131,12 +130,21 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, start=None, ma
         of integers exactly representable as float64.
     """
     log_value = pt.log(value)
-    lower = pt.zeros_like(value) + pt.as_tensor_variable(lower, dtype="float64")
+    lower = pt.as_tensor_variable(lower).astype("float64")
+
+    # The scan below carries (lo, hi) as recurrent state, whose shape must stay
+    # fixed across iterations. Since logcdf(k) broadcasts k against the
+    # distribution parameters, the state must start at the full broadcast shape
+    # of value and the parameters. Probing logcdf gives that shape; only the
+    # shape is used, so the probe computation itself is pruned from the graph.
+    result_shape = logcdf(pt.broadcast_arrays(lower, log_value)[0]).shape
+    log_value = pt.broadcast_to(log_value, result_shape)
+    lower = pt.broadcast_to(lower, result_shape)
 
     if upper is None:
         hi_init = lower + 1.0
         if start is not None:
-            start = pt.zeros_like(value) + pt.as_tensor_variable(start, dtype="float64")
+            start = pt.broadcast_to(pt.as_tensor_variable(start).astype("float64"), result_shape)
             hi_init = pt.maximum(pt.floor(start), hi_init)
 
         # Phase 1: geometrically expand an upper bracket until cdf(hi) >= value.
@@ -153,7 +161,7 @@ def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, start=None, ma
         lo, hi = lo[-1], hi[-1]
     else:
         lo = lower
-        hi = pt.zeros_like(value) + pt.as_tensor_variable(upper, dtype="float64")
+        hi = pt.broadcast_to(pt.as_tensor_variable(upper).astype("float64"), result_shape)
 
     # Phase 2: bisect [lo, hi] keeping the invariant cdf(hi) >= value > cdf(lo - 1).
     def bisect(lo, hi):
