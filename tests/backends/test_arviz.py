@@ -20,7 +20,7 @@ import xarray
 
 from arviz_base.testing import check_multiple_attrs
 from numpy import ma
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
 
@@ -384,7 +384,7 @@ class TestDataPyMC:
                 )
 
         # make sure that data is really missing
-        assert isinstance(y.owner.inputs[0].owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1)
+        assert isinstance(y.owner.inputs[0].owner.op, AdvancedIncSubtensor)
 
         test_dict = {
             "posterior": ["mu", "chol_cov"],

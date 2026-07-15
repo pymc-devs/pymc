@@ -12,7 +12,7 @@ dependencies:
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
-- pytensor>=3.1.2,<3.2
+- pytensor>=3.2.2,<3.3
 - python-graphviz
 - networkx
 - scipy>=1.4.1
