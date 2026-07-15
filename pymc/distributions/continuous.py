@@ -773,11 +773,30 @@ class TruncatedNormal(BoundedContinuous):
         )
         is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
 
-        cdf_lower = pt.exp(normal_lcdf(mu, sigma, lower)) if is_lower_bounded else 0.0
-        cdf_upper = pt.exp(normal_lcdf(mu, sigma, upper)) if is_upper_bounded else 1.0
+        if is_lower_bounded and is_upper_bounded:
+            log_norm = log_diff_normal_cdf(mu, sigma, upper, lower)
+        elif is_lower_bounded:
+            log_norm = normal_lccdf(mu, sigma, lower)
+        elif is_upper_bounded:
+            log_norm = normal_lcdf(mu, sigma, upper)
+        else:
+            log_norm = 0.0
 
-        p = cdf_lower + value * (cdf_upper - cdf_lower)
-        res = mu - sigma * np.sqrt(2.0) * pt.erfcinv(2 * p)
+        # p = cdf(lower) + value * (cdf(upper) - cdf(lower)), computed in logspace
+        # for numerical stability, along with its complement 1 - p
+        log_p = pt.log(value) + log_norm
+        log_1mp = pt.log1p(-value) + log_norm
+        if is_lower_bounded:
+            log_p = pt.logaddexp(normal_lcdf(mu, sigma, lower), log_p)
+        if is_upper_bounded:
+            log_1mp = pt.logaddexp(normal_lccdf(mu, sigma, upper), log_1mp)
+
+        # Use the more accurate erfcinv branch for each tail
+        res = pt.switch(
+            log_p <= np.log(0.5),
+            mu - sigma * np.sqrt(2.0) * pt.erfcinv(2 * pt.exp(log_p)),
+            mu + sigma * np.sqrt(2.0) * pt.erfcinv(2 * pt.exp(log_1mp)),
+        )
         res = check_icdf_value(res, value)
 
         if is_lower_bounded and is_upper_bounded:
