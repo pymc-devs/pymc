@@ -36,6 +36,7 @@
 
 
 import numpy as np
+import pytensor
 import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, Variable
@@ -363,6 +364,13 @@ def round_logprob(op, values, base_rv, **kwargs):
 
     """
     (value,) = values
+
+    if not value.type.dtype.startswith("float"):
+        # The Ops below snap the value onto the cell whose mass it asks for, and only
+        # accept float inputs. An integral value already sits on a cell, so the snapping
+        # is an identity and only the dtype needs adjusting (as when the rounding is
+        # followed by a cast to int).
+        value = pt.cast(value, pytensor.config.floatX)
 
     if isinstance(op.scalar_op, RoundHalfToEven | RoundHalfAwayFromZero):
         # The tie-breaking rule only matters on a measure-zero set of the
