@@ -45,6 +45,7 @@ from pytensor.scalar.basic import Ceil, Clip, Floor, RoundHalfToEven
 from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.math import ceil, clip, floor, round_half_to_even
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import MeasurableElemwise, _logccdf_helper, _logcdf, _logprob
@@ -159,6 +160,26 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Apply) -> list[Tensor
         return None
 
     [base_var] = node.inputs
+
+    if np.dtype(base_var.type.dtype).kind != "f" or isinstance(base_var.owner.op, MeasurableRound):
+        # The base already sits on the integers, either because its dtype guarantees it
+        # or because it is itself a rounding, so this one leaves it untouched save for
+        # the upcast the Ops apply to a discrete input. Reducing the rounding to that
+        # cast, rather than deriving the mass of a degenerate cell, leaves the base's
+        # own logprob, logcdf and icdf to apply. The cast folds away when the base is
+        # already a float, as it is for a rounded base.
+        return [pt.cast(base_var, node.outputs[0].type.dtype)]
+
+    # The reverse does not hold, so from here on the base must be shown to be continuous
+    # for the intervals below to be the right ones: an intermediate MeasurableVariable
+    # can be supported on the integers while carrying a float dtype, as `floor(x)` does.
+    # Only a RandomVariable states its own support, so anything else is declined rather
+    # than assumed continuous. Once MeasurableVariables carry the meta-information of
+    # the RV they encapsulate (https://github.com/pymc-devs/pymc/issues/6360), the
+    # support can be read off the base variable directly and this may be relaxed.
+    if not isinstance(base_var.owner.op, RandomVariable):
+        return None
+
     rounded_op = MeasurableRound(node.op.scalar_op)
     rounded_rv = rounded_op.make_node(base_var).default_output()
     rounded_rv.name = node.outputs[0].name

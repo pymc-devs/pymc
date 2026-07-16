@@ -260,3 +260,55 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
+
+
+@pytest.mark.parametrize("rounding_op", (pt.floor, pt.ceil))
+def test_rounding_discrete_base(rounding_op):
+    # A variable that already sits on the integers is only upcast by the rounding, so
+    # its own logprob applies unchanged (`pt.round` rejects integer inputs outright)
+    mu = 3
+    test_value = np.arange(0, 4)
+
+    x = pt.random.poisson(mu, size=test_value.shape, name="x")
+    xr = rounding_op(x)
+    xr_vv = xr.clone()
+
+    np.testing.assert_allclose(
+        logp(xr, xr_vv).eval({xr_vv: test_value}),
+        st.poisson(mu).logpmf(test_value),
+    )
+
+
+@pytest.mark.parametrize("outer_op", (pt.round, pt.floor, pt.ceil))
+@pytest.mark.parametrize("inner_op", (pt.floor, pt.ceil))
+def test_rounding_rounded_base(outer_op, inner_op):
+    # The inner rounding leaves the variable on the integers, where the outer one is an
+    # identity, so the logprob is that of the inner rounding alone
+    loc = 1
+    scale = 2
+    test_value = np.arange(-3, 4, dtype="float64")
+
+    x = pt.random.normal(loc, scale, size=test_value.shape, name="x")
+    inner = inner_op(x)
+
+    outer_vv = outer_op(inner).clone()
+    inner_vv = inner.clone()
+
+    np.testing.assert_allclose(
+        logp(outer_op(inner), outer_vv).eval({outer_vv: test_value}),
+        logp(inner, inner_vv).eval({inner_vv: test_value}),
+    )
+
+
+@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
+def test_rounding_censored_base_not_measurable(rounding_op):
+    # A clipped variable pools mass at its bounds, so it is not continuous, but its
+    # float dtype does not say so and we do not infer it (see
+    # https://github.com/pymc-devs/pymc/issues/6360). Fail rather than treat the base as
+    # continuous, which pools the mass at the upper bound into the neighbouring cell and
+    # leaves the bound itself with a probability of zero.
+    x = pt.random.normal(1, 2, size=(7,), name="x")
+    y = rounding_op(pt.clip(x, 0, 3))
+
+    with pytest.raises(NotImplementedError):
+        logp(y, y.clone())
