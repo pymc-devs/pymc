@@ -67,6 +67,7 @@ from pymc.logprob.abstract import (
     _logprob_helper,
     promised_valued_rv,
 )
+from pymc.logprob.censoring import MeasurableRound
 from pymc.logprob.rewriting import (
     assume_valued_outputs,
     early_measurable_ir_rewrites_db,
@@ -487,16 +488,33 @@ def find_measurable_casts(fgraph, node) -> list[TensorVariable] | None:
 
     [out] = node.outputs
     # bool < integer < float; casting to a lower kind discretizes the base variable,
-    # which is not a measure-preserving identity (float -> int would need to be
-    # treated as a form of censoring)
+    # which is not a measure-preserving identity
     kind_order = {"b": 0, "u": 1, "i": 1, "f": 2}
-    in_kind = kind_order.get(np.dtype(base_var.type.dtype).kind)
-    out_kind = kind_order.get(np.dtype(out.type.dtype).kind)
+    in_dtype = np.dtype(base_var.type.dtype)
+    out_dtype = np.dtype(out.type.dtype)
+    in_kind = kind_order.get(in_dtype.kind)
+    out_kind = kind_order.get(out_dtype.kind)
     if in_kind is None or out_kind is None:
         # Kinds we can't order, such as complex
         return None
     if out_kind < in_kind:
-        return None
+        # A float -> signed int cast rounds towards zero, so it is a `trunc` composed
+        # with a cast that merely relabels the dtype. Introduce the `trunc` explicitly
+        # and let `find_measurable_roundings` claim it; the relabelling cast is then
+        # measure-preserving and claimed on a later pass.
+        # The other narrowing casts are not truncations: unsigned ints wrap around for
+        # negative values (-2.7 -> 254 for uint8), and bool tests `x != 0`, which
+        # collapses the support onto two points instead of partitioning it.
+        if in_dtype.kind != "f" or out_dtype.kind != "i":
+            return None
+        # Rewriting to the `trunc` the user could have written themselves leaves the
+        # judgement of whether the base may be truncated to `find_measurable_roundings`,
+        # which declines the bases whose support it cannot establish, rather than
+        # duplicating that reasoning here. Once the `trunc` is in place the cast only
+        # relabels the dtype and is claimed as measure-preserving below; skipping it for
+        # an already rounded base is what brings the rewrite to a fixpoint.
+        if not isinstance(base_var.owner.op, MeasurableRound):
+            return [pt.cast(pt.trunc(base_var), out_dtype.name)]
 
     if in_kind < kind_order["f"] and out_kind == kind_order["f"]:
         # Casting a discrete variable to float hides its discreteness from other

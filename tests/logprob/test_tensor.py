@@ -712,8 +712,38 @@ class TestMeasurableCast:
             st.bernoulli(0.3).logpmf(1),
         )
 
-    @pytest.mark.parametrize("out_dtype", ["int64", "bool"])
-    def test_discretizing_cast_not_measurable(self, out_dtype):
+    @pytest.mark.parametrize(
+        "value, lower, upper",
+        [(1, 1, 2), (0, -1, 1), (-1, -2, -1)],
+        ids=["positive", "zero", "negative"],
+    )
+    def test_float_to_int(self, value, lower, upper):
+        # The cast rounds towards zero, pooling (-1, 1) at zero
+        y = pt.cast(pt.random.normal(0.5, 1), "int64")
+        y_vv = y.clone()
+
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: value}),
+            np.log(st.norm(0.5, 1).cdf(upper) - st.norm(0.5, 1).cdf(lower)),
+        )
+
+    @pytest.mark.parametrize("rounding_fn", [pt.trunc, pt.floor, pt.ceil, pt.round])
+    def test_rounded_float_to_int(self, rounding_fn):
+        # The base variable is already supported on the integers, so the cast only
+        # relabels the dtype and must not introduce a second truncation
+        x = pt.random.normal(0.5, 1)
+        y = pt.cast(rounding_fn(x), "int64")
+        y_vv = y.clone()
+
+        np.testing.assert_allclose(
+            logp(y, y_vv).eval({y_vv: 1}),
+            logp(rounding_fn(x), pt.constant(1.0)).eval(),
+        )
+
+    @pytest.mark.parametrize("out_dtype", ["bool", "uint8"])
+    def test_non_truncating_discretizing_cast_not_measurable(self, out_dtype):
+        # Casting to bool tests `x != 0` and casting to an unsigned int wraps around
+        # for negative values; neither is the truncation that float -> int performs
         y = pt.cast(pt.random.normal(), out_dtype)
         with pytest.raises(NotImplementedError):
             logp(y, y.clone())
