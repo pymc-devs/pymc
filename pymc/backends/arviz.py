@@ -153,15 +153,21 @@ def find_observations(model: Model) -> dict[str, Var]:
 
 def find_constants(model: Model) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
-    model_vars = model.basic_RVs + model.deterministics + model.potentials
-    value_vars = set(model.rvs_to_values.values())
+    # Collect data_vars that feed into observed value variables.
+    # This handles both the direct case (value_var IS the data var, e.g. continuous
+    # distributions) and the indirect case (value_var wraps the data var through a
+    # Cast op, e.g. discrete distributions like Categorical or Poisson).
+    observed_data_vars = set()
+    for rv in model.observed_RVs:
+        value_var = model.rvs_to_values[rv]
+        for anc in ancestors([value_var]):
+            if anc in model.data_vars:
+                observed_data_vars.add(anc)
 
     constant_data = {}
     for var in model.data_vars:
-        if var in value_vars:
-            # An observed value variable could also be part of the generative graph
-            if var not in ancestors(model_vars):
-                continue
+        if var in observed_data_vars:
+            continue
 
         if isinstance(var, SharedVariable):
             var_value = var.get_value()
