@@ -607,3 +607,67 @@ class TestUntransformedData:
         first_mean = snapshots[0]["mean"]["mu"].values
         last_mean = snapshots[-1]["mean"]["mu"].values
         assert not np.allclose(first_mean, last_mean), "parameters should change during training"
+
+    def test_state_dirichlet(self):
+        """State works with Dirichlet (simplex transform changes dimensionality)."""
+        with pm.Model():
+            pm.Dirichlet("p", a=[1, 2, 3])
+            fitted = pm.fit(50, method="advi", progressbar=False, random_seed=42)
+
+        s = fitted.state
+        # Dirichlet with K=3 has K-1=2 unconstrained dims, 3 constrained dims
+        assert "p" in s.mean
+        assert s.mean["p"].values.shape == (3,)
+        # Values should be on the simplex (sum to 1)
+        np.testing.assert_allclose(s.mean["p"].values.sum(), 1.0, atol=1e-6)
+        assert (s.mean["p"].values >= 0).all()
+        assert (s.mean["p"].values <= 1).all()
+        # std should also be in constrained space
+        assert s.std is not None
+        assert "p" in s.std
+        assert s.std["p"].values.shape == (3,)
+
+    def test_state_include_transformed(self):
+        """include_transformed=True adds unconstrained variables to state."""
+        with pm.Model():
+            pm.HalfNormal("sigma", sigma=5.0)
+            pm.Normal("mu", 0, 1)
+            fitted = pm.fit(
+                50,
+                method="advi",
+                progressbar=False,
+                random_seed=42,
+                include_transformed=True,
+            )
+
+        s = fitted.state
+        # Constrained variables always present
+        assert "sigma" in s.mean
+        assert "mu" in s.mean
+        # Unconstrained variables included when include_transformed=True
+        assert "sigma_log__" in s.mean
+        # mu has no transform, so it appears only once
+        assert list(s.mean.data_vars) == ["sigma", "mu", "sigma_log__"]
+        assert s.std is not None
+        assert "sigma_log__" in s.std
+
+    def test_state_include_transformed_dirichlet(self):
+        """include_transformed=True with Dirichlet (dimensionality-changing transform)."""
+        with pm.Model():
+            pm.Dirichlet("p", a=[1, 2, 3])
+            fitted = pm.fit(
+                50,
+                method="advi",
+                progressbar=False,
+                random_seed=42,
+                include_transformed=True,
+            )
+
+        s = fitted.state
+        # Constrained: p (shape 3, on simplex)
+        assert "p" in s.mean
+        assert s.mean["p"].values.shape == (3,)
+        np.testing.assert_allclose(s.mean["p"].values.sum(), 1.0, atol=1e-6)
+        # Unconstrained: p_simplex__ (shape 2, K-1 dims)
+        assert "p_simplex__" in s.mean
+        assert s.mean["p_simplex__"].values.shape == (2,)
