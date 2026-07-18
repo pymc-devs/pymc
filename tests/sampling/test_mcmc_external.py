@@ -485,3 +485,44 @@ class TestExternalSamplerLogging:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert pymc_logs == []
+
+
+class TestJaxSamplerKwargForwarding:
+    """Top-level `pm.sample` kwargs must reach the jax NUTS samplers.
+
+    Regression test for GH #8366: since pymc 6.x, `_sample_external_nuts`
+    captured extra top-level kwargs in `**kwargs` but never forwarded them to
+    `sample_jax_nuts`, so `pm.sample(..., chain_method="vectorized")` (and
+    similar jax-only arguments such as `postprocessing_backend`) were silently
+    dropped instead of reaching the sampler.
+    """
+
+    @pytest.mark.parametrize("nuts_sampler", ["numpyro", "blackjax"])
+    def test_top_level_kwargs_reach_sample_jax_nuts(self, nuts_sampler):
+        pytest.importorskip(nuts_sampler)
+
+        import pymc.sampling.jax as pymc_jax
+
+        captured = {}
+
+        def fake_sample_jax_nuts(*args, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace()
+
+        with mock.patch.object(pymc_jax, "sample_jax_nuts", side_effect=fake_sample_jax_nuts):
+            with Model():
+                Normal("x", 0, 1)
+                sample(
+                    draws=2,
+                    tune=2,
+                    chains=2,
+                    nuts_sampler=nuts_sampler,
+                    chain_method="vectorized",
+                    postprocessing_backend="cpu",
+                    progressbar=False,
+                    compute_convergence_checks=False,
+                    random_seed=42,
+                )
+
+        assert captured.get("chain_method") == "vectorized"
+        assert captured.get("postprocessing_backend") == "cpu"

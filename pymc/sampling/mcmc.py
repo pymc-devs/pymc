@@ -525,6 +525,12 @@ def _sample_external_nuts(
             nuts_kwargs=jax_nuts_kwargs,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
+            # Forward any remaining top-level kwargs (e.g. `chain_method`,
+            # `postprocessing_backend`) that `sample_jax_nuts` accepts directly.
+            # Previously these were captured by `**kwargs` above and never passed
+            # on, so `pm.sample(..., chain_method="vectorized")` silently had no
+            # effect (a regression from pymc 5.x). See GH #8366.
+            **kwargs,
             **tune_kwarg,
         )
         return idata
