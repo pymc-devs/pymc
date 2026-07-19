@@ -95,8 +95,8 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     base_rv_op = base_rv.owner.op
 
-    logcdf = _logcdf_helper(base_rv, operand, **kwargs)
-    logccdf = _logccdf_helper(base_rv, operand, **kwargs)
+    logcdf = _logcdf_helper(base_rv, operand)
+    logccdf = _logccdf_helper(base_rv, operand)
 
     condn_exp = pt.eq(value, np.array(True))
 
@@ -109,7 +109,7 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
 
     if base_rv.dtype.startswith("int"):
         logpmf = _logprob_helper(base_rv, operand, **kwargs)
-        logcdf_prev = _logcdf_helper(base_rv, operand - 1, **kwargs)
+        logcdf_prev = _logcdf_helper(base_rv, operand - 1)
         if isinstance(op.scalar_op, LT):
             return pt.switch(condn_exp, logcdf_prev, pt.logaddexp(logccdf, logpmf))
         elif isinstance(op.scalar_op, GE):

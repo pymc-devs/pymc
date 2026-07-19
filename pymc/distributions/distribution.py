@@ -152,21 +152,21 @@ class DistributionMeta(ABCMeta):
             if (class_logcdf := clsdict.get("logcdf")) is not None:
 
                 @_logcdf.register(rv_type)
-                def logcdf(op, value, *params, **kwargs):
+                def logcdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_logcdf(value, *dist_params), size)
 
             if (class_logccdf := clsdict.get("logccdf")) is not None:
 
                 @_logccdf.register(rv_type)
-                def logccdf(op, value, *params, **kwargs):
+                def logccdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_logccdf(value, *dist_params), size)
 
             if (class_icdf := clsdict.get("icdf")) is not None:
 
                 @_icdf.register(rv_type)
-                def icdf(op, value, *params, **kwargs):
+                def icdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_icdf(value, *dist_params), size)
 

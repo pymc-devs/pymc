@@ -269,7 +269,7 @@ MONOTONICALLY_DECREASING_OPS = (ArcCos, Erfc, Erfcx, Erfcinv)
 
 
 @_logcdf.register(MeasurableTransform)
-def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwargs):
+def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs):
     """Compute the log-CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)
@@ -320,7 +320,7 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs, **kwarg
 
 
 @_icdf.register(MeasurableTransform)
-def measurable_transform_icdf(op: MeasurableTransform, value, *inputs, **kwargs):
+def measurable_transform_icdf(op: MeasurableTransform, value, *inputs):
     """Compute the inverse CDF graph for a `MeasurabeTransform`."""
     other_inputs = list(inputs)
     measurable_input = other_inputs.pop(op.measurable_input_idx)

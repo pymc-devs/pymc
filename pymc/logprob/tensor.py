@@ -540,7 +540,7 @@ def cast_logprob(op, values, base_var, **kwargs):
 
 
 @_logcdf.register(MeasurableCast)
-def cast_logcdf(op, value, base_var, **kwargs):
+def cast_logcdf(op, value, base_var):
     if base_var.type.dtype.startswith(("int", "uint", "bool")):
         # For a discrete base variable, P(cast(X) <= 1.5) = P(X <= 1)
         value = pt.floor(value)
@@ -548,7 +548,7 @@ def cast_logcdf(op, value, base_var, **kwargs):
 
 
 @_icdf.register(MeasurableCast)
-def cast_icdf(op, value, base_var, **kwargs):
+def cast_icdf(op, value, base_var):
     return pt.cast(_icdf_helper(base_var, value), op.scalar_op.o_type.dtype)
 
 
@@ -600,14 +600,14 @@ def identity_logprob(op, values, base_var, **kwargs):
 @_logcdf.register(MeasurableScalarFromTensor)
 @_logcdf.register(MeasurableSpecifyAssumptions)
 @_logcdf.register(MeasurableDeepCopyOp)
-def identity_logcdf(op, value, base_var, **kwargs):
+def identity_logcdf(op, value, base_var):
     return _logcdf_helper(base_var, value)
 
 
 @_icdf.register(MeasurableScalarFromTensor)
 @_icdf.register(MeasurableSpecifyAssumptions)
 @_icdf.register(MeasurableDeepCopyOp)
-def identity_icdf(op, value, base_var, **kwargs):
+def identity_icdf(op, value, base_var):
     return _icdf_helper(base_var, value)
 
 

@@ -244,7 +244,7 @@ def mixture_support_point(op, rv, rng, weights, *components):
 
 
 @_logcdf.register(_BaseMixtureRV)
-def mixture_logcdf(op, value, rng, weights, *components, **kwargs):
+def mixture_logcdf(op, value, rng, weights, *components):
     # single component
     if len(components) == 1:
         # Need to broadcast value across mixture axis

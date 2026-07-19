@@ -209,14 +209,14 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     base_rv_inputs = base_rv.owner.inputs
 
     logprob = _logprob(base_rv_op, (value,), *base_rv_inputs, **kwargs)
-    logcdf = _logcdf(base_rv_op, value, *base_rv_inputs, **kwargs)
+    logcdf = _logcdf(base_rv_op, value, *base_rv_inputs)
 
     if base_rv_op.name:
         logprob.name = f"{base_rv_op}_logprob"
         logcdf.name = f"{base_rv_op}_logcdf"
 
     if upper_bound is not base_rv:
-        logccdf = _logccdf_helper(base_rv, value, **kwargs)
+        logccdf = _logccdf_helper(base_rv, value)
 
         # For right clipped discrete RVs, we need to add an extra term
         # corresponding to the pmf at the upper bound
@@ -244,7 +244,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
 
 
 @_logcdf.register(MeasurableClip)
-def clip_logcdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
+def clip_logcdf(op, value, base_rv, lower_bound, upper_bound):
     r"""Log-CDF of a clipped censored distribution.
 
     .. math::
@@ -270,7 +270,7 @@ def clip_logcdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
 
 
 @_icdf.register(MeasurableClip)
-def clip_icdf(op, value, base_rv, lower_bound, upper_bound, **kwargs):
+def clip_icdf(op, value, base_rv, lower_bound, upper_bound):
     # The point masses at the bounds absorb the respective tail quantiles
     icdf = _icdf_helper(base_rv, value)
 
@@ -399,8 +399,8 @@ def round_logprob(op, values, base_rv, **kwargs):
     base_rv_op = base_rv.owner.op
     base_rv_inputs = base_rv.owner.inputs
 
-    logcdf_upper = _logcdf(base_rv_op, value_upper, *base_rv_inputs, **kwargs)
-    logcdf_lower = _logcdf(base_rv_op, value_lower, *base_rv_inputs, **kwargs)
+    logcdf_upper = _logcdf(base_rv_op, value_upper, *base_rv_inputs)
+    logcdf_lower = _logcdf(base_rv_op, value_lower, *base_rv_inputs)
 
     if base_rv_op.name:
         logcdf_upper.name = f"{base_rv_op}_logcdf_upper"
