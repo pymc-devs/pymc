@@ -162,12 +162,12 @@ def support_point_censored(op, rv, dist, lower, upper):
 
 
 @_logcdf.register(CensoredRV)
-def censored_logcdf(op, value, *inputs, **kwargs):
+def censored_logcdf(op, value, *inputs):
     base_rv, lower, upper = inputs
 
     base_rv_op = base_rv.owner.op
     base_rv_inputs = base_rv.owner.inputs
-    logcdf_val = _logcdf(base_rv_op, value, *base_rv_inputs, **kwargs)
+    logcdf_val = _logcdf(base_rv_op, value, *base_rv_inputs)
 
     is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
     is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))

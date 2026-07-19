@@ -87,7 +87,6 @@ def _logcdf(
     op: Op,
     value: TensorVariable,
     *inputs: TensorVariable,
-    **kwargs,
 ):
     """Create a graph for the logcdf of a ``RandomVariable``.
 
@@ -98,9 +97,9 @@ def _logcdf(
     raise NotImplementedError(f"LogCDF method not implemented for {op}")
 
 
-def _logcdf_helper(rv, value, **kwargs):
+def _logcdf_helper(rv, value):
     """Help call `_logcdf` dispatcher."""
-    logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
+    logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs)
 
     if rv.name:
         logcdf.name = f"{rv.name}_logcdf"
@@ -113,7 +112,6 @@ def _logccdf(
     op: Op,
     value: TensorVariable,
     *inputs: TensorVariable,
-    **kwargs,
 ):
     """Create a graph for the log complementary CDF (log survival function) of a ``RandomVariable``.
 
@@ -128,7 +126,7 @@ def _logccdf(
     raise NotImplementedError(f"LogCCDF method not implemented for {op}")
 
 
-def _logccdf_helper(rv, value, **kwargs):
+def _logccdf_helper(rv, value):
     """Helper that calls `_logccdf` dispatcher with fallback to log1mexp(logcdf).
 
     If a numerically stable `_logccdf` implementation is registered for the
@@ -136,9 +134,9 @@ def _logccdf_helper(rv, value, **kwargs):
     `log(1 - exp(logcdf))` which may be numerically unstable in the tails.
     """
     try:
-        logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
+        logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs)
     except NotImplementedError:
-        logcdf = _logcdf_helper(rv, value, **kwargs)
+        logcdf = _logcdf_helper(rv, value)
         logccdf = log1mexp(logcdf)
 
     if rv.name:
@@ -152,7 +150,6 @@ def _icdf(
     op: Op,
     value: TensorVariable,
     *inputs: TensorVariable,
-    **kwargs,
 ):
     """Create a graph for the inverse CDF of a `RandomVariable`.
 
@@ -162,9 +159,9 @@ def _icdf(
     raise NotImplementedError(f"Inverse CDF method not implemented for {op}")
 
 
-def _icdf_helper(rv, value, **kwargs):
+def _icdf_helper(rv, value):
     """Help call `_icdf` dispatcher."""
-    rv_icdf = _icdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
+    rv_icdf = _icdf(rv.owner.op, value, *rv.owner.inputs)
 
     if rv.name:
         rv_icdf.name = f"{rv.name}_icdf"
