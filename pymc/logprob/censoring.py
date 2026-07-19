@@ -148,7 +148,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
 
 
 class MeasurableRound(MeasurableElemwise):
-    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph."""
+    """A placeholder used to specify a log-likelihood for a rounded RV sub-graph."""
 
     valid_scalar_types = (RoundHalfToEven, Floor, Ceil)
 
