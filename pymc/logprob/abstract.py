@@ -100,7 +100,7 @@ def _logcdf(
 
 def _logcdf_helper(rv, value, **kwargs):
     """Help call `_logcdf` dispatcher."""
-    logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
+    logcdf = _logcdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
 
     if rv.name:
         logcdf.name = f"{rv.name}_logcdf"
@@ -136,7 +136,7 @@ def _logccdf_helper(rv, value, **kwargs):
     `log(1 - exp(logcdf))` which may be numerically unstable in the tails.
     """
     try:
-        logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs, name=rv.name, **kwargs)
+        logccdf = _logccdf(rv.owner.op, value, *rv.owner.inputs, **kwargs)
     except NotImplementedError:
         logcdf = _logcdf_helper(rv, value, **kwargs)
         logccdf = log1mexp(logcdf)
