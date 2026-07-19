@@ -1080,6 +1080,17 @@ class TestMatchesScipy:
             skip_paramdomain_outside_edge_test=True,
         )
 
+        # Far-tail truncation, where exp(logcdf) underflows
+        if pytensor.config.floatX == "float64":
+            q = np.array([1e-12, 0.3, 0.9, 1 - 1e-12])
+            for lower, upper in [(39, np.inf), (39, 42), (100, np.inf)]:
+                dist = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=lower, upper=upper)
+                npt.assert_allclose(
+                    icdf(dist, q).eval(),
+                    scipy_icdf(q, 0, 1, lower, upper),
+                    rtol=1e-6,
+                )
+
         # This is a regression test for #6128: Check that having one out-of-bound value
         # in an input array does not set all logp values to -inf
         dist = pm.TruncatedNormal.dist(mu=1, sigma=2, lower=0, upper=3)

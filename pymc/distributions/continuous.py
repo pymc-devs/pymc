@@ -786,16 +786,19 @@ class TruncatedNormal(BoundedContinuous):
         # for numerical stability, along with its complement 1 - p
         log_p = pt.log(value) + log_norm
         log_1mp = pt.log1p(-value) + log_norm
+        # a + softplus(b - a) is logaddexp(a, b), written so that graph rewrites
+        # cannot fold exp(a) to zero when a is a very negative constant
         if is_lower_bounded:
-            log_p = pt.logaddexp(normal_lcdf(mu, sigma, lower), log_p)
+            lower_lcdf = normal_lcdf(mu, sigma, lower)
+            log_p = lower_lcdf + pt.softplus(log_p - lower_lcdf)
         if is_upper_bounded:
-            log_1mp = pt.logaddexp(normal_lccdf(mu, sigma, upper), log_1mp)
+            upper_lccdf = normal_lccdf(mu, sigma, upper)
+            log_1mp = upper_lccdf + pt.softplus(log_1mp - upper_lccdf)
 
-        # Use the more accurate erfcinv branch for each tail
         res = pt.switch(
             log_p <= np.log(0.5),
-            mu - sigma * np.sqrt(2.0) * pt.erfcinv(2 * pt.exp(log_p)),
-            mu + sigma * np.sqrt(2.0) * pt.erfcinv(2 * pt.exp(log_1mp)),
+            mu + sigma * pt.ndtri_exp(log_p),
+            mu - sigma * pt.ndtri_exp(log_1mp),
         )
         res = check_icdf_value(res, value)
 
