@@ -507,6 +507,40 @@ def _sample_external_nuts(
 
         jax_nuts_kwargs = dict(nuts_kwargs)
         jax_target_accept = jax_nuts_kwargs.pop("target_accept", 0.8)
+
+        # jax-specific sampler options (chain execution + postprocessing) are
+        # named parameters of `sample_jax_nuts`. Historically they leaked in via
+        # `**kwargs` on `pm.sample`; forwarding arbitrary top-level kwargs is
+        # fragile (each sampler needs a different set), so instead detect the
+        # known jax options explicitly, warn that the top-level route is
+        # deprecated, and pass them on by name. Anything left over is a stray
+        # kwarg the jax samplers don't understand -- warn that it is ignored.
+        jax_sampler_kwargs = {}
+        for key in (
+            "chain_method",
+            "postprocessing_backend",
+            "postprocessing_vectorize",
+            "postprocessing_chunks",
+        ):
+            if key in kwargs:
+                warnings.warn(
+                    f"Passing `{key}` as a top-level argument to `pm.sample` is "
+                    "deprecated and will be removed in a future release; the jax "
+                    "NUTS samplers will accept it through a dedicated route "
+                    "instead. See https://github.com/pymc-devs/pymc/issues/8366.",
+                    FutureWarning,
+                    stacklevel=2,
+                )
+                jax_sampler_kwargs[key] = kwargs.pop(key)
+
+        if kwargs:
+            warnings.warn(
+                f"The following keyword arguments are not understood by the "
+                f"{sampler!r} sampler and will be ignored: {sorted(kwargs)}.",
+                UserWarning,
+                stacklevel=2,
+            )
+
         # Don't forward tune=None: let `sample_jax_nuts`'s own default kick in.
         tune_kwarg = {"tune": tune} if tune is not None else {}
         idata = pymc_jax.sample_jax_nuts(
@@ -525,12 +559,7 @@ def _sample_external_nuts(
             nuts_kwargs=jax_nuts_kwargs,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
-            # Forward any remaining top-level kwargs (e.g. `chain_method`,
-            # `postprocessing_backend`) that `sample_jax_nuts` accepts directly.
-            # Previously these were captured by `**kwargs` above and never passed
-            # on, so `pm.sample(..., chain_method="vectorized")` silently had no
-            # effect (a regression from pymc 5.x). See GH #8366.
-            **kwargs,
+            **jax_sampler_kwargs,
             **tune_kwarg,
         )
         return idata
