@@ -48,20 +48,20 @@ class TestRVsAssignmentHamiltonianMC(RVsAssignmentStepsTester):
 
 def test_leapfrog_reversible():
     n = 3
-    np.random.seed(42)
+    rng = np.random.default_rng(42)
     start, model, _ = models.non_normal(n)
     size = sum(start[n.name].size for n in model.value_vars)
-    scaling = floatX(np.random.rand(size))
+    scaling = floatX(rng.random(size))
 
     class HMC(BaseHMC):
         def _hamiltonian_step(self, *args, **kwargs):
             pass
 
-    step = HMC(vars=model.value_vars, model=model, scaling=scaling)
+    step = HMC(vars=model.value_vars, model=model, scaling=scaling, rng=rng)
 
     astart = DictToArrayBijection.map(start)
     p = RaveledVars(floatX(step.potential.random()), astart.point_map_info)
-    q = floatX(np.random.randn(size))
+    q = floatX(rng.normal(size=size))
     start = step.integrator.compute_state(p, q)
     for epsilon in [0.01, 0.1]:
         for n_steps in [1, 2, 3, 4, 20]:
