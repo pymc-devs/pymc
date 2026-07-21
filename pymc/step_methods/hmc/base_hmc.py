@@ -158,6 +158,9 @@ class BaseHMC(GradientSharedStep):
         nuts_vars = [initial_point[v.name] for v in vars]
         size = sum(v.size for v in nuts_vars)
 
+        if not 0 < target_accept < 1:
+            raise ValueError(f"target_accept must be a float in (0, 1), got {target_accept!r}.")
+
         self.step_size = step_scale / (size**0.25)
         self.step_adapt = DualAverageAdaptation(self.step_size, target_accept, gamma, k, t0)
         self.target_accept = target_accept
