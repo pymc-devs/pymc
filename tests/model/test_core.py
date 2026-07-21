@@ -951,6 +951,14 @@ class TestSetUpdateCoords:
             rv2.name = "yumyum"
             pmodel.add_named_variable(rv2, dims=("nomnom", None))
 
+    @pytest.mark.parametrize("name", ["chain", "draw", "__sample__"])
+    def test_add_named_variable_rejects_reserved_name(self, name):
+        with pm.Model() as pmodel:
+            rv = pm.Normal.dist()
+            rv.name = name
+            with pytest.raises(ValueError, match="reserved for use in `InferenceData`"):
+                pmodel.add_named_variable(rv)
+
     def test_add_named_variable_checks_number_of_dims(self):
         match = "dim labels were provided"
         with pm.Model(coords={"bad": range(6)}) as m:
