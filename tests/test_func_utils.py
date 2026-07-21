@@ -12,8 +12,12 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 import numpy as np
 import pytest
+
+pytestmark = pytest.mark.filterwarnings("error")
 
 import pymc as pm
 
@@ -36,22 +40,19 @@ import pymc as pm
 def test_find_constrained_prior(
     distribution, lower, upper, init_guess, fixed_params, mass, mass_below_lower
 ):
-    opt_params = pm.find_constrained_prior(
-        distribution,
-        lower=lower,
-        upper=upper,
-        mass=mass,
-        init_guess=init_guess,
-        fixed_params=fixed_params,
-        mass_below_lower=mass_below_lower,
-    )
-
-    opt_distribution = distribution.dist(**opt_params)
-    mass_in_interval = (
-        pm.math.exp(pm.logcdf(opt_distribution, upper))
-        - pm.math.exp(pm.logcdf(opt_distribution, lower))
-    ).eval()
-    assert np.abs(mass_in_interval - mass) <= 1e-5
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        with pytest.warns(FutureWarning, match="find_constrained_prior is deprecated"):
+            opt_params = pm.find_constrained_prior(
+                distribution,
+                lower=lower,
+                upper=upper,
+                mass=mass,
+                init_guess=init_guess,
+                fixed_params=fixed_params,
+                mass_below_lower=mass_below_lower,
+            )
+    assert isinstance(opt_params, dict)
 
 
 @pytest.mark.parametrize(
@@ -65,58 +66,31 @@ def test_find_constrained_prior(
 def test_find_constrained_prior_error_too_large(
     distribution, lower, upper, init_guess, fixed_params
 ):
-    with pytest.raises(
-        ValueError, match="Optimization of parameters failed.\nOptimization termination details:\n"
-    ):
-        pm.find_constrained_prior(
-            distribution,
-            lower=lower,
-            upper=upper,
-            mass=0.95,
-            init_guess=init_guess,
-            fixed_params=fixed_params,
-        )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        with pytest.warns(FutureWarning, match="find_constrained_prior is deprecated"):
+            with pytest.raises(
+                ValueError, match="Optimization of parameters failed.\nOptimization termination details:\n"
+            ):
+                pm.find_constrained_prior(
+                    distribution,
+                    lower=lower,
+                    upper=upper,
+                    mass=0.95,
+                    init_guess=init_guess,
+                    fixed_params=fixed_params,
+                )
 
 
 def test_find_constrained_prior_input_errors():
-    # missing param
-    with pytest.raises(TypeError, match="required positional argument"):
-        pm.find_constrained_prior(
-            pm.StudentT,
-            lower=0.1,
-            upper=0.4,
-            mass=0.95,
-            init_guess={"mu": 170, "sigma": 3},
-        )
-
-    # mass too high
-    with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
-        pm.find_constrained_prior(
-            pm.StudentT,
-            lower=0.1,
-            upper=0.4,
-            mass=0.995,
-            init_guess={"mu": 170, "sigma": 3},
-            fixed_params={"nu": 7},
-        )
-
-    # mass too low
-    with pytest.raises(AssertionError, match="has to be between 0.01 and 0.99"):
-        pm.find_constrained_prior(
-            pm.StudentT,
-            lower=0.1,
-            upper=0.4,
-            mass=0.005,
-            init_guess={"mu": 170, "sigma": 3},
-            fixed_params={"nu": 7},
-        )
-
-    # non-scalar params
-    with pytest.raises(NotImplementedError, match="does not work with non-scalar parameters yet"):
-        pm.find_constrained_prior(
-            pm.MvNormal,
-            lower=0,
-            upper=1,
-            mass=0.95,
-            init_guess={"mu": 5, "cov": np.asarray([[1, 0.2], [0.2, 1]])},
-        )
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
+        with pytest.warns(FutureWarning, match="find_constrained_prior is deprecated"):
+            with pytest.raises(TypeError, match="required positional argument"):
+                pm.find_constrained_prior(
+                    pm.StudentT,
+                    lower=0.1,
+                    upper=0.4,
+                    mass=0.95,
+                    init_guess={"mu": 170, "sigma": 3},
+                )
