@@ -88,7 +88,11 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous, SymbolicRandomVariable
+from pymc.distributions.distribution import (
+    DIST_PARAMETER_TYPES,
+    Continuous,
+    SymbolicRandomVariable,
+)
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp
@@ -131,6 +135,7 @@ __all__ = [
     "VonMises",
     "Wald",
     "Weibull",
+    "ZeroOneInflatedBeta",
 ]
 
 
@@ -379,7 +384,9 @@ class Flat(Continuous):
 
     def logcdf(value):
         return pt.switch(
-            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5))
+            pt.eq(value, -np.inf),
+            -np.inf,
+            pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5)),
         )
 
 
@@ -1244,6 +1251,250 @@ class Beta(UnitContinuous):
         )
 
 
+class ZeroOneInflatedBetaRV(SymbolicRandomVariable):
+    name = "zero_one_inflated_beta"
+    extended_signature = "[rng],[size],(),(),(),()->[rng],()"
+    _print_name = ("ZeroOneInflatedBeta", "\\operatorname{ZeroOneInflatedBeta}")
+
+    @classmethod
+    def rv_op(cls, zoi, coi, a, b, *, rng=None, size=None):
+        zoi = pt.as_tensor(zoi)
+        coi = pt.as_tensor(coi)
+        a = pt.as_tensor(a)
+        b = pt.as_tensor(b)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(zoi, coi, a, b, ndims_params=cls.ndims_params)
+
+        next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
+
+        next_rng, beta_draws = beta(a, b, size=size, rng=next_rng, return_next_rng=True)
+
+        draws = pt.switch(
+            pt.lt(u, zoi * (1 - coi)),
+            pt.zeros_like(beta_draws),
+            pt.switch(
+                pt.lt(u, zoi),
+                pt.ones_like(beta_draws),
+                beta_draws,
+            ),
+        )
+
+        return cls(
+            inputs=[rng, size, zoi, coi, a, b],
+            outputs=[next_rng, draws],
+        )(rng, size, zoi, coi, a, b)
+
+
+class ZeroOneInflatedBeta(UnitContinuous):
+    r"""
+    Zero-One-Inflated Beta Distribution.
+
+    The pdf of this distribution is:
+
+    .. math::
+
+        f(x \mid \text{zoi}, \text{coi}, \alpha, \beta) =
+        \begin{cases}
+            \text{zoi} \cdot (1 - \text{coi})
+                & \text{if } x = 0 \\
+            \text{zoi} \cdot \text{coi}
+                & \text{if } x = 1 \\
+            (1 - \text{zoi}) \cdot \dfrac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+                & \text{if } x \in (0, 1)
+        \end{cases}
+
+    where :math:`B` is the Beta function, :math:`\alpha = \mu \kappa`, and :math:`\beta = (1 - \mu) \kappa`.
+
+
+    Examples
+    --------
+    Model proportion data with structural zeros and ones:
+
+    .. code-block:: python
+
+        import pymc as pm
+        import numpy as np
+
+        # Data with 30% boundary values, 40% of which are ones
+        true_zoi = 0.3
+        true_coi = 0.4
+        true_mu = 0.4
+        true_kappa = 20.0
+        n = 1000
+
+        rng = np.random.default_rng(100)
+        u = rng.random(n)
+        alpha = true_mu * true_kappa
+        beta  = (1 - true_mu) * true_kappa
+        beta_data = rng.beta(alpha, beta, n)
+        data = np.where(u < true_zoi * (1 - true_coi), 0.0,
+               np.where(u < true_zoi, 1.0,
+               beta_data))
+
+        # Fit model
+        with pm.Model() as model:
+            zoi   = pm.Beta("zoi", alpha=1, beta=1)
+            coi   = pm.Beta("coi", alpha=1, beta=1)
+            mu    = pm.Beta("mu", alpha=2, beta=2)
+            kappa = pm.Gamma("kappa", alpha=2, beta=0.1)
+            y = pm.ZeroOneInflatedBeta(
+                "y", zoi=zoi, coi=coi, mu=mu, kappa=kappa,
+                observed=data
+            )
+            trace = pm.sample(1000, tune=1000)
+
+
+    ========  ===============================================
+    Support   :math:`y \in [0, 1]`
+    Mean      :math:`(1 - \text{zoi})\mu + \text{zoi} \cdot \text{coi}`
+    Variance  :math:`(1-\text{zoi})\left[\dfrac{\mu(1-\mu)}{\kappa+1} + \text{zoi} \cdot \text{coi} \cdot (1 - \text{coi})\right] + \text{zoi}(1-\text{zoi})\mu^2`
+    ========  ===============================================
+
+    Setting :math:`coi = 0` recovers the Zero-Inflated Beta (ZIB) distribution.
+    Setting :math:`coi = 1` recovers the One-Inflated Beta (OIB) distribution.
+
+
+    Parameters
+    ----------
+    zoi : tensor_like of float
+        Probability of a structural value at 0 or 1, :math:`0 \leq zoi \leq 1`.
+    coi : tensor_like of float
+        Conditional probability given a structural value that it is a structural 1, :math:`0 \leq coi \leq 1`.
+    alpha : tensor_like of float, optional
+        ``alpha`` > 0. If not specified, then calculated using ``mu`` and ``kappa``.
+    beta : tensor_like of float, optional
+        ``beta`` > 0. If not specified, then calculated using ``mu`` and ``kappa``.
+    mu : tensor_like of float, optional
+        Mean of the Beta component, :math:`0 < \mu < 1`.
+    kappa : tensor_like of float, optional
+        Precision of the Beta component, :math:`\kappa > 0`.
+
+    References
+    ----------
+    .. [1] Ospina, R., & Ferrari, S. L. (2010). Inflated beta distributions.
+    .. [2] Ospina, R., & Ferrari, S. L. (2012). A general class of zero-or-one inflated
+           beta regression models.
+
+    Notes
+    -----
+    ZeroOneInflatedBeta is appropriate for modeling proportion data when exact zeros
+    or ones represent distinct processes (structural zeros and ones), separate from
+    the tails of the Beta component.
+    """
+
+    rv_type = ZeroOneInflatedBetaRV
+    rv_op = ZeroOneInflatedBetaRV.rv_op
+
+    @classmethod
+    def dist(cls, zoi, coi, mu=None, kappa=None, alpha=None, beta=None, **kwargs):
+        if (alpha is not None) and (beta is not None) and (mu is not None or kappa is not None):
+            warnings.warn(
+                "Both parametrizations provided. Proceeding with alpha and beta.",
+                UserWarning,
+            )
+        if (alpha is not None) and (beta is not None):
+            pass
+        elif (mu is not None) and (kappa is not None):
+            alpha = mu * kappa
+            beta = (1.0 - mu) * kappa
+        else:
+            raise ValueError(
+                "Incompatible parametrization. Must specify alpha and beta, or mu and kappa."
+            )
+        zoi = pt.as_tensor_variable(zoi)
+        coi = pt.as_tensor_variable(coi)
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
+        return super().dist([zoi, coi, alpha, beta], **kwargs)
+
+    def support_point(rv, size, zoi, coi, alpha, beta):
+        mean = zoi * coi + (1.0 - zoi) * (alpha / (alpha + beta))
+        if not rv_size_is_none(size):
+            mean = pt.full(size, mean)
+        return mean
+
+    def logp(value, zoi, coi, alpha, beta):
+        saved_zoi = zoi
+        saved_coi = coi    
+
+        check_zoi = pt.bitwise_and(pt.ge(zoi, 0), pt.le(zoi, 1))
+        check_coi = pt.bitwise_and(pt.ge(coi, 0), pt.le(coi, 1))
+        zoi = pt.switch(check_zoi, pt.clip(zoi, 1e-12, 1 - 1e-12), zoi)
+        coi = pt.switch(check_coi, pt.clip(coi, 1e-12, 1 - 1e-12), coi)
+
+        safe_value = pt.clip(value, 1e-12, 1 - 1e-12)
+
+        logp_beta = (
+            pt.switch(pt.eq(alpha, 1.0), 0.0, (alpha - 1.0) * pt.log(safe_value))
+            + pt.switch(pt.eq(beta, 1.0), 0.0, (beta - 1.0) * pt.log1p(-safe_value))
+            - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
+        )
+
+        res = pt.switch(
+            pt.eq(value, 0),
+            pt.log(zoi) + pt.log1p(-coi),
+            pt.switch(
+                pt.eq(value, 1),
+                pt.log(zoi) + pt.log(coi),
+                pt.log1p(-zoi) + logp_beta,
+            ),
+        )
+
+        res = pt.switch(
+            pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)),
+            res,
+            -np.inf,
+        )
+        return check_parameters(
+            res,
+            saved_zoi >= 0,
+            saved_zoi <= 1,
+            saved_coi >= 0,
+            saved_coi <= 1,
+            alpha > 0,
+            beta > 0,
+            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+        )
+
+    def logcdf(value, zoi, coi, alpha, beta):
+        saved_zoi = zoi
+        saved_coi = coi
+
+        check_zoi = pt.bitwise_and(pt.ge(zoi, 0), pt.le(zoi, 1))
+        check_coi = pt.bitwise_and(pt.ge(coi, 0), pt.le(coi, 1))
+        zoi = pt.switch(check_zoi, pt.clip(zoi, 1e-12, 1 - 1e-12), zoi)
+        coi = pt.switch(check_coi, pt.clip(coi, 1e-12, 1 - 1e-12), coi)
+
+        beta_logcdf = pt.log(pt.betainc(alpha, beta, value))
+
+        res = pt.switch(
+            pt.lt(value, 0),
+            -np.inf,
+            pt.switch(
+                pt.eq(value, 0),
+                pt.log(zoi) + pt.log1p(-coi),
+                pt.switch(
+                    pt.lt(value, 1),
+                    pt.log(zoi * (1 - coi) + (1 - zoi) * pt.exp(beta_logcdf)),
+                    0.0,
+                ),
+            ),
+        )
+
+        return check_parameters(
+            res,
+            saved_zoi >= 0,
+            saved_zoi <= 1,
+            saved_coi >= 0,
+            saved_coi <= 1,
+            alpha > 0,
+            beta > 0,
+            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+        )
+
+
 class KumaraswamyRV(SymbolicRandomVariable):
     name = "kumaraswamy"
     extended_signature = "[rng],[size],(),()->[rng],()"
@@ -1550,7 +1801,9 @@ class Laplace(Continuous):
 
     def icdf(value, mu, b):
         res = pt.switch(
-            pt.le(value, 0.5), mu + b * np.log(2 * value), mu - b * np.log(2 - 2 * value)
+            pt.le(value, 0.5),
+            mu + b * np.log(2 * value),
+            mu - b * np.log(2 - 2 * value),
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(res, b > 0, msg="b > 0")
