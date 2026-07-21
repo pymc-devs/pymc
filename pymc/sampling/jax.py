@@ -250,6 +250,12 @@ def _blackjax_inference_loop(
     else:
         raise ValueError("Only supporting 'nuts' or 'hmc' as algorithm to draw samples.")
 
+    # Must be popped before calling window_adaptation: blackjax >= 1.6 removed
+    # the progress_bar parameter from window_adaptation and forwards any
+    # unrecognized kwargs straight into the NUTS kernel, which raises
+    # TypeError. See https://github.com/pymc-devs/pymc/issues/8367.
+    progress_bar = adaptation_kwargs.pop("progress_bar", False)
+
     adapt = blackjax.window_adaptation(
         algorithm=algorithm,
         logdensity_fn=logp_fn,
@@ -274,12 +280,20 @@ def _blackjax_inference_loop(
         }
         return state, (position, stats)
 
-    progress_bar = adaptation_kwargs.pop("progress_bar", False)
-
     keys = jax.random.split(seed, draws)
-    scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
-    _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
-
+    if hasattr(blackjax.progress_bar, "gen_scan_fn"):
+        # blackjax < 1.6: progress_bar is a module exposing gen_scan_fn,
+        # which wraps jax.lax.scan directly.
+        scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
+        _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
+    elif progress_bar:
+        # blackjax >= 1.6: progress_bar is a context manager that
+        # monkeypatches jax.lax.scan for its duration instead.
+        with blackjax.progress_bar(label="NUTS"):
+            _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
+    else:
+        _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
+    
     return samples, stats
 
 
