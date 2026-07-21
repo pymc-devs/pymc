@@ -1320,7 +1320,36 @@ class Model(WithMemoization, metaclass=ContextMeta):
         TensorVariable
         """
         name = rv_var.name
-        data = convert_observed_data(data).astype(rv_var.dtype)
+        data = convert_observed_data(data)
+
+        # Check if float observed data passed to an integer-dtype distribution
+        # would lose information when cast (e.g. Binomial, Poisson).
+        # Only applies to concrete numpy arrays with float dtype going to integer dtype.
+        # Float arrays containing exact integer values (e.g. [0.0, 1.0]) are allowed.
+        rv_dtype = np.dtype(rv_var.dtype)
+        data_dtype = getattr(data, "dtype", None)
+        if (
+            data_dtype is not None
+            and not isinstance(data, Variable)
+            and np.issubdtype(rv_dtype, np.integer)
+            and np.issubdtype(data_dtype, np.floating)
+        ):
+            if isinstance(data, np.ma.MaskedArray):
+                check_data = data.compressed()
+            elif sparse.issparse(data):
+                check_data = data.data
+            else:
+                check_data = np.asarray(data)
+            cast_check = check_data.astype(rv_dtype)
+            if not np.array_equal(check_data, cast_check):
+                raise TypeError(
+                    f"Observed data for '{name}' has dtype {data_dtype} with non-integer values "
+                    f"that cannot be safely cast to the expected dtype {rv_dtype} of the "
+                    f"{rv_var.owner.op} distribution. If the cast is intentional, convert the "
+                    f"data explicitly before passing it as observed."
+                )
+
+        data = data.astype(rv_var.dtype)
 
         if data.ndim != rv_var.ndim:
             raise ShapeError(
