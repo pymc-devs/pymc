@@ -17,7 +17,7 @@ jobs:
       - name: Install ZSH
         run: sudo apt-get update && sudo apt-get install -y zsh
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
