@@ -293,7 +293,6 @@ def _blackjax_inference_loop(
             _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
     else:
         _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
-    
     return samples, stats
 
 
