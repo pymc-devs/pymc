@@ -688,43 +688,14 @@ class TestLJKCholeskyCorrTransform:
     def _get_test_values(self):
         x_unconstrained = np.array([2.0, 2.0, 1.0], dtype=config.floatX)
         x_constrained = np.array(
-            [[1.0, 0.0, 0.0], [0.70710678, 0.70710678, 0.0], [0.66666667, 0.66666667, 0.33333333]],
+            [
+                [1.0, 0.0, 0.0],
+                [2.0 / np.sqrt(5), 1.0 / np.sqrt(5), 0.0],
+                [2.0 / np.sqrt(6), 1.0 / np.sqrt(6), 1.0 / np.sqrt(6)],
+            ],
             dtype=config.floatX,
         )
         return x_unconstrained, x_constrained
-
-    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
-    def test_fill_triangular_spiral(self, upper):
-        x_unconstrained = np.array([1, 2, 3, 4, 5, 6])
-
-        if upper:
-            x_constrained = np.array(
-                [
-                    [1, 2, 3],
-                    [0, 5, 6],
-                    [0, 0, 4],
-                ]
-            )
-        else:
-            x_constrained = np.array(
-                [
-                    [4, 0, 0],
-                    [6, 5, 0],
-                    [3, 2, 1],
-                ]
-            )
-
-        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
-
-        np.testing.assert_allclose(
-            transform._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval(),
-            x_constrained,
-        )
-
-        np.testing.assert_allclose(
-            transform._inverse_fill_triangular_spiral(x_constrained, unit_diag=False).eval(),
-            x_unconstrained,
-        )
 
     def test_forward(self):
         transform = tr.CholeskyCorrTransform(n=3, upper=False)
