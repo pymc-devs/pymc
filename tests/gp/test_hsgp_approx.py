@@ -282,13 +282,6 @@ class TestHSGPPeriodic(_BaseFixtures):
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("eta", [100.0])
-    @pytest.mark.xfail(
-        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
-        The mmd is around `0.0468`.\
-        The test passes more often when subtracting the mean from the mean from the samples.\
-        It might be that the period is slightly off for the approximate power spectral density.\
-        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
-    )
     def test_prior(self, model, cov_func, eta, X1, rng):
         """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
         prior and compare them using MMD two sample test.
