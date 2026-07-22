@@ -503,6 +503,7 @@ def test_convergence_warnings(caplog, nuts_sampler):
     [record] = caplog.records
     assert re.match(r"There were \d+ divergences after tuning", record.message)
 
+
 class TestBlackjaxProgressBarCompat:
     """Regression tests for https://github.com/pymc-devs/pymc/issues/8367.
 
