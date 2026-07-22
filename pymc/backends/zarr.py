@@ -31,7 +31,7 @@ from pymc.backends.arviz import (
 )
 from pymc.backends.base import BaseTrace
 from pymc.blocking import StatDtype, StatShape
-from pymc.model.core import Model, modelcontext
+from pymc.model.core import BaseModel, modelcontext
 from pymc.step_methods.compound import (
     BlockedStep,
     CompoundStep,
@@ -80,7 +80,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         said stats with the accompanying stepper index.
     synchronizer : zarr.sync.Synchronizer | None
         The synchronizer to use for the underlying zarr arrays.
-    model : Model
+    model : BaseModel
         If None, the model is taken from the `with` context.
     vars : Sequence[TensorVariable] | None
         Sampling values will be stored for these variables. If None,
@@ -99,7 +99,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         store: BaseStore | MutableMapping,
         stats_bijection: StatsBijection,
         synchronizer: Synchronizer | None = None,
-        model: Model | None = None,
+        model: BaseModel | None = None,
         vars: Sequence[TensorVariable] | None = None,
         test_point: dict[str, np.ndarray] | None = None,
         draws_per_chunk: int = 1,
@@ -412,7 +412,7 @@ class ZarrTrace(_ZarrTraceBase):
         draws: int,
         tune: int,
         step: BlockedStep | CompoundStep,
-        model: Model | None = None,
+        model: BaseModel | None = None,
         vars: Sequence[TensorVariable] | None = None,
         test_point: dict[str, np.ndarray] | None = None,
     ):

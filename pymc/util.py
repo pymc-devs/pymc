@@ -356,6 +356,7 @@ class WithMemoization:
 
 
 def locally_cachedmethod(f):
+    """Cache a method's return value on ``self._cache``, keyed by the call arguments."""
     from collections import defaultdict
 
     def self_cache_fn(f_name):

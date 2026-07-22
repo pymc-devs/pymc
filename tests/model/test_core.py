@@ -33,7 +33,8 @@ import scipy.sparse as sps
 import scipy.stats as st
 
 from pytensor.compile.mode import get_default_mode
-from pytensor.graph import graph_inputs
+from pytensor.compile.sharedvalue import SharedVariable
+from pytensor.graph import Constant, graph_inputs
 from pytensor.graph.traversal import get_var_by_name
 from pytensor.link.numba import NumbaLinker
 from pytensor.raise_op import Assert
@@ -58,6 +59,8 @@ from pymc.exceptions import ImputationWarning, ShapeError, ShapeWarning
 from pymc.logprob.basic import transformed_conditional_logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
+from pymc.model.core import BaseModel, FrozenModel
+from pymc.model.transform.optimization import freeze_model
 from pymc.pytensorf import floatX, inputvars
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
@@ -1175,6 +1178,232 @@ def test_compile_fn():
     result_expect = func(state)
 
     np.testing.assert_allclose(result_compute, result_expect)
+
+
+class TestFrozenModelCaching:
+    def test_unfrozen_model_does_not_cache(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            mu = pm.Deterministic("mu", x * 2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+
+        assert m.compile_fn(mu, inputs=[x], point_fn=False) is not m.compile_fn(
+            mu, inputs=[x], point_fn=False
+        )
+        assert m.logp() is not m.logp()
+        assert m.logp_dlogp_function(ravel_inputs=True) is not m.logp_dlogp_function(
+            ravel_inputs=True
+        )
+
+    def test_freeze_model_partitions_shared_inputs(self):
+        # Dims and data that free RVs depend on are frozen to constants; those that only
+        # Deterministics and observed RVs depend on stay shared (and settable).
+        with pm.Model(coords={"g": [0, 1, 2], "obs": [0, 1]}) as m:
+            n = pm.Data("n", np.array(3, dtype="int64"))  # drives a free RV size
+            x = pm.Data("x", np.zeros(2), dims="obs")  # only feeds the observed RV
+            pm.Normal("z", 0, 1, shape=(n,))
+            w = pm.Normal("w", 0, 1, dims="g")
+            pm.Normal("y", x.sum() + w.sum(), 1, observed=np.zeros(2), dims="obs")
+
+        fm = freeze_model(m)
+        assert isinstance(fm["n"], Constant)
+        assert isinstance(fm.dim_lengths["g"], Constant)
+        assert isinstance(fm["x"], SharedVariable)
+        assert isinstance(fm.dim_lengths["obs"], SharedVariable)
+        assert isinstance(fm, FrozenModel)
+        assert not isinstance(m, FrozenModel)  # original model is untouched
+
+    def test_freeze_model_preserves_initvals(self):
+        # fgraph_from_model drops (and rejects) initial values; freeze_model transplants
+        # them onto the frozen model without touching the original.
+        with pm.Model() as m:
+            pm.Uniform("u", 0, 10, initval=7.0)  # concrete
+            pm.Normal("p", 0, 1, size=3, initval="prior")  # strategy string
+
+        fm = freeze_model(m)
+        assert m.rvs_to_initial_values[m["u"]] == 7.0  # original untouched
+        ip = fm.initial_point(0)
+        np.testing.assert_allclose(ip["u_interval__"], m.initial_point(0)["u_interval__"])
+        np.testing.assert_allclose(fm.initial_point(1)["p"], m.initial_point(1)["p"])
+
+        # Symbolic initial values reference the original graph and cannot be transplanted.
+        with pm.Model() as m2:
+            x = pm.Data("d", np.array([10.0, 20.0, 30.0]))
+            pm.Normal("s", 0, 1, size=3, initval=x * 2)
+        with pytest.raises(NotImplementedError, match="symbolic initial value"):
+            freeze_model(m2)
+
+    def test_compile_fn_is_cached(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            mu = pm.Deterministic("mu", x * 2)
+
+        fm = freeze_model(m)
+        f1 = fm.compile_fn(fm["mu"], inputs=[fm["x"]], point_fn=False)
+        f2 = fm.compile_fn(fm["mu"], inputs=[fm["x"]], point_fn=False)
+        assert f1 is f2
+        assert "_compile_fn" in fm._cache
+
+    def test_mutation_forbidden_on_frozen(self):
+        # FrozenModel is a sibling of Model under BaseModel: the mutating methods do not
+        # exist on it at all.
+        with pm.Model() as m:
+            x = pm.Uniform("x", 0, 10)
+        fm = freeze_model(m)
+
+        assert isinstance(fm, FrozenModel)
+        assert isinstance(fm, BaseModel)
+        assert not isinstance(fm, pm.Model)
+        with pytest.raises(AttributeError, match="register_rv"):
+            with fm:
+                pm.Normal("y")
+        with pytest.raises(AttributeError, match="add_coord"):
+            fm.add_coord("new_dim", ["a", "b"])
+        with pytest.raises(AttributeError, match="set_initval"):
+            fm.set_initval(fm["x"], 5.0)
+
+    def test_abstract_and_final_classes(self):
+        with pytest.raises(TypeError, match="abstract"):
+            BaseModel()
+        with pytest.raises(TypeError, match="freeze_model"):
+            FrozenModel()
+
+    def test_set_data_on_frozen_model(self):
+        with pm.Model() as m:
+            x = pm.Data("x", np.zeros(3))
+            b = pm.Normal("b")
+            pm.Deterministic("mu", b + x)
+
+        fm = freeze_model(m)
+        f1 = fm.compile_fn(fm["mu"], inputs=[fm["b"]], point_fn=False)
+        with fm:
+            pm.set_data({"x": np.ones(3)})
+        f2 = fm.compile_fn(fm["mu"], inputs=[fm["b"]], point_fn=False)
+        assert f1 is f2  # value update reuses the cache ...
+        np.testing.assert_allclose(f2(0.0), np.ones(3))  # ... and flows through
+
+        # A resize also flows through: the remaining shapes are runtime inputs.
+        with fm:
+            pm.set_data({"x": np.zeros(5)})
+        f3 = fm.compile_fn(fm["mu"], inputs=[fm["b"]], point_fn=False)
+        assert f3 is f1
+        assert f3(1.0).shape == (5,)
+
+    def test_set_data_frozen_data_raises(self):
+        with pm.Model() as m:
+            n = pm.Data("n", np.array(3, dtype="int64"))
+            pm.Normal("z", 0, 1, shape=(n,))
+
+        fm = freeze_model(m)
+        with pytest.raises(TypeError, match="frozen"):
+            with fm:
+                pm.set_data({"n": np.array(5, dtype="int64")})
+
+    def test_compile_fn_reseeds_cached_function(self):
+        # A cache hit must still respect random_seed (reapplied on each compile_fn call).
+        with pm.Model() as m:
+            pm.Normal("z", 0, 1)
+
+        fm = freeze_model(m)
+        f_a = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=123)
+        v1 = f_a()
+        f_b = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=123)
+        v2 = f_b()
+        assert f_a is f_b  # cache hit (same compiled function reused)
+        np.testing.assert_allclose(v1, v2)  # same seed -> same draw
+
+        f_c = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=456)
+        assert not np.allclose(v1, f_c())  # different seed -> different draw
+
+    def test_compile_fn_jax_bypasses_cache_but_stays_seeded(self):
+        # JAX detaches a function's RNG variables at compile time, so a cached function
+        # can't be reseeded. compile_fn skips the cache for RNG functions on JAX and seeds
+        # before compiling; deterministic functions are still cached.
+        pytest.importorskip("jax")
+        with pm.Model() as m:
+            pm.Normal("z", 0, 1, size=3)
+            b = pm.Normal("b")
+            pm.Deterministic("d", b * 2)
+
+        fm = freeze_model(m)
+        f_a = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=0, mode="JAX")
+        f_b = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=0, mode="JAX")
+        assert f_a is not f_b  # not cached (RNG function on JAX)
+        np.testing.assert_allclose(f_a(), f_b())  # same seed -> same draw
+        f_c = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=1, mode="JAX")
+        assert not np.allclose(f_a(), f_c())  # different seed -> different draw
+
+        g_a = fm.compile_fn(fm["d"], inputs=[fm["b"]], point_fn=False, mode="JAX")
+        g_b = fm.compile_fn(fm["d"], inputs=[fm["b"]], point_fn=False, mode="JAX")
+        assert g_a is g_b  # deterministic JAX functions are cached
+
+    def test_logp_dlogp_function_is_cached(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+
+        fm = freeze_model(m)
+        f1 = fm.logp_dlogp_function(ravel_inputs=True)
+        f2 = fm.logp_dlogp_function(ravel_inputs=True)
+        assert f1 is f2
+        assert "_logp_dlogp_function" in fm._cache
+
+    def test_logp_dlogp_d2logp_graphs_are_cached(self):
+        # Memoized graph construction returns the same object, so a freshly requested logp
+        # graph hits the compile cache instead of recompiling.
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+
+        fm = freeze_model(m)
+        assert fm.logp() is fm.logp()
+        assert fm.dlogp() is fm.dlogp()
+        assert fm.d2logp() is fm.d2logp()
+
+        f1 = fm.compile_fn(fm.logp(), inputs=fm.value_vars, point_fn=False)
+        f2 = fm.compile_fn(fm.logp(), inputs=fm.value_vars, point_fn=False)
+        assert f1 is f2
+
+    def test_cached_logp_not_corrupted_by_dlogp(self):
+        # dlogp/d2logp rewrite the shared logp in place; it must stay compilable and correct.
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+        fm = freeze_model(m)
+        _ = fm.dlogp()
+        _ = fm.d2logp()
+        f_cached = fm.compile_fn(fm.logp(), inputs=fm.value_vars, point_fn=False)
+        f_fresh = m.compile_fn(m.logp(), inputs=m.value_vars, point_fn=False)
+
+        val = np.array([0.1, 0.2])
+        np.testing.assert_allclose(f_cached(val), f_fresh(val))
+
+    def test_logp_dlogp_function_extra_values_are_per_call(self):
+        # A subset gradient leaves the other value var as an "extra" (shared) input.
+        # The cached function must reflect each call's extra values, not a stale set.
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1)
+            pm.Normal("y", 0, 1)
+            pm.Normal("obs", m["x"] + m["y"], 1, observed=[0.0])
+
+        fm = freeze_model(m)
+        x_val = fm.rvs_to_values[fm["x"]]
+        f_a = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point={"x": 0.0, "y": 1.0})
+        logp_a, _ = f_a(np.array([0.0]))
+        f_b = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point={"x": 0.0, "y": 2.0})
+        logp_b, _ = f_b(np.array([0.0]))
+        assert f_a is f_b  # same compiled function reused
+        assert not np.isclose(logp_a, logp_b)  # but the extra value (y) took effect
+
+    def test_initial_point_is_cached(self):
+        with pm.Model() as m:
+            pm.Normal("x", 0, 1, size=3)
+
+        fm = freeze_model(m)
+        ip1 = fm.initial_point(0)
+        assert "_make_initial_point" in fm._cache
+        np.testing.assert_allclose(ip1["x"], fm.initial_point(0)["x"])
+        np.testing.assert_allclose(ip1["x"], m.initial_point(0)["x"])  # matches unfrozen
 
 
 def test_model_parent_set_programmatically():

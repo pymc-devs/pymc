@@ -16,7 +16,7 @@ from collections.abc import Sequence
 from xarray import Dataset, DataTree, merge
 
 from pymc.backends.arviz import apply_function_over_dataset, coords_and_dims_for_inferencedata
-from pymc.model.core import Model, modelcontext
+from pymc.model.core import BaseModel, modelcontext
 from pymc.pytensorf import resolve_backend_compile_kwargs
 
 
@@ -24,7 +24,7 @@ def compute_deterministics(
     dataset: Dataset,
     *,
     var_names: Sequence[str] | None = None,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     merge_dataset: bool = False,
     progressbar: bool = True,
@@ -40,7 +40,7 @@ def compute_deterministics(
     var_names : sequence of str, optional
         List of names of deterministic variable to compute.
         If None, compute all deterministics in the model.
-    model : Model, optional
+    model : BaseModel, optional
         Model to use. If None, use context model.
     sample_dims : sequence of str, default ("chain", "draw")
         Sample (batch) dimensions of the dataset over which to compute the deterministics.

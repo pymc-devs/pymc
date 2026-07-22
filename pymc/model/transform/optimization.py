@@ -12,17 +12,40 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Sequence
+from typing import cast
 
 from pytensor.compile import SharedVariable
-from pytensor.graph import Constant, FunctionGraph
+from pytensor.graph import Constant, FunctionGraph, Variable
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.traversal import ancestors
 
-from pymc.model.core import Model
+from pymc.model.core import FrozenModel, Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
 
 
 def _constant_from_shared(shared: SharedVariable) -> Constant:
     return shared.type.constant_type(type=shared.type, data=shared.get_value(), name=shared.name)
+
+
+def _extract_initial_values(model: Model) -> dict[str, object]:
+    """Return the model's non-default initial values, keyed by variable name.
+
+    Symbolic initial values reference variables of the model's graph, which the fgraph
+    round-trip clones, so they cannot be transplanted onto the rebuilt model and are
+    rejected.
+    """
+    initial_values = {}
+    for rv, initval in model.rvs_to_initial_values.items():
+        if initval is None:
+            continue
+        if isinstance(initval, Variable) and not isinstance(initval, Constant):
+            raise NotImplementedError(
+                f"{rv.name} has a symbolic initial value, which cannot be transplanted onto "
+                "the transformed model. Only None, strategy strings and constant initial "
+                "values are supported."
+            )
+        initial_values[rv.name] = initval
+    return initial_values
 
 
 def freeze_dims_and_data(
@@ -54,6 +77,10 @@ def freeze_dims_and_data(
     Model
         A new model with the specified dimensions and data frozen.
 
+    Notes
+    -----
+    Constant and strategy-string initial values are preserved on the new model. Symbolic
+    initial values (which reference variables of the original graph) are not supported.
 
     Examples
     --------
@@ -76,7 +103,17 @@ def freeze_dims_and_data(
         print("Logp eval time (1000x): ", frozen_m.profile(frozen_m.logp()).fct_call_time)
 
     """
-    fg, memo = fgraph_from_model(model)
+    # fgraph_from_model does not carry initial values through the round-trip and rejects
+    # models that have them. Preserve them here: clear them for the round-trip and transplant
+    # them back onto the new model (matched by variable name) below.
+    initial_values = _extract_initial_values(model)
+    saved_initial_values = dict(model.rvs_to_initial_values)
+    try:
+        for rv in model.rvs_to_initial_values:
+            model.rvs_to_initial_values[rv] = None
+        fg, memo = fgraph_from_model(model)
+    finally:
+        model.rvs_to_initial_values.update(saved_initial_values)
 
     if dims is None:
         dims = tuple(model.dim_lengths.keys())
@@ -120,7 +157,74 @@ def freeze_dims_and_data(
         replacements[old_value] = new_value
     fg.replace_all(tuple(replacements.items()), import_missing=True)
 
-    return model_from_fgraph(fg, mutate_fgraph=True)
+    new_model = model_from_fgraph(fg, mutate_fgraph=True)
+    for name, initval in initial_values.items():
+        new_model.set_initval(new_model[name], initval)
+    return new_model
 
 
-__all__ = ("freeze_dims_and_data",)
+def freeze_model(model: Model) -> FrozenModel:
+    """Return a frozen copy of the model that caches its compiled functions.
+
+    On the frozen model, compiled functions (``compile_fn``, ``logp_dlogp_function``,
+    ``initial_point``, and the forward-sampling function used by
+    ``sample_prior_predictive`` / ``sample_posterior_predictive``) are compiled once and
+    reused across calls, so e.g. batched posterior predictive over changing ``pm.set_data``
+    values, or repeated ``pm.sample``, do not recompile. Seeding is re-applied on every
+    call, so cached functions stay reproducible.
+
+    To keep the cache valid the frozen model cannot be mutated: graph-mutating methods
+    (``register_rv``, ``add_coord``, ``set_initval``, ...) raise, and the dims and data
+    that any free variable depends on are frozen to constants as in
+    :func:`freeze_dims_and_data`. Data (and dims) that only Deterministics and observed
+    variables depend on remain updatable through ``pm.set_data`` — values and shapes are
+    runtime inputs of the cached functions, so updates and resizes take effect without
+    recompilation.
+
+    Functions with random variables compiled to backends that detach their RNGs at compile
+    time (JAX, MLX, PyTorch) cannot be reseeded and are compiled fresh on each call.
+
+    Constant and strategy-string initial values are preserved on the frozen model;
+    symbolic initial values are not supported.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+        from pymc.model.transform.optimization import freeze_model
+
+        with pm.Model() as m:
+            x = pm.Data("x", [0.0, 1.0, 2.0])
+            beta = pm.Normal("beta")
+            pm.Normal("y", mu=beta * x, observed=[1.0, 2.0, 3.0], shape=x.shape)
+            idata = pm.sample()
+
+        with freeze_model(m):
+            for x_batch in x_batches:
+                pm.set_data({"x": x_batch})
+                # Compiles on the first call only
+                pm.sample_posterior_predictive(idata, predictions=True)
+    """
+    free_rv_ancestors = set(ancestors(model.free_RVs))
+    frozen_dims = [
+        name
+        for name, length in model.dim_lengths.items()
+        if isinstance(length, SharedVariable) and length in free_rv_ancestors
+    ]
+    frozen_data = [
+        name
+        for name, var in model.named_vars.items()
+        if isinstance(var, SharedVariable) and var in free_rv_ancestors
+    ]
+    frozen_model = freeze_dims_and_data(model, dims=frozen_dims, data=frozen_data)
+
+    # Retype the rebuilt model in place as a FrozenModel. This is the standard idiom for
+    # converting an instance to a sibling class: both are pure-Python subclasses of
+    # BaseModel with the same instance layout, so only the method resolution changes
+    # (mutators become unavailable, compiled functions become cached).
+    frozen_model.__class__ = FrozenModel  # type: ignore[assignment]
+    return cast(FrozenModel, frozen_model)
+
+
+__all__ = ("freeze_dims_and_data", "freeze_model")
