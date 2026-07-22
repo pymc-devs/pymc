@@ -153,6 +153,11 @@ jobs:
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
+      # AVX-512 codegen crashes LLVM's loop vectorizer (llvm-project#210601,
+      # fixed after the 20.1.8 llvmlite bundles). Not x86-64-v3: it fails
+      # test_sampling_consistency.
+      NUMBA_CPU_NAME: generic
+      NUMBA_CPU_FEATURES: ""
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -202,6 +207,9 @@ jobs:
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
+      # See the ubuntu job for why the numba codegen target is pinned.
+      NUMBA_CPU_NAME: generic
+      NUMBA_CPU_FEATURES: ""
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -311,6 +319,9 @@ jobs:
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: linker=${{ matrix.linker }}
+      # See the ubuntu job for why the numba codegen target is pinned.
+      NUMBA_CPU_NAME: generic
+      NUMBA_CPU_FEATURES: ""
     defaults:
       run:
         shell: bash -leo pipefail {0}
@@ -360,6 +371,9 @@ jobs:
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
       PYTENSOR_FLAGS: floatX=float32
+      # See the ubuntu job for why the numba codegen target is pinned.
+      NUMBA_CPU_NAME: generic
+      NUMBA_CPU_FEATURES: ""
     defaults:
       run:
         shell: bash -leo pipefail {0}
