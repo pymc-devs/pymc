@@ -295,6 +295,21 @@ def _blackjax_inference_loop(
         _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
     return samples, stats
 
+    keys = jax.random.split(seed, draws)
+    if hasattr(blackjax.progress_bar, "gen_scan_fn"):
+        # blackjax < 1.6: progress_bar is a module exposing gen_scan_fn,
+        # which wraps jax.lax.scan directly.
+        scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
+        _, (samples, stats) = scan_fn(_one_step, last_state, (jnp.arange(draws), keys))
+    elif progress_bar:
+        # blackjax >= 1.6: progress_bar is a context manager that
+        # monkeypatches jax.lax.scan for its duration instead.
+        with blackjax.progress_bar(label="NUTS"):
+            _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
+    else:
+        _, (samples, stats) = jax.lax.scan(_one_step, last_state, (jnp.arange(draws), keys))
+    return samples, stats
+
 
 def _sample_blackjax_nuts(
     model: Model,
