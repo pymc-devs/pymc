@@ -586,6 +586,13 @@ class TruncatedNormalRV(RandomVariable):
 truncated_normal = TruncatedNormalRV()
 
 
+def _truncation_is_bounded(lower, upper):
+    """Whether each truncation bound is finite, when this can be known statically."""
+    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+    return is_lower_bounded, is_upper_bounded
+
+
 class TruncatedNormal(BoundedContinuous):
     r"""
     Univariate truncated normal distribution.
@@ -711,10 +718,7 @@ class TruncatedNormal(BoundedContinuous):
         return support_point
 
     def logp(value, mu, sigma, lower, upper):
-        is_lower_bounded = not (
-            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
-        )
-        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+        is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded and is_upper_bounded:
             norm = log_diff_normal_cdf(mu, sigma, upper, lower)
@@ -747,10 +751,7 @@ class TruncatedNormal(BoundedContinuous):
             mu, sigma, upper, lower
         )
 
-        is_lower_bounded = not (
-            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
-        )
-        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+        is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded:
             logcdf = pt.switch(value < lower, -np.inf, logcdf)
@@ -768,10 +769,7 @@ class TruncatedNormal(BoundedContinuous):
         return logcdf
 
     def icdf(value, mu, sigma, lower, upper):
-        is_lower_bounded = not (
-            isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value))
-        )
-        is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+        is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded and is_upper_bounded:
             log_norm = log_diff_normal_cdf(mu, sigma, upper, lower)
@@ -786,8 +784,8 @@ class TruncatedNormal(BoundedContinuous):
         # for numerical stability, along with its complement 1 - p
         log_p = pt.log(value) + log_norm
         log_1mp = pt.log1p(-value) + log_norm
-        # a + softplus(b - a) is logaddexp(a, b), written so that graph rewrites
-        # cannot fold exp(a) to zero when a is a very negative constant
+        # Stable logaddexp(a, b). pt.logaddexp is not usable here: with constant
+        # bounds, exp(a) folds to zero before local_log_add_exp can stabilize it.
         if is_lower_bounded:
             lower_lcdf = normal_lcdf(mu, sigma, lower)
             log_p = lower_lcdf + pt.softplus(log_p - lower_lcdf)
