@@ -44,9 +44,7 @@ from pymc.testing import (
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
 tol = 1e-7 if config.floatX == "float64" else 1e-5
 
-# `sum_to_1` module-level access is deprecated (see #7009). Functional tests use a
-# direct instance so that only the dedicated deprecation test emits the FutureWarning.
-sum_to_1 = tr.SumTo1()
+sum_to_1 = tr._sum_to_1
 
 
 def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=None):
@@ -162,11 +160,8 @@ def test_sum_to_1():
 
 
 def test_sum_to_1_deprecated():
-    with pytest.warns(FutureWarning, match="sum_to_1 is deprecated"):
-        instance = tr.sum_to_1
-
-    # The transform can still be used while deprecated
-    check_vector_transform(instance, Simplex(2))
+    with pytest.warns(FutureWarning, match="sum_to_1 transform is deprecated"):
+        assert tr.sum_to_1 is tr._sum_to_1
 
 
 def test_log():
