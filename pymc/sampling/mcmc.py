@@ -1527,7 +1527,7 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    step.set_rng(rng)
+    step.setup_chain(rng, tune, draws - tune)
 
     point = start
     if isinstance(trace, _ZarrChainBase):

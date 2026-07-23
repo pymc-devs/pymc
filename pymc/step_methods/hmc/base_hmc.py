@@ -39,7 +39,7 @@ from pymc.step_methods.hmc.quadpotential import (
 from pymc.step_methods.state import dataclass_state
 from pymc.step_methods.step_sizes import DualAverageAdaptation, StepSizeState
 from pymc.tuning import guess_scaling
-from pymc.util import RandomGenerator, get_random_generator, get_value_vars_from_user_vars
+from pymc.util import RandomGenerator, get_value_vars_from_user_vars
 
 logger = logging.getLogger(__name__)
 
@@ -297,6 +297,6 @@ class BaseHMC(GradientSharedStep):
         self.tune = True
         self.potential.reset()
 
-    def set_rng(self, rng: RandomGenerator):
-        self.rng = get_random_generator(rng, copy=False)
+    def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
+        super().setup_chain(rng, tune, draws)
         self.potential.set_rng(self.rng.spawn(1)[0])
