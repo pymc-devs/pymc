@@ -17,6 +17,7 @@ dependencies:
 - pip
 - polyagamma
 - pytensor>=3.2.2,<3.3
+- pytensor-distributions>=0.2.0
 - python-graphviz
 - networkx
 - rich>=13.7.1
