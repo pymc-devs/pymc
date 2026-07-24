@@ -12,6 +12,7 @@ dependencies:
 - pandas>=0.24.0
 - pip
 - pytensor>=3.2.2,<3.3
+- pytensor-distributions>=0.2.0
 - python-graphviz
 - rich>=13.7.1
 - scipy>=1.4.1
