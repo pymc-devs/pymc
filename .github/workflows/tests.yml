@@ -313,6 +313,7 @@ jobs:
             tests/distributions/test_random_alternative_backends.py
             tests/sampling/test_jax.py
             tests/sampling/test_mcmc_external.py
+            tests/sampling/test_samplers.py
 
       fail-fast: false
     runs-on: ubuntu-latest
@@ -342,7 +343,9 @@ jobs:
           pip install -e .
           # Track nutpie main so we exercise unreleased changes. Expected to be
           # red until nutpie main drops its `arviz.InferenceData` references.
-          pip install "nutpie @ git+https://github.com/pymc-devs/nutpie@main"
+          # pyarrow 25.0.0 (pulled in by nutpie) segfaults XLA CPU compilation
+          # when loaded in the same process; pin until resolved upstream.
+          pip install "nutpie @ git+https://github.com/pymc-devs/nutpie@main" "pyarrow<25"
           python --version
           micromamba list
       - name: Run tests
