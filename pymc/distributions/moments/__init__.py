@@ -14,6 +14,7 @@
 
 """Moments dispatchers for pymc random variables."""
 
+from pymc.distributions.moments.entropy import entropy
 from pymc.distributions.moments.means import mean
 
-__all__ = ["mean"]
+__all__ = ["entropy", "mean"]
