@@ -485,3 +485,81 @@ class TestExternalSamplerLogging:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert pymc_logs == []
+
+
+class TestJaxSamplerKwargForwarding:
+    """jax-specific `pm.sample` options must reach the jax NUTS samplers.
+
+    Regression test for GH #8366: since pymc 6.x, `_sample_external_nuts`
+    captured extra top-level kwargs in `**kwargs` but never forwarded them to
+    `sample_jax_nuts`, so `pm.sample(..., chain_method="vectorized")` (and
+    similar jax-only arguments such as `postprocessing_backend`) were silently
+    dropped instead of reaching the sampler.
+
+    Following review feedback (GH #8369), the known jax options are now detected
+    explicitly and forwarded by name (rather than blindly splatting arbitrary
+    `**kwargs`), the deprecated top-level route emits a ``FutureWarning``, and
+    any leftover unrecognised kwargs emit a ``UserWarning`` and are dropped.
+    """
+
+    @pytest.mark.parametrize("nuts_sampler", ["numpyro", "blackjax"])
+    def test_jax_options_reach_sample_jax_nuts_with_futurewarning(self, nuts_sampler):
+        pytest.importorskip(nuts_sampler)
+
+        import pymc.sampling.jax as pymc_jax
+
+        captured = {}
+
+        def fake_sample_jax_nuts(*args, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace()
+
+        with mock.patch.object(pymc_jax, "sample_jax_nuts", side_effect=fake_sample_jax_nuts):
+            with Model():
+                Normal("x", 0, 1)
+                with pytest.warns(FutureWarning, match="deprecated"):
+                    sample(
+                        draws=2,
+                        tune=2,
+                        chains=2,
+                        nuts_sampler=nuts_sampler,
+                        chain_method="vectorized",
+                        postprocessing_backend="cpu",
+                        progressbar=False,
+                        compute_convergence_checks=False,
+                        random_seed=42,
+                    )
+
+        # The known jax options are forwarded to `sample_jax_nuts` by name.
+        assert captured.get("chain_method") == "vectorized"
+        assert captured.get("postprocessing_backend") == "cpu"
+
+    @pytest.mark.parametrize("nuts_sampler", ["numpyro", "blackjax"])
+    def test_stray_kwargs_warn_and_are_dropped(self, nuts_sampler):
+        pytest.importorskip(nuts_sampler)
+
+        import pymc.sampling.jax as pymc_jax
+
+        captured = {}
+
+        def fake_sample_jax_nuts(*args, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace()
+
+        with mock.patch.object(pymc_jax, "sample_jax_nuts", side_effect=fake_sample_jax_nuts):
+            with Model():
+                Normal("x", 0, 1)
+                with pytest.warns(UserWarning, match="not understood"):
+                    sample(
+                        draws=2,
+                        tune=2,
+                        chains=2,
+                        nuts_sampler=nuts_sampler,
+                        not_a_real_kwarg=123,
+                        progressbar=False,
+                        compute_convergence_checks=False,
+                        random_seed=42,
+                    )
+
+        # Stray kwargs are dropped rather than forwarded to the sampler.
+        assert "not_a_real_kwarg" not in captured
