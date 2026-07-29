@@ -49,6 +49,7 @@ from pymc.pytensorf import (
     replace_vars_in_graphs,
     reseed_rngs,
     resolve_backend_compile_kwargs,
+    rewrite_pregrad,
 )
 from pymc.vartypes import int_types
 
@@ -798,3 +799,44 @@ def test_pickle_point_func():
     np.testing.assert_allclose(
         point_f_unpickled({"y": [3], "x": [2]}), point_f({"y": [3], "x": [2]})
     )
+
+
+def test_rewrite_pregrad_inner_graphs():
+    """`rewrite_pregrad` must reach the inner graph of `Scan` and `OpFromGraph` nodes.
+
+    Regression test for https://github.com/pymc-devs/pymc-extras/issues/720
+    """
+
+    def naive_logsumexp(x, axis=None):
+        return pt.log(pt.sum(pt.exp(x), axis=axis))
+
+    logP = pt.matrix("logP")
+    init = pt.vector("init")
+    n_steps = pt.scalar("n_steps", dtype=int)
+    alphas = scan(
+        lambda alpha, logP: 2.0 + naive_logsumexp(alpha[:, None] + logP, axis=0),
+        outputs_info=[init],
+        non_sequences=[logP],
+        n_steps=n_steps,
+        return_updates=False,
+    )
+    cost = naive_logsumexp(alphas)
+    # Test stabilization can go inside an OpFromGraph as well
+    cost_ofg = OpFromGraph([logP, init, n_steps], [cost])(logP, init, n_steps)
+
+    dcost_naive_ofg = pt.grad(cost_ofg, logP)
+    dcost_stable_ofg = pt.grad(rewrite_pregrad(cost_ofg), logP)
+
+    dcost_naive_fn = pytensor.function([logP, init, n_steps], dcost_naive_ofg)
+    dcost_stable_fn = pytensor.function([logP, init, n_steps], dcost_stable_ofg)
+    point = {
+        "logP": np.log([[0.95, 0.05], [0.15, 0.85]]),
+        "init": np.log([0.8, 0.2]),
+    }
+    # Sanity check that before overflow results are similar
+    np.testing.assert_allclose(
+        dcost_naive_fn(**point, n_steps=100),
+        dcost_stable_fn(**point, n_steps=100),
+    )
+    assert not np.isfinite(dcost_naive_fn(**point, n_steps=1000)).all(), "Test lost sensitivity"
+    assert np.isfinite(dcost_stable_fn(**point, n_steps=1000)).all()
