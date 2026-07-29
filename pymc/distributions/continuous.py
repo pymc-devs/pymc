@@ -1073,10 +1073,34 @@ class Wald(PositiveContinuous):
         )
 
     def icdf(value, mu, lam, alpha):
-        res = pt.as_tensor_variable(pt.nan) + value * 0
-        res = check_icdf_value(res, value)
+        phi = lam / mu
+        kappa = 3 * mu / (2 * lam)
+        m = mu * (pt.sqrt(1 + kappa**2) - kappa)
+        res = pt.switch(
+            pt.and_(pt.gt(value, 1e-5), pt.lt(value, 1 - 1e-5)),
+            m,
+            pt.switch(
+                pt.gt(value, 1 - 1e-5),
+                Gamma.icdf(value=value, alpha=phi, scale=mu / phi),
+                mu / (phi * Normal.icdf(value=value, mu=0, sigma=1) ** 2),
+            ),
+        )
+
+        def newton_step(q, *_):
+            cdf_q = pt.exp(Wald.logcdf(q, mu, lam, 0))
+            pdf_q = pt.exp(Wald.logp(q, mu, lam, 0))
+            return q + (value - cdf_q) / pdf_q
+
+        q, _ = pytensor.scan(
+            newton_step,
+            outputs_info=[res],
+            n_steps=20,
+        )
+
+        result = q[-1] + alpha
+        result = check_icdf_value(result, value)
         return check_icdf_parameters(
-            res,
+            result,
             mu > 0,
             lam > 0,
             alpha >= 0,
