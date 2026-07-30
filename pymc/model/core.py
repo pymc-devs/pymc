@@ -392,6 +392,14 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         self.check_bounds = check_bounds
         self._parent = model if not isinstance(model, _UnsetType) else MODEL_MANAGER.parent_context
 
+        if isinstance(self._parent, FrozenModel):
+            # A sub-model shares its parent's variable containers, so registering variables
+            # in it would mutate the frozen parent and stale its cached functions.
+            raise RuntimeError(
+                "Cannot create a sub-model of a FrozenModel. Create it in the original "
+                "model and freeze that with freeze_model."
+            )
+
         if self.parent is not None:
             self.named_vars = treedict(parent=self.parent.named_vars)
             self.named_vars_to_dims = treedict(parent=self.parent.named_vars_to_dims)
@@ -485,16 +493,22 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         if initial_point is None:
             initial_point = self.initial_point(0)
 
-        # The compiled function only depends on the graph and compile args, not on the
-        # initial_point values (those just seed the runtime-settable extra variables), so
-        # cache the compilation and re-apply this call's extra values.
+        # The compiled function depends on the graph and compile args, not on the
+        # initial_point values (those only seed the runtime-settable extra variables), so it
+        # can be cached across calls with different points and re-seeded with this call's.
         fn = self._logp_dlogp_function(
-            tuple(grad_vars), tempered=tempered, ravel_inputs=ravel_inputs, **kwargs
+            tuple(grad_vars),
+            tempered=tempered,
+            ravel_inputs=ravel_inputs,
+            initial_point=initial_point,
+            **kwargs,
         )
         fn.set_extra_values(initial_point)
         return fn
 
-    def _logp_dlogp_function(self, grad_vars, *, tempered=False, ravel_inputs=None, **kwargs):
+    def _logp_dlogp_function(
+        self, grad_vars, *, tempered=False, ravel_inputs=None, initial_point, **kwargs
+    ):
         grad_vars = list(grad_vars)
         if tempered:
             costs = [self.varlogp, self.datalogp]
@@ -502,7 +516,6 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
             costs = [self.logp()]
 
         input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        initial_point = self.initial_point(0)
         extra_vars_and_values = {
             var: initial_point[var.name]
             for var in self.value_vars
@@ -934,6 +947,9 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
 
     def _make_initial_point(self):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
+        # NOTE: `pm.sample` builds its initial-point functions through
+        # `make_initial_point_fns_per_chain`, which passes `overrides`/`jitter_rvs` and so
+        # does not route through here yet -- see the follow-up note on the PR.
         return make_initial_point_fn(model=self, return_transformed=True)
 
     def set_data(
@@ -1270,14 +1286,17 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         **kwargs,
     ) -> tuple[Function, list[SharedVariable]]:
         # random_seed=False keeps the compiled function seed-independent and cacheable;
-        # compile_fn reseeds it afterwards. The RNG variables are collected once and cached
-        # with the function so they need not be re-walked on each call.
+        # compile_fn reseeds it afterwards. The RNG variables are read off the compiled
+        # function (which `compile` already collected them for) instead of walking the graph
+        # again, and cached with it so they need not be looked up on each call.
         kwargs.setdefault("allow_input_downcast", True)
         kwargs.setdefault("accept_inplace", True)
         with self:
             fn = compile(inputs, outs, mode=mode, random_seed=False, **kwargs)
-        rng_updates = collect_default_updates(inputs=list(inputs), outputs=list(makeiter(outs)))
-        return fn, list(rng_updates)
+        rngs = [
+            inp.variable for inp in fn.maker.inputs if isinstance(inp.variable.type, RandomType)
+        ]
+        return fn, rngs
 
     def profile(
         self,
@@ -2205,7 +2224,11 @@ class FrozenModel(BaseModel):
     logp = locally_cachedmethod(BaseModel.logp)
     dlogp = locally_cachedmethod(BaseModel.dlogp)
     d2logp = locally_cachedmethod(BaseModel.d2logp)
-    _logp_dlogp_function = locally_cachedmethod(BaseModel._logp_dlogp_function)
+    # The initial point only seeds the runtime-settable extra variables, so it is not part
+    # of the cache key (it is re-applied by `logp_dlogp_function` on every call).
+    _logp_dlogp_function = locally_cachedmethod(
+        BaseModel._logp_dlogp_function, ignore=("initial_point",)
+    )
     _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
     _compile_fn = locally_cachedmethod(BaseModel._compile_fn)
 

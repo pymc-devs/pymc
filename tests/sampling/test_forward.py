@@ -40,7 +40,7 @@ from pymc.backends.base import MultiTrace
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.exceptions import ImplicitFreezeWarning
 from pymc.model.transform.conditioning import do
-from pymc.model.transform.optimization import freeze_dims_and_data
+from pymc.model.transform.optimization import freeze_dims_and_data, freeze_model
 from pymc.pytensorf import compile, rvs_in_graph
 from pymc.sampling.forward import (
     _build_constant_data,
@@ -1393,10 +1393,6 @@ class TestSamplePosteriorPredictive:
     def test_forward_function_reused_across_set_data_batches(self):
         # On a frozen model, posterior predictive sampling in a loop with set_data must
         # reuse the compiled forward function instead of recompiling it on every call.
-        import pytensor
-
-        from pymc.model.transform.optimization import freeze_model
-
         rng = np.random.default_rng(0)
         N = 30
         with pm.Model() as m:
@@ -1437,8 +1433,6 @@ class TestSamplePosteriorPredictive:
     def test_reused_forward_function_is_reproducible_across_seeds(self):
         # Reusing the cached forward function must stay reproducible: it is reseeded per
         # call, so same seed -> same draws, different seed -> different draws.
-        from pymc.model.transform.optimization import freeze_model
-
         rng = np.random.default_rng(0)
         N = 20
         with pm.Model() as m:

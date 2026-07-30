@@ -355,17 +355,29 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def locally_cachedmethod(f):
-    """Cache a method's return value on ``self._cache``, keyed by the call arguments."""
+def locally_cachedmethod(f=None, *, ignore: Sequence[str] = ()):
+    """Cache a method's return value on ``self._cache``, keyed by the call arguments.
+
+    Keyword arguments named in ``ignore`` are left out of the cache key, for values that
+    the cached result does not depend on.
+    """
     from collections import defaultdict
 
-    def self_cache_fn(f_name):
-        def cf(self):
-            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+    def decorator(f):
+        def self_cache_fn(f_name):
+            def cf(self):
+                return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[
+                    f_name
+                ]
 
-        return cf
+            return cf
 
-    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+        def key(*args, **kwargs):
+            return hash_key(*args, **{k: v for k, v in kwargs.items() if k not in ignore})
+
+        return cachedmethod(self_cache_fn(f.__name__), key=key)(f)
+
+    return decorator if f is None else decorator(f)
 
 
 def check_dist_not_registered(dist, model=None):

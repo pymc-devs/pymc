@@ -1268,6 +1268,71 @@ class TestFrozenModelCaching:
         with pytest.raises(TypeError, match="freeze_model"):
             FrozenModel()
 
+    def test_sub_model_of_frozen_is_rejected(self):
+        # A sub-model shares its parent's variable containers, so registering variables in it
+        # would mutate the frozen parent and silently stale its cached functions.
+        with pm.Model() as m:
+            pm.Normal("a")
+        fm = freeze_model(m)
+        lp = fm.logp()
+
+        with pytest.raises(RuntimeError, match="sub-model of a FrozenModel"):
+            with fm:
+                with pm.Model(name="inner"):
+                    pm.Normal("q")
+        with pytest.raises(RuntimeError, match="sub-model of a FrozenModel"):
+            pm.Model(name="inner", model=fm)
+
+        assert [v.name for v in fm.free_RVs] == ["a"]  # untouched
+        assert fm.logp() is lp  # cache still valid
+        fm.compile_fn(fm.logp(), inputs=fm.value_vars, point_fn=False)
+
+    def test_logp_dlogp_function_does_not_recompute_given_initial_point(self):
+        # The caller's initial point must be used directly: re-deriving the default point
+        # inside would cost an extra compile (and bake the wrong shapes into the extra vars).
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+        ip = m.initial_point(0)
+
+        n_compiles = [0]
+        orig_function = pytensor.function
+
+        def counting_function(*args, **kwargs):
+            n_compiles[0] += 1
+            return orig_function(*args, **kwargs)
+
+        with patch("pytensor.function", counting_function):
+            m.logp_dlogp_function(ravel_inputs=True, initial_point=ip)
+        assert n_compiles[0] == 1  # the function itself, and no initial-point function
+
+        # On a frozen model the compilation is reused across calls with different points.
+        fm = freeze_model(m)
+        f1 = fm.logp_dlogp_function(ravel_inputs=True, initial_point=fm.initial_point(0))
+        ip2 = {k: v + 0.5 for k, v in fm.initial_point(0).items()}
+        with patch("pytensor.function", counting_function):
+            f2 = fm.logp_dlogp_function(ravel_inputs=True, initial_point=ip2)
+            assert f2 is f1  # different point values still hit the cache
+
+    def test_compile_fn_walks_graph_once(self):
+        # `pytensorf.compile` already collects the RNG updates; compile_fn must not walk the
+        # graph a second time to find them.
+        import pymc.model.core as model_core
+
+        with pm.Model() as m:
+            pm.Normal("z", 0, 1, size=3)
+
+        n_walks = [0]
+        orig_collect = model_core.collect_default_updates
+
+        def counting_collect(*args, **kwargs):
+            n_walks[0] += 1
+            return orig_collect(*args, **kwargs)
+
+        with patch.object(model_core, "collect_default_updates", counting_collect):
+            m.compile_fn(m["z"], inputs=[], point_fn=False, random_seed=1)
+        assert n_walks[0] == 0  # the walk inside `compile` is the only one
+
     def test_set_data_on_frozen_model(self):
         with pm.Model() as m:
             x = pm.Data("x", np.zeros(3))
@@ -1388,9 +1453,12 @@ class TestFrozenModelCaching:
 
         fm = freeze_model(m)
         x_val = fm.rvs_to_values[fm["x"]]
-        f_a = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point={"x": 0.0, "y": 1.0})
+        # Values must be arrays, as in a point returned by `initial_point`.
+        point_a = {"x": np.array(0.0), "y": np.array(1.0)}
+        point_b = {"x": np.array(0.0), "y": np.array(2.0)}
+        f_a = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point=point_a)
         logp_a, _ = f_a(np.array([0.0]))
-        f_b = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point={"x": 0.0, "y": 2.0})
+        f_b = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point=point_b)
         logp_b, _ = f_b(np.array([0.0]))
         assert f_a is f_b  # same compiled function reused
         assert not np.isclose(logp_a, logp_b)  # but the extra value (y) took effect
