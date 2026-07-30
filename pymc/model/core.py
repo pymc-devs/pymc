@@ -326,11 +326,7 @@ def _rng_detaching_linker(mode) -> bool:
     from pytensor.link.mlx.linker import MLXLinker
     from pytensor.link.pytorch.linker import PytorchLinker
 
-    try:
-        linker = get_mode(mode).linker
-    except Exception:
-        return False
-    return isinstance(linker, JAXLinker | MLXLinker | PytorchLinker)
+    return isinstance(get_mode(mode).linker, JAXLinker | MLXLinker | PytorchLinker)
 
 
 class BaseModel(WithMemoization, metaclass=ContextMeta):
