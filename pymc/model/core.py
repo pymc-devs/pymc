@@ -493,9 +493,8 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         if initial_point is None:
             initial_point = self.initial_point(0)
 
-        # The compiled function depends on the graph and compile args, not on the
-        # initial_point values (those only seed the runtime-settable extra variables), so it
-        # can be cached across calls with different points and re-seeded with this call's.
+        # The compiled function does not depend on the initial_point values (those only seed
+        # the runtime-settable extra variables), so it is cached across calls with any point.
         fn = self._logp_dlogp_function(
             tuple(grad_vars),
             tempered=tempered,
@@ -947,9 +946,6 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
 
     def _make_initial_point(self):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
-        # NOTE: `pm.sample` builds its initial-point functions through
-        # `make_initial_point_fns_per_chain`, which passes `overrides`/`jitter_rvs` and so
-        # does not route through here yet -- see the follow-up note on the PR.
         return make_initial_point_fn(model=self, return_transformed=True)
 
     def set_data(
@@ -1267,8 +1263,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                 fn = compile(inputs, outs, mode=mode, random_seed=random_seed, **kwargs)
         else:
             # Compile seed-independently (cached on frozen models) and reseed on each call,
-            # in the order pytensorf.compile uses, so a cached function yields the same RNG
-            # stream as a fresh compile.
+            # in the order pytensorf.compile uses, for the same RNG stream as a fresh compile.
             fn, rng_updates = self._compile_fn(outs, inputs=tuple(inputs), mode=mode, **kwargs)
             if rng_updates:
                 reseed_rngs(rng_updates, random_seed)
@@ -1286,15 +1281,16 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         **kwargs,
     ) -> tuple[Function, list[SharedVariable]]:
         # random_seed=False keeps the compiled function seed-independent and cacheable;
-        # compile_fn reseeds it afterwards. The RNG variables are read off the compiled
-        # function (which `compile` already collected them for) instead of walking the graph
-        # again, and cached with it so they need not be looked up on each call.
+        # compile_fn reseeds it afterwards, using the RNGs `compile` already collected.
         kwargs.setdefault("allow_input_downcast", True)
         kwargs.setdefault("accept_inplace", True)
         with self:
             fn = compile(inputs, outs, mode=mode, random_seed=False, **kwargs)
         rngs = [
-            inp.variable for inp in fn.maker.inputs if isinstance(inp.variable.type, RandomType)
+            inp.variable
+            for inp in fn.maker.inputs
+            if isinstance(inp.variable, SharedVariable)
+            and isinstance(inp.variable.type, RandomType)
         ]
         return fn, rngs
 
@@ -2218,9 +2214,8 @@ class FrozenModel(BaseModel):
             "Create one from an existing model with freeze_model."
         )
 
-    # Cached graphs and compiled functions. The seed is applied outside `_compile_fn`
-    # (in `compile_fn`) and taken as an argument by the initial-point function, so all
-    # cached entries are seed-independent.
+    # Cached graphs and compiled functions. Seeding happens outside the cached calls, so
+    # every entry is seed-independent.
     logp = locally_cachedmethod(BaseModel.logp)
     dlogp = locally_cachedmethod(BaseModel.dlogp)
     d2logp = locally_cachedmethod(BaseModel.d2logp)

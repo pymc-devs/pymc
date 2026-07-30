@@ -14,6 +14,8 @@
 from collections.abc import Sequence
 from typing import cast
 
+import numpy as np
+
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph, Variable
 from pytensor.graph.replace import clone_replace
@@ -27,7 +29,7 @@ def _constant_from_shared(shared: SharedVariable) -> Constant:
     return shared.type.constant_type(type=shared.type, data=shared.get_value(), name=shared.name)
 
 
-def _extract_initial_values(model: Model) -> dict[str, object]:
+def _extract_initial_values(model: Model) -> dict[str, np.ndarray | Variable | str]:
     """Return the model's non-default initial values, keyed by variable name.
 
     Symbolic initial values reference variables of the model's graph, which the fgraph

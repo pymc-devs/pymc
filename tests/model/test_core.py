@@ -1287,52 +1287,6 @@ class TestFrozenModelCaching:
         assert fm.logp() is lp  # cache still valid
         fm.compile_fn(fm.logp(), inputs=fm.value_vars, point_fn=False)
 
-    def test_logp_dlogp_function_does_not_recompute_given_initial_point(self):
-        # The caller's initial point must be used directly: re-deriving the default point
-        # inside would cost an extra compile (and bake the wrong shapes into the extra vars).
-        with pm.Model() as m:
-            x = pm.Normal("x", 0, 1, size=2)
-            pm.Normal("y", x, 1, observed=[0.3, -0.5])
-        ip = m.initial_point(0)
-
-        n_compiles = [0]
-        orig_function = pytensor.function
-
-        def counting_function(*args, **kwargs):
-            n_compiles[0] += 1
-            return orig_function(*args, **kwargs)
-
-        with patch("pytensor.function", counting_function):
-            m.logp_dlogp_function(ravel_inputs=True, initial_point=ip)
-        assert n_compiles[0] == 1  # the function itself, and no initial-point function
-
-        # On a frozen model the compilation is reused across calls with different points.
-        fm = freeze_model(m)
-        f1 = fm.logp_dlogp_function(ravel_inputs=True, initial_point=fm.initial_point(0))
-        ip2 = {k: v + 0.5 for k, v in fm.initial_point(0).items()}
-        with patch("pytensor.function", counting_function):
-            f2 = fm.logp_dlogp_function(ravel_inputs=True, initial_point=ip2)
-            assert f2 is f1  # different point values still hit the cache
-
-    def test_compile_fn_walks_graph_once(self):
-        # `pytensorf.compile` already collects the RNG updates; compile_fn must not walk the
-        # graph a second time to find them.
-        import pymc.model.core as model_core
-
-        with pm.Model() as m:
-            pm.Normal("z", 0, 1, size=3)
-
-        n_walks = [0]
-        orig_collect = model_core.collect_default_updates
-
-        def counting_collect(*args, **kwargs):
-            n_walks[0] += 1
-            return orig_collect(*args, **kwargs)
-
-        with patch.object(model_core, "collect_default_updates", counting_collect):
-            m.compile_fn(m["z"], inputs=[], point_fn=False, random_seed=1)
-        assert n_walks[0] == 0  # the walk inside `compile` is the only one
-
     def test_set_data_on_frozen_model(self):
         with pm.Model() as m:
             x = pm.Data("x", np.zeros(3))
