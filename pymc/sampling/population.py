@@ -396,6 +396,7 @@ def _prepare_iter_population(
             chainstep = CompoundStep([copy(m) for m in step.methods])
         else:
             chainstep = copy(step)
+        # `draws` includes tuning here, but `setup_chain` expects the two separately
         chainstep.setup_chain(rng, tune, draws - tune)
         # link population samplers to the shared population state
         for sm in chainstep.methods if isinstance(step, CompoundStep) else [chainstep]:

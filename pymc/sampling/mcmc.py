@@ -1542,6 +1542,7 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
+    # `draws` includes tuning here, but `setup_chain` expects the two separately
     step.setup_chain(rng, tune, draws - tune)
 
     point = start

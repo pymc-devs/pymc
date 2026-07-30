@@ -234,8 +234,18 @@ class BlockedStep(ABC, WithSamplingState):
         """Prepare the step method for sampling one chain.
 
         Called once per chain, right before that chain starts sampling.
-        Can be called multiple times, meaning downstream method
-        should handle multiple, possibly repeated calls.
+        The same instance may be reused across chains, so implementations
+        must reset any per-chain state instead of accumulating it.
+
+        Parameters
+        ----------
+        rng : RandomGenerator
+            Random generator for this chain.
+        tune : int
+            Number of tuning iterations. Zero if the chain does not tune.
+        draws : int
+            Number of iterations after tuning. The chain runs ``tune + draws``
+            iterations in total.
         """
         self.rng = get_random_generator(rng, copy=False)
 
@@ -304,9 +314,10 @@ class CompoundStep(WithSamplingState):
                 method.reset_tuning()
 
     def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
-        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
-        for method, _rng in zip(self.methods, _rngs):
-            method.setup_chain(_rng, tune, draws)
+        """Set up each wrapped step method with its own spawned random generator."""
+        rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
+        for method, method_rng in zip(self.methods, rngs):
+            method.setup_chain(method_rng, tune, draws)
 
     @property
     def sampling_state(self) -> DataClassState:
