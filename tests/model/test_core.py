@@ -1464,6 +1464,34 @@ class TestFrozenModelCaching:
         np.testing.assert_allclose(ip1["x"], fm.initial_point(0)["x"])
         np.testing.assert_allclose(ip1["x"], m.initial_point(0)["x"])  # matches unfrozen
 
+    def test_repeated_sampling_does_not_recompile(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+
+        sample_kwargs = {
+            "draws": 5,
+            "tune": 5,
+            "chains": 1,
+            "progressbar": False,
+            "nuts_sampler": "pymc",
+            "compute_convergence_checks": False,
+        }
+        fm = freeze_model(m)
+        with fm:
+            pm.sample(random_seed=0, **sample_kwargs)
+
+        n_compiles = [0]
+        orig_function = pytensor.function
+
+        def counting_function(*args, **kwargs):
+            n_compiles[0] += 1
+            return orig_function(*args, **kwargs)
+
+        with patch("pytensor.function", counting_function), fm:
+            pm.sample(random_seed=1, **sample_kwargs)
+        assert n_compiles[0] == 0
+
 
 def test_model_parent_set_programmatically():
     with pm.Model() as model:

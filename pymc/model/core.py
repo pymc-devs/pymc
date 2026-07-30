@@ -942,9 +942,14 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         fn = self._make_initial_point()
         return Point(fn(random_seed), model=self)
 
-    def _make_initial_point(self):
+    def _make_initial_point(self, *, overrides=None, jitter_rvs=None, return_transformed=True):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
-        return make_initial_point_fn(model=self, return_transformed=True)
+        return make_initial_point_fn(
+            model=self,
+            overrides=overrides,
+            jitter_rvs=jitter_rvs,
+            return_transformed=return_transformed,
+        )
 
     def set_data(
         self,
