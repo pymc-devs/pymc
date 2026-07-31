@@ -61,7 +61,7 @@ from pymc.logprob.transforms import IntervalTransform
 from pymc.model import Point, ValueGradFunction, modelcontext
 from pymc.model.core import BaseModel, FrozenModel
 from pymc.model.transform.optimization import freeze_model
-from pymc.pytensorf import floatX, inputvars
+from pymc.pytensorf import compile, floatX, inputvars
 from pymc.variational.minibatch_rv import MinibatchRandomVariable
 from tests.models import simple_model
 
@@ -1333,6 +1333,21 @@ class TestFrozenModelCaching:
 
         f_c = fm.compile_fn(fm["z"], inputs=[], point_fn=False, random_seed=456)
         assert not np.allclose(v1, f_c())  # different seed -> different draw
+
+    def test_compile_fn_seeds_variables_in_the_same_order(self):
+        # Seeding hands out sub-seeds by position, so collecting the random variables in a
+        # different order than `pymc.pytensorf.compile` does silently gives every variable a
+        # different stream. Only visible with more than one variable.
+        with pm.Model() as m:
+            a = pm.Normal("a", size=2)
+            b = pm.Normal("b", size=2)
+
+        outs = [a, b]
+        expected = compile([], outs, random_seed=2)()
+        for model in (m, freeze_model(m)):
+            drawn = model.compile_fn(outs, inputs=[], point_fn=False, random_seed=2)()
+            for drawn_var, expected_var in zip(drawn, expected):
+                np.testing.assert_allclose(drawn_var, expected_var)
 
     def test_compile_fn_jax_bypasses_cache_but_stays_seeded(self):
         # JAX detaches a function's RNG variables at compile time, so a cached function
