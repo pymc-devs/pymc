@@ -157,6 +157,69 @@ def test_sigma_floor_prevents_z_blowup():
     assert abs(stop - expected) <= 3
 
 
+@pytest.mark.parametrize(
+    "slope, noise", [(1.0, 0.0), (1.0, 1.0), (5.0, 1.0)], ids=["clean", "noisy", "steep"]
+)
+def test_rising_loss_is_not_called_convergence(slope, noise):
+    """A diverging fit is the opposite of a converged one and must not be reported as one."""
+    rng = np.random.default_rng(4)
+    losses = slope * np.arange(4000.0) + rng.normal(0.0, noise, size=4000)
+    monitor = CheckLossConvergence()
+    with pytest.raises(StopIteration, match="trending up, not converging"):
+        for i in range(len(losses)):
+            monitor(None, losses[: i + 1], i)
+
+
+def test_a_burst_of_reversals_does_not_end_a_still_improving_fit():
+    """Under a plain ``kappa - z`` each upward step contributes ``kappa + |z|``, so a
+    three-step burst covers most of ``h`` on its own while the fit is still improving."""
+    rng = np.random.default_rng(7)
+    deltas = rng.normal(2.0, 0.3, size=1000)
+    deltas[400:403] = -20.0
+    losses = 1000.0 - np.cumsum(deltas)
+    assert run_monitor(CheckLossConvergence(min_steps=200), losses) is None
+
+
+def test_one_spike_does_not_end_a_still_improving_fit():
+    """A heavy-tailed excursion inflates the raw scale for hundreds of steps if unbounded."""
+    losses = 10_000.0 - np.arange(3000.0)
+    assert run_monitor(CheckLossConvergence(), losses) is None
+    spiked = losses.copy()
+    spiked[1500] += 1e6
+    assert run_monitor(CheckLossConvergence(), spiked) is None
+
+
+def test_overflowing_loss_does_not_poison_the_scale():
+    """Successive differences of huge finite losses overflow; the scale must survive it."""
+    losses = 10_000.0 - np.arange(3000.0)
+    losses[1200] = 1e308
+    assert run_monitor(CheckLossConvergence(), losses) is None
+
+
+def test_persistently_nonfinite_loss_stops():
+    """pm.fit aborts on NaN but runs to completion on +inf, so the monitor has to call it."""
+    monitor = CheckLossConvergence(min_steps=100)
+    stop = run_monitor(monitor, np.full(2000, np.inf))
+    assert stop == monitor.min_steps  # min_steps tolerated, then the next one stops
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"h": np.nan},
+        {"kappa": np.nan},
+        {"halflife": np.inf},
+        {"z_clip": np.nan},
+        {"sigma_floor": 0.0},
+        {"sigma_floor": -1.0},
+    ],
+)
+def test_nonfinite_or_nonpositive_parameters_rejected(kwargs):
+    """Each of these silently disables the stop rule or flips the sign of z."""
+    with pytest.raises(ValueError):
+        CheckLossConvergence(**kwargs)
+
+
 def test_pm_fit_integration_smoke():
     """End to end inside pm.fit: early stop returns the partial approximation."""
     rng = np.random.default_rng(0)

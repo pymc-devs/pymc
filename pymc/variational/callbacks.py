@@ -170,15 +170,25 @@ class CheckLossConvergence(Callback):
     ``+/- z_clip``, giving ``z_t``; the monitor accumulates the one-sided CUSUM
     (Page, 1954)::
 
-        S_t = max(0, S_{t-1} + (kappa - z_t))
+        S_t = max(0, S_{t-1} + (kappa - max(z_t, 0)))
 
     and declares convergence once ``S > h`` (armed only after ``min_steps``).
+
+    A step that makes the loss *worse* is read as zero improvement rather than as
+    negative improvement. Charging ``kappa + |z_t|`` for it, as a plain
+    ``kappa - z_t`` does, would make a diverging fit reach the threshold faster
+    than a converged one and stop with the opposite of the truth; it also let a
+    single heavy-tailed spike carry the CUSUM most of the way to ``h``. When the
+    threshold is reached while the loss is trending upwards, the run is reported
+    as diverging instead of converged.
 
     Parameters
     ----------
     kappa : float
         Allowance (reference value) in robust standard deviations per step.
         Improvement below ``kappa * sigma`` counts as evidence of convergence.
+        Must exceed ``E[max(z, 0)]`` under a converged trace, or ``S`` never
+        rises; see the calibration in the Notes.
     h : float
         CUSUM decision threshold. Larger values trade detection delay for a
         lower false-alarm rate.
@@ -186,18 +196,23 @@ class CheckLossConvergence(Callback):
         Half-life, in steps, of the exponentially-weighted scale estimate.
     min_steps : int
         Number of steps before the CUSUM is armed. Must be large enough for
-        the scale estimate to stabilize (a few half-lives).
+        the scale estimate to stabilize (a few half-lives). Also the number of
+        consecutive non-finite losses tolerated before the fit is stopped:
+        ``pm.fit`` aborts on NaN but runs to completion on ``+inf``.
     z_clip : float
-        Winsorization bound on the standardized increment.
+        Winsorization bound on the standardized increment, applied to the scale
+        update as well so one spike cannot inflate the scale for hundreds of steps.
     sigma_floor : float
         Lower bound on the scale estimate, guarding against exactly-constant
         losses driving ``z`` to infinity.
 
     Notes
     -----
-    The defaults ``kappa=0.25, h=20, halflife=200`` were calibrated on 1000
-    still-improving traces across four trace families; the worst-family
-    false-positive rate is 0.6%, with a median detection delay of ~70 steps.
+    The defaults ``kappa=0.5, h=10, halflife=200`` were calibrated on 1000
+    still-improving traces in each of four families (linear, power-law,
+    heteroscedastic, heavy-tailed): worst-family false-positive rate 0.8%, and on
+    traces whose improvement dies at a known step, detection rate 100% with a
+    median delay of 74 steps (p95 157).
 
     Examples
     --------
@@ -209,19 +224,26 @@ class CheckLossConvergence(Callback):
 
     def __init__(
         self,
-        kappa=0.25,
-        h=20.0,
+        kappa=0.5,
+        h=10.0,
         halflife=200.0,
         min_steps=1000,
         z_clip=4.0,
         sigma_floor=1e-12,
     ):
-        if kappa <= 0 or h <= 0 or halflife <= 0:
-            raise ValueError("kappa, h and halflife must all be positive")
+        for name, value in (
+            ("kappa", kappa),
+            ("h", h),
+            ("halflife", halflife),
+            ("z_clip", z_clip),
+            ("sigma_floor", sigma_floor),
+        ):
+            if not np.isfinite(value) or value <= 0:
+                raise ValueError(f"{name} must be finite and positive, got {value!r}")
         if z_clip <= kappa:
             raise ValueError(f"z_clip ({z_clip}) must exceed kappa ({kappa})")
-        if min_steps < 0:
-            raise ValueError(f"min_steps must be non-negative, got {min_steps!r}")
+        if not np.isfinite(min_steps) or min_steps < 0:
+            raise ValueError(f"min_steps must be a non-negative integer, got {min_steps!r}")
         self.kappa = float(kappa)
         self.h = float(h)
         self.halflife = float(halflife)
@@ -230,10 +252,14 @@ class CheckLossConvergence(Callback):
         self.sigma_floor = float(sigma_floor)
 
         self._lam = float(np.exp(np.log(0.5) / self.halflife))
+        # 4 sd of the EW mean of z under a converged trace: below this, the loss
+        # is trending up rather than sitting on the noise floor.
+        self._rise_tol = 4.0 * float(np.sqrt((1.0 - self._lam) / (1.0 + self._lam)))
         self.n_nonfinite = 0
         self._prev_loss = None
         self._prev_delta = None  # previous improvement, for successive differencing
         self._scale = None  # EW mean of |delta_t - delta_{t-1}|
+        self._z_bar = 0.0
         self._S = 0.0
 
     def __call__(self, approx, loss, i):
@@ -245,6 +271,11 @@ class CheckLossConvergence(Callback):
         current = float(loss[-1])
         if not np.isfinite(current):
             self.n_nonfinite += 1
+            if self.n_nonfinite > self.min_steps:
+                raise StopIteration(
+                    f"CheckLossConvergence: the loss has been non-finite for "
+                    f"{self.n_nonfinite} steps; stopping at step {i}"
+                )
             return
         if self._prev_loss is None:
             self._prev_loss = current
@@ -262,16 +293,25 @@ class CheckLossConvergence(Callback):
         # Standardize with the *previous* scale so a step never judges itself,
         # then fold the successive difference into the estimate.
         if self._scale is None:
-            self._scale = abs_diff
+            if np.isfinite(abs_diff):
+                self._scale = abs_diff
             return
         sigma = self._scale * _SQRT_PI_OVER_2 + self.sigma_floor
-        self._scale = self._lam * self._scale + (1.0 - self._lam) * abs_diff
+        if np.isfinite(abs_diff):
+            update = min(abs_diff, self.z_clip * sigma)
+            self._scale = self._lam * self._scale + (1.0 - self._lam) * update
         z = float(np.clip(delta / sigma, -self.z_clip, self.z_clip))
+        self._z_bar = self._lam * self._z_bar + (1.0 - self._lam) * z
 
         if i >= self.min_steps:
-            self._S = max(0.0, self._S + (self.kappa - z))
+            self._S = max(0.0, self._S + (self.kappa - max(z, 0.0)))
 
         if self._S > self.h:
+            if self._z_bar < -self._rise_tol:
+                raise StopIteration(
+                    f"CheckLossConvergence: the loss is trending up, not converging "
+                    f"(step {i}, mean z={self._z_bar:.2f}); stopping"
+                )
             raise StopIteration(
                 f"CheckLossConvergence: converged at step {i} (S={self._S:.2f} > h={self.h:g})"
             )
