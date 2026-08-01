@@ -11,7 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pytest
@@ -199,7 +199,8 @@ class TestComputeLogLikelihood:
             with (
                 # apply_function_over_dataset fails with patched `compile_pymc`
                 patch("pymc.stats.log_density.apply_function_over_dataset"),
-                patch("pymc.model.core.compile") as patched_compile,
+                # compile is asked for the RNG updates alongside the function
+                patch("pymc.model.core.compile", return_value=(MagicMock(), {})) as patched_compile,
             ):
                 compute_log_prior(idata, extend_inferencedata=False, **prior_kwargs)
                 compute_log_likelihood(idata, extend_inferencedata=False, **lik_kwargs)

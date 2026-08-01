@@ -22,7 +22,7 @@ import pytest
 import scipy.sparse as sps
 
 from pytensor import scan, shared
-from pytensor.compile import UnusedInputError
+from pytensor.compile import Function, UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.link.vm import VMLinker
@@ -332,6 +332,17 @@ class TestCompile:
         # pytensor.function over the same graph should still be deterministic.
         f = pytensor.function([], x)
         assert f() == f()
+
+    def test_compile_pymc_return_updates(self):
+        rng = pytensor.shared(np.random.default_rng(0))
+        x = pm.Normal.dist(rng=rng)
+
+        f, updates = compile([], x, return_updates=True)
+        assert list(updates) == [rng]
+        assert not np.isclose(f(), f())  # the function itself is unchanged
+
+        # Without it the function is returned on its own.
+        assert isinstance(compile([], x), Function)
 
     def test_compile_pymc_with_updates(self):
         x = pytensor.shared(0)

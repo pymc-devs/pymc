@@ -31,7 +31,6 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
-from pytensor.compile.io import In, Out
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
@@ -1278,21 +1277,17 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         **kwargs,
     ) -> tuple[Function, list[SharedVariable]]:
         # random_seed=False keeps the compiled function seed-independent and cacheable;
-        # compile_fn reseeds it afterwards.
+        # compile_fn reseeds it afterwards. The RNGs come back from `compile`, which had to
+        # collect them anyway, in the order it would have seeded them: `reseed_rngs` hands
+        # out sub-seeds by position, so a different order gives every variable a different
+        # stream.
         kwargs.setdefault("allow_input_downcast", True)
         kwargs.setdefault("accept_inplace", True)
         with self:
-            fn = compile(inputs, outs, mode=mode, random_seed=False, **kwargs)
-        # Collected the same way `compile` does, since `reseed_rngs` hands out sub-seeds by
-        # position: a different order gives every variable a different stream. The compiled
-        # function does not expose them in that order.
-        rngs = list(
-            collect_default_updates(
-                inputs=[inp.variable if isinstance(inp, In) else inp for inp in inputs],
-                outputs=[out.variable if isinstance(out, Out) else out for out in makeiter(outs)],
+            fn, rng_updates = compile(
+                inputs, outs, mode=mode, random_seed=False, return_updates=True, **kwargs
             )
-        )
-        return fn, rngs
+        return fn, list(rng_updates)
 
     def profile(
         self,

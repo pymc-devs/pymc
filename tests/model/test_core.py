@@ -17,7 +17,7 @@ import threading
 import traceback
 import warnings
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import arviz as az
 import cloudpickle
@@ -802,7 +802,8 @@ class TestCheckStartVals:
             "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
             "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
         }
-        with patch("pymc.model.core.compile") as patched_compile:
+        # compile is asked for the RNG updates alongside the function
+        with patch("pymc.model.core.compile", return_value=(MagicMock(), {})) as patched_compile:
             model.check_start_vals(start, mode=mode)
         patched_compile.assert_called_once()
         assert patched_compile.call_args.kwargs["mode"] == mode
