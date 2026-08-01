@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
@@ -45,7 +47,7 @@ __all__ = [
     "logodds",
     "ordered",
     "simplex",
-    "sum_to_1",
+    "sum_to_1",  # noqa: F822
 ]
 
 
@@ -709,12 +711,24 @@ log.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
-sum_to_1 = SumTo1()
-sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+_sum_to_1 = SumTo1()
+_sum_to_1.__doc__ = """
+Deprecated instantiation of :class:`pymc.distributions.transforms.SumTo1`
 for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
 circular.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""
+
+
+def __getattr__(name):
+    if name == "sum_to_1":
+        warnings.warn(
+            "The sum_to_1 transform is deprecated and will be removed in a future release. "
+            "Use the simplex transform instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return _sum_to_1
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

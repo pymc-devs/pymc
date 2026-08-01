@@ -44,6 +44,8 @@ from pymc.testing import (
 # stable. The minimal addable slack for float32 is higher thus we need to be less strict
 tol = 1e-7 if config.floatX == "float64" else 1e-5
 
+sum_to_1 = tr._sum_to_1
+
 
 def check_transform(transform, domain, constructor=pt.scalar, test=0, rv_var=None):
     x = constructor("x")
@@ -145,16 +147,21 @@ def test_simplex_accuracy():
 
 
 def test_sum_to_1():
-    check_vector_transform(tr.sum_to_1, Simplex(2))
-    check_vector_transform(tr.sum_to_1, Simplex(4))
+    check_vector_transform(sum_to_1, Simplex(2))
+    check_vector_transform(sum_to_1, Simplex(4))
 
     check_jacobian_det(
-        tr.sum_to_1,
+        sum_to_1,
         Vector(Unit, 2),
         pt.vector,
         floatX(np.array([0, 0])),
         lambda x: x[:-1],
     )
+
+
+def test_sum_to_1_deprecated():
+    with pytest.warns(FutureWarning, match="sum_to_1 transform is deprecated"):
+        assert tr.sum_to_1 is tr._sum_to_1
 
 
 def test_log():
@@ -571,7 +578,7 @@ class TestElementWiseLogp:
                 floatX(np.zeros(3)),
                 floatX(np.ones(3)),
                 (4, 3),
-                tr.Chain([tr.sum_to_1, tr.logodds]),
+                tr.Chain([sum_to_1, tr.logodds]),
             ),
         ],
     )
@@ -593,7 +600,7 @@ class TestElementWiseLogp:
             (floatX(np.zeros(3)), floatX(np.diag(np.ones(3))), (4,), (4, 3)),
         ],
     )
-    @pytest.mark.parametrize("transform", (tr.ordered, tr.sum_to_1))
+    @pytest.mark.parametrize("transform", (tr.ordered, sum_to_1))
     def test_mvnormal_transform(self, mu, cov, size, shape, transform):
         initval = np.sort(np.random.randn(*shape))
         model = self.build_model(

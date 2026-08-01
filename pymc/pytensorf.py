@@ -23,7 +23,8 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor.compile import Function, Mode, get_mode
-from pytensor.compile.builders import OpFromGraph
+from pytensor.compile.builders import OpFromGraph, SymbolicOp
+from pytensor.compile.rewriting import rewrite_inner_graph
 from pytensor.gradient import grad
 from pytensor.graph import rewrite_graph
 from pytensor.graph.basic import (
@@ -36,6 +37,7 @@ from pytensor.graph.basic import (
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.rewriting.basic import graph_rewriter
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -1031,9 +1033,34 @@ def get_symbolic_rv_shapes(
     return resolve_shapes([rv.shape for rv in rvs])
 
 
+@graph_rewriter
+def pregrad_inner_graphs(fgraph):
+    """Apply the pre-grad rewrites to the inner graph of every inner-graph op."""
+
+    def match(op):
+        # `SymbolicOp`s are what `symbolic_op_recognition` creates, so descending into
+        # one would recognize its own body inside itself and never terminate.
+        return (
+            isinstance(op, HasInnerGraph)
+            and hasattr(op, "clone_with_inner_graph")
+            and not isinstance(op, SymbolicOp)
+        )
+
+    def rewrite(linker, op, node, inner, *, mode):
+        rewrite_graph(
+            inner,
+            include=("canonicalize", "stabilize"),
+            custom_rewrite=pregrad_inner_graphs,
+        )
+
+    rewrite_inner_graph(fgraph, match, rewrite)
+
+
 def rewrite_pregrad(graph):
     """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
-    return rewrite_graph(graph, include=("canonicalize", "stabilize"))
+    return rewrite_graph(
+        graph, include=("canonicalize", "stabilize"), custom_rewrite=pregrad_inner_graphs
+    )
 
 
 def toposort_replace(
