@@ -186,9 +186,11 @@ class CheckLossConvergence(Callback):
     ----------
     kappa : float
         Allowance (reference value) in robust standard deviations per step.
-        Improvement below ``kappa * sigma`` counts as evidence of convergence.
-        Must exceed ``E[max(z, 0)]`` under a converged trace, or ``S`` never
-        rises; see the calibration in the Notes.
+        ``S`` rises while ``E[max(z, 0)] < kappa``, so ``kappa`` must exceed what
+        a converged trace spends on noise alone (``E[max(z, 0)]`` is 0.4 for
+        standard-normal ``z``, never 0). The stall boundary therefore sits well
+        below ``kappa * sigma``: improvement has to fall to about ``0.19 * sigma``
+        at the default. See the calibration in the Notes.
     h : float
         CUSUM decision threshold. Larger values trade detection delay for a
         lower false-alarm rate.
@@ -252,8 +254,11 @@ class CheckLossConvergence(Callback):
         self.sigma_floor = float(sigma_floor)
 
         self._lam = float(np.exp(np.log(0.5) / self.halflife))
-        # 4 sd of the EW mean of z under a converged trace: below this, the loss
-        # is trending up rather than sitting on the noise floor.
+        # Floor on the smoothed z below which a stop is reported as divergence.
+        # This is the i.i.d. bound; z is a first difference, so its smoothed mean
+        # is an order of magnitude tighter than this and a converged trace never
+        # comes near it. Deliberately loose in that direction: the cost of a
+        # missed label is a mild rise called a plateau, not a wrong stop.
         self._rise_tol = 4.0 * float(np.sqrt((1.0 - self._lam) / (1.0 + self._lam)))
         self.n_nonfinite = 0
         self._prev_loss = None

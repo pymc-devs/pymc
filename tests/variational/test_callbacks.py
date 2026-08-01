@@ -170,6 +170,32 @@ def test_rising_loss_is_not_called_convergence(slope, noise):
             monitor(None, losses[: i + 1], i)
 
 
+@pytest.mark.parametrize("seed", range(4))
+def test_a_rise_of_one_noise_sd_per_step_is_still_called_divergence(seed):
+    """The label has to survive a rise that noise nearly hides, not just an obvious one.
+
+    A loss climbing by about one noise sd per step leaves the smoothed z between
+    -0.45 and -0.62, so a divergence threshold loose enough to sit in that band
+    reports the run as converged. Parametrized because the margin is what matters.
+    """
+    rng = np.random.default_rng(seed)
+    losses = np.arange(6000.0) + rng.normal(0.0, 1.0, size=6000)
+    monitor = CheckLossConvergence()
+    with pytest.raises(StopIteration, match="trending up, not converging"):
+        for i in range(len(losses)):
+            monitor(None, losses[: i + 1], i)
+
+
+def test_a_converged_plateau_is_never_labelled_diverging():
+    """The mirror of the test above: the threshold must leave real plateaus alone."""
+    for seed in range(4):
+        losses = improving_then_plateau(n_improve=1500, n_plateau=2500, seed=seed)
+        monitor = CheckLossConvergence(min_steps=500)
+        with pytest.raises(StopIteration, match="converged at step"):
+            for i in range(len(losses)):
+                monitor(None, losses[: i + 1], i)
+
+
 def test_a_burst_of_reversals_does_not_end_a_still_improving_fit():
     """Under a plain ``kappa - z`` each upward step contributes ``kappa + |z|``, so a
     three-step burst covers most of ``h`` on its own while the fit is still improving."""
@@ -218,6 +244,163 @@ def test_nonfinite_or_nonpositive_parameters_rejected(kwargs):
     """Each of these silently disables the stop rule or flips the sign of z."""
     with pytest.raises(ValueError):
         CheckLossConvergence(**kwargs)
+
+
+def test_stop_step_tracks_plateau_onset():
+    """The stop step follows the plateau, not the clock: later onset, later stop.
+
+    The detection delay has to stay bounded as the improving phase lengthens. A CUSUM
+    that is not floored at zero banks a deficit proportional to that length, so the
+    same plateau takes ever longer to clear ``h`` -- monotone in the wrong way.
+    """
+    for seed in range(3):
+        stops = []
+        for t_star in (800, 1600, 2400, 3200):
+            losses = improving_then_plateau(n_improve=t_star, n_plateau=1200, seed=seed)
+            stop = run_monitor(CheckLossConvergence(min_steps=300), losses)
+            assert stop is not None, f"no stop for onset {t_star} (seed {seed})"
+            assert 20 <= stop - t_star <= 400, f"delay {stop - t_star} at onset {t_star}"
+            stops.append(stop)
+        assert stops == sorted(stops)
+
+
+@pytest.mark.parametrize(
+    "scale, offset",
+    [(1e-6, 0.0), (1e6, 0.0), (1e-3, 5e3), (1e3, -1e6)],
+    ids=["tiny", "huge", "shrunk_shifted", "grown_shifted"],
+)
+def test_stop_step_is_invariant_to_affine_relabelling(scale, offset):
+    """Only increments measured in units of their own noise reach the decision rule.
+
+    ELBO magnitudes differ by orders of magnitude between models, which is the whole
+    reason for dividing by sigma; an affine relabelling of one trace must not move the
+    stop by a single step.
+    """
+    losses = improving_then_plateau(n_improve=1500, n_plateau=2000)
+    reference = run_monitor(CheckLossConvergence(min_steps=300), losses)
+    assert reference is not None
+    assert run_monitor(CheckLossConvergence(min_steps=300), losses * scale + offset) == reference
+
+
+_STILL_IMPROVING = {
+    "linear": lambda rng, n: rng.normal(1.0, 1.0, size=n),
+    "power_law": lambda rng, n: (
+        5.0 * np.arange(1.0, n + 1.0) ** -0.25 + rng.normal(0.0, 0.5, size=n)
+    ),
+    "heteroscedastic": lambda rng, n: 1.0 + rng.normal(0.0, 1.0, size=n) * np.linspace(0.1, 1.0, n),
+    "student_t": lambda rng, n: 1.0 + 0.5 * rng.standard_t(df=3, size=n),
+}
+
+
+@pytest.mark.parametrize("family", sorted(_STILL_IMPROVING))
+def test_still_improving_traces_do_not_raise_a_false_alarm(family):
+    """Fifty traces per family whose improvement never dies cost at most one false alarm.
+
+    Every family ends with improvement still well clear of the stall boundary, so a
+    stop is a truncated fit. One lucky trace shape says nothing about the calibrated
+    0.8% worst-family rate; a kappa or h that drifts off it shows up here first.
+    """
+    make_deltas = _STILL_IMPROVING[family]
+    fired = []
+    for seed in range(50):
+        deltas = make_deltas(np.random.default_rng(seed), 3000)
+        stop = run_monitor(CheckLossConvergence(), 1000.0 - np.cumsum(deltas))
+        if stop is not None:
+            fired.append(stop)
+    assert len(fired) <= 1, f"{family}: {len(fired)} false alarms in 50 traces, at {fired}"
+
+
+@pytest.mark.parametrize("min_steps, slope", [(50, 0.5), (200, 3.0), (500, 1e4)])
+def test_a_deterministic_ramp_stops_at_the_analytic_step(min_steps, slope):
+    """A noiseless ramp drives |z| to z_clip, fixing the stop at min_steps + h / kappa.
+
+    Uphill ``max(z, 0)`` is zero and S gains exactly kappa per armed step, whatever the
+    slope. Reading the rise as negative improvement would charge ``kappa + z_clip`` and
+    stop nine times sooner than a converged trace does; downhill the allowance never
+    covers the improvement and S stays pinned at zero forever.
+    """
+    monitor = CheckLossConvergence(min_steps=min_steps)
+    expected = min_steps + int(monitor.h / monitor.kappa)
+    ramp = slope * np.arange(1500.0)
+    with pytest.raises(StopIteration, match=rf"trending up.*\(step {expected},"):
+        for i in range(len(ramp)):
+            monitor(None, 7.0 + ramp[: i + 1], i)
+    assert run_monitor(CheckLossConvergence(min_steps=min_steps), 7.0 - ramp) is None
+
+
+@pytest.mark.parametrize(
+    "rate, expected",
+    [
+        (0.05, "converged"),
+        (0.2, "converged"),
+        (0.5, "trending up"),
+        (1.0, "trending up"),
+        (3.0, "trending up"),
+    ],
+)
+def test_divergence_label_tracks_the_rise_rate(rate, expected):
+    """The label turns over between rises of 0.25 and 0.3 noise sd per step, and stays.
+
+    With i.i.d. noise on the loss level the successive-difference scale estimates
+    sqrt(3) sigma, so the smoothed z settles near ``-0.58 * rate`` and crosses
+    ``-_rise_tol`` at about 0.29. Pinned from both sides: a threshold loosened twofold
+    reads a half-sd-per-step climb as a plateau, a tightened one starts calling honest
+    plateaus divergent.
+    """
+    rng = np.random.default_rng(0)
+    losses = rate * np.arange(2000.0) + rng.normal(0.0, 1.0, size=2000)
+    monitor = CheckLossConvergence()
+    with pytest.raises(StopIteration, match=expected):
+        for i in range(len(losses)):
+            monitor(None, losses[: i + 1], i)
+
+
+@pytest.mark.parametrize("min_steps", [300, 600, 1000, 1500])
+def test_min_steps_arms_the_cusum_and_nothing_else(min_steps):
+    """Arming earlier cannot move the stop of a trace that improves through the window.
+
+    S is floored at zero while the loss falls, so every min_steps below the plateau
+    onset has to give the same stop step, not merely a similar one. The scale and trend
+    estimates are meanwhile fed by every step: skipping that work before arming makes
+    the answer a function of min_steps.
+    """
+    losses = improving_then_plateau(n_improve=2000, n_plateau=1500)
+    reference = run_monitor(CheckLossConvergence(min_steps=100), losses)
+    assert reference is not None
+    assert run_monitor(CheckLossConvergence(min_steps=min_steps), losses) == reference
+
+
+def test_a_fired_monitor_is_not_silently_reusable():
+    """A monitor that has stopped once keeps saying so instead of re-judging a new fit.
+
+    Nothing drops S back under h, so a second fit stops at its first step rather than
+    running to a different answer. One instance per fit is the contract; the cost of
+    breaking it is loud, not a plausible wrong stop halfway through.
+    """
+    monitor = CheckLossConvergence(min_steps=300)
+    assert run_monitor(monitor, improving_then_plateau(1000, 1500)) is not None
+    still_improving = improving_then_plateau(3000, 0, seed=5)
+    assert run_monitor(CheckLossConvergence(min_steps=300), still_improving) is None
+    assert run_monitor(monitor, still_improving) == 0
+
+
+def test_only_the_newest_loss_is_read():
+    """Handing over one loss per step decides identically to handing over the history.
+
+    pm.fit passes the growing hist; the monitor's own state is the running summary, so
+    reaching further back than the last entry would double-count what it already holds.
+    """
+    losses = improving_then_plateau(n_improve=1200, n_plateau=1500)
+    monitor = CheckLossConvergence(min_steps=300)
+    windowed = None
+    for i in range(len(losses)):
+        try:
+            monitor(None, losses[i : i + 1], i)
+        except StopIteration:
+            windowed = i
+            break
+    assert windowed is not None
+    assert windowed == run_monitor(CheckLossConvergence(min_steps=300), losses)
 
 
 def test_pm_fit_integration_smoke():
