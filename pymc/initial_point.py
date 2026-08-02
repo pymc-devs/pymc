@@ -104,7 +104,7 @@ def make_initial_point_fns_per_chain(
         # One strategy for all chains
         # Only one function compilation is needed.
         ipfns = [
-            model._make_initial_point(
+            model._initial_point_fn(
                 overrides=overrides,
                 jitter_rvs=jitter_rvs,
                 return_transformed=True,
@@ -112,7 +112,7 @@ def make_initial_point_fns_per_chain(
         ] * chains
     elif len(overrides) == chains:
         ipfns = [
-            model._make_initial_point(
+            model._initial_point_fn(
                 jitter_rvs=jitter_rvs,
                 overrides=chain_overrides,
                 return_transformed=True,

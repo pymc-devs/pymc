@@ -1380,7 +1380,7 @@ class TestFrozenModelCaching:
         f1 = fm.logp_dlogp_function(ravel_inputs=True)
         f2 = fm.logp_dlogp_function(ravel_inputs=True)
         assert f1 is f2
-        assert "_logp_dlogp_function" in fm._cache
+        assert "_value_grad_function" in fm._cache
 
     def test_logp_dlogp_d2logp_graphs_are_cached(self):
         # Memoized graph construction returns the same object, so a freshly requested logp
@@ -1438,7 +1438,7 @@ class TestFrozenModelCaching:
 
         fm = freeze_model(m)
         ip1 = fm.initial_point(0)
-        assert "_make_initial_point" in fm._cache
+        assert "_initial_point_fn" in fm._cache
         np.testing.assert_allclose(ip1["x"], fm.initial_point(0)["x"])
         np.testing.assert_allclose(ip1["x"], m.initial_point(0)["x"])  # matches unfrozen
 
