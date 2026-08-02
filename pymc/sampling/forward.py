@@ -46,7 +46,7 @@ from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.exceptions import ImplicitFreezeWarning
-from pymc.model import Model, modelcontext
+from pymc.model import BaseModel, modelcontext
 from pymc.progress_bar import create_simple_progress, default_progress_theme
 from pymc.pytensorf import compile, resolve_backend_compile_kwargs, rvs_in_graph
 from pymc.util import (
@@ -73,7 +73,7 @@ _log = logging.getLogger(__name__)
 def _build_constant_data(
     trace_constant_data: dict[str, np.ndarray],
     trace_coords: dict[str, np.ndarray],
-    model: Model,
+    model: BaseModel,
 ) -> dict[Variable, Any]:
     """Collect trace-time values for data-like nodes in the model.
 
@@ -194,7 +194,7 @@ def _maybe_warn_implicit_freeze(
     rv_set: set[Variable],
     vars_in_trace_set: set[Variable],
     constant_data: dict[Variable, Any],
-    model: Model,
+    model: BaseModel,
     trace_coords: dict[str, np.ndarray],
 ) -> None:
     """Warn when an auto-frozen trace RV has a volatile ancestor the user may have wanted resampled."""
@@ -266,6 +266,7 @@ def compile_forward_sampling_function(
     constant_data: dict[Variable, Any] | None = None,
     volatile_vars: set[Variable] | None = None,
     freeze_vars: set[Variable] | None = None,
+    model: BaseModel | None = None,
     **kwargs,
 ) -> tuple[Callable[..., np.ndarray | list[np.ndarray]], set[Variable]]:
     """Compile a function to draw samples, conditioned on the values of some variables.
@@ -378,8 +379,17 @@ def compile_forward_sampling_function(
     # the entire graph
     list(walk(fg.outputs, expand))
 
+    if model is None:
+        fn = compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs)
+    else:
+        # Route through the model so the compiled function is cached and reused across calls
+        # (e.g. batched posterior predictive with changing pm.set_data).
+        fn = model.compile_fn(
+            fg.outputs, inputs=inputs, point_fn=False, on_unused_input="ignore", **kwargs
+        )
+
     return (
-        compile(inputs, fg.outputs, on_unused_input="ignore", **kwargs),
+        fn,
         set(basic_rvs) & volatile_closure,  # Basic RVs that will be resampled
     )
 
@@ -456,7 +466,7 @@ def draw(
     return [np.stack(v) for v in drawn_values]
 
 
-def observed_dependent_deterministics(model: Model, extra_observeds=None):
+def observed_dependent_deterministics(model: BaseModel, extra_observeds=None):
     """Find deterministics that depend directly on observed variables."""
     if extra_observeds is None:
         extra_observeds = []
@@ -474,7 +484,7 @@ def observed_dependent_deterministics(model: Model, extra_observeds=None):
 @overload
 def sample_prior_predictive(
     draws: int = 500,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: Literal[True] = True,
@@ -485,7 +495,7 @@ def sample_prior_predictive(
 @overload
 def sample_prior_predictive(
     draws: int = 500,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: Literal[False] = False,
@@ -495,7 +505,7 @@ def sample_prior_predictive(
 ) -> dict[str, np.ndarray]: ...
 def sample_prior_predictive(
     draws: int = 500,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     var_names: Iterable[str] | None = None,
     random_seed: RandomState = None,
     return_inferencedata: bool = True,
@@ -509,7 +519,7 @@ def sample_prior_predictive(
     ----------
     draws : int
         Number of samples from the prior predictive to generate. Defaults to 500.
-    model : Model (optional if in ``with`` context)
+    model : BaseModel (optional if in ``with`` context)
     var_names : Iterable[str]
         A list of names of variables for which to compute the prior predictive
         samples. Defaults to both observed and unobserved RVs. Transformed values
@@ -568,6 +578,7 @@ def sample_prior_predictive(
         vars_in_trace=[],
         basic_rvs=model.basic_RVs,
         random_seed=random_seed,
+        model=model,
         **compile_kwargs,
     )
 
@@ -595,7 +606,7 @@ def sample_prior_predictive(
 @overload
 def sample_posterior_predictive(
     trace,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     *,
     var_names: str | list[str] | None = None,
     sample_vars: str | list[str] | None = None,
@@ -614,7 +625,7 @@ def sample_posterior_predictive(
 @overload
 def sample_posterior_predictive(
     trace,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     *,
     var_names: str | list[str] | None = None,
     sample_vars: str | list[str] | None = None,
@@ -632,7 +643,7 @@ def sample_posterior_predictive(
 ) -> dict[str, np.ndarray]: ...
 def sample_posterior_predictive(
     trace,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     *,
     var_names: str | list[str] | None = None,
     sample_vars: str | list[str] | None = None,
@@ -663,7 +674,7 @@ def sample_posterior_predictive(
     trace : backend, list, Dataset, DataTree, or MultiTrace
         Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
         or :class:`xarray.Dataset` (eg. DataTree.posterior or DataTree.prior)
-    model : Model (optional if in ``with`` context)
+    model : BaseModel (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
         generally be the model used to generate the `trace`, but it doesn't need to be.
     sample_vars : str or list of str, optional
@@ -1228,6 +1239,7 @@ def sample_posterior_predictive(
             constant_data=constant_data,
             volatile_vars=volatile_vars,
             freeze_vars=frozen_vars,
+            model=model,
             **compile_kwargs,
         )
         sampler_fn = point_wrapper(_sampler_fn)

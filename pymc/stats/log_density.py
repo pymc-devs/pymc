@@ -20,7 +20,7 @@ from pymc.backends.arviz import (
     apply_function_over_dataset,
     coords_and_dims_for_inferencedata,
 )
-from pymc.model import Model, modelcontext
+from pymc.model import BaseModel, modelcontext
 from pymc.pytensorf import resolve_backend_compile_kwargs
 
 __all__ = ("compute_log_likelihood", "compute_log_prior")
@@ -33,7 +33,7 @@ def compute_log_likelihood(
     *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
     backend: str | None = None,
@@ -50,7 +50,7 @@ def compute_log_likelihood(
         Defaults to all observed variables.
     extend_inferencedata : bool, default True
         Whether to extend the original InferenceData or return a new one
-    model : Model, optional
+    model : BaseModel, optional
     sample_dims : sequence of str, default ("chain", "draw")
     progressbar : bool, default True
     backend : str, optional
@@ -82,7 +82,7 @@ def compute_log_prior(
     *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
     backend: str | None = None,
@@ -99,7 +99,7 @@ def compute_log_prior(
         Defaults to all all free variables.
     extend_inferencedata : bool, default True
         Whether to extend the original InferenceData or return a new one
-    model : Model, optional
+    model : BaseModel, optional
     sample_dims : sequence of str, default ("chain", "draw")
     progressbar : bool, default True
     backend : str, optional
@@ -131,7 +131,7 @@ def compute_log_density(
     *,
     var_names: Sequence[str] | None = None,
     extend_inferencedata: bool = True,
-    model: Model | None = None,
+    model: BaseModel | None = None,
     kind: Literal["likelihood", "prior"] = "likelihood",
     sample_dims: Sequence[str] = ("chain", "draw"),
     progressbar=True,
@@ -150,7 +150,7 @@ def compute_log_density(
         Defaults to all all free variables.
     extend_inferencedata : bool, default True
         Whether to extend the original InferenceData or return a new one
-    model : Model, optional
+    model : BaseModel, optional
     kind: Literal["likelihood", "prior"]
         Whether to compute the log density of the observed random variables (likelihood)
         or to compute the log density of the latent random variables (prior). This
