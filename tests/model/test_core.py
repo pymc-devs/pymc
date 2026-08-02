@@ -17,7 +17,7 @@ import threading
 import traceback
 import warnings
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import arviz as az
 import cloudpickle
@@ -802,8 +802,7 @@ class TestCheckStartVals:
             "a_interval__": model.rvs_to_transforms[a].forward(0.3, *a.owner.inputs).eval(),
             "b_interval__": model.rvs_to_transforms[b].forward(2.1, *b.owner.inputs).eval(),
         }
-        # compile is asked for the RNG updates alongside the function
-        with patch("pymc.model.core.compile", return_value=(MagicMock(), {})) as patched_compile:
+        with patch("pymc.model.core.compile") as patched_compile:
             model.check_start_vals(start, mode=mode)
         patched_compile.assert_called_once()
         assert patched_compile.call_args.kwargs["mode"] == mode
@@ -1243,7 +1242,7 @@ class TestFrozenModelCaching:
         f1 = fm.compile_fn(fm["mu"], inputs=[fm["x"]], point_fn=False)
         f2 = fm.compile_fn(fm["mu"], inputs=[fm["x"]], point_fn=False)
         assert f1 is f2
-        assert "_compile_fn" in fm._cache
+        assert "_compiled_fn" in fm._cache
 
     def test_mutation_forbidden_on_frozen(self):
         # FrozenModel is a sibling of Model under BaseModel: the mutating methods do not

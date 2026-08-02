@@ -31,6 +31,7 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
+from pytensor.compile.io import In, Out
 from pytensor.compile.sharedvalue import SharedVariable
 from pytensor.graph.basic import Constant, Variable
 from pytensor.graph.traversal import ancestors, explicit_graph_inputs, graph_inputs
@@ -1239,55 +1240,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         -------
         Compiled PyTensor function
         """
-        if inputs is None:
-            inputs = list(explicit_graph_inputs(outs))
-            if (not point_fn) and len(inputs) > 1:
-                raise ValueError(
-                    "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
-                )
-
-        random_seed = kwargs.pop("random_seed", None)
-
-        if _rng_detaching_linker(mode) and collect_default_updates(
-            inputs=list(inputs), outputs=list(makeiter(outs))
-        ):
-            # These linkers detach RNGs at compile time, so a compiled function cannot be
-            # reseeded. Seed before compiling and skip the cache.
-            kwargs.setdefault("allow_input_downcast", True)
-            kwargs.setdefault("accept_inplace", True)
-            with self:
-                fn = compile(inputs, outs, mode=mode, random_seed=random_seed, **kwargs)
-        else:
-            # Compile seed-independently (cached on frozen models) and reseed on each call,
-            # in the order pytensorf.compile uses, for the same RNG stream as a fresh compile.
-            fn, rng_updates = self._compile_fn(outs, inputs=tuple(inputs), mode=mode, **kwargs)
-            if rng_updates:
-                reseed_rngs(rng_updates, random_seed)
-
-        if point_fn:
-            return PointFunc(fn)
-        return fn
-
-    def _compile_fn(
-        self,
-        outs: Variable | Sequence[Variable],
-        *,
-        inputs: Sequence[Variable] | None = None,
-        mode=None,
-        **kwargs,
-    ) -> tuple[Function, list[SharedVariable]]:
-        # random_seed=False keeps the compiled function seed-independent and cacheable;
-        # compile_fn reseeds it afterwards. The RNGs come back from `compile`, which had to
-        # collect them anyway, in the order it would have seeded them: `reseed_rngs` hands
-        # out sub-seeds by position, so a different order gives every variable a different
-        # stream.
-        kwargs.setdefault("allow_input_downcast", True)
-        kwargs.setdefault("accept_inplace", True)
-        with self:
-            fn, rng_updates = compile(
-                inputs, outs, mode=mode, random_seed=False, return_updates=True, **kwargs
-            )
-        return fn, list(rng_updates)
+        raise NotImplementedError
 
     def profile(
         self,
@@ -1821,6 +1774,53 @@ class Model(BaseModel):
 
     """
 
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[True] = True,
+        **kwargs,
+    ) -> PointFunc: ...
+
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[False],
+        **kwargs,
+    ) -> Function: ...
+
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: bool = True,
+        **kwargs,
+    ) -> PointFunc | Function:
+        if inputs is None:
+            inputs = list(explicit_graph_inputs(outs))
+            if (not point_fn) and len(inputs) > 1:
+                raise ValueError(
+                    "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
+                )
+
+        kwargs.setdefault("allow_input_downcast", True)
+        kwargs.setdefault("accept_inplace", True)
+        with self:
+            fn = compile(inputs, outs, mode=mode, **kwargs)
+
+        if point_fn:
+            return PointFunc(fn)
+        return fn
+
     def add_coord(
         self,
         name: str,
@@ -2220,7 +2220,87 @@ class FrozenModel(BaseModel):
         BaseModel._logp_dlogp_function, ignore=("initial_point",)
     )
     _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
-    _compile_fn = locally_cachedmethod(BaseModel._compile_fn)
+
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[True] = True,
+        **kwargs,
+    ) -> PointFunc: ...
+
+    @overload
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: Literal[False],
+        **kwargs,
+    ) -> Function: ...
+
+    def compile_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        point_fn: bool = True,
+        **kwargs,
+    ) -> PointFunc | Function:
+        if inputs is None:
+            inputs = list(explicit_graph_inputs(outs))
+            if (not point_fn) and len(inputs) > 1:
+                raise ValueError(
+                    "compile_fn requires inputs to be specified when there is more than one input and point_fn is disabled."
+                )
+
+        random_seed = kwargs.pop("random_seed", None)
+
+        if _rng_detaching_linker(mode) and collect_default_updates(
+            inputs=[inp.variable if isinstance(inp, In) else inp for inp in inputs],
+            outputs=[out.variable if isinstance(out, Out) else out for out in makeiter(outs)],
+        ):
+            # These linkers detach RNGs at compile time, so a compiled function cannot be
+            # reseeded, and one compiled for a given seed cannot be reused for another.
+            kwargs.setdefault("allow_input_downcast", True)
+            kwargs.setdefault("accept_inplace", True)
+            with self:
+                fn = compile(inputs, outs, mode=mode, random_seed=random_seed, **kwargs)
+        else:
+            fn, rng_updates = self._compiled_fn(outs, inputs=tuple(inputs), mode=mode, **kwargs)
+            if rng_updates:
+                reseed_rngs(rng_updates, random_seed)
+
+        if point_fn:
+            return PointFunc(fn)
+        return fn
+
+    @locally_cachedmethod
+    def _compiled_fn(
+        self,
+        outs: Variable | Sequence[Variable],
+        *,
+        inputs: Sequence[Variable] | None = None,
+        mode=None,
+        **kwargs,
+    ) -> tuple[Function, list[SharedVariable]]:
+        # Compiling with random_seed=False leaves the function seed-independent, so it can be
+        # cached and reseeded by `compile_fn` on every call. The RNGs come back from
+        # `compile`, which had to collect them anyway, in the order it would have seeded
+        # them: `reseed_rngs` hands out sub-seeds by position, so a different order gives
+        # every variable a different stream.
+        kwargs.setdefault("allow_input_downcast", True)
+        kwargs.setdefault("accept_inplace", True)
+        with self:
+            fn, rng_updates = compile(
+                inputs, outs, mode=mode, random_seed=False, return_updates=True, **kwargs
+            )
+        return fn, list(rng_updates)
 
 
 class BlockModelAccess(Model):
