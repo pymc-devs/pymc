@@ -506,7 +506,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
             Compute the tempered logp `free_logp + alpha * observed_logp`.
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def compile_logp(
         self,
@@ -919,7 +919,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         ip : dict of {str : array_like}
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def set_data(
         self,
@@ -1216,7 +1216,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         -------
         Compiled PyTensor function
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def profile(
         self,
