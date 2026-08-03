@@ -143,6 +143,13 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVari
     clipped_rv = (
         MeasurableClip(scalar_clip).make_node(base_var, lower_bound, upper_bound).outputs[0]
     )
+    # Dropping an infinite bound also drops the upcast it forced on the original clip,
+    # which must be restored for the replacement to be type-compatible.
+    # The cast is left plain so that `find_measurable_casts` is the one to claim it:
+    # a discrete base hidden behind a float cast is only measurable when directly valued
+    out_dtype = node.outputs[0].type.dtype
+    if clipped_rv.type.dtype != out_dtype:
+        clipped_rv = pt.cast(clipped_rv, out_dtype)
     return [clipped_rv]
 
 
