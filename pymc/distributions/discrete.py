@@ -40,6 +40,7 @@ from pymc.distributions.dist_math import (
     check_icdf_parameters,
     check_icdf_value,
     check_parameters,
+    discrete_icdf_via_search,
     factln,
     log_diff_normal_cdf,
     logpow,
@@ -167,6 +168,23 @@ class Binomial(Discrete):
         )
 
         return check_parameters(
+            res,
+            n >= 0,
+            0 <= p,
+            p <= 1,
+            msg="n >= 0, 0 <= p <= 1",
+        )
+
+    def icdf(value, n, p):
+        dist = Binomial.dist(n=n, p=p)
+        res = discrete_icdf_via_search(
+            lambda k: logcdf(dist, k),
+            value,
+            lower=0,
+            upper=n,
+        )
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
             res,
             n >= 0,
             0 <= p,
@@ -614,6 +632,21 @@ class Poisson(Discrete):
             msg="mu >= 0",
         )
 
+    def icdf(value, mu):
+        dist = Poisson.dist(mu=mu)
+        res = discrete_icdf_via_search(
+            lambda k: logcdf(dist, k),
+            value,
+            lower=0,
+            start=mu,
+        )
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            mu >= 0,
+            msg="mu >= 0",
+        )
+
 
 class NegativeBinomial(Discrete):
     R"""
@@ -755,6 +788,23 @@ class NegativeBinomial(Discrete):
             pt.log(pt.betainc(n, pt.floor(value) + 1, p)),
         )
         return check_parameters(
+            res,
+            n > 0,
+            0 <= p,
+            p <= 1,
+            msg="n > 0, 0 <= p <= 1",
+        )
+
+    def icdf(value, n, p):
+        dist = NegativeBinomial.dist(n=n, p=p)
+        res = discrete_icdf_via_search(
+            lambda k: logcdf(dist, k),
+            value,
+            lower=0,
+            start=n * (1 - p) / p,
+        )
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
             res,
             n > 0,
             0 <= p,

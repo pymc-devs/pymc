@@ -89,6 +89,95 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
     return expr
 
 
+def discrete_icdf_via_search(logcdf, value, lower, upper=None, *, start=None, max_iters=64):
+    """Numerically invert a discrete CDF by bisecting the (monotone) ``logcdf``.
+
+    Returns the smallest integer ``k`` in the support such that
+    ``cdf(k) >= value``, i.e. the quantile function evaluated at ``value``.
+    This is the discrete counterpart of inverting a continuous CDF with a
+    special function (e.g. ``betaincinv``), and is meant for distributions
+    whose quantile function has no closed form (e.g. ``Poisson``, ``Binomial``,
+    ``NegativeBinomial``).
+
+    The search uses fixed-length ``scan`` loops rather than a data-dependent
+    ``until`` condition. Each step is idempotent once an element has converged,
+    so running the full ``max_iters`` iterations does not change the result.
+
+    Parameters
+    ----------
+    logcdf : callable
+        Function mapping an integer-valued tensor ``k`` to ``logcdf(k)`` of the
+        target distribution.
+    value : tensor_like
+        Cumulative probabilities at which to evaluate the quantile function.
+        Assumed to lie in the open interval ``(0, 1)``; edge handling for
+        ``value`` is the responsibility of :func:`check_icdf_value`.
+    lower : tensor_like
+        Smallest value in the support of the distribution.
+    upper : tensor_like, optional
+        Largest value in the support. If ``None`` (unbounded support), a finite
+        upper bracket is first found by geometric expansion.
+    start : tensor_like, optional
+        Initial guess for the upper bracket when ``upper`` is ``None``,
+        typically the distribution mean. The geometric expansion starts from
+        ``max(floor(start), lower + 1)`` instead of ``lower + 1``, so that
+        elements whose quantile is near or below the guess converge in fewer
+        effective iterations. The guess does not need to be accurate for the
+        result to be exact. Ignored when ``upper`` is given.
+    max_iters : int
+        Number of search iterations per phase. This needs to exceed ``log2`` of
+        the largest reachable quantile; the default of 64 covers the full range
+        of integers exactly representable as float64.
+    """
+    log_value = pt.log(value)
+    lower = pt.as_tensor_variable(lower).astype("float64")
+
+    # The scan below carries (lo, hi) as recurrent state, whose shape must stay
+    # fixed across iterations. Since logcdf(k) broadcasts k against the
+    # distribution parameters, the state must start at the full broadcast shape
+    # of value and the parameters. Probing logcdf gives that shape; only the
+    # shape is used, so the probe computation itself is pruned from the graph.
+    result_shape = logcdf(pt.broadcast_arrays(lower, log_value)[0]).shape
+    log_value = pt.broadcast_to(log_value, result_shape)
+    lower = pt.broadcast_to(lower, result_shape)
+
+    if upper is None:
+        hi_init = lower + 1.0
+        if start is not None:
+            start = pt.broadcast_to(pt.as_tensor_variable(start).astype("float64"), result_shape)
+            hi_init = pt.maximum(pt.floor(start), hi_init)
+
+        # Phase 1: geometrically expand an upper bracket until cdf(hi) >= value.
+        def expand(lo, hi):
+            insufficient = logcdf(hi) < log_value
+            return pt.switch(insufficient, hi + 1.0, lo), pt.switch(insufficient, hi * 2.0, hi)
+
+        lo, hi = pytensor.scan(
+            expand,
+            outputs_info=[lower, hi_init],
+            n_steps=max_iters,
+            return_updates=False,
+        )
+        lo, hi = lo[-1], hi[-1]
+    else:
+        lo = lower
+        hi = pt.broadcast_to(pt.as_tensor_variable(upper).astype("float64"), result_shape)
+
+    # Phase 2: bisect [lo, hi] keeping the invariant cdf(hi) >= value > cdf(lo - 1).
+    def bisect(lo, hi):
+        mid = pt.floor((lo + hi) / 2.0)
+        covers = logcdf(mid) >= log_value
+        return pt.switch(covers, lo, mid + 1.0), pt.switch(covers, mid, hi)
+
+    lo, _ = pytensor.scan(
+        bisect,
+        outputs_info=[lo, hi],
+        n_steps=max_iters,
+        return_updates=False,
+    )
+    return lo[-1]
+
+
 def logpow(x, m):
     """Calculate log(x**m) since m*log(x) will fail when m, x = 0."""
     # return m * log(x)
