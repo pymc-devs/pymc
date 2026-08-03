@@ -176,7 +176,9 @@ def test_rising_loss_is_not_called_convergence(slope, noise):
     rng = np.random.default_rng(4)
     losses = slope * np.arange(4000.0) + rng.normal(0.0, noise, size=4000)
     monitor = CheckLossConvergence()
-    with pytest.raises(StopIteration, match="trending up, not converging"):
+    with pytest.raises(
+        StopIteration, match=r"CheckLossConvergence: the loss is trending up.*negate it"
+    ):
         for i in range(len(losses)):
             monitor(None, losses[: i + 1], i)
 
@@ -224,6 +226,20 @@ def test_one_spike_does_not_end_a_still_improving_fit():
     spiked = losses.copy()
     spiked[1500] += 1e6
     assert run_monitor(CheckLossConvergence(), spiked) is None
+
+
+def test_a_one_step_jump_does_not_turn_a_plateau_into_a_divergence():
+    """Winsorizing z bounds what a single step can contribute to the trend estimate.
+
+    Unclipped, one upward jump holds the smoothed z below the divergence threshold for
+    hundreds of steps, so the plateau that follows is reported as a diverging fit.
+    """
+    losses = improving_then_plateau(n_improve=1500, n_plateau=2500)
+    losses[1400:] += 1e5
+    monitor = CheckLossConvergence(min_steps=300)
+    with pytest.raises(StopIteration, match="converged at step"):
+        for i in range(len(losses)):
+            monitor(None, losses[: i + 1], i)
 
 
 def test_overflowing_loss_does_not_poison_the_scale():
