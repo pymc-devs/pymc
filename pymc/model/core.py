@@ -138,6 +138,33 @@ def modelcontext(model: BaseModel | None) -> BaseModel:
     return model
 
 
+def _make_value_grad_function(
+    model, grad_vars, *, tempered=False, ravel_inputs=None, initial_point, **kwargs
+) -> ValueGradFunction:
+    """Build the logp/dlogp function for ``grad_vars``, treating the rest as extra inputs."""
+    grad_vars = list(grad_vars)
+    if tempered:
+        costs = [model.varlogp, model.datalogp]
+    else:
+        costs = [model.logp()]
+
+    input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
+    extra_vars_and_values = {
+        var: initial_point[var.name]
+        for var in model.value_vars
+        if var in input_vars and var not in grad_vars
+    }
+    return ValueGradFunction(
+        costs,
+        grad_vars,
+        extra_vars_and_values,
+        model=model,
+        initial_point=initial_point,
+        ravel_inputs=ravel_inputs,
+        **kwargs,
+    )
+
+
 class ValueGradFunction:
     """Create a PyTensor function that computes a value and its gradient.
 
@@ -479,53 +506,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
             Compute the tempered logp `free_logp + alpha * observed_logp`.
             `alpha` can be changed using `ValueGradFunction.set_weights([alpha])`.
         """
-        if grad_vars is None:
-            grad_vars = self.continuous_value_vars
-        else:
-            grad_vars = get_value_vars_from_user_vars(grad_vars, self)
-            for i, var in enumerate(grad_vars):
-                if var.dtype not in continuous_types:
-                    raise ValueError(f"Can only compute the gradient of continuous types: {var}")
-
-        if initial_point is None:
-            initial_point = self.initial_point(0)
-
-        # The compiled function does not depend on the initial_point values (those only seed
-        # the runtime-settable extra variables), so it is cached across calls with any point.
-        fn = self._logp_dlogp_function(
-            tuple(grad_vars),
-            tempered=tempered,
-            ravel_inputs=ravel_inputs,
-            initial_point=initial_point,
-            **kwargs,
-        )
-        fn.set_extra_values(initial_point)
-        return fn
-
-    def _logp_dlogp_function(
-        self, grad_vars, *, tempered=False, ravel_inputs=None, initial_point, **kwargs
-    ):
-        grad_vars = list(grad_vars)
-        if tempered:
-            costs = [self.varlogp, self.datalogp]
-        else:
-            costs = [self.logp()]
-
-        input_vars = {i for i in graph_inputs(costs) if not isinstance(i, Constant)}
-        extra_vars_and_values = {
-            var: initial_point[var.name]
-            for var in self.value_vars
-            if var in input_vars and var not in grad_vars
-        }
-        return ValueGradFunction(
-            costs,
-            grad_vars,
-            extra_vars_and_values,
-            model=self,
-            initial_point=initial_point,
-            ravel_inputs=ravel_inputs,
-            **kwargs,
-        )
+        raise NotImplementedError  # pragma: no cover
 
     def compile_logp(
         self,
@@ -938,12 +919,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         ip : dict of {str : array_like}
             Maps names of transformed variables to numeric initial values in the transformed space.
         """
-        fn = self._make_initial_point()
-        return Point(fn(random_seed), model=self)
-
-    def _make_initial_point(self):
-        # Compiled function takes the seed as an argument, so the cache is seed-independent.
-        return make_initial_point_fn(model=self, return_transformed=True)
+        raise NotImplementedError  # pragma: no cover
 
     def set_data(
         self,
@@ -1240,7 +1216,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         -------
         Compiled PyTensor function
         """
-        raise NotImplementedError
+        raise NotImplementedError  # pragma: no cover
 
     def profile(
         self,
@@ -1774,6 +1750,48 @@ class Model(BaseModel):
 
     """
 
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
+        fn = self._initial_point_fn()
+        return Point(fn(random_seed), model=self)
+
+    def _initial_point_fn(self, *, overrides=None, jitter_rvs=None, return_transformed=True):
+        return make_initial_point_fn(
+            model=self,
+            overrides=overrides,
+            jitter_rvs=jitter_rvs,
+            return_transformed=return_transformed,
+        )
+
+    def logp_dlogp_function(
+        self,
+        grad_vars=None,
+        tempered=False,
+        initial_point: PointType | None = None,
+        ravel_inputs: bool | None = None,
+        **kwargs,
+    ):
+        if grad_vars is None:
+            grad_vars = self.continuous_value_vars
+        else:
+            grad_vars = get_value_vars_from_user_vars(grad_vars, self)
+            for i, var in enumerate(grad_vars):
+                if var.dtype not in continuous_types:
+                    raise ValueError(f"Can only compute the gradient of continuous types: {var}")
+
+        if initial_point is None:
+            initial_point = self.initial_point(0)
+
+        fn = _make_value_grad_function(
+            self,
+            grad_vars,
+            tempered=tempered,
+            ravel_inputs=ravel_inputs,
+            initial_point=initial_point,
+            **kwargs,
+        )
+        fn.set_extra_values(initial_point)
+        return fn
+
     @overload
     def compile_fn(
         self,
@@ -2214,12 +2232,55 @@ class FrozenModel(BaseModel):
     logp = locally_cachedmethod(BaseModel.logp)
     dlogp = locally_cachedmethod(BaseModel.dlogp)
     d2logp = locally_cachedmethod(BaseModel.d2logp)
+
+    def initial_point(self, random_seed: SeedSequenceSeed = None) -> dict[str, np.ndarray]:
+        fn = self._initial_point_fn()
+        return Point(fn(random_seed), model=self)
+
+    @locally_cachedmethod
+    def _initial_point_fn(self, *, overrides=None, jitter_rvs=None, return_transformed=True):
+        # The compiled function takes the seed as an argument, so this does not depend on it.
+        return make_initial_point_fn(
+            model=self,
+            overrides=overrides,
+            jitter_rvs=jitter_rvs,
+            return_transformed=return_transformed,
+        )
+
+    def logp_dlogp_function(
+        self,
+        grad_vars=None,
+        tempered=False,
+        initial_point: PointType | None = None,
+        ravel_inputs: bool | None = None,
+        **kwargs,
+    ):
+        if grad_vars is None:
+            grad_vars = self.continuous_value_vars
+        else:
+            grad_vars = get_value_vars_from_user_vars(grad_vars, self)
+            for i, var in enumerate(grad_vars):
+                if var.dtype not in continuous_types:
+                    raise ValueError(f"Can only compute the gradient of continuous types: {var}")
+
+        if initial_point is None:
+            initial_point = self.initial_point(0)
+
+        fn = self._value_grad_function(
+            tuple(grad_vars),
+            tempered=tempered,
+            ravel_inputs=ravel_inputs,
+            initial_point=initial_point,
+            **kwargs,
+        )
+        fn.set_extra_values(initial_point)
+        return fn
+
     # The initial point only seeds the runtime-settable extra variables, so it is not part
-    # of the cache key (it is re-applied by `logp_dlogp_function` on every call).
-    _logp_dlogp_function = locally_cachedmethod(
-        BaseModel._logp_dlogp_function, ignore=("initial_point",)
-    )
-    _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
+    # of the cache key: `logp_dlogp_function` re-applies it on every call.
+    @locally_cachedmethod(ignore=("initial_point",))
+    def _value_grad_function(self, grad_vars, **kwargs):
+        return _make_value_grad_function(self, grad_vars, **kwargs)
 
     @overload
     def compile_fn(

@@ -15,10 +15,12 @@ import re
 
 import arviz
 import numpy as np
+import pytensor.tensor as pt
 import pytest
 import xarray
 
 from cachetools import cached
+from pytensor.compile.io import In, Out
 
 import pymc as pm
 
@@ -115,6 +117,39 @@ def test_hashing_of_rv_tuples():
                 (freerv, []),
             ]:
                 assert isinstance(hashable(structure), int)
+
+
+def test_hashable_of_sets():
+    # Sets used to fall through to being pickled as a whole, which is not stable across
+    # calls, so equal sets got different hashes.
+    with pm.Model():
+        rv = pm.Normal("rv")
+
+    assert hashable({rv}) == hashable({rv})
+    assert hashable({rv}) != hashable(set())
+    assert hashable({1, 2}) == hashable({2, 1})  # order-insensitive
+    assert hashable(frozenset({1, 2})) == hashable(frozenset({1, 2}))
+
+
+def test_hashable_of_function_inputs_and_outputs():
+    # In/Out wrap a variable with compilation options and are hashed by identity, but
+    # callers rebuild them on every call.
+    x = pt.vector("x")
+    assert hashable(In(x, borrow=True)) == hashable(In(x, borrow=True))
+    assert hashable(In(x, borrow=True)) != hashable(In(x, borrow=False))
+    assert hashable(Out(x, borrow=True)) == hashable(Out(x, borrow=True))
+
+
+def test_hash_key_of_arrays():
+    # Looking a key up compares it with the stored one, which must not raise for arrays or
+    # for the containers holding them.
+    key = hash_key({"x": np.zeros(3)})
+    same = hash_key({"x": np.zeros(3)})
+    other = hash_key({"x": np.ones(3)})
+
+    assert key == same
+    assert key != other
+    assert {key: "value"}[same] == "value"
 
 
 def test_hash_key():
