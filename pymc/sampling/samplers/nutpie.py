@@ -13,6 +13,7 @@
 #   limitations under the License.
 """The nutpie NUTS implementation as a sampler."""
 
+import inspect
 import warnings
 
 from collections.abc import Sequence
@@ -45,9 +46,14 @@ class Nutpie(ExternalSampler):
         choice for ``backend``.
     progressbar_theme : Theme, optional
         Theme for the progress bar.
-    **nuts_kwargs
-        Passed to ``nutpie.sample`` (e.g. ``target_accept``,
-        ``max_treedepth``, ``store_unconstrained``).
+    **nutpie_kwargs
+        Any other nutpie argument, routed to the nutpie function that
+        declares it: ``nutpie.compile_pymc_model`` for compile-time options,
+        ``nutpie.sample`` for everything else (``target_accept``,
+        ``max_treedepth``, ``store_unconstrained``, ...). This is what makes
+        the deprecated ``pm.sample(nuts_sampler="nutpie",
+        compile_kwargs={...})`` spelling expressible here: every key becomes a
+        keyword argument.
     """
 
     package = "nutpie"
@@ -58,20 +64,59 @@ class Nutpie(ExternalSampler):
         backend: Literal["numba", "jax"] | None = None,
         gradient_backend: Literal["pytensor", "jax"] | None = None,
         progressbar_theme=None,
-        **nuts_kwargs,
+        **nutpie_kwargs,
     ):
         super().__init__()
-        # Named rather than an opaque `compile_kwargs` dict, so the supported
-        # `nutpie.compile_pymc_model` options are discoverable from the
-        # signature. `None` means "leave it to the existing default" rather
-        # than forwarding it.
+        # The two options users reach for are named, so they are discoverable
+        # from the signature. `None` means "leave it to the existing default"
+        # rather than forwarding it.
         self.compile_kwargs = {
             name: value
             for name, value in (("backend", backend), ("gradient_backend", gradient_backend))
             if value is not None
         }
+        # nutpie splits its API over two functions, so route the rest by
+        # asking which one declares each name. Without this, a compile-time
+        # option would silently reach `nutpie.sample`, and users migrating off
+        # `compile_kwargs={...}` would have no spelling for anything beyond
+        # the two named above.
+        compile_only = self._compile_only_parameters()
+        self.compile_kwargs.update(
+            {k: v for k, v in nutpie_kwargs.items() if k in compile_only},
+        )
+        self.nuts_kwargs = {k: v for k, v in nutpie_kwargs.items() if k not in compile_only}
         self.progressbar_theme = progressbar_theme
-        self.nuts_kwargs = nuts_kwargs
+
+    @staticmethod
+    def _compile_only_parameters() -> frozenset[str]:
+        """Names ``nutpie.compile_pymc_model`` accepts and ``nutpie.sample`` does not.
+
+        Read from nutpie itself rather than hardcoded, so the split keeps
+        working as nutpie's own signatures change. Names declared by both stay
+        with ``nutpie.sample``, and if either signature can't be introspected
+        nothing is rerouted -- both fall back to the previous behavior.
+        """
+        import nutpie
+
+        def parameters(func) -> set[str]:
+            try:
+                signature = inspect.signature(func)
+            except (TypeError, ValueError):
+                return set()
+            if any(p.kind is inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values()):
+                # A **kwargs catch-all tells us nothing about what is accepted.
+                return set()
+            return set(signature.parameters)
+
+        compile_parameters = parameters(nutpie.compile_pymc_model)
+        if not compile_parameters:
+            return frozenset()
+        # `model`/`var_names`/`initial_points` are supplied by pymc itself.
+        return frozenset(
+            compile_parameters
+            - parameters(nutpie.sample)
+            - {"model", "var_names", "initial_points"}
+        )
 
     def sample_from_init(
         self,

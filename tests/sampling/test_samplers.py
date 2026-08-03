@@ -13,6 +13,8 @@
 #   limitations under the License.
 
 import inspect
+import sys
+import types
 import unittest.mock as mock
 
 import numpy as np
@@ -37,6 +39,46 @@ def make_model(data):
         noise = pm.Normal("noise", dims="idx")
         pm.Normal("y", mu + noise.mean(), sigma, observed=data)
     return model
+
+
+@pytest.fixture
+def fake_nutpie(monkeypatch):
+    """Stand-in with nutpie's two-function shape, so routing is testable without it."""
+
+    def compile_pymc_model(
+        model,
+        *,
+        backend=None,
+        gradient_backend=None,
+        initial_points=None,
+        var_names=None,
+        freeze_model=None,
+    ): ...
+
+    def sample(
+        compiled,
+        *,
+        draws=1000,
+        tune=1000,
+        chains=4,
+        cores=None,
+        seed=None,
+        target_accept=0.8,
+        maxdepth=10,
+        save_warmup=True,
+        store_unconstrained=False,
+        progress_bar=True,
+        progress_callback=None,
+    ): ...
+
+    module = types.ModuleType("nutpie")
+    module.compile_pymc_model = compile_pymc_model
+    module.sample = sample
+    monkeypatch.setitem(sys.modules, "nutpie", module)
+    monkeypatch.setattr(
+        "pymc.sampling.samplers.base.require_installed", lambda package: None, raising=True
+    )
+    return module
 
 
 RUN_KWARGS = {
@@ -319,6 +361,27 @@ class TestAPIEquivalenceRegressions:
         ):
             Nutpie(gradient_backend="jax").sample_from_init(model=model)
         assert captured["compile_kwargs"] == {"gradient_backend": "jax"}
+
+    def test_nutpie_kwargs_reach_the_function_that_declares_them(self, fake_nutpie):
+        """Every `compile_kwargs={...}` key stays expressible as a keyword argument."""
+        from pymc.sampling.samplers.nutpie import Nutpie
+
+        assert Nutpie._compile_only_parameters() == {"backend", "gradient_backend", "freeze_model"}
+
+        sampler = Nutpie(
+            backend="numba", freeze_model=True, target_accept=0.9, store_unconstrained=True
+        )
+        assert sampler.compile_kwargs == {"backend": "numba", "freeze_model": True}
+        assert sampler.nuts_kwargs == {"target_accept": 0.9, "store_unconstrained": True}
+
+    def test_nutpie_routing_falls_back_when_signature_is_opaque(self, fake_nutpie):
+        """A `**kwargs` catch-all tells us nothing, so nothing is rerouted."""
+        from pymc.sampling.samplers.nutpie import Nutpie
+
+        fake_nutpie.compile_pymc_model = lambda model, **kwargs: None
+        assert Nutpie._compile_only_parameters() == frozenset()
+        # unchanged from the pre-routing behavior: everything goes to nutpie.sample
+        assert Nutpie(freeze_model=True).nuts_kwargs == {"freeze_model": True}
 
     def test_jax_samplers_reject_compilation_options(self):
         pytest.importorskip("numpyro")
