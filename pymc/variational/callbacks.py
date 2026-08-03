@@ -155,8 +155,9 @@ class Tracker(Callback):
     __call__ = record
 
 
-# Successive differences of an i.i.d. series have sd sqrt(2) * sigma, so their mean
-# absolute value is 2 * sigma / sqrt(pi): recover sigma by multiplying by sqrt(pi) / 2.
+# Scales the mean absolute successive difference into the standardizer for delta.
+# The z it produces is unit-variance only when the loss increments are independent,
+# so kappa and h are calibrated against it as it stands rather than derived from it.
 _SQRT_PI_OVER_2 = float(np.sqrt(np.pi) / 2.0)
 
 
@@ -185,12 +186,10 @@ class CheckLossConvergence(Callback):
     Parameters
     ----------
     kappa : float
-        Allowance (reference value) in robust standard deviations per step.
-        ``S`` rises while ``E[max(z, 0)] < kappa``, so ``kappa`` must exceed what
-        a converged trace spends on noise alone (``E[max(z, 0)]`` is 0.4 for
-        standard-normal ``z``, never 0). The stall boundary therefore sits well
-        below ``kappa * sigma``: improvement has to fall to about ``0.19 * sigma``
-        at the default. See the calibration in the Notes.
+        Allowance per step, in units of the scale that standardizes ``delta``. ``S``
+        rises only while the average ``max(z, 0)`` stays under ``kappa``; on a stalled
+        trace that average is 0.3 to 0.4 rather than 0, so a ``kappa`` below it never
+        fires. See the calibration in the Notes.
     h : float
         CUSUM decision threshold. Larger values trade detection delay for a
         lower false-alarm rate.
@@ -254,8 +253,8 @@ class CheckLossConvergence(Callback):
         self.sigma_floor = float(sigma_floor)
 
         self._lam = float(np.exp(np.log(0.5) / self.halflife))
-        # Four sd of the smoothed z under i.i.d. noise; deliberately loose, since a
-        # missed label costs a mild rise called a plateau, not a wrong stop.
+        # The smoothed z settles at the mean z, so the stop is reported as a divergence
+        # once the loss has been climbing by _rise_tol times the scale, per step.
         self._rise_tol = 4.0 * float(np.sqrt((1.0 - self._lam) / (1.0 + self._lam)))
         self.n_nonfinite = 0
         self._prev_loss = None

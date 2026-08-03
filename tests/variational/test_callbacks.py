@@ -18,7 +18,12 @@ import pytest
 
 import pymc as pm
 
-from pymc.variational.callbacks import CheckLossConvergence, CheckParametersConvergence, Tracker
+from pymc.variational.callbacks import (
+    _SQRT_PI_OVER_2,
+    CheckLossConvergence,
+    CheckParametersConvergence,
+    Tracker,
+)
 
 
 @pytest.mark.parametrize("diff", ["relative", "absolute"])
@@ -155,6 +160,24 @@ def test_sigma_adapts_to_scale_change():
     losses = 1000.0 - np.cumsum(deltas)
     monitor = CheckLossConvergence(min_steps=500)
     assert run_monitor(monitor, losses) is None
+
+
+def test_the_scale_constant_is_not_a_unit_variance_normalizer():
+    """``sqrt(pi)/2`` recovers ``sd(delta)`` only when the increments are independent.
+
+    ``delta`` is itself a first difference, so on a trace whose *levels* are i.i.d. --
+    what a plateaued ADVI trace looks like, its increments correlating at about -0.5 --
+    the estimate lands on ``sqrt(3) * sigma`` while ``sd(delta)`` is ``sqrt(2) * sigma``,
+    putting ``z`` at 0.82 sd. Both cases are real, so no one factor makes ``z``
+    unit-variance: ``kappa`` and ``h`` are calibrated against the constant as it stands,
+    and rescaling it moves the stall boundary with every ``z``.
+    """
+    rng = np.random.default_rng(0)
+    noise = rng.normal(0.0, 1.0, size=50_000)
+    for losses, expected in ((noise, np.sqrt(3.0)), (np.cumsum(noise), 1.0)):
+        monitor = CheckLossConvergence(min_steps=10**9, halflife=2000.0)
+        run_monitor(monitor, losses)
+        assert monitor._scale * _SQRT_PI_OVER_2 == pytest.approx(expected, rel=0.03)
 
 
 def test_sigma_floor_prevents_z_blowup():
