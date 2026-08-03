@@ -113,6 +113,33 @@ def test_one_sided_clip():
     np.testing.assert_almost_equal(logp_fn(1, -1), ref_scipy.logpdf(-1))
 
 
+@pytest.mark.parametrize("side", ("lower", "upper"))
+def test_one_sided_infinite_clip_discrete_base(side):
+    # Infinite bounds upcast the clip of a discrete variable to float,
+    # which must not prevent the logprob derivation
+    x_rv = pt.random.poisson(2)
+    cens_x_rv = pt.clip(x_rv, -np.inf, 4) if side == "upper" else pt.clip(x_rv, 1, np.inf)
+    assert cens_x_rv.dtype == "float64"
+
+    cens_x_vv = cens_x_rv.clone()
+    logprob = logp(cens_x_rv, cens_x_vv)
+    assert_no_rvs(logprob)
+
+    logp_fn = pytensor.function([cens_x_vv], logprob)
+    ref_scipy = st.poisson(2)
+
+    if side == "upper":
+        assert logp_fn(5) == -np.inf
+        np.testing.assert_allclose(logp_fn(0), ref_scipy.logpmf(0))
+        np.testing.assert_allclose(
+            logp_fn(4), np.logaddexp(ref_scipy.logsf(4), ref_scipy.logpmf(4))
+        )
+    else:
+        assert logp_fn(0) == -np.inf
+        np.testing.assert_allclose(logp_fn(1), ref_scipy.logcdf(1))
+        np.testing.assert_allclose(logp_fn(5), ref_scipy.logpmf(5))
+
+
 def test_useless_clip():
     x_rv = pt.random.normal(0.5, 1, size=3)
     cens_x_rv = pt.clip(x_rv, x_rv, x_rv)

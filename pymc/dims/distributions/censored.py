@@ -17,6 +17,7 @@ from pytensor.xtensor.random.variable import shared_rng as xtensor_shared_rng
 
 from pymc.dims.distributions.core import DimDistribution, copy_docstring, expand_dist_dims
 from pymc.distributions.censored import Censored as RegularCensored
+from pymc.distributions.censored import _is_unbounded
 
 
 @copy_docstring(RegularCensored)
@@ -48,9 +49,14 @@ class Censored(DimDistribution):
         if extra_dist_dims:
             dist = expand_dist_dims(dist, extra_dist_dims)
 
-        # Probability is inferred from the clip operation
+        # Probability is inferred from the clip operation.
+        # Infinite bounds are replaced by the variable itself, which clips nothing and,
+        # unlike an infinite constant, does not upcast discrete variables to float.
         # TODO: Make this a SymbolicRandomVariable that can itself be resized
-        clipped = dist.clip(lower, upper)
+        clipped = dist.clip(
+            dist if _is_unbounded(lower, lower=True) else lower,
+            dist if _is_unbounded(upper, lower=False) else upper,
+        )
         if kwargs.get("return_next_rng"):
             # TODO: Hack -- we have no rng of our own to thread forward.
             # change_dist_size should grow a return_next_rng option so that
