@@ -114,15 +114,26 @@ def test_stopiteration_message():
             monitor(None, losses[: i + 1], i)
 
 
-def test_nonfinite_losses_skipped_and_counted():
-    """NaN/inf losses are ignored without corrupting the statistics."""
+def test_nonfinite_losses_skipped_and_the_run_reset():
+    """NaN/inf losses are ignored without corrupting the statistics.
+
+    The tolerance is on a *run* of them, so a finite loss clears the count; a cumulative
+    count kills a long healthy fit that emits one +inf every so often.
+    """
     losses = improving_then_plateau(n_improve=800, n_plateau=1200)
     losses[100] = np.nan
-    losses[200] = np.inf
+    losses[101] = np.inf
     monitor = CheckLossConvergence(min_steps=300)
     stop = run_monitor(monitor, losses)
-    assert monitor.n_nonfinite == 2
+    assert monitor.n_nonfinite == 0
     assert stop is not None  # still detects the plateau
+
+
+def test_scattered_nonfinite_losses_never_stop_a_healthy_fit():
+    """One +inf every tenth step is not a stalled fit, whatever their total."""
+    losses = 10_000.0 - np.arange(3000.0)
+    losses[::10] = np.inf
+    assert run_monitor(CheckLossConvergence(min_steps=100), losses) is None
 
 
 def test_none_losses_raises_typeerror():
@@ -238,10 +249,12 @@ def test_persistently_nonfinite_loss_stops():
         {"z_clip": np.nan},
         {"sigma_floor": 0.0},
         {"sigma_floor": -1.0},
+        {"min_steps": 2.7},
     ],
 )
 def test_nonfinite_or_nonpositive_parameters_rejected(kwargs):
-    """Each of these silently disables the stop rule or flips the sign of z."""
+    """Each of these silently disables the stop rule, flips the sign of z, or is
+    silently truncated to something the caller did not ask for."""
     with pytest.raises(ValueError):
         CheckLossConvergence(**kwargs)
 
@@ -326,6 +339,23 @@ def test_a_deterministic_ramp_stops_at_the_analytic_step(min_steps, slope):
         for i in range(len(ramp)):
             monitor(None, 7.0 + ramp[: i + 1], i)
     assert run_monitor(CheckLossConvergence(min_steps=min_steps), 7.0 - ramp) is None
+
+
+@pytest.mark.parametrize("rate", [1.0, 5.0, 100.0])
+def test_a_maximized_objective_has_to_be_negated(rate):
+    """Handed a raw ELBO the monitor answers a question about its own settings.
+
+    Every step is uphill, so ``max(z, 0)`` is zero and S gains the full allowance per
+    armed step: the stop lands at ``min_steps + h / kappa`` however fast the fit is
+    improving, and faster improvement stops sooner. Negated, the same trace runs on.
+    """
+    rng = np.random.default_rng(0)
+    elbo = rate * np.arange(4000.0) + rng.normal(0.0, 1.0, size=4000)
+    assert run_monitor(CheckLossConvergence(), -elbo) is None
+    monitor = CheckLossConvergence()
+    assert run_monitor(monitor, elbo) == pytest.approx(
+        monitor.min_steps + monitor.h / monitor.kappa, abs=10
+    )
 
 
 @pytest.mark.parametrize(

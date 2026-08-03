@@ -155,14 +155,17 @@ class Tracker(Callback):
     __call__ = record
 
 
-# E|X| = sigma * sqrt(2/pi) for X ~ N(0, sigma); the mean absolute successive
-# difference of an i.i.d. series estimates sqrt(2) * sigma_noise, so
-# sigma_noise = mean|delta_t - delta_{t-1}| * sqrt(pi) / 2.
+# Successive differences of an i.i.d. series have sd sqrt(2) * sigma, so their mean
+# absolute value is 2 * sigma / sqrt(pi): recover sigma by multiplying by sqrt(pi) / 2.
 _SQRT_PI_OVER_2 = float(np.sqrt(np.pi) / 2.0)
 
 
 class CheckLossConvergence(Callback):
     """Stop ``pm.fit`` when the loss improvement rate decays to noise level.
+
+    The monitored quantity must be *minimized*: an ELBO is maximized, so pass
+    ``-elbo``. Fed a rising quantity the stop step is a constant, set by the
+    settings rather than by the fit.
 
     Let ``delta_t = loss[t-1] - loss[t]`` (positive while optimizing). Each
     increment is standardized by a robust exponentially-weighted scale estimate
@@ -172,15 +175,12 @@ class CheckLossConvergence(Callback):
 
         S_t = max(0, S_{t-1} + (kappa - max(z_t, 0)))
 
-    and declares convergence once ``S > h`` (armed only after ``min_steps``).
+    and declares convergence once ``S > h``; the CUSUM accumulates only after
+    ``min_steps``.
 
-    A step that makes the loss *worse* is read as zero improvement rather than as
-    negative improvement. Charging ``kappa + |z_t|`` for it, as a plain
-    ``kappa - z_t`` does, would make a diverging fit reach the threshold faster
-    than a converged one and stop with the opposite of the truth; it also let a
-    single heavy-tailed spike carry the CUSUM most of the way to ``h``. When the
-    threshold is reached while the loss is trending upwards, the run is reported
-    as diverging instead of converged.
+    A step that makes the loss *worse* counts as zero improvement, not negative
+    improvement. When the threshold is reached while the loss is trending upwards,
+    the run is reported as diverging instead of converged.
 
     Parameters
     ----------
@@ -205,7 +205,7 @@ class CheckLossConvergence(Callback):
         Winsorization bound on the standardized increment, applied to the scale
         update as well so one spike cannot inflate the scale for hundreds of steps.
     sigma_floor : float
-        Lower bound on the scale estimate, guarding against exactly-constant
+        Additive floor on the standardizing scale, guarding against exactly-constant
         losses driving ``z`` to infinity.
 
     Notes
@@ -244,7 +244,7 @@ class CheckLossConvergence(Callback):
                 raise ValueError(f"{name} must be finite and positive, got {value!r}")
         if z_clip <= kappa:
             raise ValueError(f"z_clip ({z_clip}) must exceed kappa ({kappa})")
-        if not np.isfinite(min_steps) or min_steps < 0:
+        if not np.isfinite(min_steps) or min_steps != int(min_steps) or min_steps < 0:
             raise ValueError(f"min_steps must be a non-negative integer, got {min_steps!r}")
         self.kappa = float(kappa)
         self.h = float(h)
@@ -254,15 +254,12 @@ class CheckLossConvergence(Callback):
         self.sigma_floor = float(sigma_floor)
 
         self._lam = float(np.exp(np.log(0.5) / self.halflife))
-        # Floor on the smoothed z below which a stop is reported as divergence.
-        # This is the i.i.d. bound; z is a first difference, so its smoothed mean
-        # is an order of magnitude tighter than this and a converged trace never
-        # comes near it. Deliberately loose in that direction: the cost of a
-        # missed label is a mild rise called a plateau, not a wrong stop.
+        # Four sd of the smoothed z under i.i.d. noise; deliberately loose, since a
+        # missed label costs a mild rise called a plateau, not a wrong stop.
         self._rise_tol = 4.0 * float(np.sqrt((1.0 - self._lam) / (1.0 + self._lam)))
         self.n_nonfinite = 0
         self._prev_loss = None
-        self._prev_delta = None  # previous improvement, for successive differencing
+        self._prev_delta = None
         self._scale = None  # EW mean of |delta_t - delta_{t-1}|
         self._z_bar = 0.0
         self._S = 0.0
@@ -278,10 +275,11 @@ class CheckLossConvergence(Callback):
             self.n_nonfinite += 1
             if self.n_nonfinite > self.min_steps:
                 raise StopIteration(
-                    f"CheckLossConvergence: the loss has been non-finite for "
+                    f"{type(self).__name__}: the loss has been non-finite for "
                     f"{self.n_nonfinite} steps; stopping at step {i}"
                 )
             return
+        self.n_nonfinite = 0
         if self._prev_loss is None:
             self._prev_loss = current
             return
@@ -295,8 +293,7 @@ class CheckLossConvergence(Callback):
         abs_diff = abs(delta - self._prev_delta)
         self._prev_delta = delta
 
-        # Standardize with the *previous* scale so a step never judges itself,
-        # then fold the successive difference into the estimate.
+        # Standardize with the *previous* scale so a step never judges itself.
         if self._scale is None:
             if np.isfinite(abs_diff):
                 self._scale = abs_diff
@@ -314,9 +311,9 @@ class CheckLossConvergence(Callback):
         if self._S > self.h:
             if self._z_bar < -self._rise_tol:
                 raise StopIteration(
-                    f"CheckLossConvergence: the loss is trending up, not converging "
-                    f"(step {i}, mean z={self._z_bar:.2f}); stopping"
+                    f"{type(self).__name__}: the loss is trending up, not converging "
+                    f"(step {i}, mean z={self._z_bar:.2f}); if it is maximized, negate it"
                 )
             raise StopIteration(
-                f"CheckLossConvergence: converged at step {i} (S={self._S:.2f} > h={self.h:g})"
+                f"{type(self).__name__}: converged at step {i} (S={self._S:.2f} > h={self.h:g})"
             )
