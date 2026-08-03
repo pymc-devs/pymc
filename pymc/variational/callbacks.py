@@ -165,8 +165,9 @@ class CheckLossConvergence(Callback):
     """Stop ``pm.fit`` when the loss improvement rate decays to noise level.
 
     The monitored quantity must be *minimized*: an ELBO is maximized, so pass
-    ``-elbo``. Fed a rising quantity the stop step is a constant, set by the
-    settings rather than by the fit.
+    ``-elbo``. Fed a rising quantity the stop arrives just after ``min_steps + h / kappa``,
+    and exactly on it once the rise reaches about 4 noise sd per step: it reports the
+    settings rather than the fit.
 
     Let ``delta_t = loss[t-1] - loss[t]`` (positive while optimizing). Each
     increment is standardized by a robust exponentially-weighted scale estimate
@@ -204,16 +205,28 @@ class CheckLossConvergence(Callback):
         Winsorization bound on the standardized increment, applied to the scale
         update as well so one spike cannot inflate the scale for hundreds of steps.
     sigma_floor : float
-        Additive floor on the standardizing scale, guarding against exactly-constant
-        losses driving ``z`` to infinity.
+        Additive floor on the standardizing scale. An exactly-constant stretch of loss
+        drives the successive-difference scale to zero, and standardizing by it is a
+        plain float division: without the floor that raises ``ZeroDivisionError``.
 
     Notes
     -----
-    The defaults ``kappa=0.5, h=10, halflife=200`` were calibrated on 1000
-    still-improving traces in each of four families (linear, power-law,
-    heteroscedastic, heavy-tailed): worst-family false-positive rate 0.8%, and on
-    traces whose improvement dies at a known step, detection rate 100% with a
-    median delay of 74 steps (p95 157).
+    What the defaults fix is a rate: the per-step improvement of the loss over the
+    per-step noise sd of the loss. A fit improving more slowly than that is stopped
+    however long it would have gone on improving, so the figures below hold at a stated
+    rate and not in general.
+
+    Calibrated on 1000 traces per cell of ``loss[t] = f(t) + sigma[t] * eps[t]``, i.i.d.
+    ``eps``, 6000 steps, in four families -- linear ``f``; power law
+    ``f = A * (t + 100) ** -0.5``; ``sigma`` alternating between 1 and 3 every 750
+    steps; and Student-t noise with ``df=3`` -- each indexed by the smallest
+    ``-f'(t) / sigma[t]`` its improving segment reaches. At a rate of 1.0 the defaults
+    stopped none of the 4000 still-improving traces, at 0.8 one of them, at 0.7 two, and
+    at 0.6 all four families together lost 821, of which 768 were the alternating-sigma
+    one: the boundary sits between 0.6 and 0.7, and ``kappa`` is what moves it. On the
+    same four families frozen to a plateau at step 3000 after improving at a rate of
+    1.0, every trace was stopped and none before the plateau, with median delays of 25
+    to 54 steps and p95 at most 86.
 
     Examples
     --------

@@ -180,15 +180,22 @@ def test_the_scale_constant_is_not_a_unit_variance_normalizer():
         assert monitor._scale * _SQRT_PI_OVER_2 == pytest.approx(expected, rel=0.03)
 
 
-def test_sigma_floor_prevents_z_blowup():
-    """Exactly-constant losses (MAD -> 0) stay finite and stop cleanly."""
+def test_the_sigma_floor_keeps_a_constant_loss_divisible():
+    """An exactly-constant loss drives the successive-difference scale to zero.
+
+    Standardizing by that scale is a division of two Python floats, so the unfloored
+    monitor raises ZeroDivisionError at its first standardization rather than producing
+    an infinite or NaN z. Floored, every increment reads as zero improvement and S gains
+    the full kappa per armed step, which is the right answer for a constant loss.
+    """
     losses = np.full(3000, 42.0)
     monitor = CheckLossConvergence(min_steps=100)
-    stop = run_monitor(monitor, losses)
-    # constant loss really is converged; S grows by kappa per step after arming
-    assert stop is not None
-    expected = 100 + int(monitor.h / monitor.kappa)
-    assert abs(stop - expected) <= 3
+    assert run_monitor(monitor, losses) == 100 + int(monitor.h / monitor.kappa)
+
+    unfloored = CheckLossConvergence(min_steps=100)
+    unfloored.sigma_floor = 0.0
+    with pytest.raises(ZeroDivisionError):
+        run_monitor(unfloored, losses)
 
 
 @pytest.mark.parametrize(
@@ -334,32 +341,41 @@ def test_stop_step_is_invariant_to_affine_relabelling(scale, offset):
     assert run_monitor(CheckLossConvergence(min_steps=300), losses * scale + offset) == reference
 
 
+def _blocked_sigma(n):
+    return np.where((np.arange(n) // 750) % 2 == 0, 1.0, 3.0)
+
+
+# The four families of the Notes calibration, at its headline rate of 1.0: the loss
+# improves by one noise sd per step at the slowest point of every trace.
 _STILL_IMPROVING = {
-    "linear": lambda rng, n: rng.normal(1.0, 1.0, size=n),
+    "linear": lambda rng, n: -np.arange(float(n)) + rng.normal(0.0, 1.0, size=n),
     "power_law": lambda rng, n: (
-        5.0 * np.arange(1.0, n + 1.0) ** -0.25 + rng.normal(0.0, 0.5, size=n)
+        2.0 * (n + 99.0) ** 1.5 * (np.arange(float(n)) + 100.0) ** -0.5
+        + rng.normal(0.0, 1.0, size=n)
     ),
-    "heteroscedastic": lambda rng, n: 1.0 + rng.normal(0.0, 1.0, size=n) * np.linspace(0.1, 1.0, n),
-    "student_t": lambda rng, n: 1.0 + 0.5 * rng.standard_t(df=3, size=n),
+    "heteroscedastic": lambda rng, n: (
+        -3.0 * np.arange(float(n)) + rng.normal(0.0, 1.0, size=n) * _blocked_sigma(n)
+    ),
+    "student_t": lambda rng, n: -np.arange(float(n)) + rng.standard_t(df=3, size=n) / np.sqrt(3.0),
 }
 
 
 @pytest.mark.parametrize("family", sorted(_STILL_IMPROVING))
 def test_still_improving_traces_do_not_raise_a_false_alarm(family):
-    """Fifty traces per family whose improvement never dies cost at most one false alarm.
+    """Fifty traces per family at the operating point the Notes quote: no stop at all.
 
-    Every family ends with improvement still well clear of the stall boundary, so a
-    stop is a truncated fit. One lucky trace shape says nothing about the calibrated
-    0.8% worst-family rate; a kappa or h that drifts off it shows up here first.
+    The full sweep is 1000 traces per family and finds none either. Fifty catches
+    settings that have drifted off that point because the boundary is sharp: at kappa
+    0.7 the linear family fires on 48 of these same 50 traces.
     """
-    make_deltas = _STILL_IMPROVING[family]
+    make_losses = _STILL_IMPROVING[family]
     fired = []
     for seed in range(50):
-        deltas = make_deltas(np.random.default_rng(seed), 3000)
-        stop = run_monitor(CheckLossConvergence(), 1000.0 - np.cumsum(deltas))
+        losses = make_losses(np.random.default_rng(seed), 3000)
+        stop = run_monitor(CheckLossConvergence(), losses)
         if stop is not None:
             fired.append(stop)
-    assert len(fired) <= 1, f"{family}: {len(fired)} false alarms in 50 traces, at {fired}"
+    assert not fired, f"{family}: {len(fired)} false alarms in 50 traces, at {fired}"
 
 
 @pytest.mark.parametrize("min_steps, slope", [(50, 0.5), (200, 3.0), (500, 1e4)])
