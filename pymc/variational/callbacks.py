@@ -155,24 +155,16 @@ class Tracker(Callback):
     __call__ = record
 
 
-# Scales the mean absolute successive difference into the standardizer for delta.
-# The z it produces is unit-variance only when the loss increments are independent,
-# so kappa and h are calibrated against it as it stands rather than derived from it.
-_SQRT_PI_OVER_2 = float(np.sqrt(np.pi) / 2.0)
-
-
 class CheckLossConvergence(Callback):
     """Stop ``pm.fit`` when the loss improvement rate decays to noise level.
 
     The monitored quantity must be *minimized*: an ELBO is maximized, so pass
-    ``-elbo``. Fed a rising quantity the stop arrives just after ``min_steps + h / kappa``,
-    and exactly on it once the rise reaches about 4 noise sd per step: it reports the
-    settings rather than the fit.
+    ``-elbo``.
 
     Let ``delta_t = loss[t-1] - loss[t]`` (positive while optimizing). Each
     increment is standardized by a robust exponentially-weighted scale estimate
     built from successive differences (von Neumann, 1941) and winsorized at
-    ``+/- z_clip``, giving ``z_t``; the monitor accumulates the one-sided CUSUM
+    ``+/- 4``, giving ``z_t``; the monitor accumulates the one-sided CUSUM
     (Page, 1954)::
 
         S_t = max(0, S_{t-1} + (kappa - max(z_t, 0)))
@@ -180,17 +172,14 @@ class CheckLossConvergence(Callback):
     and declares convergence once ``S > h``; the CUSUM accumulates only after
     ``min_steps``.
 
-    A step that makes the loss *worse* counts as zero improvement, not negative
-    improvement. When the threshold is reached while the loss is trending upwards,
-    the run is reported as diverging instead of converged.
+    Reaching the threshold while the loss trends upwards is reported as divergence,
+    not convergence.
 
     Parameters
     ----------
     kappa : float
-        Allowance per step, in units of the scale that standardizes ``delta``. ``S``
-        rises only while the average ``max(z, 0)`` stays under ``kappa``; on a stalled
-        trace that average is 0.3 to 0.4 rather than 0, so a ``kappa`` below it never
-        fires. See the calibration in the Notes.
+        Allowance per step, in units of the scale that standardizes ``delta``. Must
+        exceed what a stalled trace spends on noise alone (0.3 to 0.4); see Notes.
     h : float
         CUSUM decision threshold. Larger values trade detection delay for a
         lower false-alarm rate.
@@ -201,32 +190,20 @@ class CheckLossConvergence(Callback):
         the scale estimate to stabilize (a few half-lives). Also the number of
         consecutive non-finite losses tolerated before the fit is stopped:
         ``pm.fit`` aborts on NaN but runs to completion on ``+inf``.
-    z_clip : float
-        Winsorization bound on the standardized increment, applied to the scale
-        update as well so one spike cannot inflate the scale for hundreds of steps.
-    sigma_floor : float
-        Additive floor on the standardizing scale. An exactly-constant stretch of loss
-        drives the successive-difference scale to zero, and standardizing by it is a
-        plain float division: without the floor that raises ``ZeroDivisionError``.
 
     Notes
     -----
-    What the defaults fix is a rate: the per-step improvement of the loss over the
-    per-step noise sd of the loss. A fit improving more slowly than that is stopped
-    however long it would have gone on improving, so the figures below hold at a stated
-    rate and not in general.
+    The defaults fix a *rate*: the per-step improvement of the loss over its per-step
+    noise sd. A fit improving more slowly than that is stopped however long it would
+    have gone on improving, so the figures below hold at a stated rate, not in general.
 
-    Calibrated on 1000 traces per cell of ``loss[t] = f(t) + sigma[t] * eps[t]``, i.i.d.
-    ``eps``, 6000 steps, in four families -- linear ``f``; power law
-    ``f = A * (t + 100) ** -0.5``; ``sigma`` alternating between 1 and 3 every 750
-    steps; and Student-t noise with ``df=3`` -- each indexed by the smallest
-    ``-f'(t) / sigma[t]`` its improving segment reaches. At a rate of 1.0 the defaults
-    stopped none of the 4000 still-improving traces, at 0.8 one of them, at 0.7 two, and
-    at 0.6 all four families together lost 821, of which 768 were the alternating-sigma
-    one: the boundary sits between 0.6 and 0.7, and ``kappa`` is what moves it. On the
-    same four families frozen to a plateau at step 3000 after improving at a rate of
-    1.0, every trace was stopped and none before the plateau, with median delays of 25
-    to 54 steps and p95 at most 86.
+    Calibrated on 1000 traces per cell of ``loss[t] = f(t) + sigma[t] * eps[t]``, 6000
+    steps, in four families -- linear, power law, alternating ``sigma``, and Student-t
+    noise with ``df=3``. At a rate of 1.0 the defaults stopped none of the 4000
+    still-improving traces; the stall boundary sits between 0.6 and 0.7, and ``kappa``
+    is what moves it. On the same families frozen to a plateau after improving at a
+    rate of 1.0, every trace was stopped and none before the plateau, with median
+    delays of 25 to 54 steps and p95 at most 86.
 
     Examples
     --------
@@ -236,34 +213,29 @@ class CheckLossConvergence(Callback):
         approx = pm.fit(100_000, callbacks=[monitor])  # stops early if converged
     """
 
-    def __init__(
-        self,
-        kappa=0.5,
-        h=10.0,
-        halflife=200.0,
-        min_steps=1000,
-        z_clip=4.0,
-        sigma_floor=1e-12,
-    ):
-        for name, value in (
-            ("kappa", kappa),
-            ("h", h),
-            ("halflife", halflife),
-            ("z_clip", z_clip),
-            ("sigma_floor", sigma_floor),
-        ):
+    # Scales mean |successive difference| into the standardizer for delta. The z it
+    # produces is unit-variance only when the loss increments are independent, so kappa
+    # and h are calibrated against it as it stands rather than derived from it.
+    _SCALE_TO_SIGMA = float(np.sqrt(np.pi) / 2.0)
+    # Winsorization bound on z, applied to the scale update too so one spike cannot
+    # inflate the scale for hundreds of steps.
+    _Z_CLIP = 4.0
+    # Additive floor on the standardizing scale: an exactly-constant stretch of loss
+    # drives the successive-difference scale to zero, and dividing by it raises.
+    _SIGMA_FLOOR = 1e-12
+
+    def __init__(self, kappa=0.5, h=10.0, halflife=200.0, min_steps=1000):
+        for name, value in (("kappa", kappa), ("h", h), ("halflife", halflife)):
             if not np.isfinite(value) or value <= 0:
                 raise ValueError(f"{name} must be finite and positive, got {value!r}")
-        if z_clip <= kappa:
-            raise ValueError(f"z_clip ({z_clip}) must exceed kappa ({kappa})")
+        if self._Z_CLIP <= kappa:
+            raise ValueError(f"kappa ({kappa}) must be below _Z_CLIP ({self._Z_CLIP})")
         if not np.isfinite(min_steps) or min_steps != int(min_steps) or min_steps < 0:
             raise ValueError(f"min_steps must be a non-negative integer, got {min_steps!r}")
         self.kappa = float(kappa)
         self.h = float(h)
         self.halflife = float(halflife)
         self.min_steps = int(min_steps)
-        self.z_clip = float(z_clip)
-        self.sigma_floor = float(sigma_floor)
 
         self._lam = float(np.exp(np.log(0.5) / self.halflife))
         # The smoothed z settles at the mean z, so the stop is reported as a divergence
@@ -310,11 +282,11 @@ class CheckLossConvergence(Callback):
             if np.isfinite(abs_diff):
                 self._scale = abs_diff
             return
-        sigma = self._scale * _SQRT_PI_OVER_2 + self.sigma_floor
+        sigma = self._scale * self._SCALE_TO_SIGMA + self._SIGMA_FLOOR
         if np.isfinite(abs_diff):
-            update = min(abs_diff, self.z_clip * sigma)
+            update = min(abs_diff, self._Z_CLIP * sigma)
             self._scale = self._lam * self._scale + (1.0 - self._lam) * update
-        z = float(np.clip(delta / sigma, -self.z_clip, self.z_clip))
+        z = float(np.clip(delta / sigma, -self._Z_CLIP, self._Z_CLIP))
         self._z_bar = self._lam * self._z_bar + (1.0 - self._lam) * z
 
         if i >= self.min_steps:
