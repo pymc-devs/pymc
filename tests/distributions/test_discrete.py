@@ -761,6 +761,18 @@ def test_negative_binomial_logp_stable_when_p_underflows():
     np.testing.assert_allclose(logp_expr.eval({a: 5000.0}), -14998.61370563888)
 
 
+def test_negative_binomial_logp_large_n():
+    """binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
+    their shared ulp once n is large, so the logp falls back on the Poisson(mu) limit.
+    """
+    mu, n = pt.dscalars("mu", "n")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=mu, alpha=n), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e12}), -1.9634457319257537)
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e18}), -1.9634457319257537)
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e20}), -1.9634457319257537)
+
+
 @pytest.mark.xfail(
     reason="Needs a log(a + exp(x)) -> log(a) + log1pexp(x - log(a)) stabilization in "
     "PyTensor, since logp only ever sees p = n / (mu + n)"
