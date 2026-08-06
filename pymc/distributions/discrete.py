@@ -725,26 +725,27 @@ class NegativeBinomial(Discrete):
         return mu
 
     def logp(value, n, p):
+        mu = n * (1 - p) / p
+
+        # binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
+        # their shared ulp once n is large, so fall back on the Poisson(mu) limit there.
         res = pt.switch(
-            pt.lt(value, 0),
-            -np.inf,
+            pt.gt(n, 1e10),
+            logpow(mu, value) - mu - factln(value),
             binomln(value + n - 1, value) + logpow(1 - p, value) + logpow(p, n),
         )
+        res = pt.switch(pt.lt(value, 0), -np.inf, res)
 
         # p == 0 is outside the support, but a valid tiny p can round to it: sigmoid(-800)
         # is exactly 0.0 while log(p) is still -800. Checking 0 <= p instead of 0 < p keeps
         # those usable, at the cost of returning the limiting -inf for a degenerate p == 0.
-        negbinom = check_parameters(
+        return check_parameters(
             res,
             0 <= p,
             p <= 1,
             n > 0,
             msg="0 <= p <= 1, n > 0",
         )
-
-        # Return Poisson when n gets very large.
-        mu = n * (1 - p) / p
-        return pt.switch(pt.gt(n, 1e10), logp(Poisson.dist(mu=mu), value), negbinom)
 
     def logcdf(value, n, p):
         res = pt.switch(
