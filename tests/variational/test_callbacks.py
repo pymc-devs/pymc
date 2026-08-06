@@ -144,6 +144,26 @@ def test_sigma_adapts_to_scale_change():
     assert run_monitor(monitor, losses) is None
 
 
+def test_the_scale_constant_is_the_divisor_kappa_is_calibrated_against():
+    """``sqrt(pi)/2`` turns the mean successive difference into the divisor of ``delta``.
+
+    Deltas alternating 1 and 3 hold that mean at exactly 2, so the divisor is exactly
+    ``sqrt(pi)`` and the smoothed z settles at ``2 / sqrt(pi)``, 13% above the ``1.0`` an
+    unscaled divisor would give. Asserting that ratio against a literal, rather than
+    re-multiplying by the constant itself, is what makes this fail when the constant is
+    rescaled at its use site as well as at its definition. Neither value makes z
+    unit-variance -- ``delta`` is itself a first difference, so its increments correlate
+    -- so kappa and h are calibrated against this divisor as it stands, and rescaling it
+    moves every z and with it the stall boundary.
+    """
+    assert CheckLossConvergence._SCALE_TO_SIGMA == pytest.approx(np.sqrt(np.pi) / 2.0)
+    losses = 1000.0 - np.cumsum(np.tile([1.0, 3.0], 1000))
+    monitor = CheckLossConvergence(min_steps=10**9)  # never armed; only the estimates run
+    assert run_monitor(monitor, losses) is None
+    assert monitor._scale == 2.0
+    assert monitor._z_bar == pytest.approx(2.0 / np.sqrt(np.pi), rel=0.01)
+
+
 def test_the_sigma_floor_keeps_a_constant_loss_divisible():
     """An exactly-constant loss drives the successive-difference scale to zero.
 
@@ -151,15 +171,20 @@ def test_the_sigma_floor_keeps_a_constant_loss_divisible():
     monitor raises ZeroDivisionError at its first standardization rather than producing
     an infinite or NaN z. Floored, every increment reads as zero improvement and S gains
     the full kappa per armed step, which is the right answer for a constant loss.
+
+    The unfloored monitor is a subclass rather than an instance with the constant
+    shadowed on it: overriding a class constant is what a class constant is for, and it
+    is also the escape hatch for the caller the floor is not a parameter for.
     """
     losses = np.full(3000, 42.0)
     monitor = CheckLossConvergence(min_steps=100)
     assert run_monitor(monitor, losses) == 100 + int(monitor.h / monitor.kappa)
 
-    unfloored = CheckLossConvergence(min_steps=100)
-    unfloored._SIGMA_FLOOR = 0.0
+    class _Unfloored(CheckLossConvergence):
+        _SIGMA_FLOOR = 0.0
+
     with pytest.raises(ZeroDivisionError):
-        run_monitor(unfloored, losses)
+        run_monitor(_Unfloored(min_steps=100), losses)
 
 
 @pytest.mark.parametrize(

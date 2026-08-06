@@ -221,7 +221,11 @@ class CheckLossConvergence(Callback):
     # inflate the scale for hundreds of steps.
     _Z_CLIP = 4.0
     # Additive floor on the standardizing scale: an exactly-constant stretch of loss
-    # drives the successive-difference scale to zero, and dividing by it raises.
+    # drives the successive-difference scale to zero, and dividing by it raises. A divide
+    # guard, not a tuning knob -- the counterpart of the eps in `relative` above, and no
+    # more a constructor parameter than that one is. It is inert until the per-step
+    # increments fall below about 1e-9, so a caller cannot improve on it without first
+    # having rescaled the objective; one that must can override it in a subclass.
     _SIGMA_FLOOR = 1e-12
 
     def __init__(self, kappa=0.5, h=10.0, halflife=200.0, min_steps=1000):
