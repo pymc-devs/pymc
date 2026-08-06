@@ -751,6 +751,22 @@ class TestNegativeBinomial(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+@pytest.mark.xfail(
+    reason="logp reconstructs mu = alpha * (1 - p) / p and then computes mu / (mu + alpha), "
+    "which is just 1 - p, and the round-trip overflows. The mu parametrization additionally "
+    "needs a log(a + exp(x)) -> log(a) + log1pexp(x - log(a)) stabilization in PyTensor, "
+    "since logp only ever sees p = n / (mu + n)."
+)
+def test_negative_binomial_logp_stable_when_parameter_underflows():
+    a = pt.dscalar("a")
+
+    mu_param = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=2.0), 3)
+    np.testing.assert_allclose(mu_param.eval({a: 710.0}), -1417.2274112777604)
+
+    p_param = pm.logp(pm.NegativeBinomial.dist(n=2.0, p=pt.sigmoid(a)), 3)
+    np.testing.assert_allclose(p_param.eval({a: -800.0}), -1598.6137056388802)
+
+
 class TestNegativeBinomialMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"mu": 5.0, "alpha": 8.0}
