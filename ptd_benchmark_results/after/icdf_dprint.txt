@@ -1,0 +1,40 @@
+Composite{switch(or(lt(i0, 0), gt(i0, 1)), nan, switch(eq(i0, 0), -inf, switch(eq(i0, 1), inf, (1.5 + (3.5355339059327378 * i1)))))} [id A] d={0: [1]} 2
+ ├─ q [id B]
+ └─ Erfinv [id C] d={0: [0]} 1
+    └─ Composite{(-1.0 + (2.0 * i0))} [id D] 0
+       └─ q [id B]
+
+Inner graphs:
+
+Composite{switch(or(lt(i0, 0), gt(i0, 1)), nan, switch(eq(i0, 0), -inf, switch(eq(i0, 1), inf, (1.5 + (3.5355339059327378 * i1)))))} [id A] d={0: [1]}
+ ← Switch [id E]
+    ├─ OR [id F]
+    │  ├─ LT [id G]
+    │  │  ├─ i0 [id H]
+    │  │  └─ 0 [id I]
+    │  └─ GT [id J]
+    │     ├─ i0 [id H]
+    │     └─ 1 [id K]
+    ├─ nan [id L]
+    └─ Switch [id M]
+       ├─ EQ [id N]
+       │  ├─ i0 [id H]
+       │  └─ 0 [id I]
+       ├─ -inf [id O]
+       └─ Switch [id P]
+          ├─ EQ [id Q]
+          │  ├─ i0 [id H]
+          │  └─ 1 [id K]
+          ├─ inf [id R]
+          └─ add [id S]
+             ├─ 1.5 [id T]
+             └─ mul [id U]
+                ├─ 3.5355339059327378 [id V]
+                └─ i1 [id W]
+
+Composite{(-1.0 + (2.0 * i0))} [id D]
+ ← add [id X]
+    ├─ -1.0 [id Y]
+    └─ mul [id Z]
+       ├─ 2.0 [id BA]
+       └─ i0 [id H]

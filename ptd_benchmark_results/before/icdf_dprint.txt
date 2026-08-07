@@ -1,0 +1,24 @@
+Composite{switch(and(ge(i0, 0), le(i0, 1)), (1.5 + (-3.5355339059327378 * i1)), nan)} [id A] '0 <= value <= 1' d={0: [1]} 2
+ ├─ q [id B]
+ └─ Erfcinv [id C] d={0: [0]} 1
+    └─ Mul [id D] 0
+       ├─ [2.] [id E]
+       └─ q [id B]
+
+Inner graphs:
+
+Composite{switch(and(ge(i0, 0), le(i0, 1)), (1.5 + (-3.5355339059327378 * i1)), nan)} [id A] d={0: [1]}
+ ← Switch [id F]
+    ├─ AND [id G]
+    │  ├─ GE [id H]
+    │  │  ├─ i0 [id I]
+    │  │  └─ 0 [id J]
+    │  └─ LE [id K]
+    │     ├─ i0 [id I]
+    │     └─ 1 [id L]
+    ├─ add [id M]
+    │  ├─ 1.5 [id N]
+    │  └─ mul [id O]
+    │     ├─ -3.5355339059327378 [id P]
+    │     └─ i1 [id Q]
+    └─ nan [id R]
