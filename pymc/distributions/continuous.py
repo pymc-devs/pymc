@@ -51,6 +51,7 @@ from pytensor.tensor.random.basic import (
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.variable import TensorConstant, TensorVariable
+from pytensor_distributions import normal as ptd_normal
 
 from pymc.distributions.custom import CustomDist
 from pymc.logprob.abstract import _logprob_helper
@@ -524,32 +525,29 @@ class Normal(Continuous):
         return mu
 
     def logp(value, mu, sigma):
-        res = -0.5 * pt.pow((value - mu) / sigma, 2) - pt.log(pt.sqrt(2.0 * np.pi)) - pt.log(sigma)
         return check_parameters(
-            res,
+            ptd_normal.logpdf(value, mu, sigma),
             sigma > 0,
             msg="sigma > 0",
         )
 
     def logcdf(value, mu, sigma):
         return check_parameters(
-            normal_lcdf(mu, sigma, value),
+            ptd_normal.logcdf(value, mu, sigma),
             sigma > 0,
             msg="sigma > 0",
         )
 
     def logccdf(value, mu, sigma):
         return check_parameters(
-            normal_lccdf(mu, sigma, value),
+            ptd_normal.logsf(value, mu, sigma),
             sigma > 0,
             msg="sigma > 0",
         )
 
     def icdf(value, mu, sigma):
-        res = mu + sigma * -np.sqrt(2.0) * pt.erfcinv(2 * value)
-        res = check_icdf_value(res, value)
         return check_icdf_parameters(
-            res,
+            ptd_normal.ppf(value, mu, sigma),
             sigma > 0,
             msg="sigma > 0",
         )

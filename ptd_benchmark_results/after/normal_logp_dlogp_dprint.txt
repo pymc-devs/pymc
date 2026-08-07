@@ -1,0 +1,141 @@
+Composite{...}.0 [id A] d={0: [1]} 8
+ ├─ Subtensor{i} [id B] v={0: [0]} 1
+ │  ├─ joined_inputs [id C]
+ │  └─ 1 [id D]
+ ├─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.0 [id E] 6
+ │  ├─ Composite{...}.1 [id F] 5
+ │  │  └─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │     └─ Exp [id H] 3
+ │  │        └─ Subtensor{i} [id B] v={0: [0]} 1
+ │  │           └─ ···
+ │  ├─ Composite{...}.0 [id F] 5
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │  └─ ···
+ │  ├─ obs{[ 1.320334 ... 56013e+00]} [id I]
+ │  └─ Subtensor{:stop} [id J] v={0: [0]} 0
+ │     ├─ joined_inputs [id C]
+ │     └─ 1 [id K]
+ ├─ Subtensor{i} [id L] v={0: [0]} 2
+ │  ├─ joined_inputs [id C]
+ │  └─ 0 [id M]
+ └─ Exp [id H] 3
+    └─ ···
+Join{axis=0} [id N] 12
+ ├─ Composite{...}.0 [id O] d={0: [0], 1: [1]} 11
+ │  ├─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id P] v={0: [0]} 7
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.1 [id E] 6
+ │  │     └─ ···
+ │  ├─ Subtensor{:stop} [id J] v={0: [0]} 0
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id Q] v={0: [0]} 10
+ │  │  └─ Composite{...}.1 [id A] d={0: [1]} 8
+ │  │     └─ ···
+ │  └─ ExpandDims{axis=0} [id R] v={0: [0]} 9
+ │     └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.2 [id E] 6
+ │        └─ ···
+ └─ Composite{...}.1 [id O] d={0: [0], 1: [1]} 11
+    └─ ···
+
+Inner graphs:
+
+Composite{...} [id A] d={0: [1]}
+ ← add [id S]
+    ├─ -3.221523658174155 [id T]
+    ├─ mul [id U]
+    │  ├─ -0.5 [id V]
+    │  └─ sqr [id W]
+    │     └─ mul [id X]
+    │        ├─ 0.1 [id Y]
+    │        └─ i2 [id Z]
+    ├─ Switch [id BA]
+    │  ├─ GE [id BB]
+    │  │  ├─ i3 [id BC]
+    │  │  └─ 0.0 [id BD]
+    │  ├─ add [id BE]
+    │  │  ├─ -1.83522929514961 [id BF]
+    │  │  └─ mul [id BG]
+    │  │     ├─ -0.5 [id V]
+    │  │     └─ sqr [id BH]
+    │  │        └─ mul [id BI]
+    │  │           ├─ 0.2 [id BJ]
+    │  │           └─ i3 [id BC]
+    │  └─ -inf [id BK]
+    ├─ i0 [id BL]
+    └─ i1 [id BM]
+ ← GE [id BB]
+    └─ ···
+
+FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]} [id E]
+ ← Sum{axes=None} [id BN]
+    └─ Composite{...}.0 [id BO]
+       ├─ i0 [id BP]
+       ├─ i1 [id BQ]
+       ├─ i2 [id BR]
+       ├─ i3 [id BS]
+       └─ i4 [id BT]
+ ← Sum{axes=None} [id BU]
+    └─ Composite{...}.1 [id BO]
+       └─ ···
+ ← Sum{axes=None} [id BV]
+    └─ Composite{...}.2 [id BO]
+       └─ ···
+
+Composite{...} [id F]
+ ← log [id BW]
+    └─ i0 [id BL]
+ ← GT [id BX]
+    ├─ i0 [id BL]
+    └─ 0 [id BY]
+
+Composite{...} [id O] d={0: [0], 1: [1]}
+ ← add [id BZ]
+    ├─ mul [id CA]
+    │  ├─ -0.0100000 ... 0000000002 [id CB]
+    │  └─ i2 [id Z]
+    └─ true_div [id CC]
+       ├─ true_div [id CD]
+       │  ├─ i1 [id BM]
+       │  └─ i0 [id BL]
+       └─ i0 [id BL]
+ ← add [id CE]
+    ├─ -999.0 [id CF]
+    ├─ Switch [id CG]
+    │  ├─ i3 [id CH]
+    │  ├─ mul [id CI]
+    │  │  ├─ -0.04000000000000001 [id CJ]
+    │  │  ├─ i0 [id BL]
+    │  │  └─ i0 [id BL]
+    │  └─ 0.0 [id CK]
+    └─ mul [id CL]
+       ├─ true_div [id CM]
+       │  ├─ i4 [id CN]
+       │  └─ sqr [id CO]
+       │     └─ i0 [id BL]
+       └─ i0 [id BL]
+
+Composite{...} [id BO]
+ ← Switch [id CP]
+    ├─ i0 [id CQ]
+    ├─ sub [id CR]
+    │  ├─ add [id CS]
+    │  │  ├─ -0.9189385332046727 [id CT]
+    │  │  └─ mul [id CU]
+    │  │     ├─ -0.5 [id CV]
+    │  │     └─ sqr [id CW]
+    │  │        └─ true_div [id CX]
+    │  │           ├─ sub [id CY]
+    │  │           │  ├─ i3 [id BC]
+    │  │           │  └─ i4 [id CN]
+    │  │           └─ i2 [id Z]
+    │  └─ i1 [id BM]
+    └─ -inf [id CZ]
+ ← sub [id CY]
+    └─ ···
+ ← mul [id DA]
+    ├─ true_div [id CX]
+    │  └─ ···
+    └─ sub [id CY]
+       └─ ···

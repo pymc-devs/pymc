@@ -1,0 +1,20 @@
+{
+  "normal": {
+    "min_us": 2.1735404152423143,
+    "median_us": 2.351772563997656,
+    "repeat": 30,
+    "number": 200
+  },
+  "normal_censored": {
+    "min_us": 36.0968749737367,
+    "median_us": 37.60218998650089,
+    "repeat": 30,
+    "number": 200
+  },
+  "icdf": {
+    "min_us": 8.832084713503718,
+    "median_us": 9.569687827024609,
+    "repeat": 30,
+    "number": 200
+  }
+}
