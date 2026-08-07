@@ -31,6 +31,7 @@ import pytest
 import scipy
 import scipy.sparse as sps
 import scipy.stats as st
+import xarray as xr
 
 from pytensor.compile.mode import get_default_mode
 from pytensor.compile.sharedvalue import SharedVariable
@@ -871,6 +872,27 @@ def test_multiple_add_coords_with_same_name():
         d = pm.Deterministic("d", a + b + c)
     variables = get_var_by_name([d], "dim1")
     assert len(variables) == 1 and variables[0] is m.dim_lengths["dim1"]
+
+
+@pytest.mark.parametrize(
+    "coords_dict",
+    [
+        pytest.param({"city": ["nyc", "la", "chi"]}, id="string"),
+        pytest.param({"year": [2020, 2021, 2022]}, id="int"),
+        pytest.param(
+            {"time": np.array(["2020-01-01", "2020-01-02"], dtype="datetime64[D]")},
+            id="datetime64",
+        ),
+    ],
+)
+def test_xarray_coord_values_unwrapped(coords_dict):
+    """xarray DataArray coord values are unwrapped to plain tuples of values."""
+    ds = xr.Dataset(coords=coords_dict)
+    with pm.Model(coords=ds.coords) as m:
+        key = next(iter(coords_dict))
+        coord = m.coords[key]
+        assert isinstance(coord, tuple)
+        assert not isinstance(coord[0], xr.DataArray)
 
 
 class TestSetUpdateCoords:

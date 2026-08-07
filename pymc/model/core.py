@@ -29,6 +29,7 @@ from typing import (
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
+import xarray as xr
 
 from pytensor.compile import DeepCopyOp, Function, ProfileStats, get_mode, view_op
 from pytensor.compile.io import In, Out
@@ -1856,6 +1857,12 @@ class Model(BaseModel):
                 f"Either `values` or `length` must be specified for the '{name}' dimension."
             )
         if values is not None:
+            # xarray DataArrays passed as coord values must be unwrapped.
+            # tuple(DataArray) iterates yielding 0-d DataArrays instead of plain values,
+            # which breaks np.array_equal comparisons and DataTree export.
+            if isinstance(values, xr.DataArray):
+                values = values.values
+
             # Conversion to a tuple ensures that the coordinate values are immutable.
             # Also unlike numpy arrays the's tuple.index(...) which is handy to work with.
             values = tuple(values)
