@@ -1780,6 +1780,26 @@ class TestZeroSumNormal:
         assert m.logp(sum=False)[0].type.shape == (3,)
         assert m.logp(sum=False, jacobian=False)[0].type.shape == (3,)
 
+    def test_zerosum_transform_non_trailing_axis(self):
+        # Regression: zero-summing a non-trailing axis must reduce the logp over that axis, else
+        # logp and jacobian shapes mismatch once dims are static (e.g. after freeze_dims_and_data).
+        from pymc.distributions.transforms import ZeroSumTransform
+        from pymc.model.transform.optimization import freeze_dims_and_data
+
+        # Static shape: reduced over the zero-summed (leading) axis, keeping the trailing axis.
+        with pm.Model() as m_static:
+            pm.Normal("x", 0.0, 1.0, shape=(3, 2), transform=ZeroSumTransform([0]))
+        assert m_static.logp(sum=False)[0].type.shape == (2,)
+
+        # Dynamic dims build fine; freezing makes shapes static and must not raise.
+        with pm.Model(coords={"a": range(3), "b": range(2)}) as m:
+            pm.Normal("x", 0.0, 1.0, dims=("a", "b"), transform=ZeroSumTransform([0]))
+        frozen = freeze_dims_and_data(m)
+        np.testing.assert_allclose(
+            m.compile_logp()(m.initial_point()),
+            frozen.compile_logp()(frozen.initial_point()),
+        )
+
 
 class TestMvStudentTCov(BaseTestDistributionRandom):
     def mvstudentt_rng_fn(self, size, nu, mu, scale, rng):
