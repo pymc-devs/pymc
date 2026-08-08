@@ -534,6 +534,47 @@ class TestMeasurableSplit:
             scipy_dirichlet_logpdf(np.concatenate(x_parts_test, axis=1), alpha),
         )
 
+    def test_values_reached_through_measurable_chains(self):
+        # Split logp must receive all values together to reconstruct the base variable.
+        rng = np.random.default_rng(521)
+        mu = np.arange(6)
+        x = pt.random.normal(mu, 1.0, name="x")
+        x_parts = pt.split(x, splits_size=[2, 4], n_splits=2, axis=0)
+        x_parts_vv = [x_part.clone() for x_part in x_parts]
+        x_parts_test = [rng.normal(size=x_part.type.shape) for x_part in x_parts_vv]
+
+        # One part valued behind a shift, the other directly on the split node
+        logp_parts = list(
+            conditional_logp({x_parts[0] + 1: x_parts_vv[0], x_parts[1]: x_parts_vv[1]}).values()
+        )
+        logp_fn = pytensor.function(x_parts_vv, logp_parts)
+        logp_x1_eval, logp_x2_eval = logp_fn(*x_parts_test)
+        np.testing.assert_allclose(
+            logp_x1_eval,
+            st.norm.logpdf(x_parts_test[0] - 1, mu[:2]),
+        )
+        np.testing.assert_allclose(
+            logp_x2_eval,
+            st.norm.logpdf(x_parts_test[1], mu[2:]),
+        )
+
+        # Both parts valued behind a chain, so no value is attached to the split node itself
+        logp_parts = list(
+            conditional_logp(
+                {x_parts[0] + 1: x_parts_vv[0], x_parts[1] * 2: x_parts_vv[1]}
+            ).values()
+        )
+        logp_fn = pytensor.function(x_parts_vv, logp_parts)
+        logp_x1_eval, logp_x2_eval = logp_fn(*x_parts_test)
+        np.testing.assert_allclose(
+            logp_x1_eval,
+            st.norm.logpdf(x_parts_test[0] - 1, mu[:2]),
+        )
+        np.testing.assert_allclose(
+            logp_x2_eval,
+            st.norm.logpdf(x_parts_test[1] / 2, mu[2:]) - np.log(2),
+        )
+
     @pytest.mark.xfail(
         reason="Rewrite from partial split to split on subtensor not implemented yet"
     )

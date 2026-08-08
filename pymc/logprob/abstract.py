@@ -39,13 +39,17 @@ import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
+from itertools import zip_longest
 
+from pytensor.configdefaults import config
 from pytensor.graph import Apply, Op, Variable
 from pytensor.graph.utils import MetaType
-from pytensor.tensor import TensorVariable, log1mexp
+from pytensor.tensor import TensorVariable, log1mexp, tensor
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.utils import broadcast_static_dim_lengths
 
 
 @singledispatch
@@ -61,18 +65,25 @@ def _logprob(
     of ``RandomVariable``.  If you want to implement new density/mass graphs
     for a ``RandomVariable``, register a new function on this dispatcher.
 
+    Pass all values involved in the node's density together. Use `request_logprob` when
+    recursing into a measurable input.
     """
     raise NotImplementedError(f"Logprob method not implemented for {op}")
 
 
-def _logprob_helper(rv, *values, **kwargs):
-    """Help call `_logprob` dispatcher."""
-    logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+def request_logprob(rv, value, **kwargs):
+    """Return the log-density term of `rv` at `value`, or a stand-in for it.
 
-    name = rv.name
-    if (not name) and (len(values) == 1):
-        name = values[0].name
-    if name:
+    Use within `_logprob` implementations; use `logp` for a standalone derivation.
+    Nodes with multiple non-RNG outputs return a `DensityQuery`, allowing
+    `resolve_density_queries` to collect their values into one `_logprob` call.
+    """
+    if n_potential_valued_outputs(rv.owner) > 1:
+        return density_query(rv, value)
+
+    logprob = _logprob(rv.owner.op, (value,), *rv.owner.inputs, **kwargs)
+
+    if name := (rv.name or value.name):
         if isinstance(logprob, list | tuple):
             for i, term in enumerate(logprob):
                 term.name = f"{name}_logprob.{i}"
@@ -80,6 +91,18 @@ def _logprob_helper(rv, *values, **kwargs):
             logprob.name = f"{name}_logprob"
 
     return logprob
+
+
+def _logprob_helper(rv, *values, **kwargs):
+    warnings.warn(
+        "_logprob_helper has been renamed to request_logprob",
+        FutureWarning,
+        stacklevel=2,
+    )
+    if len(values) != 1:
+        # The old API let a caller hand over every value of a node at once
+        return _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+    return request_logprob(rv, values[0], **kwargs)
 
 
 @singledispatch
@@ -170,7 +193,18 @@ def _icdf_helper(rv, value):
 
 
 class MeasurableOp(abc.ABC):
-    """An operation whose outputs can be assigned a measure/log-probability."""
+    """An operation whose outputs can be assigned a measure/log-probability.
+
+    ``supp_axes`` lists support axes as negative indices, in ``node.outputs`` order,
+    including ``None`` entries for RNG outputs. Set it when constructing the measurable Op,
+    deriving it from inputs so equal nodes agree. Unlike ``values`` passed to ``_logprob``,
+    it covers every output.
+
+    ``None`` means unknown support axes; ``()`` means scalar support. `DensityQuery`
+    requires known axes to determine its output type.
+    """
+
+    supp_axes: tuple[tuple[int, ...] | None, ...] | None = None
 
 
 MeasurableOp.register(RandomVariable)
@@ -298,7 +332,7 @@ class PromisedValuedRV(Op):
     logp(ab, ab_value)
     ```
 
-    The density of `ab[2]` (that is `b`) depends on `ab_value[1]` and `ab_value[0] * 8`, but this is not apparent
+    The density of `ab[1]` (that is `b`) depends on `ab_value[1]` and `ab_value[0] * 8`, but this is not apparent
     in the IR representation because the values of `a` and `b` are merged together, and will only be split by the logp
     function (see why next). For the time being we introduce a PromisedValue to isolate the graphs of a and b, and
     freezing the dependency of `b` on `a` (not `a_base`).
@@ -325,3 +359,56 @@ class PromisedValuedRV(Op):
 
 
 promised_valued_rv = PromisedValuedRV()
+
+
+def supp_axes(var: Variable) -> tuple[int, ...] | None:
+    """Return support axes from the Op's `supp_axes` or `ndim_supp`, or None if unknown."""
+    node = var.owner
+    # getattr: RandomVariable is a virtual subclass of MeasurableOp, so it has no default
+    if (declared := getattr(node.op, "supp_axes", None)) is not None:
+        return declared[node.outputs.index(var)]
+    # SymbolicRandomVariable may lack ndim_supp when no signature is defined.
+    ndim_supp = getattr(node.op, "ndim_supp", None)
+    return None if ndim_supp is None else tuple(range(-ndim_supp, 0))
+
+
+class DensityQuery(Op):
+    r"""A deferred request for the log-density of a measurable variable at a value.
+
+    `resolve_density_queries` answers queries targeting the same node in one `_logprob` call.
+    The placeholder shape broadcasts the variable and value shapes, then removes support axes.
+    """
+
+    def make_node(self, rv, value):
+        assert isinstance(rv, Variable)
+        assert isinstance(value, Variable)
+        axes = supp_axes(rv)
+        if axes is None:
+            raise NotImplementedError(
+                f"{rv.owner.op} has several outputs whose values reach its density by separate "
+                f"paths, so it must declare which axes its measure is over. "
+                f"Set `supp_axes` on the Op."
+            )
+        # Log-probabilities are floating point, including for discrete variables.
+        dtype = value.type.dtype if value.type.dtype.startswith("float") else config.floatX
+        shape = [
+            broadcast_static_dim_lengths(lengths)
+            for lengths in zip_longest(
+                reversed(rv.type.shape), reversed(value.type.shape), fillvalue=1
+            )
+        ][::-1]
+        shape = tuple(
+            length for axis, length in enumerate(shape, start=-len(shape)) if axis not in axes
+        )
+        return Apply(self, [rv, value], [tensor(dtype=dtype, shape=shape)])
+
+    def perform(self, node, inputs, out):
+        raise NotImplementedError("DensityQuery should not be present in the final graph!")
+
+
+density_query = DensityQuery()
+
+
+def n_potential_valued_outputs(node) -> int:
+    """Count non-RNG outputs that may participate in the node's density."""
+    return sum(not isinstance(out.type, RandomType) for out in node.outputs)

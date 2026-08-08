@@ -42,13 +42,16 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats.distributions as sp
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import equal_computations
+from pytensor.graph.rewriting.basic import SequentialGraphRewriter, in2out, node_rewriter
 from pytensor.graph.traversal import ancestors
 from pytensor.tensor.random.op import RandomVariable
 from scipy import stats
 
 import pymc as pm
 
+from pymc.logprob.abstract import MeasurableOp, ValuedRV, _logcdf, _logprob
 from pymc.logprob.basic import (
     conditional_logp,
     icdf,
@@ -57,6 +60,7 @@ from pymc.logprob.basic import (
     logp,
     transformed_conditional_logp,
 )
+from pymc.logprob.rewriting import logprob_rewrites_basic_query, logprob_rewrites_db
 from pymc.logprob.transforms import LogTransform
 from pymc.logprob.utils import replace_rvs_by_values
 from pymc.testing import assert_no_rvs
@@ -258,6 +262,105 @@ def test_joint_logp_basic():
     assert b_value_var in res_ancestors
     assert c_value_var in res_ancestors
     assert a_value_var in res_ancestors
+
+
+def test_joint_logp_over_multiple_values():
+    """Joint logp receives all requested values in output order, including through chains."""
+
+    class JointPairOp(OpFromGraph):
+        """Not yet measurable; `find_measurable_joint_pair` makes it so."""
+
+    class MeasurableJointPairOp(MeasurableOp, OpFromGraph):
+        # The first value's density is over its trailing axis; the second's is elementwise
+        supp_axes = ((-1,), ())
+        measured_outputs: tuple[bool, bool]
+
+    def variables_leading_to_values(fgraph):
+        # Traverse all clients: downstream chains are not yet measurable.
+        leads = set()
+        for node in reversed(fgraph.toposort()):
+            if isinstance(node.op, ValuedRV) or any(out in leads for out in node.outputs):
+                leads.update(node.inputs)
+        return leads
+
+    @node_rewriter([JointPairOp])
+    def find_measurable_joint_pair(fgraph, node):
+        inner_inputs = [inp.type() for inp in node.op.fgraph.inputs]
+        measurable_op = MeasurableJointPairOp(
+            inputs=inner_inputs, outputs=node.op.fgraph.bind(inner_inputs)
+        )
+        leads_to_value = variables_leading_to_values(fgraph)
+        measurable_op.measured_outputs = tuple(out in leads_to_value for out in node.outputs)
+        return measurable_op(*node.inputs, return_list=True)
+
+    ir_rewriter = SequentialGraphRewriter(
+        in2out(find_measurable_joint_pair),
+        logprob_rewrites_db.query(logprob_rewrites_basic_query),
+    )
+
+    calls = []
+
+    @_logprob.register(MeasurableJointPairOp)
+    def joint_pair_logp(op, values, *inputs, **kwargs):
+        calls.append((op.measured_outputs, len(values)))
+        assert len(values) == sum(op.measured_outputs), "logp derived over a subset of values"
+        if op.measured_outputs == (True, True):
+            v1, v2 = values
+            # Assign the non-separable joint term to the first value.
+            return v1.sum(axis=-1) + v2, pt.zeros_like(v2)
+        elif op.measured_outputs == (True, False):
+            [v1] = values
+            return v1.sum(axis=-1) + 100.0
+        else:
+            [v2] = values
+            return v2 - 100.0
+
+    @_logcdf.register(MeasurableJointPairOp)
+    def joint_pair_logcdf(op, value, *inputs, **kwargs):
+        # Test values lie inside the censoring bounds, so this branch is unused.
+        return pt.zeros_like(value)
+
+    mu = pt.vector("mu", shape=(3,))
+    op = JointPairOp(inputs=[mu], outputs=[pt.broadcast_to(mu[:, None], (3, 5)), mu * 2])
+    v1 = pt.matrix("v1", shape=(3, 5))
+    v2 = pt.vector("v2", shape=(3,))
+    v1_test = np.arange(15, dtype=v1.dtype).reshape(3, 5)
+    v2_test = np.array([1.0, 2.0, 3.0], dtype=v2.dtype)
+
+    # Both outputs measured: one value arrives through a measurable chain, the other directly
+    out1, out2 = op(mu)
+    logps = conditional_logp({out1 + 1: v1, out2: v2}, ir_rewriter=ir_rewriter)
+    assert calls == [((True, True), 2)]
+    fn = pytensor.function([v1, v2], [logps[v1], logps[v2]])
+    got1, got2 = fn(v1_test, v2_test)
+    np.testing.assert_allclose(got1, (v1_test - 1).sum(axis=-1) + v2_test)
+    np.testing.assert_allclose(got2, np.zeros(3))
+
+    # Both values arrive through chains; clipping is inactive within the test bounds.
+    calls.clear()
+    out1, out2 = op(mu)
+    logps = conditional_logp(
+        {out1 + 1: v1, pt.clip(out2, -1000.0, 1000.0): v2}, ir_rewriter=ir_rewriter
+    )
+    assert calls == [((True, True), 2)]
+    fn = pytensor.function([v1, v2], [logps[v1], logps[v2]])
+    got1, got2 = fn(v1_test, v2_test)
+    np.testing.assert_allclose(got1, (v1_test - 1).sum(axis=-1) + v2_test)
+    np.testing.assert_allclose(got2, np.zeros(3))
+
+    # Only the first output measured, through a chain
+    calls.clear()
+    out1, _ = op(mu)
+    [logp_v1] = conditional_logp({out1 + 1: v1}, ir_rewriter=ir_rewriter).values()
+    assert calls == [((True, False), 1)]
+    np.testing.assert_allclose(logp_v1.eval({v1: v1_test}), (v1_test - 1).sum(axis=-1) + 100.0)
+
+    # Only the second output measured, through a chain
+    calls.clear()
+    _, out2 = op(mu)
+    [logp_v2] = conditional_logp({out2 + 1: v2}, ir_rewriter=ir_rewriter).values()
+    assert calls == [((False, True), 1)]
+    np.testing.assert_allclose(logp_v2.eval({v2: v2_test}), (v2_test - 1) - 100.0)
 
 
 def test_model_unchanged_logprob_access():
@@ -467,11 +570,11 @@ def test_ir_ops_can_be_evaluated_with_warning():
         lam = pm.Exponential("lam")
         pm.CustomDist("y", lam, logp=my_logp, observed=[0, 1, 2])
 
+    # Value substitution leaves only TransformedValue in the logp (see #8100).
     with pytest.warns(
         UserWarning, match="TransformedValue should not be present in the final graph"
     ):
-        with pytest.warns(UserWarning, match="ValuedVar should not be present in the final graph"):
-            m.logp()
+        m.logp()
 
     assert _eval_values[0].sum() == 3
     assert _eval_values[1] == np.exp(-1.5)
