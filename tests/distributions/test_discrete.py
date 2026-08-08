@@ -751,6 +751,39 @@ class TestNegativeBinomial(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+def test_negative_binomial_logp_stable_when_p_underflows():
+    """log(p) and log(1 - p) are rewritten into softplus, so the logp stays finite."""
+    a = pt.dscalar("a")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(n=2.0, p=pt.sigmoid(a)), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({a: -800.0}), -1598.6137056388802)
+    np.testing.assert_allclose(logp_expr.eval({a: 37.0}), -109.6137056388801)
+    np.testing.assert_allclose(logp_expr.eval({a: 5000.0}), -14998.61370563888)
+
+
+def test_negative_binomial_logp_large_n():
+    """binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
+    their shared ulp once n is large, so the logp falls back on the Poisson(mu) limit.
+    """
+    mu, n = pt.dscalars("mu", "n")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=mu, alpha=n), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e12}), -1.9634457319257537)
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e18}), -1.9634457319257537)
+    np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e20}), -1.9634457319257537)
+
+
+@pytest.mark.xfail(
+    reason="Needs a log(a + exp(x)) -> log(a) + log1pexp(x - log(a)) stabilization in "
+    "PyTensor, since logp only ever sees p = n / (mu + n)"
+)
+def test_negative_binomial_logp_stable_when_mu_overflows():
+    a = pt.dscalar("a")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=2.0), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({a: 710.0}), -1417.2274112777604)
+
+
 class TestNegativeBinomialMuSigma(BaseTestDistributionRandom):
     pymc_dist = pm.NegativeBinomial
     pymc_dist_params = {"mu": 5.0, "alpha": 8.0}

@@ -15,7 +15,7 @@
 import warnings
 
 from collections.abc import Iterable, Sequence
-from typing import cast
+from typing import Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -898,13 +898,37 @@ def resolve_backend_compile_kwargs(backend: str | None, compile_kwargs: dict | N
     return compile_kwargs
 
 
+@overload
 def compile(
     inputs,
     outputs,
-    random_seed: SeedSequenceSeed = None,
+    random_seed: SeedSequenceSeed | bool = None,
     mode=None,
+    return_updates: Literal[False] = False,
     **kwargs,
-) -> Function:
+) -> Function: ...
+
+
+@overload
+def compile(
+    inputs,
+    outputs,
+    random_seed: SeedSequenceSeed | bool = None,
+    mode=None,
+    *,
+    return_updates: Literal[True],
+    **kwargs,
+) -> tuple[Function, dict[Variable, Variable]]: ...
+
+
+def compile(
+    inputs,
+    outputs,
+    random_seed: SeedSequenceSeed | bool = None,
+    mode=None,
+    return_updates: bool = False,
+    **kwargs,
+) -> Function | tuple[Function, dict[Variable, Variable]]:
     """Use ``pytensor.function`` with specialized pymc rewrites always enabled.
 
     This function also ensures shared Generator used by RandomVariables
@@ -921,6 +945,9 @@ def compile(
         If not specified, the value of original shared variables will still be overwritten.
     mode: optional
         PyTensor mode used to compile the function
+    return_updates: bool, default False
+        Whether to also return the RNG update mapping that was collected from the graph.
+        Saves callers that need it from walking the graph a second time.
 
     Included rewrites
     -----------------
@@ -948,8 +975,9 @@ def compile(
         ],
     )
 
-    # We always reseed random variables as this provides RNGs with no chances of collision
-    if rng_updates:
+    # Reseed for collision-free RNGs, unless random_seed=False decouples seeding from
+    # compilation so the function can be cached and reseeded by the caller.
+    if rng_updates and random_seed is not False:
         rngs = cast(list[SharedVariable], list(rng_updates))
         reseed_rngs(rngs, random_seed)
 
@@ -975,6 +1003,8 @@ def compile(
         mode=mode,
         **kwargs,
     )
+    if return_updates:
+        return pytensor_function, rng_updates
     return pytensor_function
 
 

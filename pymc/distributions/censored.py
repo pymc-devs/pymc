@@ -14,10 +14,10 @@
 import numpy as np
 import pytensor.tensor as pt
 
+from pytensor.graph.basic import Constant
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
-from pytensor.tensor.variable import TensorConstant
 
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
@@ -33,6 +33,13 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.logprob.abstract import _logcdf
 from pymc.util import check_dist_not_registered
+
+
+def _is_unbounded(bound, *, lower: bool) -> bool:
+    """Whether a censoring bound is an infinite constant, and thus not censoring at all."""
+    if not isinstance(bound, Constant):
+        return False
+    return bool(np.all(np.isneginf(bound.value)) if lower else np.all(np.isinf(bound.value)))
 
 
 class CensoredRV(SymbolicRandomVariable):
@@ -52,9 +59,16 @@ class CensoredRV(SymbolicRandomVariable):
         if rv_size_is_none(size):
             size = implicit_size_from_params(dist, lower, upper, ndims_params=cls.ndims_params)
 
-        # Censoring is achieved by clipping the base distribution between lower and upper
+        # Censoring is achieved by clipping the base distribution between lower and upper.
+        # Infinite bounds are replaced by the variable itself, which clips nothing and,
+        # unlike an infinite constant, does not upcast discrete variables to float.
+        # The logprob rewrites read this pattern back as an unbounded side.
         dist = change_dist_size(dist, size)
-        censored_rv = pt.clip(dist, lower, upper)
+        censored_rv = pt.clip(
+            dist,
+            dist if _is_unbounded(lower, lower=True) else lower,
+            dist if _is_unbounded(upper, lower=False) else upper,
+        )
 
         return CensoredRV(
             inputs=[dist, lower, upper],
@@ -169,8 +183,8 @@ def censored_logcdf(op, value, *inputs):
     base_rv_inputs = base_rv.owner.inputs
     logcdf_val = _logcdf(base_rv_op, value, *base_rv_inputs)
 
-    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
-    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+    is_lower_bounded = not _is_unbounded(lower, lower=True)
+    is_upper_bounded = not _is_unbounded(upper, lower=False)
 
     if is_lower_bounded:
         logcdf_val = pt.switch(pt.lt(value, lower), -np.inf, logcdf_val)
