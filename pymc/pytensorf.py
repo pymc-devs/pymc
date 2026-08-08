@@ -432,6 +432,14 @@ def make_shared_replacements(point, vars, model):
     Returns
     -------
     Dict of variable -> new shared variable
+
+    Notes
+    -----
+    A fresh shared variable per call means the compiled graph differs for every step method
+    instance, so these functions can never be served from a frozen model's compilation cache.
+    Making the shared variables depend only on the model, and swapping in per-instance ones
+    with ``Function.copy`` afterwards (as :meth:`ValueGradFunction.copy` does), would let
+    these steps reuse a cached graph as well.
     """
     vars_set = set(vars)
     return {
