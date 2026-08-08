@@ -13,6 +13,7 @@
 #   limitations under the License.
 from __future__ import annotations
 
+import copy
 import functools
 import sys
 import threading
@@ -298,6 +299,33 @@ class ValueGradFunction:
             grad_vars = (grad_vars,)
 
         return self._pytensor_function(*grad_vars)
+
+    def copy(self):
+        """Return a function that reuses the compiled graph but owns its shared variables.
+
+        The shared variables holding the extra values and the cost weights are runtime state
+        of a single caller, so a shared instance cannot be handed out twice. Copying them is
+        orders of magnitude cheaper than compiling the graph again.
+        """
+        new = copy.copy(self)
+        # The static shape must be preserved, or the swapped variables won't have the type
+        # the compiled function expects.
+        new_shared = {
+            old: pytensor.shared(old.get_value(), old.name, shape=old.type.shape)
+            for old in (self._weights, *self._extra_vars_shared.values())
+        }
+        # An unused cost weight (a single cost) is not an input of the compiled function,
+        # and `Function.copy` rejects swaps for variables it doesn't have.
+        fn_inputs = {inp.variable for inp in self._pytensor_function.maker.inputs}
+        new._pytensor_function = self._pytensor_function.copy(
+            swap={old: shared for old, shared in new_shared.items() if old in fn_inputs}
+        )
+        new._weights = new_shared[self._weights]
+        new._extra_vars_shared = {
+            name: new_shared[old] for name, old in self._extra_vars_shared.items()
+        }
+        new._extra_are_set = False
+        return new
 
     @property
     def profile(self):
@@ -942,9 +970,14 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         fn = self._make_initial_point()
         return Point(fn(random_seed), model=self)
 
-    def _make_initial_point(self):
+    def _make_initial_point(self, *, overrides=None, jitter_rvs=None, return_transformed=True):
         # Compiled function takes the seed as an argument, so the cache is seed-independent.
-        return make_initial_point_fn(model=self, return_transformed=True)
+        return make_initial_point_fn(
+            model=self,
+            overrides=overrides,
+            jitter_rvs=jitter_rvs,
+            return_transformed=return_transformed,
+        )
 
     def set_data(
         self,
@@ -2223,9 +2256,15 @@ class FrozenModel(BaseModel):
     d2logp = locally_cachedmethod(BaseModel.d2logp)
     # The initial point only seeds the runtime-settable extra variables, so it is not part
     # of the cache key (it is re-applied by `logp_dlogp_function` on every call).
-    _logp_dlogp_function = locally_cachedmethod(
+    _cached_logp_dlogp_function = locally_cachedmethod(
         BaseModel._logp_dlogp_function, ignore=("initial_point",)
     )
+
+    def _logp_dlogp_function(self, *args, **kwargs):
+        # Unlike the graphs and functions cached above, a `ValueGradFunction` owns mutable
+        # state, so callers get their own shared variables on top of the cached graph.
+        return self._cached_logp_dlogp_function(*args, **kwargs).copy()
+
     _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
 
     @overload

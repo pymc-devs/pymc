@@ -34,7 +34,6 @@ import pytensor
 
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
-from pymc.pytensorf import compile
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
@@ -183,12 +182,14 @@ class BaseTrace(IBaseTrace):
 
         if fn is None:
             # borrow=True avoids deepcopy when inputs=output which is the case for untransformed value variables
-            fn = compile(
+            # Routed through the model so the compilation is reused on frozen models.
+            fn = model.compile_fn(
+                outs=[pytensor.Out(v, borrow=True) for v in vars],
                 inputs=[pytensor.In(v, borrow=True) for v in model.value_vars],
-                outputs=[pytensor.Out(v, borrow=True) for v in vars],
+                point_fn=False,
                 on_unused_input="ignore",
+                trust_input=True,
             )
-            fn.trust_input = True
 
         # Get variable shapes. Most backends will need this
         # information.

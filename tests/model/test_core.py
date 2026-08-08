@@ -1401,8 +1401,10 @@ class TestFrozenModelCaching:
         fm = freeze_model(m)
         f1 = fm.logp_dlogp_function(ravel_inputs=True)
         f2 = fm.logp_dlogp_function(ravel_inputs=True)
-        assert f1 is f2
-        assert "_logp_dlogp_function" in fm._cache
+        # Each caller gets its own shared variables on top of a single compiled graph.
+        assert f1 is not f2
+        # The cache bucket is named after the wrapped method, `BaseModel._logp_dlogp_function`.
+        assert len(fm._cache["_logp_dlogp_function"]) == 1
 
     def test_logp_dlogp_d2logp_graphs_are_cached(self):
         # Memoized graph construction returns the same object, so a freshly requested logp
@@ -1439,20 +1441,41 @@ class TestFrozenModelCaching:
         # The cached function must reflect each call's extra values, not a stale set.
         with pm.Model() as m:
             x = pm.Normal("x", 0, 1)
-            pm.Normal("y", 0, 1)
-            pm.Normal("obs", m["x"] + m["y"], 1, observed=[0.0])
+            # A shaped extra value checks that the per-caller shared variables keep the
+            # static shape the compiled function was built for.
+            y = pm.Normal("y", 0, 1, shape=3)
+            pm.Normal("obs", x + y.sum(), 1, observed=[0.0])
 
         fm = freeze_model(m)
         x_val = fm.rvs_to_values[fm["x"]]
         # Values must be arrays, as in a point returned by `initial_point`.
-        point_a = {"x": np.array(0.0), "y": np.array(1.0)}
-        point_b = {"x": np.array(0.0), "y": np.array(2.0)}
+        point_a = {"x": np.array(0.0), "y": np.ones(3)}
+        point_b = {"x": np.array(0.0), "y": np.full(3, 2.0)}
         f_a = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point=point_a)
         logp_a, _ = f_a(np.array([0.0]))
         f_b = fm.logp_dlogp_function([x_val], ravel_inputs=True, initial_point=point_b)
         logp_b, _ = f_b(np.array([0.0]))
-        assert f_a is f_b  # same compiled function reused
-        assert not np.isclose(logp_a, logp_b)  # but the extra value (y) took effect
+        assert f_a is not f_b
+        assert not np.isclose(logp_a, logp_b)  # the extra value (y) took effect
+
+        # Handing out the cached function must not share its extra values across callers,
+        # neither those set when `f_b` was created nor those set on it afterwards.
+        np.testing.assert_allclose(f_a(np.array([0.0]))[0], logp_a)
+        f_b.set_extra_values({"x": np.array(0.0), "y": np.full(3, 3.0)})
+        np.testing.assert_allclose(f_a(np.array([0.0]))[0], logp_a)
+
+    def test_logp_dlogp_function_weights_are_per_call(self):
+        with pm.Model() as m:
+            pm.Normal("x", 0, 1)
+            pm.Normal("obs", m["x"], 1, observed=[0.0])
+
+        fm = freeze_model(m)
+        f_a = fm.logp_dlogp_function(tempered=True, ravel_inputs=True)
+        f_b = fm.logp_dlogp_function(tempered=True, ravel_inputs=True)
+        logp_a, _ = f_a(np.array([0.0]))
+        f_b.set_weights(np.array([0.5]))
+        np.testing.assert_allclose(f_a(np.array([0.0]))[0], logp_a)
+        assert not np.isclose(f_b(np.array([0.0]))[0], logp_a)
 
     def test_initial_point_is_cached(self):
         with pm.Model() as m:
@@ -1463,6 +1486,34 @@ class TestFrozenModelCaching:
         assert "_make_initial_point" in fm._cache
         np.testing.assert_allclose(ip1["x"], fm.initial_point(0)["x"])
         np.testing.assert_allclose(ip1["x"], m.initial_point(0)["x"])  # matches unfrozen
+
+    def test_repeated_sampling_does_not_recompile(self):
+        with pm.Model() as m:
+            x = pm.Normal("x", 0, 1, size=2)
+            pm.Normal("y", x, 1, observed=[0.3, -0.5])
+
+        sample_kwargs = {
+            "draws": 5,
+            "tune": 5,
+            "chains": 1,
+            "progressbar": False,
+            "nuts_sampler": "pymc",
+            "compute_convergence_checks": False,
+        }
+        fm = freeze_model(m)
+        with fm:
+            pm.sample(random_seed=0, **sample_kwargs)
+
+        n_compiles = [0]
+        orig_function = pytensor.function
+
+        def counting_function(*args, **kwargs):
+            n_compiles[0] += 1
+            return orig_function(*args, **kwargs)
+
+        with patch("pytensor.function", counting_function), fm:
+            pm.sample(random_seed=1, **sample_kwargs)
+        assert n_compiles[0] == 0
 
 
 def test_model_parent_set_programmatically():
