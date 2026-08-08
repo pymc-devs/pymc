@@ -89,8 +89,6 @@ class MeasurableMakeVector(MeasurableOp, MakeVector):
 @_logprob.register(MeasurableMakeVector)
 def logprob_make_vector(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
-    # TODO: Sort out this circular dependency issue
-
     (value,) = values
 
     base_rvs = remove_promised_valued_rvs(base_rvs)
