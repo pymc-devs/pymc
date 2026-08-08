@@ -1,0 +1,91 @@
+flowchart TD
+    %% ============ PyMC layer ============
+    subgraph PYMC["PyMC layer"]
+        A["PyMC model<br/>(pm.Model: priors, likelihood)"]
+        A --> B["Build symbolic graph<br/>logp / dlogp / random fns"]
+        B --> C["pytensor.function(inputs, outputs, mode=...)"]
+    end
+
+    %% ============ Graph prep ============
+    subgraph PREP["Graph preparation (pure Python)"]
+        C --> D["clone graph, apply givens/updates,<br/>collect shared variables"]
+        D --> E["wrap in FunctionGraph"]
+    end
+
+    %% ============ Stage 1: rewriting ============
+    subgraph REWRITE["STAGE 1 — Graph rewriting (pure Python, backend-agnostic)"]
+        E --> F["run optimizer pipeline (optdb)"]
+        F --> G["merge / useless"]
+        G --> H["canonicalize<br/>(equilibrium, fixed-point loop)"]
+        H --> I["stabilize<br/>numerically-stable forms"]
+        I --> J["specialize + fusion"]
+        J --> K["backend-specific rewrites<br/>+ inplace / destroy handler"]
+        K --> L["Rewritten FunctionGraph"]
+    end
+
+    %% ============ Backend selection ============
+    L --> M{"Which backend (linker)?<br/>pm.sample(backend=...)<br/>or compile_kwargs mode=... / config.linker"}
+    M -->|"'numba' (default)"| NUMBA
+    M -->|"'c' (→ cvm)"| CBACK
+    M -->|"'jax'"| JAXB
+    M -->|"'pytorch'"| PTB
+    M -->|"'mlx' (Apple GPU)"| MLXB
+    M -->|"'py' / 'vm'"| PYB
+
+    %% ============ Stage 2: linking ============
+    subgraph LINK["STAGE 2 — Linking (backend-specific)"]
+        subgraph NUMBA["Numba backend (default, pip-friendly)"]
+            N1["graph -> Python"]
+            N1 --> N2["numba.njit JIT via LLVM"]
+            N2 --> N3["on-disk cache<br/>(numba__cache=True)"]
+        end
+        subgraph CBACK["C / CVM backend (needs C++ compiler)"]
+            C1["generate C++ source"]
+            C1 --> C2["g++/clang++ subprocess"]
+            C2 --> C3["cached .so modules"]
+        end
+        subgraph JAXB["JAX backend"]
+            J1["graph -> JAX"]
+            J1 --> J2["jax.jit -> XLA"]
+        end
+        subgraph PTB["PyTorch backend"]
+            T1["graph -> PyTorch"]
+            T1 --> T2["torch.compile<br/>(TorchDynamo/Inductor)"]
+        end
+        subgraph MLXB["MLX backend (Apple Silicon GPU)"]
+            X1["graph -> MLX"]
+            X1 --> X2["mx.compile (lazy JIT)"]
+        end
+        subgraph PYB["Python VM backend"]
+            P1["Op.perform in pure Python"]
+        end
+    end
+
+    %% ============ Compiled artifact = PyTensor's final output (the boundary) ============
+    N3 --> Z["Compiled callable — PyTensor's output<br/>θ (a point in parameter space) → logp(θ), ∇logp(θ)<br/>(observed data baked in as constants)"]
+    C3 --> Z
+    J2 --> Z
+    T2 --> Z
+    X2 --> Z
+    P1 --> Z
+
+    %% ============ Runtime: the sampler engine (NOT PyTensor) ============
+    subgraph RUN["Runtime — MCMC sampling (the sampler engine, NOT PyTensor)"]
+        direction TB
+        LOOP["Sampler loop:<br/>propose θ → call the compiled logp/∇logp → accept/reject → repeat (many times)"]
+        LOOP --> ENG{"Which sampler engine?<br/>pm.sample(nuts_sampler=...)"}
+        ENG -->|"'pymc'"| SP1["PyMC NUTS<br/>pure-Python loop<br/>(calls a callable from any CPU backend, e.g. C / Numba)"]
+        ENG -->|"'nutpie' (default if installed)"| SP2["nutpie / nuts-rs<br/>Rust loop<br/>(needs a Numba or JAX callable)"]
+        ENG -->|"'numpyro'"| SP3["NumPyro NUTS<br/>JAX loop<br/>(needs a JAX callable)"]
+        ENG -->|"'blackjax'"| SP4["BlackJAX NUTS<br/>JAX loop<br/>(needs a JAX callable)"]
+    end
+
+    %% Connect the boundary artifact into the runtime AFTER the subgraph is declared,
+    %% targeting the already-declared LOOP node so Mermaid links into the cluster.
+    Z --> LOOP
+
+    classDef sampler fill:#fff3e0,stroke:#e65100,color:#000;
+    class LOOP,SP1,SP2,SP3,SP4 sampler;
+
+    classDef choice fill:#e3f2fd,stroke:#1565c0,color:#000;
+    class M,ENG choice;
