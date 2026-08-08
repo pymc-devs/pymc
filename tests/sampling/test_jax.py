@@ -502,3 +502,79 @@ def test_convergence_warnings(caplog, nuts_sampler):
 
     [record] = caplog.records
     assert re.match(r"There were \d+ divergences after tuning", record.message)
+
+
+class TestBlackjaxProgressBarCompat:
+    """Regression tests for https://github.com/pymc-devs/pymc/issues/8367.
+
+    blackjax >= 1.6 removed the progress_bar parameter from
+    window_adaptation (unknown kwargs get forwarded straight into the NUTS
+    kernel and raise TypeError) and replaced the progress_bar module
+    (with its gen_scan_fn helper) with a context-manager function.
+    """
+
+    def test_sample_blackjax_nuts_progressbar_false(self):
+        # This is the exact reproduction from the issue: progress_bar
+        # reaching window_adaptation used to raise
+        # "TypeError: ... got an unexpected keyword argument 'progress_bar'"
+        # on any blackjax >= 1.6.
+        with pm.Model():
+            x = pm.Normal("x", 0.0, 1.0)
+            pm.Normal("obs", x, 1.0, observed=np.array([0.3, -0.1, 0.5]))
+            idata = pm.sample(
+                draws=10,
+                tune=10,
+                chains=1,
+                cores=1,
+                nuts_sampler="blackjax",
+                progressbar=False,
+            )
+        assert idata.posterior["x"].shape == (1, 10)
+
+    def test_sample_blackjax_nuts_progressbar_true(self):
+        # Exercises the progress_bar=True path specifically, which on
+        # blackjax >= 1.6 (after fixing the TypeError above) used to hit a
+        # second break: AttributeError, since blackjax.progress_bar is no
+        # longer a module with a gen_scan_fn attribute.
+        with pm.Model():
+            x = pm.Normal("x", 0.0, 1.0)
+            pm.Normal("obs", x, 1.0, observed=np.array([0.3, -0.1, 0.5]))
+            idata = pm.sample(
+                draws=10,
+                tune=10,
+                chains=1,
+                cores=1,
+                nuts_sampler="blackjax",
+                progressbar=True,
+            )
+        assert idata.posterior["x"].shape == (1, 10)
+
+    def test_progress_bar_popped_before_window_adaptation(self):
+        # Directly asserts the ordering fix: progress_bar must never reach
+        # blackjax.window_adaptation's kwargs, regardless of blackjax
+        # version/API shape.
+        import blackjax
+
+        from pymc.sampling.jax import _blackjax_inference_loop
+
+        original_window_adaptation = blackjax.window_adaptation
+
+        def spy_window_adaptation(*args, **kwargs):
+            assert "progress_bar" not in kwargs, "progress_bar leaked into window_adaptation kwargs"
+            return original_window_adaptation(*args, **kwargs)
+
+        with pm.Model() as model:
+            x = pm.Normal("x", 0.0, 1.0)
+            pm.Normal("obs", x, 1.0, observed=np.array([0.3, -0.1, 0.5]))
+            logp_fn = get_jaxified_logp(model)
+
+        with mock.patch("blackjax.window_adaptation", side_effect=spy_window_adaptation):
+            _blackjax_inference_loop(
+                seed=jax.random.PRNGKey(0),
+                init_position=[np.array(0.0)],
+                logp_fn=logp_fn,
+                draws=5,
+                tune=5,
+                target_accept=0.8,
+                progress_bar=False,
+            )
