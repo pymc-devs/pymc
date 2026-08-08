@@ -14,14 +14,13 @@
 
 import warnings
 
-from collections.abc import Sequence
 from functools import partial, reduce
 
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply, Variable
+from pytensor.graph.basic import Apply
 from pytensor.graph.op import Op
 from pytensor.tensor import (
     abs,
@@ -442,47 +441,9 @@ def flatten_list(tensors):
     return pt.concatenate([var.ravel() for var in tensors])
 
 
-class LogDet(Op):
-    r"""Compute the logarithm of the absolute determinant of a square matrix M, log(abs(det(M))) on the CPU.
-
-    Avoids det(M) overflow/underflow.
-
-    Notes
-    -----
-    Once PR #3959 (https://github.com/Theano/Theano/pull/3959/) by harpone is merged,
-    this must be removed.
-    """
-
-    def make_node(self, x):
-        x = pytensor.tensor.as_tensor_variable(x)
-        o = pytensor.tensor.scalar(dtype=x.dtype)
-        return Apply(self, [x], [o])
-
-    def perform(self, node, inputs, outputs, params=None):
-        try:
-            (x,) = inputs
-            (z,) = outputs
-            s = np.linalg.svd(x, compute_uv=False)
-            log_det = np.sum(np.log(np.abs(s)))
-            z[0] = np.asarray(log_det, dtype=x.dtype)
-        except Exception:
-            raise ValueError(f"Failed to compute logdet of {x}.")
-
-    def pullback(
-        self,
-        inputs: Sequence[Variable],
-        outputs: Sequence[Variable],
-        cotangents: Sequence[Variable],
-    ) -> list[Variable]:
-        [gz] = cotangents
-        [x] = inputs
-        return [gz * matrix_inverse(x).T]
-
-    def __str__(self):
-        return "LogDet"
-
-
-logdet = LogDet()
+def logdet(x):
+    r"""Compute the logarithm of the absolute determinant of a square matrix M, log(abs(det(M)))."""
+    return slogdet(x)[1]
 
 
 def probit(p):
