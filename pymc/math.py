@@ -14,13 +14,14 @@
 
 import warnings
 
+from collections.abc import Sequence
 from functools import partial, reduce
 
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.graph.basic import Apply
+from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.tensor import (
     abs,
@@ -467,8 +468,13 @@ class LogDet(Op):
         except Exception:
             raise ValueError(f"Failed to compute logdet of {x}.")
 
-    def grad(self, inputs, g_outputs):
-        [gz] = g_outputs
+    def pullback(
+        self,
+        inputs: Sequence[Variable],
+        outputs: Sequence[Variable],
+        cotangents: Sequence[Variable],
+    ) -> list[Variable]:
+        [gz] = cotangents
         [x] = inputs
         return [gz * matrix_inverse(x).T]
 

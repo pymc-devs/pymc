@@ -36,9 +36,6 @@ from tests.helpers import verify_grad
 
 pytestmark = [
     pytest.mark.filterwarnings("error"),
-    pytest.mark.filterwarnings(
-        "ignore:.*should implement `pullback` instead of `L_op`.*:FutureWarning"
-    ),
     pytest.mark.filterwarnings("ignore:Numba will use object mode.*:UserWarning"),
 ]
 
