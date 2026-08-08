@@ -53,7 +53,7 @@ from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
 from pymc.distributions.custom import CustomDist
-from pymc.logprob.abstract import _logprob_helper
+from pymc.logprob.abstract import request_logprob
 from pymc.logprob.basic import TensorLike, icdf
 from pymc.pytensorf import normalize_rng_param
 
@@ -729,7 +729,7 @@ class TruncatedNormal(BoundedContinuous):
         else:
             norm = 0.0
 
-        logp = _logprob_helper(Normal.dist(mu, sigma), value) - norm
+        logp = request_logprob(Normal.dist(mu, sigma), value) - norm
 
         if is_lower_bounded:
             logp = pt.switch(value < lower, -np.inf, logp)
@@ -2381,7 +2381,7 @@ class HalfCauchy(PositiveContinuous):
         return beta
 
     def logp(value, beta):
-        res = pt.log(2) + _logprob_helper(Cauchy.dist(alpha=0, beta=beta), value)
+        res = pt.log(2) + request_logprob(Cauchy.dist(alpha=0, beta=beta), value)
         res = pt.switch(value >= 0, res, -np.inf)
         return check_parameters(
             res,

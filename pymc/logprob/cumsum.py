@@ -41,7 +41,7 @@ from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, request_logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables
 
@@ -69,7 +69,7 @@ def logprob_cumsum(op, values, base_rv, **kwargs):
         axis=op.axis,
     )
 
-    cumsum_logp = _logprob_helper(base_rv, value_diff)
+    cumsum_logp = request_logprob(base_rv, value_diff)
 
     return cumsum_logp
 

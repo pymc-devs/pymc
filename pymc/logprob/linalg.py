@@ -16,7 +16,7 @@ import pytensor.tensor as pt
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.tensor.math import _matmul
 
-from pymc.logprob.abstract import MeasurableBlockwise, MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableBlockwise, MeasurableOp, _logprob, request_logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import check_potential_measurability, filter_measurable_variables
 
@@ -41,7 +41,7 @@ def logprob_measurable_matmul(op, values, l, r):  # noqa: E741
         x, A = l, r
         x_value = pt.linalg.solve(A.mT, y_value.mT).mT
 
-    x_logp = _logprob_helper(x, x_value)
+    x_logp = request_logprob(x, x_value)
 
     # The operation has a support dimensionality of 2
     # We need to reduce it if it's still present in the base logp

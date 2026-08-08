@@ -1098,6 +1098,32 @@ def test_ifelse_mixture_shared_component():
     )
 
 
+def test_ifelse_mixture_split_component():
+    cond = pt.scalar("cond", dtype="bool")
+    mu = pt.random.normal(name="mu")
+    x, y = pt.split(pt.random.normal(mu, 1, size=4), [2, 2], n_splits=2)
+    z = pt.random.normal(mu + 10, 1, size=2)
+    mu_rv, mix_rv = ifelse(cond, [mu, x], [mu, z])
+
+    mu_value, mix_value, y_value = (rv.type() for rv in (mu_rv, mix_rv, y))
+    # The two Split outputs need their values resolved together, even with y outside ifelse.
+    logps = conditional_logp({mu_rv: mu_value, mix_rv: mix_value, y: y_value})
+    for logp_term in logps.values():
+        assert_no_rvs(logp_term)
+    fn = function([cond, mu_value, mix_value, y_value], list(logps.values()))
+
+    mu_test = 0.5
+    mix_test = np.array([1.0, 2.0])
+    y_test = np.array([3.0, 4.0])
+    for cond_test in (True, False):
+        mu_logp, mix_logp, y_logp = fn(cond_test, mu_test, mix_test, y_test)
+        np.testing.assert_allclose(mu_logp, sp.norm.logpdf(mu_test))
+        np.testing.assert_allclose(
+            mix_logp, sp.norm.logpdf(mix_test, mu_test if cond_test else mu_test + 10)
+        )
+        np.testing.assert_allclose(y_logp, sp.norm.logpdf(y_test, mu_test))
+
+
 @pytest.mark.xfail(reason="Relied on rewrite-case that is no longer supported by PyTensor")
 def test_joint_logprob_subtensor():
     """Make sure we can compute a joint log-probability for ``Y[I]`` where ``Y`` and ``I`` are random variables."""
