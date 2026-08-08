@@ -303,6 +303,7 @@ def _blackjax_inference_loop(
 
     return samples, stats
 
+
 def _sample_blackjax_nuts(
     model: Model,
     target_accept: float,
