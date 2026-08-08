@@ -281,7 +281,7 @@ def _blackjax_inference_loop(
         return state, (position, stats)
 
     keys = jax.random.split(seed, draws)
-   if hasattr(blackjax.progress_bar, "gen_scan_fn"):
+    if hasattr(blackjax.progress_bar, "gen_scan_fn"):
         # blackjax < 1.6: progress_bar is a module exposing gen_scan_fn,
         # which wraps jax.lax.scan directly.
         scan_fn = blackjax.progress_bar.gen_scan_fn(draws, progress_bar)
