@@ -62,8 +62,9 @@ from pymc.logprob.abstract import (
     _logcdf,
     _logcdf_helper,
     _logprob,
-    _logprob_helper,
     promised_valued_rv,
+    request_logprob,
+    supp_axes,
 )
 from pymc.logprob.censoring import MeasurableRound
 from pymc.logprob.rewriting import (
@@ -98,7 +99,7 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
         base_rv.name = f"base_rv[{i}]"
         value.name = f"value[{i}]"
 
-    logps = [_logprob_helper(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
+    logps = [request_logprob(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
 
     # If the stacked variables depend on each other, we have to replace them by the respective values
     logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
@@ -132,7 +133,7 @@ def logprob_join(op, values, *base_rvs, **kwargs):
 
     base_rvs_to_split_values = dict(zip(base_rvs, split_values))
     logps = [
-        _logprob_helper(base_var, split_value)
+        request_logprob(base_var, split_value)
         for base_var, split_value in base_rvs_to_split_values.items()
     ]
 
@@ -214,7 +215,11 @@ def find_measurable_splits(fgraph, node) -> list[TensorVariable] | None:
     if not filter_measurable_variables([x]):
         return None
 
-    return MeasurableSplit(node.op.len_splits, node.op.axis).make_node(x, splits).outputs
+    measurable_split = MeasurableSplit(node.op.len_splits, node.op.axis)
+    # A split carves up the variable but not its measure, so each part is measured over the
+    # same axes as the base. `None` when the base cannot say, which is an answer too.
+    measurable_split.supp_axes = (supp_axes(x),) * node.op.len_splits
+    return measurable_split.make_node(x, splits).outputs
 
 
 @_logprob.register(MeasurableSplit)
@@ -230,7 +235,7 @@ def logprob_split(op: MeasurableSplit, values, x, splits, **kwargs):
     # Reverse the effects of split on the value variable
     join_value = pt.join(axis, *values)
 
-    join_logp = _logprob_helper(x, join_value)
+    join_logp = request_logprob(x, join_value)
 
     reduced_dims = join_value.ndim - join_logp.ndim
 
@@ -277,7 +282,7 @@ def logprob_dimshuffle(op: MeasurableDimShuffle, values, base_var, **kwargs):
     undo_ds = [original_shuffle.index(i) for i in range(len(original_shuffle))]
     value = value.dimshuffle(undo_ds)
 
-    raw_logp = _logprob_helper(base_var, value)
+    raw_logp = request_logprob(base_var, value)
 
     # Re-apply original dimshuffle, ignoring any support dimensions consumed by
     # the logprob function. This assumes that support dimensions are always in
@@ -413,7 +418,7 @@ def broadcast_logprob(op, values, rv, *shape, **kwargs):
     rv_value = unbroadcast_value
     if broadcast_dims:
         rv_value = pt.expand_dims(rv_value, tuple(d - n_new_dims for d in broadcast_dims))
-    logp = _logprob_helper(rv, rv_value)
+    logp = request_logprob(rv, rv_value)
 
     # The broadcast dims are consumed like support dims and disappear from the logp
     core_ndim = rv_value.ndim - logp.ndim
@@ -528,7 +533,7 @@ def cast_logprob(op, values, base_var, **kwargs):
     # The cast is measure-preserving; the value is passed through as is.
     # Casting it back could silently map impossible values to possible ones
     # (e.g., 1.5 -> 1 for an integer base variable).
-    return _logprob_helper(base_var, value)
+    return request_logprob(base_var, value)
 
 
 @_logcdf.register(MeasurableCast)
@@ -586,7 +591,7 @@ def identity_logprob(op, values, base_var, **kwargs):
     # rewritten under trusted assumptions could return a finite logp where the honest
     # density would return -inf, just like a skipped support check.
     [value] = values
-    return _logprob_helper(base_var, value)
+    return request_logprob(base_var, value)
 
 
 @_logcdf.register(MeasurableScalarFromTensor)
@@ -660,7 +665,7 @@ def logprob_join_dims(op, values, base_var, **kwargs):
     unjoined_shape = [base_shape[i] for i in op.axis_range]
     unjoined_value = split_dims(value, shape=unjoined_shape, axis=op.start_axis)
 
-    raw_logp = _logprob_helper(base_var, unjoined_value)
+    raw_logp = request_logprob(base_var, unjoined_value)
 
     # Re-join the value dimensions, ignoring any support dimensions consumed by the
     # logprob function (assumed to be the rightmost positions). A join lying entirely
@@ -679,7 +684,7 @@ def logprob_split_dims(op, values, base_var, shape, **kwargs):
     n_axes = value.type.ndim - base_var.type.ndim + 1
     joined_value = join_dims(value, start_axis=op.axis, n_axes=n_axes)
 
-    raw_logp = _logprob_helper(base_var, joined_value)
+    raw_logp = request_logprob(base_var, joined_value)
 
     # Re-split the value dimensions, unless the split dimension was a support dimension
     # consumed by the logprob function (assumed to be the rightmost positions)

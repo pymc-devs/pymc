@@ -127,7 +127,7 @@ from pymc.logprob.abstract import (
     _logcdf,
     _logcdf_helper,
     _logprob,
-    _logprob_helper,
+    request_logprob,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import (
@@ -227,12 +227,12 @@ def measurable_transform_logprob(op: MeasurableTransform, values, *inputs, **kwa
     if isinstance(backward_value, tuple):
         input_logprob = pt.logaddexp(
             *(
-                _logprob_helper(measurable_input, backward_val, **kwargs)
+                request_logprob(measurable_input, backward_val, **kwargs)
                 for backward_val in backward_value
             )
         )
     else:
-        input_logprob = _logprob_helper(measurable_input, backward_value)
+        input_logprob = request_logprob(measurable_input, backward_value)
 
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
 
