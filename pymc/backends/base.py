@@ -188,8 +188,8 @@ class BaseTrace(IBaseTrace):
                 inputs=[pytensor.In(v, borrow=True) for v in model.value_vars],
                 point_fn=False,
                 on_unused_input="ignore",
+                trust_input=True,
             )
-            fn.trust_input = True
 
         # Get variable shapes. Most backends will need this
         # information.
