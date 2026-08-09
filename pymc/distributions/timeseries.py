@@ -122,7 +122,41 @@ class RandomWalkRV(SymbolicRandomVariable):
 class RandomWalk(Distribution):
     r"""RandomWalk Distribution.
 
-    TODO: Expand docstrings
+    Parameters
+    ----------
+    init_dist : unnamed_distribution
+        Unnamed univariate or multivariate distribution of the initial value.
+        Unnamed refers to distributions created with the ``.dist()`` API.
+
+        .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
+
+    innovation_dist : unnamed_distribution
+        Unnamed univariate or multivariate distribution of the innovation term for each step.
+        Unnamed refers to distributions created with the ``.dist()`` API.
+
+        .. warning:: innovation_dist will be cloned, rendering it independent of the one passed as input.
+
+    steps : int, optional
+        Number of steps in the Random Walk (steps > 0). Only needed if shape is not
+        provided.
+
+    Notes
+    -----
+    RandomWalk is a generic subclass, used to implement specific Random Walk distributions
+    such as GaussianRandomWalk, MvGaussianRandomWalk, and MvStudentTRandomWalk. It can also
+    be used directly to build custom Random Walks by passing arbitrary ``init_dist`` and
+    ``innovation_dist``.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import pymc as pm
+
+        with pm.Model():
+            init_dist = pm.Normal.dist(0, 10)
+            innovation_dist = pm.Normal.dist(0, 1)
+            rw = pm.RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation_dist, steps=100)
     """
 
     rv_type = RandomWalkRV
