@@ -156,7 +156,9 @@ class RandomWalk(Distribution):
         with pm.Model():
             init_dist = pm.Normal.dist(0, 10)
             innovation_dist = pm.Normal.dist(0, 1)
-            rw = pm.RandomWalk("rw", init_dist=init_dist, innovation_dist=innovation_dist, steps=100)
+            rw = pm.RandomWalk(
+                "rw", init_dist=init_dist, innovation_dist=innovation_dist, steps=100
+            )
     """
 
     rv_type = RandomWalkRV
