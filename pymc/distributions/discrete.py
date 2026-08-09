@@ -699,7 +699,7 @@ class NegativeBinomial(Discrete):
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
-    def get_n_p(cls, mu=None, alpha=None, p=None, n=None):
+    def get_n_p(cls, mu=None, alpha=None, p=None, n=None, math=pt):
         if n is None:
             if alpha is not None:
                 n = alpha
@@ -710,7 +710,9 @@ class NegativeBinomial(Discrete):
 
         if p is None:
             if mu is not None:
-                p = n / (mu + n)
+                # n / (mu + n) in logit space, so a mu = exp(x) that overflows still
+                # yields finite logp and dlogp: log(mu) cancels back to x
+                p = math.sigmoid(math.log(n) - math.log(mu))
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
         elif mu is not None:
@@ -725,7 +727,10 @@ class NegativeBinomial(Discrete):
         return mu
 
     def logp(value, n, p):
-        mu = n * (1 - p) / p
+        # (1 - p) / p in log space: a p = sigmoid(w) that saturates at 1.0 carries no
+        # information, while the rewritten log terms still see w. Spelled log(1 - p)
+        # because the sigmoid stabilization rewrites do not recognize log1p(-p)
+        mu = n * pt.exp(pt.log(1 - p) - pt.log(p))
 
         # binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
         # their shared ulp once n is large, so fall back on the Poisson(mu) limit there.

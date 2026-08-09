@@ -316,7 +316,7 @@ class NegativeBinomial(DimDistribution):
 
     @classmethod
     def dist(cls, mu=None, alpha=None, *, p=None, n=None, **kwargs):
-        n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n)
+        n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n, math=ptx.math)
         return super().dist([n, p], **kwargs)
 
 

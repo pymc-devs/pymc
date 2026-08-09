@@ -33,7 +33,7 @@ from pymc.distributions.discrete import OrderedLogistic, OrderedProbit
 from pymc.exceptions import ImputationWarning
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
-from pymc.pytensorf import floatX
+from pymc.pytensorf import floatX, rewrite_pregrad
 from pymc.testing import (
     BaseTestDistributionRandom,
     Bool,
@@ -772,16 +772,43 @@ def test_negative_binomial_logp_large_n():
     np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e18}), -1.9634457319257537)
     np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e20}), -1.9634457319257537)
 
+    # a tiny mu saturates p = n / (mu + n) at 1.0, so the Poisson branch must recover
+    # log(mu) from the log-space terms for logp and dlogp to stay usable
+    a = pt.dscalar("a")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=1e12), 3)
+    np.testing.assert_allclose(logp_expr.eval({a: -300.0}), -901.7917594692281)
 
-@pytest.mark.xfail(
-    reason="Needs a log(a + exp(x)) -> log(a) + log1pexp(x - log(a)) stabilization in "
-    "PyTensor, since logp only ever sees p = n / (mu + n)"
-)
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: -300.0}), 3.0)
+
+
 def test_negative_binomial_logp_stable_when_mu_overflows():
+    """get_n_p builds p = sigmoid(log(n) - log(mu)), so with mu = exp(a) the log
+    cancels and the logp reduces to softplus terms in a, keeping logp and dlogp
+    finite when exp(a) overflows.
+
+    A constant alpha and a log-transformed alpha (the shape a positive alpha RV takes
+    in the logp graph) are both checked.
+    """
     a = pt.dscalar("a")
     logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=2.0), 3)
 
     np.testing.assert_allclose(logp_expr.eval({a: 710.0}), -1417.2274112777604)
+    np.testing.assert_allclose(logp_expr.eval({a: 5000.0}), -9997.22741127776)
+
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 710.0}), -2.0)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 5000.0}), -2.0)
+
+    b = pt.dscalar("b")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=pt.exp(b)), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({a: 710.0, b: 0.7}), -1426.9536421881814)
+    np.testing.assert_allclose(logp_expr.eval({a: 5000.0, b: 0.7}), -10065.952757236526)
+
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 710.0, b: 0.7}), -2.0137527074704766)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 5000.0, b: 0.7}), -2.0137527074704766)
 
 
 class TestNegativeBinomialMuSigma(BaseTestDistributionRandom):
