@@ -181,29 +181,23 @@ class CheckLossConvergence(Callback):
         Allowance per step, in units of the scale that standardizes ``delta``. Must
         exceed what a stalled trace spends on noise alone (0.3 to 0.4); see Notes.
     h : float
-        CUSUM decision threshold. Larger values trade detection delay for a
-        lower false-alarm rate.
+        CUSUM decision threshold, trading detection delay against false alarms.
     halflife : float
         Half-life, in steps, of the exponentially-weighted scale estimate.
     min_steps : int
-        Number of steps before the CUSUM is armed. Must be large enough for
-        the scale estimate to stabilize (a few half-lives). Also the number of
-        consecutive non-finite losses tolerated before the fit is stopped:
+        Steps before the CUSUM is armed; needs a few half-lives for the scale to
+        settle. Also the number of consecutive non-finite losses tolerated:
         ``pm.fit`` aborts on NaN but runs to completion on ``+inf``.
 
     Notes
     -----
-    The defaults fix a *rate*: the per-step improvement of the loss over its per-step
-    noise sd. A fit improving more slowly than that is stopped however long it would
-    have gone on improving, so the figures below hold at a stated rate, not in general.
-
+    The defaults fix a *rate*, the per-step improvement over the per-step noise sd, so
+    a fit improving more slowly is stopped however long it would have kept improving.
     Calibrated on 1000 traces per cell of ``loss[t] = f(t) + sigma[t] * eps[t]``, 6000
-    steps, in four families -- linear, power law, alternating ``sigma``, and Student-t
-    noise with ``df=3``. At a rate of 1.0 the defaults stopped none of the 4000
-    still-improving traces; the stall boundary sits between 0.6 and 0.7, and ``kappa``
-    is what moves it. On the same families frozen to a plateau after improving at a
-    rate of 1.0, every trace was stopped and none before the plateau, with median
-    delays of 25 to 54 steps and p95 at most 86.
+    steps, four families (linear, power law, alternating ``sigma``, Student-t ``df=3``):
+    at rate 1.0 none of the 4000 still-improving traces stopped, the stall boundary sits
+    between 0.6 and 0.7, and ``kappa`` moves it. Frozen to a plateau after improving at
+    rate 1.0, every trace stopped, none early, median delay 25 to 54 steps, p95 at most 86.
 
     Examples
     --------
@@ -213,19 +207,15 @@ class CheckLossConvergence(Callback):
         approx = pm.fit(100_000, callbacks=[monitor])  # stops early if converged
     """
 
-    # Scales mean |successive difference| into the standardizer for delta. The z it
-    # produces is unit-variance only when the loss increments are independent, so kappa
-    # and h are calibrated against it as it stands rather than derived from it.
+    # Scales mean |successive difference| into the standardizer for delta. Its z is
+    # unit-variance only for independent increments, so kappa and h are calibrated
+    # against it as it stands rather than derived from it.
     _SCALE_TO_SIGMA = float(np.sqrt(np.pi) / 2.0)
     # Winsorization bound on z, applied to the scale update too so one spike cannot
     # inflate the scale for hundreds of steps.
     _Z_CLIP = 4.0
-    # Additive floor on the standardizing scale: an exactly-constant stretch of loss
-    # drives the successive-difference scale to zero, and dividing by it raises. A divide
-    # guard, not a tuning knob -- the counterpart of the eps in `relative` above, and no
-    # more a constructor parameter than that one is. It is inert until the per-step
-    # increments fall below about 1e-9, so a caller cannot improve on it without first
-    # having rescaled the objective; one that must can override it in a subclass.
+    # Divide guard, not a knob: an exactly-constant stretch of loss drives the
+    # successive-difference scale to zero, and dividing by it raises.
     _SIGMA_FLOOR = 1e-12
 
     def __init__(self, kappa=0.5, h=10.0, halflife=200.0, min_steps=1000):
