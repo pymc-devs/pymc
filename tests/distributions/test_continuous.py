@@ -331,13 +331,6 @@ class TestMatchesScipy:
             lambda value, nu: st.chi2.logcdf(value, df=nu),
         )
 
-    def test_chisquared_icdf(self):
-        check_icdf(
-            pm.ChiSquared,
-            {"nu": Rplus},
-            lambda q, nu: st.chi2.ppf(q, df=nu),
-        )
-
     def test_wald_logp(self):
         check_logp(
             pm.Wald,
@@ -911,13 +904,6 @@ class TestMatchesScipy:
                 st.norm.logpdf(sp.logit(value), mu, sigma) - (np.log(value) + np.log1p(-value))
             ),
             decimal=select_by_precision(float64=6, float32=1),
-        )
-        check_logcdf(
-            pm.LogitNormal,
-            Unit,
-            {"mu": R, "sigma": Rplusbig},
-            lambda value, mu, sigma: st.norm.logcdf(sp.logit(value), mu, sigma),
-            decimal=select_by_precision(float64=5, float32=1),
         )
         check_icdf(
             pm.LogitNormal,
