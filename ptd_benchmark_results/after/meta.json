@@ -1,0 +1,11 @@
+{
+  "label": "after",
+  "commit": "83cb13865",
+  "pymc": "0+untagged.10565.g83cb138",
+  "pytensor": "3.2.2",
+  "pytensor_distributions": "0.2.0",
+  "numpy": "2.4.6",
+  "python": "3.13.11",
+  "machine": "macOS-26.5.2-arm64-arm-64bit-Mach-O",
+  "floatX": "float64"
+}

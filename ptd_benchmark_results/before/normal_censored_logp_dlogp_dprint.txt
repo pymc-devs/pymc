@@ -1,0 +1,500 @@
+Composite{...}.0 [id A] d={0: [1]} 10
+ ├─ Subtensor{i} [id B] v={0: [0]} 1
+ │  ├─ joined_inputs [id C]
+ │  └─ 1 [id D]
+ ├─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.0 [id E] 6
+ │  ├─ Composite{...}.2 [id F] 5
+ │  │  └─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │     └─ Exp [id H] 3
+ │  │        └─ Subtensor{i} [id B] v={0: [0]} 1
+ │  │           └─ ···
+ │  ├─ Composite{...}.1 [id F] 5
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │  └─ ···
+ │  ├─ obs{[ 1.320334 ... 56013e+00]} [id I]
+ │  └─ Subtensor{:stop} [id J] v={0: [0]} 0
+ │     ├─ joined_inputs [id C]
+ │     └─ 1 [id K]
+ ├─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]}.0 [id L] 7
+ │  ├─ [False Fal ... lse False] [id M]
+ │  ├─ Composite{...}.2 [id F] 5
+ │  │  └─ ···
+ │  ├─ [False Fal ... rue False] [id N]
+ │  ├─ Composite{...}.1 [id F] 5
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │  └─ ···
+ │  ├─ cens{[ 5.244064 ... 58192e-01]} [id O]
+ │  ├─ Subtensor{:stop} [id J] v={0: [0]} 0
+ │  │  └─ ···
+ │  ├─ Composite{...}.0 [id F] 5
+ │  │  └─ ···
+ │  ├─ [ 0.  0. ... . -1.  0.] [id P]
+ │  └─ [ 0.  0. ... .  0.  0.] [id Q]
+ ├─ Subtensor{i} [id R] v={0: [0]} 2
+ │  ├─ joined_inputs [id C]
+ │  └─ 0 [id S]
+ └─ Exp [id H] 3
+    └─ ···
+Join{axis=0} [id T] 17
+ ├─ Composite{...}.0 [id U] d={0: [0], 1: [1]} 16
+ │  ├─ ExpandDims{axis=0} [id G] v={0: [0]} 4
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id V] v={0: [0]} 8
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.1 [id E] 6
+ │  │     └─ ···
+ │  ├─ ExpandDims{axis=0} [id W] v={0: [0]} 14
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]}.4 [id L] 7
+ │  │     └─ ···
+ │  ├─ Subtensor{:stop} [id J] v={0: [0]} 0
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id X] v={0: [0]} 15
+ │  │  └─ Composite{...}.1 [id A] d={0: [1]} 10
+ │  │     └─ ···
+ │  ├─ ExpandDims{axis=0} [id Y] v={0: [0]} 9
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]}.2 [id E] 6
+ │  │     └─ ···
+ │  ├─ Composite{...}.0 [id F] 5
+ │  │  └─ ···
+ │  ├─ ExpandDims{axis=0} [id Z] v={0: [0]} 13
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]}.3 [id L] 7
+ │  │     └─ ···
+ │  ├─ ExpandDims{axis=0} [id BA] v={0: [0]} 12
+ │  │  └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]}.2 [id L] 7
+ │  │     └─ ···
+ │  └─ ExpandDims{axis=0} [id BB] v={0: [0]} 11
+ │     └─ FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]}.1 [id L] 7
+ │        └─ ···
+ └─ Composite{...}.1 [id U] d={0: [0], 1: [1]} 16
+    └─ ···
+
+Inner graphs:
+
+Composite{...} [id A] d={0: [1]}
+ ← add [id BC]
+    ├─ -3.221523658174155 [id BD]
+    ├─ mul [id BE]
+    │  ├─ -0.5 [id BF]
+    │  └─ sqr [id BG]
+    │     └─ mul [id BH]
+    │        ├─ 0.1 [id BI]
+    │        └─ i3 [id BJ]
+    ├─ Switch [id BK]
+    │  ├─ GE [id BL]
+    │  │  ├─ i4 [id BM]
+    │  │  └─ 0.0 [id BN]
+    │  ├─ add [id BO]
+    │  │  ├─ -1.83522929514961 [id BP]
+    │  │  └─ mul [id BQ]
+    │  │     ├─ -0.5 [id BF]
+    │  │     └─ sqr [id BR]
+    │  │        └─ mul [id BS]
+    │  │           ├─ 0.2 [id BT]
+    │  │           └─ i4 [id BM]
+    │  └─ -inf [id BU]
+    ├─ i0 [id BV]
+    ├─ i1 [id BW]
+    └─ i2 [id BX]
+ ← GE [id BL]
+    └─ ···
+
+FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,)]} [id E]
+ ← Sum{axes=None} [id BY]
+    └─ Composite{...}.0 [id BZ]
+       ├─ i0 [id CA]
+       ├─ i1 [id CB]
+       ├─ i2 [id CC]
+       ├─ i3 [id CD]
+       └─ i4 [id CE]
+ ← Sum{axes=None} [id CF]
+    └─ Composite{...}.1 [id BZ]
+       └─ ···
+ ← Sum{axes=None} [id CG]
+    └─ Composite{...}.2 [id BZ]
+       └─ ···
+
+Composite{...} [id F]
+ ← sqr [id CH]
+    └─ i0 [id BV]
+ ← log [id CI]
+    └─ i0 [id BV]
+ ← GT [id CJ]
+    ├─ i0 [id BV]
+    └─ 0 [id CK]
+
+FusedElemwise{Composite{...}, reduce[add@(0,), add@(0,), add@(0,), add@(0,), add@(0,)]} [id L]
+ ← Sum{axes=None} [id CL]
+    └─ Composite{...}.0 [id CM]
+       ├─ i0 [id CN]
+       ├─ i1 [id CO]
+       ├─ i2 [id CP]
+       ├─ i3 [id CQ]
+       ├─ i4 [id CE]
+       ├─ i5 [id CR]
+       ├─ i6 [id CS]
+       ├─ i7 [id CT]
+       ├─ i8 [id CU]
+       └─ i9 [id CV]
+ ← Sum{axes=None} [id CW]
+    └─ Composite{...}.1 [id CM]
+       └─ ···
+ ← Sum{axes=None} [id CX]
+    └─ Composite{...}.2 [id CM]
+       └─ ···
+ ← Sum{axes=None} [id CY]
+    └─ Composite{...}.3 [id CM]
+       └─ ···
+ ← Sum{axes=None} [id CZ]
+    └─ Composite{...}.4 [id CM]
+       └─ ···
+
+Composite{...} [id U] d={0: [0], 1: [1]}
+ ← add [id DA]
+    ├─ mul [id DB]
+    │  ├─ -0.0100000 ... 0000000002 [id DC]
+    │  └─ i3 [id BJ]
+    ├─ true_div [id DD]
+    │  ├─ true_div [id DE]
+    │  │  ├─ i1 [id BW]
+    │  │  └─ i0 [id BV]
+    │  └─ i0 [id BV]
+    └─ neg [id DF]
+       └─ i2 [id BX]
+ ← add [id DG]
+    ├─ 1.0 [id DH]
+    └─ mul [id DI]
+       ├─ add [id DJ]
+       │  ├─ Switch [id DK]
+       │  │  ├─ i4 [id DL]
+       │  │  ├─ mul [id DM]
+       │  │  │  ├─ -0.04000000000000001 [id DN]
+       │  │  │  └─ i0 [id BV]
+       │  │  └─ 0.0 [id DO]
+       │  ├─ true_div [id DP]
+       │  │  ├─ i5 [id DQ]
+       │  │  └─ i6 [id DR]
+       │  ├─ true_div [id DS]
+       │  │  ├─ -1342.0 [id DT]
+       │  │  └─ i0 [id BV]
+       │  ├─ true_div [id DU]
+       │  │  ├─ neg [id DV]
+       │  │  │  └─ i7 [id DW]
+       │  │  └─ i6 [id DR]
+       │  ├─ true_div [id DX]
+       │  │  ├─ neg [id DY]
+       │  │  │  └─ i8 [id DZ]
+       │  │  └─ i6 [id DR]
+       │  └─ true_div [id EA]
+       │     ├─ neg [id EB]
+       │     │  └─ i9 [id EC]
+       │     └─ i6 [id DR]
+       └─ i0 [id BV]
+
+Composite{...} [id BZ]
+ ← Switch [id ED]
+    ├─ i0 [id EE]
+    ├─ sub [id EF]
+    │  ├─ add [id EG]
+    │  │  ├─ -0.9189385332046727 [id EH]
+    │  │  └─ mul [id EI]
+    │  │     ├─ -0.5 [id EJ]
+    │  │     └─ sqr [id EK]
+    │  │        └─ true_div [id EL]
+    │  │           ├─ sub [id EM]
+    │  │           │  ├─ i3 [id BJ]
+    │  │           │  └─ i4 [id BM]
+    │  │           └─ i2 [id BX]
+    │  └─ i1 [id BW]
+    └─ -inf [id EN]
+ ← sub [id EM]
+    └─ ···
+ ← mul [id EO]
+    ├─ true_div [id EL]
+    │  └─ ···
+    └─ sub [id EM]
+       └─ ···
+
+Composite{...} [id CM]
+ ← Switch [id EP]
+    ├─ i0 [id EE]
+    ├─ Switch [id EQ]
+    │  ├─ i1 [id ER]
+    │  ├─ Switch [id ES]
+    │  │  ├─ LT [id ET]
+    │  │  │  ├─ true_div [id EU]
+    │  │  │  │  ├─ sub [id EV]
+    │  │  │  │  │  ├─ i5 [id DQ]
+    │  │  │  │  │  └─ i6 [id DR]
+    │  │  │  │  └─ i4 [id BM]
+    │  │  │  └─ -1.0 [id EW]
+    │  │  ├─ sub [id EX]
+    │  │  │  ├─ log [id EY]
+    │  │  │  │  └─ mul [id EZ]
+    │  │  │  │     ├─ 0.5 [id FA]
+    │  │  │  │     └─ erfcx [id FB]
+    │  │  │  │        └─ true_div [id FC]
+    │  │  │  │           ├─ mul [id FD]
+    │  │  │  │           │  ├─ -0.7071067932881648 [id FE]
+    │  │  │  │           │  └─ sub [id EV]
+    │  │  │  │           │     └─ ···
+    │  │  │  │           └─ i4 [id BM]
+    │  │  │  └─ mul [id FF]
+    │  │  │     ├─ 0.5 [id FA]
+    │  │  │     └─ sqr [id FG]
+    │  │  │        └─ true_div [id EU]
+    │  │  │           └─ ···
+    │  │  └─ log1p [id FH]
+    │  │     └─ mul [id FI]
+    │  │        ├─ -0.5 [id FJ]
+    │  │        └─ erfc [id FK]
+    │  │           └─ true_div [id FL]
+    │  │              ├─ mul [id FM]
+    │  │              │  ├─ 0.7071067932881648 [id FN]
+    │  │              │  └─ sub [id EV]
+    │  │              │     └─ ···
+    │  │              └─ i4 [id BM]
+    │  └─ -inf [id FO]
+    └─ Switch [id FP]
+       ├─ i2 [id FQ]
+       ├─ Switch [id FR]
+       │  ├─ i1 [id ER]
+       │  ├─ Switch [id FS]
+       │  │  ├─ GT [id FT]
+       │  │  │  ├─ true_div [id EU]
+       │  │  │  │  └─ ···
+       │  │  │  └─ 1.0 [id FU]
+       │  │  ├─ sub [id FV]
+       │  │  │  ├─ log [id FW]
+       │  │  │  │  └─ mul [id FX]
+       │  │  │  │     ├─ 0.5 [id FA]
+       │  │  │  │     └─ erfcx [id FY]
+       │  │  │  │        └─ true_div [id FL]
+       │  │  │  │           └─ ···
+       │  │  │  └─ mul [id FF]
+       │  │  │     └─ ···
+       │  │  └─ log1p [id FZ]
+       │  │     └─ mul [id GA]
+       │  │        ├─ -0.5 [id FJ]
+       │  │        └─ erfc [id GB]
+       │  │           └─ true_div [id FC]
+       │  │              └─ ···
+       │  └─ -inf [id FO]
+       └─ Switch [id GC]
+          ├─ i1 [id ER]
+          ├─ sub [id GD]
+          │  ├─ add [id GE]
+          │  │  ├─ -0.9189385332046727 [id GF]
+          │  │  └─ mul [id GG]
+          │  │     ├─ -0.5 [id FJ]
+          │  │     └─ sqr [id FG]
+          │  │        └─ ···
+          │  └─ i3 [id BJ]
+          └─ -inf [id FO]
+ ← mul [id GH]
+    ├─ add [id GI]
+    │  ├─ Switch [id GJ]
+    │  │  ├─ LT [id ET]
+    │  │  │  └─ ···
+    │  │  ├─ 0.0 [id GK]
+    │  │  └─ Switch [id GL]
+    │  │     ├─ i0 [id EE]
+    │  │     ├─ true_div [id GM]
+    │  │     │  ├─ mul [id GN]
+    │  │     │  │  ├─ 0.3989422872290391 [id GO]
+    │  │     │  │  └─ exp [id GP]
+    │  │     │  │     └─ true_div [id GQ]
+    │  │     │  │        ├─ mul [id GR]
+    │  │     │  │        │  ├─ -0.5000000171142714 [id GS]
+    │  │     │  │        │  ├─ sub [id EV]
+    │  │     │  │        │  │  └─ ···
+    │  │     │  │        │  └─ sub [id EV]
+    │  │     │  │        │     └─ ···
+    │  │     │  │        └─ i7 [id DW]
+    │  │     │  └─ add [id GT]
+    │  │     │     ├─ 1.0 [id GU]
+    │  │     │     └─ mul [id FI]
+    │  │     │        └─ ···
+    │  │     └─ 0.0 [id GK]
+    │  └─ Switch [id GV]
+    │     ├─ GT [id FT]
+    │     │  └─ ···
+    │     ├─ Switch [id GW]
+    │     │  ├─ i2 [id FQ]
+    │     │  ├─ Switch [id GX]
+    │     │  │  ├─ i0 [id EE]
+    │     │  │  ├─ 0.0 [id GK]
+    │     │  │  └─ mul [id GY]
+    │     │  │     ├─ 0.7071067932881648 [id FN]
+    │     │  │     └─ add [id GZ]
+    │     │  │        ├─ true_div [id HA]
+    │     │  │        │  ├─ -1.1283791670955126 [id HB]
+    │     │  │        │  └─ erfcx [id FY]
+    │     │  │        │     └─ ···
+    │     │  │        └─ true_div [id HC]
+    │     │  │           ├─ mul [id HD]
+    │     │  │           │  ├─ 1.4142135865763297 [id HE]
+    │     │  │           │  └─ sub [id EV]
+    │     │  │           │     └─ ···
+    │     │  │           └─ i4 [id BM]
+    │     │  └─ 0.0 [id GK]
+    │     └─ 0.0 [id GK]
+    └─ sub [id EV]
+       └─ ···
+ ← mul [id HF]
+    ├─ add [id HG]
+    │  ├─ Switch [id HH]
+    │  │  ├─ LT [id ET]
+    │  │  │  └─ ···
+    │  │  ├─ Switch [id HI]
+    │  │  │  ├─ i0 [id EE]
+    │  │  │  ├─ mul [id HJ]
+    │  │  │  │  ├─ -0.7071067932881648 [id FE]
+    │  │  │  │  └─ add [id HK]
+    │  │  │  │     ├─ true_div [id HL]
+    │  │  │  │     │  ├─ -1.1283791670955126 [id HB]
+    │  │  │  │     │  └─ erfcx [id FB]
+    │  │  │  │     │     └─ ···
+    │  │  │  │     └─ true_div [id HM]
+    │  │  │  │        ├─ mul [id HN]
+    │  │  │  │        │  ├─ -1.4142135865763297 [id HO]
+    │  │  │  │        │  └─ sub [id EV]
+    │  │  │  │        │     └─ ···
+    │  │  │  │        └─ i4 [id BM]
+    │  │  │  └─ 0.0 [id GK]
+    │  │  └─ 0.0 [id GK]
+    │  └─ Switch [id HP]
+    │     ├─ GT [id FT]
+    │     │  └─ ···
+    │     ├─ 0.0 [id GK]
+    │     └─ Switch [id HQ]
+    │        ├─ i2 [id FQ]
+    │        ├─ Switch [id HR]
+    │        │  ├─ i0 [id EE]
+    │        │  ├─ 0.0 [id GK]
+    │        │  └─ true_div [id HS]
+    │        │     ├─ mul [id HT]
+    │        │     │  ├─ -0.3989422872290391 [id HU]
+    │        │     │  └─ exp [id GP]
+    │        │     │     └─ ···
+    │        │     └─ add [id HV]
+    │        │        ├─ 1.0 [id GU]
+    │        │        └─ mul [id GA]
+    │        │           └─ ···
+    │        └─ 0.0 [id GK]
+    └─ sub [id EV]
+       └─ ···
+ ← add [id HW]
+    ├─ true_div [id HX]
+    │  ├─ mul [id HY]
+    │  │  ├─ add [id HZ]
+    │  │  │  ├─ Switch [id IA]
+    │  │  │  │  ├─ LT [id ET]
+    │  │  │  │  │  └─ ···
+    │  │  │  │  ├─ i9 [id EC]
+    │  │  │  │  └─ 0.0 [id GK]
+    │  │  │  └─ Switch [id IB]
+    │  │  │     ├─ GT [id FT]
+    │  │  │     │  └─ ···
+    │  │  │     ├─ i8 [id DZ]
+    │  │  │     └─ 0.0 [id GK]
+    │  │  ├─ sub [id EV]
+    │  │  │  └─ ···
+    │  │  └─ sub [id EV]
+    │  │     └─ ···
+    │  └─ i4 [id BM]
+    └─ Switch [id IC]
+       ├─ i2 [id FQ]
+       ├─ 0.0 [id GK]
+       └─ Switch [id ID]
+          ├─ i0 [id EE]
+          ├─ 0.0 [id GK]
+          └─ mul [id IE]
+             ├─ -1.0 [id IF]
+             ├─ true_div [id EU]
+             │  └─ ···
+             └─ sub [id EV]
+                └─ ···
+ ← add [id IG]
+    ├─ true_div [id IH]
+    │  ├─ mul [id II]
+    │  │  ├─ add [id HZ]
+    │  │  │  └─ ···
+    │  │  └─ sub [id EV]
+    │  │     └─ ···
+    │  └─ i7 [id DW]
+    ├─ Switch [id IJ]
+    │  ├─ i2 [id FQ]
+    │  ├─ 0.0 [id GK]
+    │  └─ Switch [id IK]
+    │     ├─ i0 [id EE]
+    │     ├─ 0.0 [id GK]
+    │     └─ true_div [id IL]
+    │        ├─ neg [id IM]
+    │        │  └─ true_div [id EU]
+    │        │     └─ ···
+    │        └─ i4 [id BM]
+    ├─ mul [id IN]
+    │  ├─ -0.7071067932881648 [id FE]
+    │  └─ add [id IO]
+    │     ├─ Switch [id IP]
+    │     │  ├─ LT [id ET]
+    │     │  │  └─ ···
+    │     │  ├─ Switch [id IQ]
+    │     │  │  ├─ i0 [id EE]
+    │     │  │  ├─ true_div [id IR]
+    │     │  │  │  ├─ add [id HK]
+    │     │  │  │  │  └─ ···
+    │     │  │  │  └─ i4 [id BM]
+    │     │  │  └─ 0.0 [id GK]
+    │     │  └─ 0.0 [id GK]
+    │     └─ Switch [id IS]
+    │        ├─ GT [id FT]
+    │        │  └─ ···
+    │        ├─ 0.0 [id GK]
+    │        └─ Switch [id IT]
+    │           ├─ i2 [id FQ]
+    │           ├─ Switch [id IU]
+    │           │  ├─ i0 [id EE]
+    │           │  ├─ 0.0 [id GK]
+    │           │  └─ true_div [id IV]
+    │           │     ├─ true_div [id IW]
+    │           │     │  ├─ mul [id IX]
+    │           │     │  │  ├─ 0.5641895835477563 [id IY]
+    │           │     │  │  └─ exp [id GP]
+    │           │     │  │     └─ ···
+    │           │     │  └─ add [id HV]
+    │           │     │     └─ ···
+    │           │     └─ i4 [id BM]
+    │           └─ 0.0 [id GK]
+    └─ mul [id IZ]
+       ├─ 0.7071067932881648 [id FN]
+       └─ add [id JA]
+          ├─ Switch [id JB]
+          │  ├─ LT [id ET]
+          │  │  └─ ···
+          │  ├─ 0.0 [id GK]
+          │  └─ Switch [id JC]
+          │     ├─ i0 [id EE]
+          │     ├─ true_div [id JD]
+          │     │  ├─ true_div [id JE]
+          │     │  │  ├─ mul [id IX]
+          │     │  │  │  └─ ···
+          │     │  │  └─ add [id GT]
+          │     │  │     └─ ···
+          │     │  └─ i4 [id BM]
+          │     └─ 0.0 [id GK]
+          └─ Switch [id JF]
+             ├─ GT [id FT]
+             │  └─ ···
+             ├─ Switch [id JG]
+             │  ├─ i2 [id FQ]
+             │  ├─ Switch [id JH]
+             │  │  ├─ i0 [id EE]
+             │  │  ├─ 0.0 [id GK]
+             │  │  └─ true_div [id JI]
+             │  │     ├─ add [id GZ]
+             │  │     │  └─ ···
+             │  │     └─ i4 [id BM]
+             │  └─ 0.0 [id GK]
+             └─ 0.0 [id GK]

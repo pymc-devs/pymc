@@ -1,0 +1,19 @@
+{
+  "normal": {
+    "DimShuffle": 4,
+    "Elemwise": 4,
+    "Subtensor": 3,
+    "Join": 1,
+    "FusedElemwise": 1
+  },
+  "normal_censored": {
+    "DimShuffle": 8,
+    "Elemwise": 4,
+    "Subtensor": 3,
+    "FusedElemwise": 2,
+    "Join": 1
+  },
+  "icdf": {
+    "Elemwise": 3
+  }
+}
