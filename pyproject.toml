@@ -1,6 +1,54 @@
 [build-system]
-requires = ["setuptools", "versioneer[toml]==0.29"]
+requires = ["setuptools>=77", "versioneer[toml]==0.29"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pymc"
+dynamic = ["version"]
+requires-python = ">=3.12,<3.15"
+authors = [{ name = "PyMC Developers", email = "pymc.devs@gmail.com" }]
+description = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with PyTensor"
+readme = "README.rst"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Operating System :: OS Independent",
+]
+keywords = [
+    "statistics",
+    "modelling",
+    "inference",
+    "probabilistic-programming",
+    "bayesian-inference",
+    "science",
+]
+dependencies = [
+    "arviz>=1.1.0,<2.0",
+    "cachetools>=4.2.1,<7",
+    "cloudpickle",
+    "numpy>=1.25.0",
+    "pandas>=0.24.0",
+    "pytensor>=3.2.2,<3.3",
+    "rich>=13.7.1",
+    "scipy>=1.4.1",
+    "threadpoolctl>=3.1.0,<4.0.0",
+    "typing-extensions>=3.7.4",
+]
+
+[project.urls]
+repository = "http://github.com/pymc-devs/pymc"
+
+[tool.setuptools.packages.find]
+include = ["pymc*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
