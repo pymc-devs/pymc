@@ -51,7 +51,6 @@ from pymc.distributions.continuous import (
     VonMises,
     Wald,
     Weibull,
-    ZeroOneInflatedBeta,
 )
 from pymc.distributions.custom import CustomDist, DensityDist
 from pymc.distributions.discrete import (
@@ -85,6 +84,7 @@ from pymc.distributions.mixture import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    ZeroOneInflatedBeta,
 )
 from pymc.distributions.multivariate import (
     CAR,
