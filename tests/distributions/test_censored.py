@@ -128,6 +128,35 @@ class TestCensored:
             [0, 0, 0.3, 0.2, 0.5, 0, 0],
         )
 
+    def test_censored_discrete_unbounded_side(self):
+        # An unbounded side must not upcast the censored variable to float
+        cat = pm.Categorical.dist([0.1, 0.2, 0.2, 0.3, 0.2], shape=())
+        eval_points = [-1, 0, 1, 2, 3, 4, 5]
+
+        # No censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=None, shape=())
+        assert censored_cat.dtype == "int64"
+        np.testing.assert_allclose(
+            logp(censored_cat, eval_points).exp().eval(),
+            [0, 0.1, 0.2, 0.2, 0.3, 0.2, 0],
+        )
+
+        # Left censoring
+        censored_cat = pm.Censored.dist(cat, lower=1, upper=None, shape=())
+        assert censored_cat.dtype == "int64"
+        np.testing.assert_allclose(
+            logp(censored_cat, eval_points).exp().eval(),
+            [0, 0, 0.3, 0.2, 0.3, 0.2, 0],
+        )
+
+        # Right censoring
+        censored_cat = pm.Censored.dist(cat, lower=None, upper=3, shape=())
+        assert censored_cat.dtype == "int64"
+        np.testing.assert_allclose(
+            logp(censored_cat, eval_points).exp().eval(),
+            [0, 0.1, 0.2, 0.2, 0.5, 0, 0],
+        )
+
     def test_censored_logcdf_continuous(self):
         norm = pm.Normal.dist(0, 1)
         eval_points = np.array([-np.inf, -2, -1, 0, 1, 2, np.inf])

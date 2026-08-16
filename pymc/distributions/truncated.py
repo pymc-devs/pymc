@@ -459,7 +459,7 @@ def truncated_logprob(op, values, *inputs, **kwargs):
 
 
 @_logcdf.register(TruncatedRV)
-def truncated_logcdf(op: TruncatedRV, value, *inputs, **kwargs):
+def truncated_logcdf(op: TruncatedRV, value, *inputs):
     *rv_inputs, lower, upper = inputs
 
     base_rv = op.base_rv_op.make_node(*rv_inputs).default_output()

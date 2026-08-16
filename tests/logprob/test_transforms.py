@@ -48,12 +48,17 @@ from pymc.distributions.discrete import Bernoulli
 from pymc.logprob.basic import conditional_logp, icdf, logccdf, logcdf, logp
 from pymc.logprob.transforms import (
     ArccoshTransform,
+    ArccosTransform,
     ArcsinhTransform,
+    ArcsinTransform,
     ArctanhTransform,
+    ArctanTransform,
     ChainedTransform,
     CoshTransform,
+    ErfcinvTransform,
     ErfcTransform,
     ErfcxTransform,
+    ErfinvTransform,
     ErfTransform,
     ExpTransform,
     LocTransform,
@@ -182,9 +187,14 @@ class TestTransform:
             ErfTransform(),
             ErfcTransform(),
             ErfcxTransform(),
+            ErfinvTransform(),
+            ErfcinvTransform(),
             SinhTransform(),
             CoshTransform(),
             TanhTransform(),
+            ArcsinTransform(),
+            ArccosTransform(),
+            ArctanTransform(),
             ArcsinhTransform(),
             ArccoshTransform(),
             ArctanhTransform(),
@@ -324,6 +334,29 @@ class TestLocScaleRVTransform:
             icdf_fn(scale_test_val, q_test_val),
             sp.stats.norm(0, scale_test_val).ppf(q_test_val),
         )
+
+    @pytest.mark.parametrize(
+        "pt_transform, scale",
+        [
+            (pt.deg2rad, np.pi / 180),
+            (pt.rad2deg, 180 / np.pi),
+        ],
+    )
+    def test_deg2rad_rad2deg_transform_rv(self, pt_transform, scale):
+        y_rv = pt_transform(pt.random.normal(0.5, 1, name="base_rv"))
+        y_rv.name = "y"
+        y_vv = y_rv.clone()
+
+        logp_fn = pytensor.function([y_vv], logp(y_rv, y_vv))
+        logcdf_fn = pytensor.function([y_vv], logcdf(y_rv, y_vv))
+        icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
+
+        y_test_val = 0.7
+        q_test_val = 0.3
+        ref_dist = sp.stats.norm(0.5 * scale, scale)
+        np.testing.assert_allclose(logp_fn(y_test_val), ref_dist.logpdf(y_test_val))
+        np.testing.assert_allclose(logcdf_fn(y_test_val), ref_dist.logcdf(y_test_val))
+        np.testing.assert_allclose(icdf_fn(q_test_val), ref_dist.ppf(q_test_val))
 
     def test_negated_rv_transform(self):
         x_rv = -pt.random.halfnormal()
@@ -525,8 +558,13 @@ def test_absolute_rv_transform(test_val):
         (pt.erf, ErfTransform()),
         (pt.erfc, ErfcTransform()),
         (pt.erfcx, ErfcxTransform()),
+        (pt.erfinv, ErfinvTransform()),
+        (pt.erfcinv, ErfcinvTransform()),
         (pt.sinh, SinhTransform()),
         (pt.tanh, TanhTransform()),
+        (pt.arcsin, ArcsinTransform()),
+        (pt.arccos, ArccosTransform()),
+        (pt.arctan, ArctanTransform()),
         (pt.arcsinh, ArcsinhTransform()),
         (pt.arccosh, ArccoshTransform()),
         (pt.arctanh, ArctanhTransform()),
@@ -555,10 +593,12 @@ def test_extra_bijective_rv_transforms(pt_transform, transform):
     [
         (pt.erfc, ErfcTransform()),
         (pt.erfcx, ErfcxTransform()),
+        (pt.erfcinv, ErfcinvTransform()),
+        (pt.arccos, ArccosTransform()),
     ],
 )
 def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
-    """Test logcdf for monotonically decreasing transforms (Erfc, Erfcx)."""
+    """Test logcdf for monotonically decreasing transforms."""
     base_rv = pt.random.normal(0.5, 1, name="base_rv")
     rv = pt_transform(base_rv)
 
@@ -572,6 +612,30 @@ def test_monotonically_decreasing_transform_logcdf(pt_transform, transform):
     np.testing.assert_allclose(
         rv_logcdf.eval({vv: vv_test}),
         expected_logcdf.eval({vv: vv_test}),
+    )
+
+
+@pytest.mark.parametrize(
+    "pt_transform, transform, decreasing",
+    [
+        (pt.arctan, ArctanTransform(), False),
+        (pt.erfcinv, ErfcinvTransform(), True),
+    ],
+)
+def test_monotonic_transform_icdf(pt_transform, transform, decreasing):
+    base_rv = pt.random.normal(0.5, 1, name="base_rv")
+    rv = pt_transform(base_rv)
+
+    vv = rv.clone()
+    rv_icdf = icdf(rv, vv)
+
+    q = 1 - vv if decreasing else vv
+    expected_icdf = transform.forward(icdf(base_rv, q))
+
+    vv_test = np.array(0.3)
+    np.testing.assert_allclose(
+        rv_icdf.eval({vv: vv_test}),
+        expected_icdf.eval({vv: vv_test}),
     )
 
 

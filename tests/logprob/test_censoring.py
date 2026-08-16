@@ -43,6 +43,9 @@ import scipy.stats as st
 
 from pymc import logp
 from pymc.logprob import conditional_logp
+from pymc.logprob.basic import icdf, logcdf
+from pymc.logprob.censoring import MeasurableClip
+from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
@@ -108,6 +111,33 @@ def test_one_sided_clip():
     assert np.all(np.array(logp_fn(2, -2)) != -np.inf)
     np.testing.assert_almost_equal(logp_fn(-1, 1), ref_scipy.logcdf(-1))
     np.testing.assert_almost_equal(logp_fn(1, -1), ref_scipy.logpdf(-1))
+
+
+@pytest.mark.parametrize("side", ("lower", "upper"))
+def test_one_sided_infinite_clip_discrete_base(side):
+    # Infinite bounds upcast the clip of a discrete variable to float,
+    # which must not prevent the logprob derivation
+    x_rv = pt.random.poisson(2)
+    cens_x_rv = pt.clip(x_rv, -np.inf, 4) if side == "upper" else pt.clip(x_rv, 1, np.inf)
+    assert cens_x_rv.dtype == "float64"
+
+    cens_x_vv = cens_x_rv.clone()
+    logprob = logp(cens_x_rv, cens_x_vv)
+    assert_no_rvs(logprob)
+
+    logp_fn = pytensor.function([cens_x_vv], logprob)
+    ref_scipy = st.poisson(2)
+
+    if side == "upper":
+        assert logp_fn(5) == -np.inf
+        np.testing.assert_allclose(logp_fn(0), ref_scipy.logpmf(0))
+        np.testing.assert_allclose(
+            logp_fn(4), np.logaddexp(ref_scipy.logsf(4), ref_scipy.logpmf(4))
+        )
+    else:
+        assert logp_fn(0) == -np.inf
+        np.testing.assert_allclose(logp_fn(1), ref_scipy.logcdf(1))
+        np.testing.assert_allclose(logp_fn(5), ref_scipy.logpmf(5))
 
 
 def test_useless_clip():
@@ -232,7 +262,9 @@ def test_clip_transform():
     assert np.isclose(obs_logp, exp_logp)
 
 
-@pytest.mark.parametrize("rounding_op", (pt.round, pt.floor, pt.ceil))
+@pytest.mark.parametrize(
+    "rounding_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
 def test_rounding(rounding_op):
     loc = 1
     scale = 2
@@ -247,12 +279,16 @@ def test_rounding(rounding_op):
     assert logprob is not None
 
     x_sp = st.norm(loc, scale)
-    if rounding_op == pt.round:
+    if rounding_op in (pt.round, pt.round_half_away_from_zero):
         expected_logp = np.log(x_sp.cdf(test_value + 0.5) - x_sp.cdf(test_value - 0.5))
     elif rounding_op == pt.floor:
         expected_logp = np.log(x_sp.cdf(test_value + 1.0) - x_sp.cdf(test_value))
     elif rounding_op == pt.ceil:
         expected_logp = np.log(x_sp.cdf(test_value) - x_sp.cdf(test_value - 1.0))
+    elif rounding_op == pt.trunc:
+        expected_logp = np.log(
+            x_sp.cdf(test_value + (test_value >= 0)) - x_sp.cdf(test_value - (test_value <= 0))
+        )
     else:
         raise NotImplementedError()
 
@@ -260,3 +296,190 @@ def test_rounding(rounding_op):
         logprob.eval({xr_vv: test_value}),
         expected_logp,
     )
+
+
+@pytest.mark.parametrize("rounding_op", (pt.floor, pt.ceil, pt.trunc))
+def test_rounding_discrete_base(rounding_op):
+    # A variable that already sits on the integers is only upcast by the rounding, so
+    # its own logprob applies unchanged (`pt.round` rejects integer inputs outright)
+    mu = 3
+    test_value = np.arange(0, 4)
+
+    x = pt.random.poisson(mu, size=test_value.shape, name="x")
+    xr = rounding_op(x)
+    xr_vv = xr.clone()
+
+    np.testing.assert_allclose(
+        logp(xr, xr_vv).eval({xr_vv: test_value}),
+        st.poisson(mu).logpmf(test_value),
+    )
+
+
+@pytest.mark.parametrize(
+    "outer_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
+@pytest.mark.parametrize("inner_op", (pt.floor, pt.ceil, pt.trunc))
+def test_rounding_rounded_base(outer_op, inner_op):
+    # The inner rounding leaves the variable on the integers, where the outer one is an
+    # identity, so the logprob is that of the inner rounding alone
+    loc = 1
+    scale = 2
+    test_value = np.arange(-3, 4, dtype="float64")
+
+    x = pt.random.normal(loc, scale, size=test_value.shape, name="x")
+    inner = inner_op(x)
+
+    outer_vv = outer_op(inner).clone()
+    inner_vv = inner.clone()
+
+    np.testing.assert_allclose(
+        logp(outer_op(inner), outer_vv).eval({outer_vv: test_value}),
+        logp(inner, inner_vv).eval({inner_vv: test_value}),
+    )
+
+
+@pytest.mark.parametrize(
+    "rounding_op", (pt.round, pt.round_half_away_from_zero, pt.floor, pt.ceil, pt.trunc)
+)
+def test_rounding_censored_base_not_measurable(rounding_op):
+    # A clipped variable pools mass at its bounds, so it is not continuous, but its
+    # float dtype does not say so and we do not infer it (see
+    # https://github.com/pymc-devs/pymc/issues/6360). Fail rather than treat the base as
+    # continuous, which pools the mass at the upper bound into the neighbouring cell and
+    # leaves the bound itself with a probability of zero.
+    x = pt.random.normal(1, 2, size=(7,), name="x")
+    y = rounding_op(pt.clip(x, 0, 3))
+
+    with pytest.raises(NotImplementedError):
+        logp(y, y.clone())
+
+
+@pytest.mark.parametrize("swap_args", (False, True))
+def test_maximum_minimum_censoring(swap_args):
+    x_rv = pt.random.normal(0.5, 1)
+    if swap_args:
+        lb_cens_x_rv = pt.maximum(-1.0, x_rv)
+        ub_cens_x_rv = pt.minimum(1.0, x_rv)
+    else:
+        lb_cens_x_rv = pt.maximum(x_rv, -1.0)
+        ub_cens_x_rv = pt.minimum(x_rv, 1.0)
+
+    lb_cens_x_vv = lb_cens_x_rv.clone()
+    ub_cens_x_vv = ub_cens_x_rv.clone()
+
+    lb_logp = logp(lb_cens_x_rv, lb_cens_x_vv)
+    ub_logp = logp(ub_cens_x_rv, ub_cens_x_vv)
+    assert_no_rvs(lb_logp)
+    assert_no_rvs(ub_logp)
+
+    logp_fn = pytensor.function([lb_cens_x_vv, ub_cens_x_vv], [lb_logp, ub_logp])
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(logp_fn(-1, 1), [ref_scipy.logcdf(-1), ref_scipy.logsf(1)])
+    np.testing.assert_allclose(logp_fn(0, 0), ref_scipy.logpdf(0))
+    assert np.all(np.array(logp_fn(-2, 2)) == -np.inf)
+
+
+@pytest.mark.parametrize("max_of_min", (False, True))
+def test_two_sided_maximum_minimum_censoring(max_of_min):
+    x_rv = pt.random.normal(0.5, 1)
+    if max_of_min:
+        cens_x_rv = pt.maximum(pt.minimum(x_rv, 1.5), 0.3)
+    else:
+        cens_x_rv = pt.minimum(pt.maximum(x_rv, 0.3), 1.5)
+
+    cens_x_vv = cens_x_rv.clone()
+    logprob = logp(cens_x_rv, cens_x_vv)
+    assert_no_rvs(logprob)
+
+    logp_fn = pytensor.function([cens_x_vv], logprob)
+    ref_scipy = st.norm(0.5, 1)
+
+    assert logp_fn(0.0) == -np.inf
+    assert logp_fn(2.0) == -np.inf
+    np.testing.assert_allclose(logp_fn(0.3), ref_scipy.logcdf(0.3))
+    np.testing.assert_allclose(logp_fn(1.5), ref_scipy.logsf(1.5))
+    np.testing.assert_allclose(logp_fn(1.0), ref_scipy.logpdf(1.0))
+
+
+def test_discrete_maximum_minimum_censoring():
+    x_rv = pt.random.poisson(2)
+    lb_cens_x_rv = pt.maximum(x_rv, 1)
+    ub_cens_x_rv = pt.minimum(x_rv, 4)
+
+    lb_cens_x_vv = lb_cens_x_rv.clone()
+    ub_cens_x_vv = ub_cens_x_rv.clone()
+    lb_logp = logp(lb_cens_x_rv, lb_cens_x_vv)
+    ub_logp = logp(ub_cens_x_rv, ub_cens_x_vv)
+    assert_no_rvs(lb_logp)
+    assert_no_rvs(ub_logp)
+
+    logp_fn = pytensor.function([lb_cens_x_vv, ub_cens_x_vv], [lb_logp, ub_logp])
+    ref_scipy = st.poisson(2)
+
+    np.testing.assert_allclose(
+        logp_fn(1, 4),
+        [ref_scipy.logcdf(1), np.logaddexp(ref_scipy.logsf(4), ref_scipy.logpmf(4))],
+    )
+    np.testing.assert_allclose(logp_fn(2, 2), ref_scipy.logpmf(2))
+    assert np.all(np.array(logp_fn(0, 5)) == -np.inf)
+
+    # Two-sided matches the equivalent clip
+    cens_x_rv = pt.maximum(pt.minimum(x_rv, 4), 1)
+    cens_x_vv = cens_x_rv.clone()
+    two_sided_logp_fn = pytensor.function([cens_x_vv], logp(cens_x_rv, cens_x_vv))
+    np.testing.assert_allclose(two_sided_logp_fn(1), ref_scipy.logcdf(1))
+    np.testing.assert_allclose(
+        two_sided_logp_fn(4), np.logaddexp(ref_scipy.logsf(4), ref_scipy.logpmf(4))
+    )
+    np.testing.assert_allclose(two_sided_logp_fn(2), ref_scipy.logpmf(2))
+
+
+def test_maximum_of_two_rvs_not_claimed_as_censoring():
+    x_rv = pt.random.normal()
+    y_rv = pt.random.normal()
+    z_rv = pt.maximum(x_rv, y_rv)
+
+    with pytest.raises(NotImplementedError):
+        logp(z_rv, z_rv.clone())
+
+
+def test_clip_logcdf_icdf():
+    x_rv = pt.random.normal(0.5, 1)
+    cens_x_rv = pt.clip(x_rv, 0.3, 1.5)
+    cens_x_vv = cens_x_rv.clone()
+
+    cens_logcdf = logcdf(cens_x_rv, cens_x_vv)
+    cens_icdf = icdf(cens_x_rv, cens_x_vv)
+    logcdf_fn = pytensor.function([cens_x_vv], cens_logcdf)
+    icdf_fn = pytensor.function([cens_x_vv], cens_icdf)
+    ref_scipy = st.norm(0.5, 1)
+
+    assert logcdf_fn(0.1) == -np.inf
+    np.testing.assert_allclose(logcdf_fn(0.3), ref_scipy.logcdf(0.3))
+    np.testing.assert_allclose(logcdf_fn(1.0), ref_scipy.logcdf(1.0))
+    assert logcdf_fn(1.5) == 0.0
+    assert logcdf_fn(2.0) == 0.0
+
+    # The point masses at the bounds absorb the tail quantiles
+    np.testing.assert_allclose(icdf_fn(0.05), 0.3)
+    np.testing.assert_allclose(icdf_fn(0.5), ref_scipy.ppf(0.5))
+    np.testing.assert_allclose(icdf_fn(0.99), 1.5)
+
+
+def test_nested_clip_fusion():
+    x_rv = pt.random.normal(0.5, 1)
+    # Bounds combine with maximum/minimum: equivalent to clip(x, 0, 1)
+    cens_x_rv = pt.clip(pt.clip(x_rv, -1.0, 1.0), 0.0, 2.0)
+    cens_x_vv = cens_x_rv.clone()
+
+    fgraph = construct_ir_fgraph({cens_x_rv: cens_x_vv})
+    assert sum(isinstance(node.op, MeasurableClip) for node in fgraph.toposort()) == 1
+
+    logp_fn = pytensor.function([cens_x_vv], logp(cens_x_rv, cens_x_vv))
+    ref_scipy = st.norm(0.5, 1)
+
+    np.testing.assert_allclose(logp_fn(0.0), ref_scipy.logcdf(0.0))
+    np.testing.assert_allclose(logp_fn(1.0), ref_scipy.logsf(1.0))
+    np.testing.assert_allclose(logp_fn(0.5), ref_scipy.logpdf(0.5))
+    assert logp_fn(1.5) == -np.inf

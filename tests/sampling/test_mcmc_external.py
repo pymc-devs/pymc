@@ -101,6 +101,28 @@ def test_step_args():
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
 
+def test_jax_sampler_kwargs_routing():
+    pytest.importorskip("numpyro")
+
+    # `chain_method` and `max_tree_depth` share the single `nuts` dict but belong to
+    # different layers: the former is a `sample_jax_nuts` argument, the latter a
+    # NUTS-kernel one. Their effects are not observable in the returned trace, so the
+    # dispatch is checked at the call `_sample_external_nuts` makes to the sampler.
+    with mock.patch("pymc.sampling.jax.sample_jax_nuts") as mock_sampler:
+        with Model():
+            Normal("a")
+            sample(
+                nuts_sampler="numpyro",
+                nuts={"chain_method": "vectorized", "max_tree_depth": 7},
+                random_seed=1411,
+                progressbar=False,
+            )
+
+    call_kwargs = mock_sampler.call_args.kwargs
+    assert call_kwargs["chain_method"] == "vectorized"
+    assert call_kwargs["nuts_kwargs"] == {"max_tree_depth": 7}
+
+
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
     if nuts_sampler != "pymc":

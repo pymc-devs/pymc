@@ -2071,7 +2071,7 @@ class KroneckerNormal(Continuous):
         logdet = pt.sum(pt.log(eigs))
 
         # Square each sample
-        quad = pt.batched_dot(sqrt_quad.T, sqrt_quad.T)
+        quad = pt.vecdot(sqrt_quad.T, sqrt_quad.T)
         if onedim:
             quad = quad[0]
 

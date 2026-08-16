@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import singledispatch
 
 import numpy as np
@@ -45,7 +47,7 @@ __all__ = [
     "logodds",
     "ordered",
     "simplex",
-    "sum_to_1",
+    "sum_to_1",  # noqa: F822
 ]
 
 
@@ -57,6 +59,7 @@ def _default_transform(op: Op, rv: TensorVariable):
 
 class LogExpM1(Transform):
     name = "log_exp_m1"
+    ndim_supp = 0
 
     def backward(self, value, *inputs):
         return pt.softplus(value)
@@ -84,6 +87,7 @@ class Ordered(Transform):
     """
 
     name = "ordered"
+    ndim_supp = 1
 
     def __init__(self, positive=False, ascending=True):
         self.positive = positive
@@ -124,6 +128,7 @@ class SumTo1(Transform):
     """
 
     name = "sumto1"
+    ndim_supp = 1
 
     def backward(self, value, *inputs):
         remaining = 1 - pt.sum(value[..., :], axis=-1, keepdims=True)
@@ -179,6 +184,7 @@ class CholeskyCorrTransform(Transform):
     """
 
     name = "cholesky_corr"
+    ndim_supp = 1
 
     def __init__(self, n, upper: bool = False):
         """
@@ -425,6 +431,7 @@ class CholeskyCovPacked(Transform):
     """Transforms the diagonal elements of the LKJCholeskyCov distribution to be on the log scale."""
 
     name = "cholesky-cov-packed"
+    ndim_supp = 1
 
     def __init__(self, n):
         """Create a CholeskyCovPack object.
@@ -494,6 +501,7 @@ class CholeskyCovTransform(Transform):
     """
 
     name = "cholesky-cov"
+    ndim_supp = 1
 
     def __init__(self, n):
         """Create a CholeskyCovTransform.
@@ -649,6 +657,7 @@ class ZeroSumTransform(Transform):
 
     def __init__(self, zerosum_axes):
         self.zerosum_axes = tuple(int(axis) for axis in zerosum_axes)
+        self.ndim_supp = len(self.zerosum_axes)
 
     @staticmethod
     def extend_axis(array, axis):
@@ -702,12 +711,24 @@ log.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.LogTransform`
 for use in the ``transform`` argument of a random variable."""
 
-sum_to_1 = SumTo1()
-sum_to_1.__doc__ = """
-Instantiation of :class:`pymc.distributions.transforms.SumTo1`
+_sum_to_1 = SumTo1()
+_sum_to_1.__doc__ = """
+Deprecated instantiation of :class:`pymc.distributions.transforms.SumTo1`
 for use in the ``transform`` argument of a random variable."""
 
 circular = CircularTransform()
 circular.__doc__ = """
 Instantiation of :class:`pymc.logprob.transforms.CircularTransform`
 for use in the ``transform`` argument of a random variable."""
+
+
+def __getattr__(name):
+    if name == "sum_to_1":
+        warnings.warn(
+            "The sum_to_1 transform is deprecated and will be removed in a future release. "
+            "Use the simplex transform instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return _sum_to_1
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

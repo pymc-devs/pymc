@@ -230,7 +230,23 @@ class BlockedStep(ABC, WithSamplingState):
         if hasattr(self, "tune"):
             self.tune = False
 
-    def set_rng(self, rng: RandomGenerator):
+    def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
+        """Prepare the step method for sampling one chain.
+
+        Called once per chain, right before that chain starts sampling.
+        The same instance may be reused across chains, so implementations
+        must reset any per-chain state instead of accumulating it.
+
+        Parameters
+        ----------
+        rng : RandomGenerator
+            Random generator for this chain.
+        tune : int
+            Number of tuning iterations. Zero if the chain does not tune.
+        draws : int
+            Number of iterations after tuning. The chain runs ``tune + draws``
+            iterations in total.
+        """
         self.rng = get_random_generator(rng, copy=False)
 
 
@@ -297,6 +313,12 @@ class CompoundStep(WithSamplingState):
             if hasattr(method, "reset_tuning"):
                 method.reset_tuning()
 
+    def setup_chain(self, rng: RandomGenerator, tune: int, draws: int) -> None:
+        """Set up each wrapped step method with its own spawned random generator."""
+        rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
+        for method, method_rng in zip(self.methods, rngs):
+            method.setup_chain(method_rng, tune, draws)
+
     @property
     def sampling_state(self) -> DataClassState:
         return CompoundStepState(methods=[method.sampling_state for method in self.methods])
@@ -312,11 +334,6 @@ class CompoundStep(WithSamplingState):
     @property
     def vars(self) -> list[Variable]:
         return [var for method in self.methods for var in method.vars]
-
-    def set_rng(self, rng: RandomGenerator):
-        _rngs = get_random_generator(rng, copy=False).spawn(len(self.methods))
-        for method, _rng in zip(self.methods, _rngs):
-            method.set_rng(_rng)
 
     def _progressbar_config(self, n_chains=1):
         from functools import reduce

@@ -41,7 +41,7 @@ class MinibatchRandomVariable(MeasurableOp, Op):
         out = rv.type()
         return Apply(self, [rv, *total_size], [out])
 
-    def infer_shape(self, fgraph, node, shapes):
+    def infer_shape(self, node, shapes):
         return [shapes[0]]
 
     def perform(self, node, inputs, output_storage):

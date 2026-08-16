@@ -52,6 +52,7 @@ import collections
 import itertools
 import warnings
 
+from dataclasses import dataclass
 from typing import Any, overload
 
 import numpy as np
@@ -115,6 +116,23 @@ class ParametrizationError(VariationalInferenceError, ValueError):
 
 class GroupError(VariationalInferenceError, TypeError):
     """Error related to VI groups."""
+
+
+@dataclass
+class VIState:
+    """State of a fitted variational inference approximation.
+
+    Parameters
+    ----------
+    mean : Dataset
+        Posterior mean of each latent variable.
+    std : Dataset or None
+        Posterior standard deviation of each latent variable.
+        ``None`` for particle-based methods.
+    """
+
+    mean: Dataset
+    std: Dataset | None
 
 
 def _known_scan_ignored_inputs(terms):
@@ -1164,13 +1182,52 @@ class Group(WithMemoization):
 
     @property
     def mean_data(self) -> Dataset:
-        """Mean of the latent variables as an xarray Dataset."""
+        """Mean of the latent variables as an xarray Dataset.
+
+        These are the values the optimizer works with. For the
+        original model space, use :meth:`state` instead.
+        """
         return self.var_to_data(self.mean)
 
     @property
     def std_data(self) -> Dataset:
-        """Standard deviation of the latent variables as an xarray Dataset."""
+        """Standard deviation of the latent variables as an xarray Dataset.
+
+        These are the values the optimizer works with. For the
+        original model space, use :meth:`state` instead.
+        """
         return self.var_to_data(self.std)
+
+    @property
+    def state(self) -> VIState:
+        """Fit state with mean and std as xarray Datasets."""
+        from pymc.model.transform_values import constrain_values
+
+        include_transformed = getattr(self, "include_transformed", False)
+
+        def _constrain_flat(flat_tensor: pt.TensorVariable) -> Dataset:
+            ds = self.var_to_data(flat_tensor)
+            ds = ds.expand_dims("__sample__")
+            result = constrain_values(
+                ds,
+                model=self.model,
+                sample_dims=("__sample__",),
+                compile_kwargs={"mode": "FAST_COMPILE"},
+            )
+            return result.squeeze("__sample__", drop=True)
+
+        mean_ds = _constrain_flat(self.mean)
+        std_ds = _constrain_flat(self.std) if self.has_logq else None
+
+        if include_transformed:
+            mean_ds = mean_ds.merge(self.mean_data, compat="override")
+            if std_ds is not None:
+                std_ds = std_ds.merge(self.std_data, compat="override")
+
+        return VIState(
+            mean=mean_ds,
+            std=std_ds,
+        )
 
 
 group_for_params = Group.group_for_params

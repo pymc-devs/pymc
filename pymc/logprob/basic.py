@@ -203,7 +203,7 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         return expr
 
 
-def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
+def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
     """Create a graph for the log-CDF of a random variable.
 
     Parameters
@@ -291,20 +291,20 @@ def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) 
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return _logcdf_helper(rv, value, **kwargs)
+        return _logcdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
-        expr = _logcdf_helper(ir_rv, ir_value, **kwargs)
+        expr = _logcdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])
         return expr
 
 
-def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
+def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
     """Create a graph for the log complementary CDF (log survival function) of a random variable.
 
     The log complementary CDF is defined as log(1 - CDF(x)), also known as the
@@ -356,20 +356,20 @@ def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs)
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return _logccdf_helper(rv, value, **kwargs)
+        return _logccdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
-        expr = _logccdf_helper(ir_rv, ir_value, **kwargs)
+        expr = _logccdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])
         return expr
 
 
-def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
+def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
     """Create a graph for the inverse CDF of a random variable.
 
     Parameters
@@ -439,13 +439,13 @@ def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype="floatX")
     try:
-        return _icdf_helper(rv, value, **kwargs)
+        return _icdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
         [ir_valued_rv] = fgraph.outputs
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
-        expr = _icdf_helper(ir_rv, ir_value, **kwargs)
+        expr = _icdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])

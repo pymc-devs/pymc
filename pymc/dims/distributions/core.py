@@ -151,23 +151,23 @@ def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
 
 
 @_logcdf.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor_logcdf(op, value, rv, **kwargs):
+def measurable_xtensor_from_tensor_logcdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
-    rv_logcdf = _logcdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    rv_logcdf = _logcdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, rv_logcdf)
 
 
 @_logccdf.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor_logccdf(op, value, rv, **kwargs):
+def measurable_xtensor_from_tensor_logccdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
-    rv_logcdf = _logccdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    rv_logcdf = _logccdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, rv_logcdf)
 
 
 @_icdf.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor_icdf(op, value, rv, **kwargs):
+def measurable_xtensor_from_tensor_icdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
-    icdf = _icdf(rv.owner.op, tensor_value, *rv.owner.inputs, **kwargs)
+    icdf = _icdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, icdf)
 
 

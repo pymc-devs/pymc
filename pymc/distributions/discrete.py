@@ -390,6 +390,20 @@ class Bernoulli(Discrete):
             msg="0 <= p <= 1",
         )
 
+    def icdf(value, p):
+        res = pt.switch(
+            pt.le(value, 1 - p),
+            0,
+            1,
+        ).astype("int64")
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            0 <= p,
+            p <= 1,
+            msg="0 <= p <= 1",
+        )
+
 
 class DiscreteWeibullRV(SymbolicRandomVariable):
     name = "discrete_weibull"
@@ -685,7 +699,7 @@ class NegativeBinomial(Discrete):
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
-    def get_n_p(cls, mu=None, alpha=None, p=None, n=None):
+    def get_n_p(cls, mu=None, alpha=None, p=None, n=None, math=pt):
         if n is None:
             if alpha is not None:
                 n = alpha
@@ -696,7 +710,9 @@ class NegativeBinomial(Discrete):
 
         if p is None:
             if mu is not None:
-                p = n / (mu + n)
+                # n / (mu + n) in logit space, so a mu = exp(x) that overflows still
+                # yields finite logp and dlogp: log(mu) cancels back to x
+                p = math.sigmoid(math.log(n) - math.log(mu))
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
         elif mu is not None:
@@ -711,28 +727,30 @@ class NegativeBinomial(Discrete):
         return mu
 
     def logp(value, n, p):
-        alpha = n
-        mu = alpha * (1 - p) / p
+        # (1 - p) / p in log space: a p = sigmoid(w) that saturates at 1.0 carries no
+        # information, while the rewritten log terms still see w. Spelled log(1 - p)
+        # because the sigmoid stabilization rewrites do not recognize log1p(-p)
+        mu = n * pt.exp(pt.log(1 - p) - pt.log(p))
 
+        # binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
+        # their shared ulp once n is large, so fall back on the Poisson(mu) limit there.
         res = pt.switch(
-            pt.lt(value, 0),
-            -np.inf,
-            (
-                binomln(value + alpha - 1, value)
-                + logpow(mu / (mu + alpha), value)
-                + logpow(alpha / (mu + alpha), alpha)
-            ),
+            pt.gt(n, 1e10),
+            logpow(mu, value) - mu - factln(value),
+            binomln(value + n - 1, value) + logpow(1 - p, value) + logpow(p, n),
         )
+        res = pt.switch(pt.lt(value, 0), -np.inf, res)
 
-        negbinom = check_parameters(
+        # p == 0 is outside the support, but a valid tiny p can round to it: sigmoid(-800)
+        # is exactly 0.0 while log(p) is still -800. Checking 0 <= p instead of 0 < p keeps
+        # those usable, at the cost of returning the limiting -inf for a degenerate p == 0.
+        return check_parameters(
             res,
-            mu > 0,
-            alpha > 0,
-            msg="mu > 0, alpha > 0",
+            0 <= p,
+            p <= 1,
+            n > 0,
+            msg="0 <= p <= 1, n > 0",
         )
-
-        # Return Poisson when alpha gets very large.
-        return pt.switch(pt.gt(alpha, 1e10), logp(Poisson.dist(mu=mu), value), negbinom)
 
     def logcdf(value, n, p):
         res = pt.switch(

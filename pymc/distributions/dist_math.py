@@ -91,8 +91,19 @@ def check_icdf_value(expr: Variable, value: Variable) -> Variable:
 
 def logpow(x, m):
     """Calculate log(x**m) since m*log(x) will fail when m, x = 0."""
-    # return m * log(x)
-    return pt.switch(pt.eq(x, 0), pt.switch(pt.eq(m, 0), 0.0, -np.inf), m * pt.log(x))
+    # Guard on log(x), not on x. PyTensor stabilizes log(x) as a whole -- log(exp(a))
+    # becomes a, log1p(-sigmoid(a)) becomes -softplus(a) -- so log(x) stays finite
+    # when x merely collapsed to zero through underflow or cancellation, and is -inf
+    # only when x is genuinely zero. Testing x itself cannot tell those apart, and
+    # would discard a perfectly representable m * log(x) in the first case.
+    log_x = pt.log(x)
+    return pt.switch(
+        pt.and_(pt.eq(log_x, -np.inf), pt.le(m, 0)),
+        # 0 * log(0) is nan, and m * log(0) is +inf for m < 0 where we report -inf
+        # at the edge of the support
+        pt.switch(pt.eq(m, 0), 0.0, -np.inf),
+        m * log_x,
+    )
 
 
 def factln(n):

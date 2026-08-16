@@ -248,7 +248,8 @@ class _Process:
 
     def _start_loop(self):
         zarr_recording = self._zarr_recording
-        self._step_method.set_rng(self._rng)
+        # `_draws` already excludes tuning (see `draws -= tune` in `_mp_sample`)
+        self._step_method.setup_chain(self._rng, self._tune, self._draws)
 
         draw = 0
         tuning = True

@@ -15,7 +15,7 @@
 import warnings
 
 from collections.abc import Iterable, Sequence
-from typing import cast
+from typing import Literal, cast, overload
 
 import numpy as np
 import pandas as pd
@@ -23,7 +23,8 @@ import pytensor
 import pytensor.tensor as pt
 
 from pytensor.compile import Function, Mode, get_mode
-from pytensor.compile.builders import OpFromGraph
+from pytensor.compile.builders import OpFromGraph, SymbolicOp
+from pytensor.compile.rewriting import rewrite_inner_graph
 from pytensor.gradient import grad
 from pytensor.graph import rewrite_graph
 from pytensor.graph.basic import (
@@ -36,6 +37,7 @@ from pytensor.graph.basic import (
 from pytensor.graph.fg import FunctionGraph, Output
 from pytensor.graph.op import HasInnerGraph
 from pytensor.graph.replace import clone_replace
+from pytensor.graph.rewriting.basic import graph_rewriter
 from pytensor.graph.traversal import explicit_graph_inputs, graph_inputs, walk
 from pytensor.scalar.basic import Cast
 from pytensor.scan.op import Scan
@@ -47,7 +49,7 @@ from pytensor.tensor.random.variable import RandomGeneratorSharedVariable
 from pytensor.tensor.rewriting.basic import topo_unconditional_constant_folding
 from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
-from pytensor.tensor.subtensor import AdvancedIncSubtensor, AdvancedIncSubtensor1
+from pytensor.tensor.subtensor import AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
 from pytensor.utils import lazy_scipy_module
 
@@ -162,7 +164,7 @@ def extract_obs_data(x: TensorVariable) -> np.ndarray:
             return array_data.astype(x.type.dtype)
         if isinstance(x.owner.op, MinibatchOp):
             return extract_obs_data(x.owner.inputs[x.owner.outputs.index(x)])
-        if isinstance(x.owner.op, AdvancedIncSubtensor | AdvancedIncSubtensor1):
+        if isinstance(x.owner.op, AdvancedIncSubtensor):
             array_data = extract_obs_data(x.owner.inputs[0])
             mask_idx = tuple(extract_obs_data(i) for i in x.owner.inputs[2:])
             mask = np.zeros_like(array_data)
@@ -430,6 +432,14 @@ def make_shared_replacements(point, vars, model):
     Returns
     -------
     Dict of variable -> new shared variable
+
+    Notes
+    -----
+    A fresh shared variable per call means the compiled graph differs for every step method
+    instance, so these functions can never be served from a frozen model's compilation cache.
+    Making the shared variables depend only on the model, and swapping in per-instance ones
+    with ``Function.copy`` afterwards (as :meth:`ValueGradFunction.copy` does), would let
+    these steps reuse a cached graph as well.
     """
     vars_set = set(vars)
     return {
@@ -896,13 +906,37 @@ def resolve_backend_compile_kwargs(backend: str | None, compile_kwargs: dict | N
     return compile_kwargs
 
 
+@overload
 def compile(
     inputs,
     outputs,
-    random_seed: SeedSequenceSeed = None,
+    random_seed: SeedSequenceSeed | bool = None,
     mode=None,
+    return_updates: Literal[False] = False,
     **kwargs,
-) -> Function:
+) -> Function: ...
+
+
+@overload
+def compile(
+    inputs,
+    outputs,
+    random_seed: SeedSequenceSeed | bool = None,
+    mode=None,
+    *,
+    return_updates: Literal[True],
+    **kwargs,
+) -> tuple[Function, dict[Variable, Variable]]: ...
+
+
+def compile(
+    inputs,
+    outputs,
+    random_seed: SeedSequenceSeed | bool = None,
+    mode=None,
+    return_updates: bool = False,
+    **kwargs,
+) -> Function | tuple[Function, dict[Variable, Variable]]:
     """Use ``pytensor.function`` with specialized pymc rewrites always enabled.
 
     This function also ensures shared Generator used by RandomVariables
@@ -919,6 +953,9 @@ def compile(
         If not specified, the value of original shared variables will still be overwritten.
     mode: optional
         PyTensor mode used to compile the function
+    return_updates: bool, default False
+        Whether to also return the RNG update mapping that was collected from the graph.
+        Saves callers that need it from walking the graph a second time.
 
     Included rewrites
     -----------------
@@ -946,8 +983,9 @@ def compile(
         ],
     )
 
-    # We always reseed random variables as this provides RNGs with no chances of collision
-    if rng_updates:
+    # Reseed for collision-free RNGs, unless random_seed=False decouples seeding from
+    # compilation so the function can be cached and reseeded by the caller.
+    if rng_updates and random_seed is not False:
         rngs = cast(list[SharedVariable], list(rng_updates))
         reseed_rngs(rngs, random_seed)
 
@@ -973,6 +1011,8 @@ def compile(
         mode=mode,
         **kwargs,
     )
+    if return_updates:
+        return pytensor_function, rng_updates
     return pytensor_function
 
 
@@ -1031,9 +1071,34 @@ def get_symbolic_rv_shapes(
     return resolve_shapes([rv.shape for rv in rvs])
 
 
+@graph_rewriter
+def pregrad_inner_graphs(fgraph):
+    """Apply the pre-grad rewrites to the inner graph of every inner-graph op."""
+
+    def match(op):
+        # `SymbolicOp`s are what `symbolic_op_recognition` creates, so descending into
+        # one would recognize its own body inside itself and never terminate.
+        return (
+            isinstance(op, HasInnerGraph)
+            and hasattr(op, "clone_with_inner_graph")
+            and not isinstance(op, SymbolicOp)
+        )
+
+    def rewrite(linker, op, node, inner, *, mode):
+        rewrite_graph(
+            inner,
+            include=("canonicalize", "stabilize"),
+            custom_rewrite=pregrad_inner_graphs,
+        )
+
+    rewrite_inner_graph(fgraph, match, rewrite)
+
+
 def rewrite_pregrad(graph):
     """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
-    return rewrite_graph(graph, include=("canonicalize", "stabilize"))
+    return rewrite_graph(
+        graph, include=("canonicalize", "stabilize"), custom_rewrite=pregrad_inner_graphs
+    )
 
 
 def toposort_replace(

@@ -27,7 +27,7 @@ import numpy as np
 
 from pytensor import tensor as pt
 from pytensor.compile.builders import OpFromGraph
-from pytensor.graph import FunctionGraph, graph_replace, node_rewriter
+from pytensor.graph import FunctionGraph, node_rewriter
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.rewriting.basic import in2out
 from pytensor.graph.utils import MetaType
@@ -54,7 +54,6 @@ from pymc.distributions.shape_utils import (
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
-from pymc.printing import str_for_dist
 from pymc.pytensorf import (
     collect_default_updates_inner_fgraph,
     constant_fold,
@@ -153,21 +152,21 @@ class DistributionMeta(ABCMeta):
             if (class_logcdf := clsdict.get("logcdf")) is not None:
 
                 @_logcdf.register(rv_type)
-                def logcdf(op, value, *params, **kwargs):
+                def logcdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_logcdf(value, *dist_params), size)
 
             if (class_logccdf := clsdict.get("logccdf")) is not None:
 
                 @_logccdf.register(rv_type)
-                def logccdf(op, value, *params, **kwargs):
+                def logccdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_logccdf(value, *dist_params), size)
 
             if (class_icdf := clsdict.get("icdf")) is not None:
 
                 @_icdf.register(rv_type)
-                def icdf(op, value, *params, **kwargs):
+                def icdf(op, value, *params):
                     dist_params, size = _extract_dist_params_and_size(op, params)
                     return maybe_resize(class_icdf(value, *dist_params), size)
 
@@ -524,9 +523,9 @@ class Distribution(metaclass=DistributionMeta):
         rv : TensorVariable
             The created random variable tensor, registered in the Model.
         """
-        try:
-            from pymc.model import Model
+        from pymc.model.core import Model
 
+        try:
             model = Model.get_context()
         except TypeError:
             raise TypeError(
@@ -565,6 +564,8 @@ class Distribution(metaclass=DistributionMeta):
         )
 
         # add in pretty-printing support
+        from pymc.printing import str_for_dist
+
         rv_out.str_repr = types.MethodType(str_for_dist, rv_out)
         rv_out._repr_latex_ = types.MethodType(
             functools.partial(str_for_dist, formatting="latex"), rv_out
@@ -658,9 +659,7 @@ def inline_symbolic_random_variable(fgraph, node):
     """Expand a SymbolicRV when obtaining the logp graph if `inline_logprob` is True."""
     op = node.op
     if op.inline_logprob:
-        return graph_replace(
-            op.inner_outputs, dict(zip(op.inner_inputs, node.inputs)), strict=False
-        )
+        return op.fgraph.bind(node.inputs)
 
 
 # Registered before pre-canonicalization which happens at position=-10

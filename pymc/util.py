@@ -25,6 +25,7 @@ import numpy as np
 
 from cachetools import LRUCache, cachedmethod
 from pytensor.compile import SharedVariable
+from pytensor.compile.io import In, Out
 from pytensor.graph.basic import Variable
 from xarray import Dataset, DataTree
 
@@ -302,6 +303,13 @@ def hashable(a=None) -> int:
         # lists are mutable and not hashable by default
         # for memoization, we need the hash to depend on the items
         return hash(tuple(hashable(i) for i in a))
+    if isinstance(a, set | frozenset):
+        # same as for lists, but order-insensitive
+        return hash(frozenset(hashable(i) for i in a))
+    if isinstance(a, In | Out):
+        # these wrap a variable with compilation options and are hashed by identity,
+        # so hash what they hold instead
+        return hashable(a.__dict__)
     try:
         return hash(a)
     except TypeError:
@@ -321,18 +329,28 @@ def hash_key(*args, **kwargs):
 
 
 class HashableWrapper:
-    __slots__ = ("obj",)
+    __slots__ = ("_hash", "obj")
 
     def __init__(self, obj):
         self.obj = obj
+        self._hash = hashable(obj)
 
     def __hash__(self):
         """Return a hash of the object."""
-        return hashable(self.obj)
+        return self._hash
 
     def __eq__(self, other):
-        """Compare this object with `other`."""
-        return self.obj == other
+        """Compare this object with `other`.
+
+        Compares the types and the hashes computed by :func:`hashable`, since the wrapped
+        objects may not support equality that returns a bool (arrays, or containers holding
+        them).
+        """
+        return (
+            isinstance(other, HashableWrapper)
+            and type(self.obj) is type(other.obj)
+            and self._hash == other._hash
+        )
 
     def __repr__(self):
         """Return a string representation of the object."""
@@ -355,16 +373,29 @@ class WithMemoization:
         self.__dict__.update(state)
 
 
-def locally_cachedmethod(f):
+def locally_cachedmethod(f=None, *, ignore: Sequence[str] = ()):
+    """Cache a method's return value on ``self._cache``, keyed by the call arguments.
+
+    Keyword arguments named in ``ignore`` are left out of the cache key, for values that
+    the cached result does not depend on.
+    """
     from collections import defaultdict
 
-    def self_cache_fn(f_name):
-        def cf(self):
-            return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[f_name]
+    def decorator(f):
+        def self_cache_fn(f_name):
+            def cf(self):
+                return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[
+                    f_name
+                ]
 
-        return cf
+            return cf
 
-    return cachedmethod(self_cache_fn(f.__name__), key=hash_key)(f)
+        def key(*args, **kwargs):
+            return hash_key(*args, **{k: v for k, v in kwargs.items() if k not in ignore})
+
+        return cachedmethod(self_cache_fn(f.__name__), key=key)(f)
+
+    return decorator if f is None else decorator(f)
 
 
 def check_dist_not_registered(dist, model=None):

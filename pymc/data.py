@@ -38,7 +38,7 @@ from pymc.pytensorf import convert_data, rvs_in_graph
 from pymc.vartypes import isgenerator
 
 if typing.TYPE_CHECKING:
-    from pymc.model.core import Model
+    from pymc.model.core import BaseModel
 
 __all__ = [
     "Data",
@@ -156,7 +156,7 @@ def Minibatch(variable: TensorVariable, *variables: TensorVariable, batch_size: 
     mb_tensors = [tensor[mb_indices] for tensor in tensors]
 
     # Wrap graph in OFG so it's easily identifiable and not rewritten accidentally
-    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)
+    *mb_tensors, _ = MinibatchOp([*tensors, rng], [*mb_tensors, rng_update])(*tensors, rng)  # type: ignore[misc]
     for i, r in enumerate(mb_tensors[:-1]):
         r.name = f"minibatch.{i}"
 
@@ -226,7 +226,7 @@ def Data(
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
-    model: Union["Model", None] = None,
+    model: Union["BaseModel", None] = None,
     **kwargs,
 ) -> SharedVariable | TensorConstant:
     """Create a data container that registers a data variable with the model.
@@ -291,7 +291,7 @@ def Data(
     ...         model.set_data("data", data_vals)
     ...         idatas.append(pm.sample())
     """
-    from pymc.model.core import modelcontext
+    from pymc.model.core import Model, modelcontext
 
     if coords is None:
         coords = {}
@@ -307,6 +307,8 @@ def Data(
             "No model on context stack, which is needed to instantiate a data container. "
             "Add variable inside a 'with model:' block."
         )
+    if not isinstance(model, Model):
+        raise TypeError(f"Cannot add new data to an immutable {type(model).__name__}.")
     name = model.name_for(name)
 
     # Transform `value` it to something digestible for PyTensor.

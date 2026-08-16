@@ -61,9 +61,7 @@ from pytensor.tensor.rewriting.math import local_exp_over_1_plus_exp
 from pytensor.tensor.rewriting.shape import ShapeOptimizer
 from pytensor.tensor.subtensor import (
     AdvancedIncSubtensor,
-    AdvancedIncSubtensor1,
     AdvancedSubtensor,
-    AdvancedSubtensor1,
     IncSubtensor,
     Subtensor,
 )
@@ -73,8 +71,8 @@ from pymc.logprob.abstract import PromisedValuedRV, ValuedRV, valued_rv
 from pymc.logprob.utils import DiracDelta
 from pymc.pytensorf import toposort_replace
 
-inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor, AdvancedIncSubtensor1)
-subtensor_ops = (AdvancedSubtensor, AdvancedSubtensor1, Subtensor)
+inc_subtensor_ops = (IncSubtensor, AdvancedIncSubtensor)
+subtensor_ops = (AdvancedSubtensor, Subtensor)
 
 
 @node_rewriter([ValuedRV])
@@ -167,9 +165,19 @@ logprob_rewrites_db.register(
     "basic",
     position=0.9,
 )
+# local_join_dims/local_split_dims are excluded so that JoinDims/SplitDims survive
+# until the measurable rewrites (and their measurable subclasses survive after);
+# non-measurable ones are still lowered to Reshape when the logp graph is compiled
+CANONICALIZE_IR_QUERY_ARGS = (
+    "+canonicalize",
+    "-local_eager_useless_unbatched_blockwise",
+    "-local_join_dims",
+    "-local_split_dims",
+)
+
 logprob_rewrites_db.register(
     "pre-canonicalize",
-    optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
+    optdb.query(*CANONICALIZE_IR_QUERY_ARGS),
     "basic",
     position=1,
 )
@@ -205,7 +213,7 @@ logprob_rewrites_db.register(
 
 logprob_rewrites_db.register(
     "post-canonicalize",
-    optdb.query("+canonicalize", "-local_eager_useless_unbatched_blockwise"),
+    optdb.query(*CANONICALIZE_IR_QUERY_ARGS),
     "basic",
     position=4,
 )

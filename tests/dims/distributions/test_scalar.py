@@ -21,6 +21,7 @@ from pymc import distributions as regular_distributions
 from pymc.dims import (
     Beta,
     Cauchy,
+    DiracDelta,
     Exponential,
     Flat,
     Gamma,
@@ -336,4 +337,41 @@ def test_negative_binomial():
         regular_distributions.NegativeBinomial("x", mu=5.0, alpha=2.0, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+@pytest.mark.parametrize("c", [5.0, 3], ids=["float", "int"])
+def test_diracdelta(c):
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        DiracDelta("x", c, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.DiracDelta("x", c, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_diracdelta_scalar():
+    with Model() as model:
+        x = DiracDelta("x", 2.0)
+    assert x.type.dims == ()
+
+    with Model() as reference_model:
+        regular_distributions.DiracDelta("x", 2.0)
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_diracdelta_observed():
+    coords = {"a": range(3)}
+    observed = as_xtensor(np.array([1.0, 1.0, 1.0]), dims=("a",))
+    with Model(coords=coords) as model:
+        DiracDelta("x", 1.0, dims="a", observed=observed)
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.DiracDelta("x", 1.0, dims="a", observed=observed.values)
+
     assert_equivalent_logp_graph(model, reference_model)

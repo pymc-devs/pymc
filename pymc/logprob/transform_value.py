@@ -45,7 +45,7 @@ class TransformedValue(Op):
         warnings.warn("TransformedValue should not be present in the final graph!")
         outputs[0][0] = inputs[0]
 
-    def infer_shape(self, fgraph, node, input_shapes):
+    def infer_shape(self, node, input_shapes):
         return [input_shapes[0]]
 
 
@@ -72,7 +72,7 @@ class TransformedValueRV(MeasurableOp, Op):
             "`TransformedRV` `Op`s should be removed from graphs used for computation."
         )
 
-    def infer_shape(self, fgraph, node, input_shapes):
+    def infer_shape(self, node, input_shapes):
         return input_shapes
 
 

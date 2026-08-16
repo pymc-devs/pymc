@@ -41,6 +41,7 @@ from pymc.step_methods import (
     BinaryGibbsMetropolis,
     CategoricalGibbsMetropolis,
     CompoundStep,
+    DEMetropolis,
     HamiltonianMC,
     Metropolis,
     Slice,
@@ -341,6 +342,66 @@ class ApocalypticMetropolis(pm.Metropolis):
             "warn",
         )
         return draw, stats
+
+
+_SETUP_CHAIN_STATS = {
+    "setup_tune": (np.int64, []),
+    "setup_draws": (np.int64, []),
+}
+
+
+class SetupChainReporter:
+    """Mixin reporting the ``tune`` and ``draws`` passed to `setup_chain` as sampler stats.
+
+    Stats are used because they are the only channel that survives the round-trip
+    back from the worker processes of the multiprocess sampler.
+    """
+
+    def setup_chain(self, rng, tune, draws):
+        super().setup_chain(rng, tune, draws)
+        self._setup_tune = tune
+        self._setup_draws = draws
+
+    def astep(self, q0):
+        draw, stats = super().astep(q0)
+        stats[0]["setup_tune"] = self._setup_tune
+        stats[0]["setup_draws"] = self._setup_draws
+        return draw, stats
+
+
+class SetupChainMetropolis(SetupChainReporter, Metropolis):
+    stats_dtypes_shapes = {**Metropolis.stats_dtypes_shapes, **_SETUP_CHAIN_STATS}
+
+
+class SetupChainDEMetropolis(SetupChainReporter, DEMetropolis):
+    stats_dtypes_shapes = {**DEMetropolis.stats_dtypes_shapes, **_SETUP_CHAIN_STATS}
+
+
+@pytest.mark.parametrize(
+    "step_cls, chains, cores",
+    [
+        (SetupChainMetropolis, 1, 1),
+        (SetupChainMetropolis, 2, 2),
+        (SetupChainDEMetropolis, 4, 1),
+    ],
+    ids=["sequential", "multiprocess", "population"],
+)
+def test_setup_chain_receives_draw_counts(step_cls, chains, cores):
+    """Each sampling path must report `tune` and `draws` separately, not double-subtract."""
+    with pm.Model():
+        pm.Normal("x")
+        idata = pm.sample(
+            draws=7,
+            tune=3,
+            chains=chains,
+            cores=cores,
+            step=step_cls(),
+            progressbar=False,
+            compute_convergence_checks=False,
+        )
+
+    assert (idata.sample_stats["setup_tune"] == 3).all()
+    assert (idata.sample_stats["setup_draws"] == 7).all()
 
 
 class TestSampleReturn:

@@ -506,13 +506,27 @@ def _sample_external_nuts(
         import pymc.sampling.jax as pymc_jax
 
         jax_nuts_kwargs = dict(nuts_kwargs)
-        jax_target_accept = jax_nuts_kwargs.pop("target_accept", 0.8)
+        # `sample_jax_nuts` exposes several sampler-driver options as top-level
+        # arguments rather than NUTS-kernel kwargs. Lift any passed via `nuts`
+        # so they reach the sampler; the rest stay in `jax_nuts_kwargs` and are
+        # forwarded to the kernel. Unlifted options use `sample_jax_nuts`'s defaults.
+        jax_top_level_params = (
+            "target_accept",
+            "jitter",
+            "keep_untransformed",
+            "chain_method",
+            "postprocessing_backend",
+            "postprocessing_vectorize",
+            "postprocessing_chunks",
+        )
+        jax_top_level_kwargs = {
+            key: jax_nuts_kwargs.pop(key) for key in jax_top_level_params if key in jax_nuts_kwargs
+        }
         # Don't forward tune=None: let `sample_jax_nuts`'s own default kick in.
         tune_kwarg = {"tune": tune} if tune is not None else {}
         idata = pymc_jax.sample_jax_nuts(
             draws=draws,
             chains=chains,
-            target_accept=jax_target_accept,
             # jax samplers take a single master seed; `random_seed` here is the
             # per-chain list produced by `pm.sample`, so use the first entry.
             random_seed=int(random_seed[0]),
@@ -525,6 +539,7 @@ def _sample_external_nuts(
             nuts_kwargs=jax_nuts_kwargs,
             idata_kwargs=idata_kwargs,
             compute_convergence_checks=compute_convergence_checks,
+            **jax_top_level_kwargs,
             **tune_kwarg,
         )
         return idata
@@ -1527,7 +1542,8 @@ def _iter_sample(
     if draws < 1:
         raise ValueError("Argument `draws` must be greater than 0.")
 
-    step.set_rng(rng)
+    # `draws` includes tuning here, but `setup_chain` expects the two separately
+    step.setup_chain(rng, tune, draws - tune)
 
     point = start
     if isinstance(trace, _ZarrChainBase):

@@ -13,6 +13,7 @@
 #   limitations under the License.
 import functools
 import re
+import warnings
 
 from collections.abc import Callable, Sequence
 
@@ -39,7 +40,6 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import _change_dist_size, rv_size_is_none
 from pymc.exceptions import BlockModelAccessError
 from pymc.logprob.abstract import _logcdf, _logprob
-from pymc.model.core import new_or_existing_block_model_access
 from pymc.pytensorf import collect_default_updates
 
 
@@ -264,6 +264,8 @@ class _CustomSymbolicDist(Distribution):
         class_name: str,
         rng=None,
     ):
+        from pymc.model.core import new_or_existing_block_model_access
+
         size = normalize_size_param(size)
         # If it's NoneConst, just use that as the dummy
         dummy_size_param = size.type() if isinstance(size, TensorVariable) else size
@@ -408,7 +410,9 @@ class SupportPointRewrite(GraphRewriter):
         if not isinstance(node.op, Scan):
             return
 
-        node_inputs, node_outputs = node.op.inner_inputs, node.op.inner_outputs
+        # The Scan inner graph is frozen; work on a mutable copy
+        inner_fgraph = node.op.fgraph.unfreeze()
+        node_inputs, node_outputs = inner_fgraph.inputs, inner_fgraph.outputs
         op = node.op
 
         local_fgraph_topo = io_toposort(node_inputs, node_outputs)
@@ -461,11 +465,11 @@ def dist_support_point(op, rv, *args):
     node = rv.owner
     rv_out_idx = node.outputs.index(rv)
 
-    fgraph = op.fgraph.clone()
+    fgraph = op.fgraph.unfreeze()
     replace_support_point = SupportPointRewrite()
     replace_support_point.rewrite(fgraph)
     # Replace dummy inner inputs by outer inputs
-    fgraph.replace_all(tuple(zip(op.inner_inputs, args)), import_missing=True)
+    fgraph.replace_all(tuple(zip(fgraph.inputs, args)), import_missing=True)
     support_point = fgraph.outputs[rv_out_idx]
     return support_point
 
@@ -824,11 +828,13 @@ class CustomDist:
 
     @classmethod
     def is_symbolic_random(self, random, dist_params):
+        from pymc.model.core import new_or_existing_block_model_access
+
         if random is None:
             return False
         # Try calling random with symbolic inputs
+        size = normalize_size_param(None)
         try:
-            size = normalize_size_param(None)
             with new_or_existing_block_model_access(
                 error_msg_on_access="Model variables cannot be created in the random function. Use the `.dist` API to create such variables."
             ):
@@ -842,4 +848,27 @@ class CustomDist:
         return isinstance(out, Variable)
 
 
-DensityDist = CustomDist
+class DensityDist(CustomDist):
+    """Alias for :class:`~pymc.CustomDist`.
+
+    .. deprecated::
+        ``DensityDist`` is deprecated and will be removed in a future release.
+        Use :class:`~pymc.CustomDist` instead.
+    """
+
+    def __new__(cls, *args, **kwargs):
+        warnings.warn(
+            "DensityDist has been deprecated, use CustomDist instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return super().__new__(cls, *args, **kwargs)
+
+    @classmethod
+    def dist(cls, *args, **kwargs):
+        warnings.warn(
+            "DensityDist has been deprecated, use CustomDist instead.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        return super().dist(*args, **kwargs)

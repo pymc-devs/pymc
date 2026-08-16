@@ -325,7 +325,8 @@ def get_initval_from_scan_tap_input(inp) -> TensorVariable:
 @_logprob.register(MeasurableScan)
 def logprob_scan(op, values, *inputs, name=None, **kwargs):
     new_node = op.make_node(*inputs)
-    scan_args = ScanArgs.from_node(new_node)
+    # clone=True thaws the frozen inner graph into a mutable copy
+    scan_args = ScanArgs.from_node(new_node, clone=True)
     rv_outer_outs = get_random_outer_outputs(scan_args)
 
     # values = (pt.zeros(11)[1:].set(values[0]),)
@@ -446,8 +447,12 @@ def find_measurable_scans(fgraph, node):
     valued_output_idxs = [node.outputs.index(out) for out in valued_outputs]
 
     # Make inner graph measurable
+    # The inner graph of the Scan is frozen, so we work on a mutable clone
+    clone_fgraph = node.op.fgraph.unfreeze()
+    inner_inps = clone_fgraph.inputs
+    inner_outs = clone_fgraph.outputs
     mapping = node.op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
-    inner_rvs = [node.op.inner_outputs[mapping[idx][-1]] for idx in valued_output_idxs]
+    inner_rvs = [inner_outs[mapping[idx][-1]] for idx in valued_output_idxs]
     inner_fgraph = construct_ir_fgraph({rv: rv.type() for rv in inner_rvs})
     remove_valued_rvs(inner_fgraph)
     inner_rvs = list(inner_fgraph.outputs)
@@ -458,9 +463,6 @@ def find_measurable_scans(fgraph, node):
     # We must also replace any lingering references to the old RVs by the new measurable RVS
     # For example if we had measurable out1 = exp(normal()) and out2 = out1 - x
     # We need to replace references of original out1 by the new MeasurableExp(normal())
-    clone_fgraph = node.op.fgraph.clone()
-    inner_inps = clone_fgraph.inputs
-    inner_outs = clone_fgraph.outputs
     inner_rvs_replacements = []
     for idx, new_inner_rv in zip(valued_output_idxs, inner_rvs, strict=True):
         old_inner_rv = inner_outs[idx]

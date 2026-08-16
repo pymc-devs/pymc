@@ -49,7 +49,6 @@ from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
     AdvancedSubtensor,
-    AdvancedSubtensor1,
     Subtensor,
     as_index_constant,
 )
@@ -135,14 +134,10 @@ def test_mixture_basics():
     )
     assert np.isfinite(y_logp)
 
-    with pytest.raises(RuntimeError, match="could not be derived: {m}"):
+    # Symbolic join axes are rejected by PyTensor at graph construction
+    with pytest.raises(TypeError, match="axis of join must be a constant"):
         axis_at = pt.lscalar("axis")
-        env = create_mix_model((2,), axis_at)
-        I_rv = env["I_rv"]
-        i_vv = env["i_vv"]
-        M_rv = env["M_rv"]
-        m_vv = env["m_vv"]
-        conditional_logp({M_rv: m_vv, I_rv: i_vv})
+        create_mix_model((2,), axis_at)
 
 
 @pytest.mark.parametrize(
@@ -1128,7 +1123,7 @@ def test_joint_logprob_subtensor():
     #  (e.g., at least one of the advanced indexes has non-repeating values)
     A_idx = A_rv[I_rv, pt.ogrid[A_rv.shape[-1] :]]
 
-    assert isinstance(A_idx.owner.op, Subtensor | AdvancedSubtensor | AdvancedSubtensor1)
+    assert isinstance(A_idx.owner.op, Subtensor | AdvancedSubtensor)
 
     A_idx_value_var = A_idx.type()
     A_idx_value_var.name = "A_idx_value"

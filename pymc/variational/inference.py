@@ -112,6 +112,7 @@ class Inference:
         progressbar_theme=default_progress_theme,
         *,
         backend=None,
+        include_transformed=False,
         **kwargs,
     ):
         """Perform Operator Variational Inference.
@@ -179,6 +180,9 @@ class Inference:
         # hack to allow pm.fit() access to loss hist
         self.approx.hist = self.hist
         self.state = state
+
+        for group in self.approx.groups:
+            group.include_transformed = include_transformed
 
         return self.approx
 
@@ -698,6 +702,7 @@ def fit(
     inf_kwargs=None,
     *,
     backend=None,
+    include_transformed=False,
     **kwargs,
 ):
     r"""Handy shortcut for using inference methods in functional way.
@@ -725,6 +730,10 @@ def fit(
         starting standard deviation for inference, only available for method 'advi'
     backend: str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
+    include_transformed: bool, default False
+        If True, the :meth:`~Approximation.state` will also include the
+        unconstrained (transformed) variables alongside the original model
+        variables, similar to ``pm.sample(idata_kwargs={'include_transformed': True})``.
 
     Other Parameters
     ----------------
@@ -787,4 +796,4 @@ def fit(
         inference = method
     else:
         raise TypeError(f"method should be one of {set(_select.keys())} or Inference instance")
-    return inference.fit(n, backend=backend, **kwargs)
+    return inference.fit(n, backend=backend, include_transformed=include_transformed, **kwargs)

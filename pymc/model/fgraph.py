@@ -45,7 +45,7 @@ class ModelVar(Op):
         assert not self.dims or len(self.dims) == rv.type.ndim
         return Apply(self, [rv], [rv.type(name=self.name)])
 
-    def infer_shape(self, fgraph, node, inputs_shape):
+    def infer_shape(self, node, inputs_shape):
         return [inputs_shape[0]]
 
     def do_constant_folding(self, fgraph, node):
