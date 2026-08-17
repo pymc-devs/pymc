@@ -29,8 +29,14 @@ from pytensor.scalar import Cast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.type import TensorType
 
+from pymc.logprob.transforms import Transform
 from pymc.model.core import FrozenModel, Model
-from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
+from pymc.model.fgraph import (
+    ModelFreeRV,
+    ModelValuedVar,
+    fgraph_from_model,
+    model_from_fgraph,
+)
 
 
 def _constant_from_shared(shared: SharedVariable) -> Constant:
@@ -237,6 +243,14 @@ def freeze_model(model: Model) -> FrozenModel:
     return cast(FrozenModel, frozen_model)
 
 
+def _is_dtype(dtype, ref_dtype: str) -> bool:
+    """Whether `dtype` (a dtype-like or alias such as "float") normalizes to `ref_dtype`."""
+    try:
+        return dtype is not None and np.dtype(dtype).name == ref_dtype
+    except TypeError:
+        return False
+
+
 def _cast_root(var: Variable, from_dtype: str, to_dtype: str) -> Variable:
     """Return a `to_dtype` clone of a root variable (constant, shared or input)."""
     if getattr(var.type, "dtype", None) != from_dtype:
@@ -255,6 +269,46 @@ def _restore_static_shape(new: Variable, old: Variable) -> Variable:
         new = pt.specify_shape(new, old.type.shape)
         new.name = old.name
     return new
+
+
+class _CastedTransform(Transform):
+    """Wrap a transform whose graphs produce a different float dtype, casting its outputs.
+
+    Guarantees value-space graphs stay in the target dtype even when the wrapped
+    transform embeds constants of another precision. Computations inside the wrapped
+    transform may still run in the original precision.
+    """
+
+    def __init__(self, transform: Transform, dtype: str):
+        self.transform = transform
+        self.dtype = dtype
+        # Keep the name: value variable names derive from it
+        self.name = transform.name
+
+    def forward(self, value, *inputs):
+        return pt.cast(self.transform.forward(value, *inputs), self.dtype)
+
+    def backward(self, value, *inputs):
+        return pt.cast(self.transform.backward(value, *inputs), self.dtype)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.cast(self.transform.log_jac_det(value, *inputs), self.dtype)
+
+
+def _transform_keeps_dtype(transform: Transform, rv: Variable, value: Variable, dtype: str) -> bool:
+    """Whether the transform's forward/backward graphs on `rv`/`value` stay in `dtype`.
+
+    Probed under ``floatX=dtype``, the setting the converted model is meant to be
+    compiled under, so only transforms that embed foreign-dtype constants get wrapped.
+    """
+    try:
+        with pytensor.config.change_flags(floatX=dtype):
+            return (
+                transform.forward(rv, *rv.owner.inputs).type.dtype == dtype
+                and transform.backward(value, *rv.owner.inputs).type.dtype == dtype
+            )
+    except Exception:
+        return False
 
 
 def _cast_graph_floats(
@@ -302,7 +356,15 @@ def _cast_graph_floats(
             new_op._frozen_lop = None
             new_op._frozen_rop = None
             new_outputs = new_op.make_node(*new_inputs).outputs
-        elif getattr(op, "dtype", None) == from_dtype:
+        elif isinstance(op, ModelValuedVar) and op.transform is not None:
+            # Transform objects travel with the op and may embed constants of the old
+            # dtype in the value-space graphs (logp, initial point); wrap them if so.
+            rv_new, value_new = new_inputs
+            if not _transform_keeps_dtype(op.transform, rv_new, value_new, to_dtype):
+                op = copy.copy(op)
+                op.transform = _CastedTransform(op.transform, to_dtype)
+            new_outputs = op.make_node(*new_inputs).outputs
+        elif _is_dtype(getattr(op, "dtype", None), from_dtype):
             # Ops with a fixed output dtype: RandomVariables, reductions, ARange, ...
             new_op = copy.copy(op)
             new_op.dtype = to_dtype

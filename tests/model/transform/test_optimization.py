@@ -277,3 +277,33 @@ class TestModelToFloat32:
                 )
         # The sampler may store draws as float64; just check sampling worked
         assert np.isfinite(idata.posterior["beta"]).all()
+
+    def test_transform_with_foreign_dtype_constants(self):
+        # Transforms travel with the model as objects and may bake float64 constants
+        # into value-space graphs; model_to_float32 must keep those graphs float32.
+        import pytensor.tensor as pt
+
+        from pymc.logprob.transforms import Transform
+
+        class ScaledTransform(Transform):
+            name = "scaled"
+            scale = np.array(2.0, dtype="float64")  # baked float64 constant
+
+            def forward(self, value, *inputs):
+                return value * self.scale
+
+            def backward(self, value, *inputs):
+                return value / self.scale
+
+            def log_jac_det(self, value, *inputs):
+                return -pt.log(self.scale) * pt.ones_like(value)
+
+        with Model() as m:
+            Normal("x", 0, 1, default_transform=ScaledTransform())
+
+        m32 = model_to_float32(m)
+        with pytensor.config.change_flags(floatX="float32"):
+            ip32 = m32.initial_point()
+            assert all(v.dtype == "float32" for v in ip32.values())
+            logp32 = m32.compile_logp()(ip32)
+        np.testing.assert_allclose(logp32, m.compile_logp()(m.initial_point()), rtol=1e-5)
