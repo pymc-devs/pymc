@@ -418,8 +418,9 @@ def model_to_float32(model: Model) -> Model:
     variables are unaffected. Explicit `.astype("float64")` casts are redirected
     to float32.
 
-    This can substantially speed up sampling on CPUs (via SIMD vectorization and
-    halved memory traffic) and especially on GPUs, at the cost of precision.
+    This can speed up sampling at the cost of precision — most on GPUs and for
+    compute-bound models; on CPU backends gains depend on how memory- and
+    BLAS-bound the model's logp is.
 
     Compile and sample under ``floatX="float32"``, otherwise constants introduced
     when building logp graphs will upcast intermediate computations back to float64:
