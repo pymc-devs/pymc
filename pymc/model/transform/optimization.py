@@ -272,27 +272,32 @@ def _restore_static_shape(new: Variable, old: Variable) -> Variable:
 
 
 class _CastedTransform(Transform):
-    """Wrap a transform whose graphs produce a different float dtype, casting its outputs.
+    """Wrap a transform whose graphs produce a different float dtype.
 
-    Guarantees value-space graphs stay in the target dtype even when the wrapped
-    transform embeds constants of another precision. Computations inside the wrapped
-    transform may still run in the original precision.
+    The wrapped transform's graphs are converted with `_cast_graph_floats` — so
+    constants of the old dtype embedded in the transform (not reachable from the
+    model graph) are cast too — and the outputs are cast as a last resort.
     """
 
-    def __init__(self, transform: Transform, dtype: str):
+    def __init__(self, transform: Transform, from_dtype: str, to_dtype: str):
         self.transform = transform
-        self.dtype = dtype
+        self.from_dtype = from_dtype
+        self.to_dtype = to_dtype
         # Keep the name: value variable names derive from it
         self.name = transform.name
 
+    def _converted(self, out: Variable) -> Variable:
+        (out,), _ = _cast_graph_floats([out], self.from_dtype, self.to_dtype)
+        return pt.cast(out, self.to_dtype)
+
     def forward(self, value, *inputs):
-        return pt.cast(self.transform.forward(value, *inputs), self.dtype)
+        return self._converted(self.transform.forward(value, *inputs))
 
     def backward(self, value, *inputs):
-        return pt.cast(self.transform.backward(value, *inputs), self.dtype)
+        return self._converted(self.transform.backward(value, *inputs))
 
     def log_jac_det(self, value, *inputs):
-        return pt.cast(self.transform.log_jac_det(value, *inputs), self.dtype)
+        return self._converted(self.transform.log_jac_det(value, *inputs))
 
 
 def _transform_keeps_dtype(transform: Transform, rv: Variable, value: Variable, dtype: str) -> bool:
@@ -362,7 +367,7 @@ def _cast_graph_floats(
             rv_new, value_new = new_inputs
             if not _transform_keeps_dtype(op.transform, rv_new, value_new, to_dtype):
                 op = copy.copy(op)
-                op.transform = _CastedTransform(op.transform, to_dtype)
+                op.transform = _CastedTransform(op.transform, from_dtype, to_dtype)
             new_outputs = op.make_node(*new_inputs).outputs
         elif _is_dtype(getattr(op, "dtype", None), from_dtype):
             # Ops with a fixed output dtype: RandomVariables, reductions, ARange, ...
