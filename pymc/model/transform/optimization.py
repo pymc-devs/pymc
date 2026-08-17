@@ -11,15 +11,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import copy
+
 from collections.abc import Sequence
 from typing import cast
 
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 
 from pytensor.compile import SharedVariable
+from pytensor.compile.builders import OpFromGraph, construct_nominal_fgraph
 from pytensor.graph import Constant, FunctionGraph, Variable
 from pytensor.graph.replace import clone_replace
-from pytensor.graph.traversal import ancestors
+from pytensor.graph.traversal import ancestors, io_toposort
+from pytensor.scalar import Cast
+from pytensor.tensor.elemwise import Elemwise
+from pytensor.tensor.type import TensorType
 
 from pymc.model.core import FrozenModel, Model
 from pymc.model.fgraph import ModelFreeRV, fgraph_from_model, model_from_fgraph
@@ -229,4 +237,158 @@ def freeze_model(model: Model) -> FrozenModel:
     return cast(FrozenModel, frozen_model)
 
 
-__all__ = ("freeze_dims_and_data", "freeze_model")
+def _cast_root(var: Variable, from_dtype: str, to_dtype: str) -> Variable:
+    """Return a `to_dtype` clone of a root variable (constant, shared or input)."""
+    if getattr(var.type, "dtype", None) != from_dtype:
+        return var
+    if isinstance(var, Constant):
+        return pt.constant(var.data.astype(to_dtype), name=var.name)
+    if isinstance(var, SharedVariable):
+        return pytensor.shared(
+            var.get_value(borrow=False).astype(to_dtype), name=var.name, shape=var.type.shape
+        )
+    return var.type.clone(dtype=to_dtype)(name=var.name)
+
+
+def _restore_static_shape(new: Variable, old: Variable) -> Variable:
+    if isinstance(new.type, TensorType) and new.type.shape != old.type.shape:
+        new = pt.specify_shape(new, old.type.shape)
+        new.name = old.name
+    return new
+
+
+def _cast_graph_floats(
+    outputs: Sequence[Variable], from_dtype: str, to_dtype: str
+) -> tuple[list[Variable], dict[Variable, Variable]]:
+    """Clone the graph of `outputs`, casting every `from_dtype` variable to `to_dtype`.
+
+    Returns the converted outputs and a memo mapping old to new variables.
+    """
+    memo: dict[Variable, Variable] = {}
+
+    def mapped(var):
+        if var not in memo:
+            memo[var] = _cast_root(var, from_dtype, to_dtype)
+        return memo[var]
+
+    for node in io_toposort([], outputs):
+        op, new_inputs = node.op, [mapped(var) for var in node.inputs]
+        if (
+            isinstance(op, Elemwise)
+            and isinstance(op.scalar_op, Cast)
+            and op.scalar_op.o_type.dtype == from_dtype
+        ):
+            # Redirect explicit casts (e.g. `x.astype("float64")`)
+            new_outputs = [pt.cast(new_inputs[0], to_dtype)]
+        elif isinstance(op, OpFromGraph):
+            # Convert the inner graph of e.g. SymbolicRandomVariables recursively.
+            # Static shapes frozen in the inner graph cannot be re-inferred from the
+            # inner inputs when nodes are rebuilt, so they are restored explicitly.
+            inner_outs, inner_memo = _cast_graph_floats(op.inner_outputs, from_dtype, to_dtype)
+            inner_outs = [
+                _restore_static_shape(new, old)
+                for new, old in zip(inner_outs, op.inner_outputs, strict=True)
+            ]
+            inner_ins = [
+                inner_memo.get(i, _cast_root(i, from_dtype, to_dtype)) for i in op.inner_inputs
+            ]
+            new_op = copy.copy(op)
+            new_op.fgraph = construct_nominal_fgraph(inner_ins, inner_outs).freeze()
+            new_op.input_types = [i.type for i in inner_ins]
+            new_op.output_types = [o.type for o in inner_outs]
+            # Drop gradient caches computed for the old inner graph
+            new_op._lop_op_cache = {}
+            new_op._rop_op_cache = None
+            new_op._frozen_lop = None
+            new_op._frozen_rop = None
+            new_outputs = new_op.make_node(*new_inputs).outputs
+        elif getattr(op, "dtype", None) == from_dtype:
+            # Ops with a fixed output dtype: RandomVariables, reductions, ARange, ...
+            new_op = copy.copy(op)
+            new_op.dtype = to_dtype
+            new_outputs = new_op.make_node(*new_inputs).outputs
+        else:
+            new_outputs = op.make_node(*new_inputs).outputs
+        for old, new in zip(node.outputs, new_outputs, strict=True):
+            new.name = old.name
+            memo[old] = new
+
+    return [mapped(out) for out in outputs], memo
+
+
+def _cast_model_floats(model: Model, from_dtype: str, to_dtype: str) -> Model:
+    initial_values = _extract_initial_values(model)
+    saved_initial_values = dict(model.rvs_to_initial_values)
+    try:
+        for rv in model.rvs_to_initial_values:
+            model.rvs_to_initial_values[rv] = None
+        fg, _ = fgraph_from_model(model)
+    finally:
+        model.rvs_to_initial_values.update(saved_initial_values)
+
+    new_outputs, memo = _cast_graph_floats(fg.outputs, from_dtype, to_dtype)
+    new_fg = FunctionGraph(outputs=new_outputs, clone=False)
+    new_fg._coords = fg._coords  # type: ignore[attr-defined]
+    new_fg._dim_lengths = {  # type: ignore[attr-defined]
+        dim: memo.get(length, length)
+        for dim, length in fg._dim_lengths.items()  # type: ignore[attr-defined]
+    }
+
+    new_model = model_from_fgraph(new_fg, mutate_fgraph=True)
+    for name, initval in initial_values.items():
+        if isinstance(initval, np.ndarray) and initval.dtype.kind == "f":
+            initval = initval.astype(to_dtype)
+        new_model.set_initval(new_model[name], initval)
+    return new_model
+
+
+def model_to_float32(model: Model) -> Model:
+    """Recreate a Model with all float64 variables and data cast to float32.
+
+    Every float64 variable is converted: data (constants and `pm.Data`), free and
+    observed RVs (including the inner graphs of symbolic RVs like `ZeroSumNormal`),
+    value variables, Deterministics and Potentials. Integer, boolean and RNG
+    variables are unaffected. Explicit `.astype("float64")` casts are redirected
+    to float32.
+
+    This can substantially speed up sampling on CPUs (via SIMD vectorization and
+    halved memory traffic) and especially on GPUs, at the cost of precision.
+
+    Compile and sample under ``floatX="float32"``, otherwise constants introduced
+    when building logp graphs will upcast intermediate computations back to float64:
+
+    .. code-block:: python
+
+        import pymc as pm
+        import pytensor
+
+        from pymc.model.transform.optimization import model_to_float32
+
+        with pm.Model() as m:
+            x = pm.Data("x", [0.0, 1.0, 2.0])
+            beta = pm.Normal("beta")
+            pm.Normal("y", mu=beta * x, sigma=1.0, observed=[1.0, 2.0, 3.0])
+
+        with pytensor.config.change_flags(floatX="float32"):
+            with model_to_float32(m):
+                idata = pm.sample()
+
+    Notes
+    -----
+    ``pm.set_data`` on the new model expects float32 arrays.
+
+    Constant and strategy-string initial values are preserved (arrays are cast);
+    symbolic initial values are not supported.
+    """
+    return _cast_model_floats(model, "float64", "float32")
+
+
+def model_to_float64(model: Model) -> Model:
+    """Recreate a Model with all float32 variables and data cast to float64.
+
+    The inverse of :func:`model_to_float32`. See its docstring for details.
+    """
+    return _cast_model_floats(model, "float32", "float64")
+
+
+__all__ = ("freeze_dims_and_data", "freeze_model", "model_to_float32", "model_to_float64")
