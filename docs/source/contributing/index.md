@@ -5,6 +5,39 @@ There are many ways in which you can help make it better.
 And all of them are welcome!
 
 ## Contribute as an individual
+
+## New Contributors to PyMC
+
+Are you new to contributing to PyMC? This section will help you get started quickly.
+
+### First Steps
+1. Fork the repository
+2. Clone it to your local machine
+3. Set up your development environment
+4. Pick a beginner-friendly issue (look for `docs` or `beginner friendly`)
+5. Make your changes
+6. Submit a Pull Request
+
+### Learn the Basics
+Before contributing, it helps to understand PyMC:
+
+- Intro to Probabilistic Programming with PyMC (Austin Rochford)
+- Intuitive Bayesian Modeling with PyMC (Oriol Abril Pla)
+
+### Development Setup
+Follow the environment setup guide:
+https://pymc-data-umbrella.xyz/en/latest/sprint/tutorials/environment_setup.html
+
+### Tips for First-Time Contributors
+- Start with documentation contributions
+- Keep pull requests small and focused
+- Ask questions if you get stuck
+- Read the contributing guidelines carefully
+
+### Next Steps
+- Explore the codebase structure
+- Try small code contributions after docs
+- Participate in discussions on Discourse
 PyMC is a joint effort of many people, each contributing to the areas they like
 and have some expertise in, coordinating to try and cover all tasks.
 
