@@ -732,6 +732,30 @@ class TestDeterministicExprsParametric:
                 "anchors_tex": [r"\text{mu} + (\text{tau} \cdot \text{z})"],
             }
 
+        def fixed_vs_prior_params(m):
+            # Parameters/hyperparameters as fixed values (scalars, and an
+            # inline anonymous prior) alongside named priors. Anonymous
+            # dists must render as distribution calls, not leak RNG internals
+            import pytensor
+
+            anon = Normal.dist(0, 2)
+            w = pytensor.shared(np.float64(1.5))  # unnamed non-model leaf
+            z = Normal("z", 0, 1, shape=3)
+            theta = Deterministic("theta", 2.0 + 1.5 * z + w + w * 3 + anon.sum() + anon.sum())
+            Normal("y", theta, 10, shape=3)
+            return {
+                "anchors_plain": [
+                    "2 + (1.5 * z)",
+                    "<Scalar(float64, shape=())>",
+                    "sum(Normal(0, 2), axis=None)",
+                ],
+                "anchors_tex": [
+                    r"(2 + (1.5 \cdot \text{z}))",
+                    r"\text{Scalar(float64, shape=())}",
+                    r"\sum\left(\operatorname{Normal}(0,~2)\right)",
+                ],
+            }
+
         return {
             "linear_regression": linear_regression,
             "nonlinear": nonlinear,
@@ -739,6 +763,7 @@ class TestDeterministicExprsParametric:
             "indexing_and_slicing": indexing_and_slicing,
             "potential_only": potential_only,
             "hierarchical": hierarchical,
+            "fixed_vs_prior_params": fixed_vs_prior_params,
         }
 
     @staticmethod
@@ -762,6 +787,7 @@ class TestDeterministicExprsParametric:
         assert "Potential(f(" not in text
         assert "DimShuffle{" not in text
         assert "ViewOp" not in text
+        assert "RNG(" not in text
         for anchor in expected["anchors_plain"]:
             assert anchor in text
 
@@ -773,5 +799,6 @@ class TestDeterministicExprsParametric:
         assert r"\operatorname{Deterministic}" not in tex
         # names are consistently escaped (no bare underscores anywhere)
         assert "_" not in tex.replace("\\_", "")
+        assert "RNG(" not in tex
         for anchor in expected["anchors_tex"]:
             assert anchor in tex

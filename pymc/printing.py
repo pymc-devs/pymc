@@ -38,6 +38,7 @@ from pytensor.printing import (
 from pytensor.printing import pprint as _pytensor_pprint
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.math import Dot, Sum
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
@@ -398,6 +399,29 @@ class _BodyLeafPrinter(Printer):
         return r
 
 
+class _BodyDistPrinter(Printer):
+    """Render anonymous distributions inside bodies as distribution calls.
+
+    Delegates to ``str_for_dist`` so an inline prior such as
+    ``pm.Normal.dist(0, 1)`` looks like its named counterpart on RV lines,
+    instead of leaking graph internals (including a nondeterministic RNG
+    memory address) into the repr.
+    """
+
+    def __init__(self, formatting: str, named_vars: set[Variable]):
+        self.formatting = formatting
+        self.named_vars = named_vars
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        r = str_for_dist(output, formatting=self.formatting, named_vars=self.named_vars)
+        # str_for_dist wraps latex in $...$ for standalone use; strip for inline bodies
+        r = r.strip("$")
+        pstate.memo[output] = r
+        return r
+
+
 class _LatexFunctionPrinter(Printer):
     r"""Fallback LaTeX rendering: \operatorname{name}(args)."""
 
@@ -437,8 +461,33 @@ class _BodyConstantPrinter(Printer):
         return r
 
 
+class _OwnerlessLeafPrinter(Printer):
+    r"""Render ownerless leaves (e.g. unnamed shared variables) gracefully.
+
+    Mirrors the plain-text rendering (the variable's type), since these
+    nodes carry no name or mathematical content of their own.
+    """
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        r = rf"\text{{{_latex_escape(str(output.type))}}}"
+        pstate.memo[output] = r
+        return r
+
+
 def _is_unary_viewop(r) -> bool:
     return r.owner is not None and isinstance(r.owner.op, ViewOp) and len(r.owner.inputs) == 1
+
+
+def _is_random_op(r) -> bool:
+    if r.owner is None:
+        return False
+    # Imported lazily: pymc.distributions imports printing lazily, so a
+    # module-level import here would create an import cycle.
+    from pymc.distributions.distribution import SymbolicRandomVariable
+
+    return isinstance(r.owner.op, RandomVariable | SymbolicRandomVariable)
 
 
 def _unwrap_viewops(r):
@@ -453,11 +502,15 @@ def _unwrap_viewops(r):
     return r
 
 
-def _make_plain_body_printer(named_leaf_condition) -> PPrinter:
+def _make_plain_body_printer(named_leaf_condition, named_vars: set[Variable]) -> PPrinter:
     """Clone the global pytensor printer with model-aware overrides.
 
     Inheriting the global printer's registrations gives plain-text coverage of
     many ops for free.
+
+    Anonymous distributions are rendered via ``str_for_dist`` (like named RV
+    lines) rather than the inherited raw-RNG rendering, which leaks a
+    nondeterministic memory address.
 
     ``ViewOp`` must be handled condition-based (below the named-leaf rule),
     because named Deterministics are themselves unary ``ViewOp`` outputs that
@@ -470,6 +523,10 @@ def _make_plain_body_printer(named_leaf_condition) -> PPrinter:
         _TransparentFirstInputPrinter(),
     )
     printer = printer.clone_assign(
+        lambda pstate, r: _is_random_op(r),
+        _BodyDistPrinter("plain", named_vars),
+    )
+    printer = printer.clone_assign(
         lambda pstate, r: _is_unary_viewop(r),
         _TransparentFirstInputPrinter(),
     )
@@ -480,7 +537,7 @@ def _make_plain_body_printer(named_leaf_condition) -> PPrinter:
     return printer.clone_assign(named_leaf_condition, _BodyLeafPrinter("plain"))
 
 
-def _make_latex_body_printer(named_leaf_condition) -> PPrinter:
+def _make_latex_body_printer(named_leaf_condition, named_vars: set[Variable]) -> PPrinter:
     r"""A fresh printer rendering expression bodies as LaTeX.
 
     Priority is the reverse of assignment order (``assign`` inserts at head).
@@ -523,6 +580,16 @@ def _make_latex_body_printer(named_leaf_condition) -> PPrinter:
     printer.assign(
         lambda pstate, r: r.owner.op is pt.mul,
         OperatorPrinter(r"\cdot", -1, "either"),
+    )
+    # Anonymous distributions render as distribution calls; without this they
+    # would fall through to conditions that assume r.owner is not None and
+    # crash on their ownerless rng/size inputs.
+    # Ownerless leaves (e.g. unnamed shared variables referenced directly)
+    # must terminate here: the operator conditions below assume r.owner.
+    printer.assign(lambda pstate, r: r.owner is None, _OwnerlessLeafPrinter())
+    printer.assign(
+        lambda pstate, r: _is_random_op(r),
+        _BodyDistPrinter("latex", named_vars),
     )
     # Condition-based ViewOp handling: must stay below the named-leaf rule,
     # which resolves ViewOp wrappers itself. DimShuffle is dict-keyed because
@@ -579,9 +646,9 @@ def _str_for_expression_body(var: Variable, formatting: str, named_vars: set[Var
         return name is not None and name.strip("$") in named_names
 
     if "latex" in formatting:
-        s = _make_latex_body_printer(_named_leaf_condition).process(body)
+        s = _make_latex_body_printer(_named_leaf_condition, named_vars).process(body)
     else:
-        s = _make_plain_body_printer(_named_leaf_condition).process(body)
+        s = _make_plain_body_printer(_named_leaf_condition, named_vars).process(body)
     return _strip_outer_parens(s)
 
 
