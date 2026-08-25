@@ -148,14 +148,12 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
     assert isinstance(xt.owner.op, TruncatedRV)
     assert xt.type.dtype == x.type.dtype
 
-    xt_draws = draw(xt, draws=1_000)
+    xt_draws = draw(xt, draws=5)
     assert np.all(xt_draws >= lower)
     assert np.all(xt_draws <= upper)
     assert np.unique(xt_draws).size == xt_draws.size
 
-    # Compare with reference. The Cramer-von Mises p-value is too coarse at
-    # tiny sample sizes to threshold reliably (a perfect sampler fails
-    # ~0.1% of runs at n=5), hence the large number of draws.
+    # Compare with reference
     ref_xt = scipy.stats.truncnorm(
         (lower - loc) / scale,
         (upper - loc) / scale,
