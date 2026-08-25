@@ -24,7 +24,14 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions import transforms
-from pymc.distributions.continuous import Gamma, LogNormal, Normal, UnitContinuous, get_tau_sigma
+from pymc.distributions.continuous import (
+    Beta,
+    Gamma,
+    LogNormal,
+    Normal,
+    UnitContinuous,
+    get_tau_sigma,
+)
 from pymc.distributions.discrete import Binomial, NegativeBinomial, Poisson
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
@@ -42,7 +49,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated
-from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
+from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob, _logprob_helper
 from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.pytensorf import normalize_rng_param
@@ -948,13 +955,11 @@ class ZeroOneInflatedBeta(UnitContinuous):
 
     @classmethod
     def dist(cls, zoi, coi, mu=None, kappa=None, alpha=None, beta=None, **kwargs):
-        if (alpha is not None) and (beta is not None) and (mu is not None or kappa is not None):
-            warnings.warn(
-                "Both parametrizations provided. Proceeding with alpha and beta.",
-                UserWarning,
-            )
         if (alpha is not None) and (beta is not None):
-            pass
+            if (mu is not None) or (kappa is not None):
+                raise ValueError(
+                    "Incompatible parametrization. Specify either alpha and beta, or mu and kappa."
+                )
         elif (mu is not None) and (kappa is not None):
             alpha = mu * kappa
             beta = (1.0 - mu) * kappa
@@ -979,18 +984,13 @@ class ZeroOneInflatedBeta(UnitContinuous):
         # finite (with finite gradients) even when a boundary or
         # out-of-support branch is selected. Substitute a safe interior
         # value into the unselected branch, following the approach used
-        # for Hurdle distributions (see #8057). Parameters are used raw:
-        # domain enforcement is handled by check_parameters, and boundary
-        # parameter values (e.g. zoi == 0 with an observed 0) correctly
-        # yield -inf.
+        # for Hurdle distributions (see #8057).
+        # Boundary parameter values (e.g. zoi == 0 with an observed 0)
+        # correctly yield -inf.
         inside = pt.bitwise_and(pt.gt(value, 0.0), pt.lt(value, 1.0))
         safe_value = pt.switch(inside, value, 0.5)
 
-        logp_beta = (
-            (alpha - 1.0) * pt.log(safe_value)
-            + (beta - 1.0) * pt.log1p(-safe_value)
-            - (pt.gammaln(alpha) + pt.gammaln(beta) - pt.gammaln(alpha + beta))
-        )
+        logp_beta = _logprob_helper(Beta.dist(alpha=alpha, beta=beta), safe_value)
 
         res = pt.switch(
             pt.eq(value, 0.0),
@@ -1014,17 +1014,13 @@ class ZeroOneInflatedBeta(UnitContinuous):
             zoi <= 1,
             coi >= 0,
             coi <= 1,
-            alpha > 0,
-            beta > 0,
-            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
+            msg="0 <= zoi <= 1, 0 <= coi <= 1",
         )
 
     def logcdf(value, zoi, coi, alpha, beta):
-        # Keep betainc away from values outside (0, 1) so its output and
-        # gradient stay finite in unselected switch branches.
         inside = pt.bitwise_and(pt.gt(value, 0.0), pt.lt(value, 1.0))
         safe_value = pt.switch(inside, value, 0.5)
-        beta_logcdf = pt.log(pt.betainc(alpha, beta, safe_value))
+        beta_logcdf = _logcdf_helper(Beta.dist(alpha=alpha, beta=beta), safe_value)
 
         res = pt.switch(
             pt.lt(value, 0.0),
