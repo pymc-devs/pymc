@@ -39,6 +39,7 @@ from pymc.distributions import (
     DirichletMultinomial,
     HalfNormal,
     KroneckerNormal,
+    LKJCorr,
     MvNormal,
     NegativeBinomial,
     Normal,
@@ -318,6 +319,14 @@ def test_truncated_repr():
 
     str_repr = model.str_repr(include_params=False)
     assert str_repr == "x ~ TruncatedGamma"
+
+
+def test_lkjcorr_repr():
+    with Model() as model:
+        x = LKJCorr("x", n=3, eta=1.0)
+
+    str_repr = model.str_repr(include_params=False)
+    assert str_repr == "x ~ LKJCorr"
 
 
 def test_custom_dist_repr():
