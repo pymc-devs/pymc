@@ -16,6 +16,7 @@ import re
 
 import numpy as np
 import pytensor.tensor as pt
+import pytest
 
 from pytensor.tensor.random import normal
 from rich.console import Console
@@ -618,7 +619,7 @@ class TestDeterministicExprs:
         from pymc.printing import str_for_potential_or_deterministic
 
         model = self.model()
-        mu = [v for v in model.deterministics if v.name == "mu"][0]
+        mu = next(v for v in model.deterministics if v.name == "mu")
         named_vars = set(model.deterministics) | set(model.free_RVs) | set(model.data_vars)
         assert (
             str_for_potential_or_deterministic(mu, named_vars=named_vars, deterministic_exprs=True)
@@ -628,3 +629,119 @@ class TestDeterministicExprs:
             str_for_potential_or_deterministic(mu, named_vars=named_vars)
             == "mu = Deterministic(f(x, alpha_a, sigma))"
         )
+
+    def test_unnamed_viewop_wrapping_named_leaf(self):
+        # An unnamed ViewOp wrapper around a named variable must render as
+        # that variable, not crash on its missing name
+        from pytensor.compile.ops import view_op
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Deterministic("d", view_op(s) * 2 + s)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = (s * 2) + s" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{d} &= &(\text{s} \cdot 2) + \text{s}" in tex
+
+
+class TestDeterministicExprsParametric:
+    """Table-driven coverage across model families.
+
+    Each case asserts output invariants that hold for any well-rendered body
+    (no leftover placeholders, no graph-internals leakage, consistent LaTeX
+    escaping), plus a small number of exact anchors for the ops that
+    distinguish the family. This catches regressions in op rendering without
+    snapshotting entire strings.
+    """
+
+    @staticmethod
+    def _cases() -> dict:
+        def linear_regression(m):
+            x = pm.Data("x", np.array([1.0, 2.0]))
+            a = Normal("a", 0, 1)
+            b = Normal("b", 0, 1)
+            mu = Deterministic("mu", a + b * x)
+            Normal("y", mu, 1)
+            return {
+                "anchors_plain": ["mu = a + (b * x)"],
+                "anchors_tex": [r"\text{a} + (\text{b} \cdot \text{x})"],
+            }
+
+        def nonlinear(m):
+            s = HalfNormal("s", 1)
+            nl = Deterministic("nl", pt.exp(s) / (pt.sqrt(s) + pt.tanh(s)))
+            return {
+                "anchors_plain": ["Exp(s) / (Sqrt(s) + Tanh(s))"],
+                "anchors_tex": [r"\frac{\exp(\text{s})}{(\sqrt{\text{s}} + \tanh(\text{s}))}"],
+            }
+
+        def matrix_ops(m):
+            X = pm.Data("X", np.eye(2))
+            b = Normal("b", 0, 1, shape=2)
+            pm.Deterministic("p", pt.dot(X, b) + b.sum())
+            return {
+                "anchors_plain": [r"(X \dot b) + sum(b"],
+                "anchors_tex": [r"\text{X} \cdot \text{b} + \sum\left(\text{b}\right)"],
+            }
+
+        def indexing_and_slicing(m):
+            X = pm.Data("X", np.ones((3, 3)))
+            s = HalfNormal("s", 1)
+            pm.Deterministic("d", X[:, 0] * s + X[:2].sum(axis=0))
+            return {
+                # plain renders real Python-style indexing...
+                "anchors_plain": ["X[:, 0]", "sum(X[:2]"],
+                # ...latex degrades gracefully to \operatorname for subtensors (#8407 open question)
+                "anchors_tex": [r"\operatorname{Subtensor}", r"\sum\left(\operatorname{Subtensor}"],
+            }
+
+        def potential_only(m):
+            z = Normal("z")
+            pm.Potential("pot", -(z**2) / 2)
+            return {
+                "anchors_plain": ["pot ~ (-(z ** 2)) / 2"],
+                "anchors_tex": [r"\frac{(-{\text{z}}^{2})}{2}"],
+            }
+
+        return {
+            "linear_regression": linear_regression,
+            "nonlinear": nonlinear,
+            "matrix_ops": matrix_ops,
+            "indexing_and_slicing": indexing_and_slicing,
+            "potential_only": potential_only,
+        }
+
+    @staticmethod
+    def _build(case_name: str) -> tuple[Model, dict]:
+        with Model() as model:
+            expected = TestDeterministicExprsParametric._cases()[case_name](model)
+        return model, expected
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_default_repr_uses_placeholders(self, case_name: str):
+        model, _ = self._build(case_name)
+        text = model.str_repr()
+        assert ("Deterministic(f(" in text) or ("Potential(f(" in text)
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_plain_bodies(self, case_name: str):
+        model, expected = self._build(case_name)
+        text = model.str_repr(deterministic_exprs=True)
+        # no opaque placeholders and no graph-internals leakage
+        assert "Deterministic(f(" not in text
+        assert "Potential(f(" not in text
+        assert "DimShuffle{" not in text
+        assert "ViewOp" not in text
+        for anchor in expected["anchors_plain"]:
+            assert anchor in text
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_latex_bodies(self, case_name: str):
+        model, expected = self._build(case_name)
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        # bodies replace the wrapper operator entirely
+        assert r"\operatorname{Deterministic}" not in tex
+        # names are consistently escaped (no bare underscores anywhere)
+        assert "_" not in tex.replace("\\_", "")
+        for anchor in expected["anchors_tex"]:
+            assert anchor in tex

@@ -387,7 +387,9 @@ class _BodyLeafPrinter(Printer):
     def process(self, output, pstate):
         if output in pstate.memo:
             return pstate.memo[output]
-        name = output.name.strip("$")
+        # The leaf condition may match an unnamed ViewOp wrapper whose
+        # unwrapped target is the named variable being rendered.
+        name = _unwrap_viewops(output).name.strip("$")
         if "latex" in self.formatting:
             r = rf"\text{{{_latex_escape(name)}}}"
         else:
@@ -489,7 +491,10 @@ def _make_latex_body_printer(named_leaf_condition) -> PPrinter:
     printer.assign(lambda pstate, r: True, _LatexFunctionPrinter())  # lowest priority
     printer.assign(lambda pstate, r: r.owner.op is pt.exp, FunctionPrinter([r"\exp"]))
     printer.assign(lambda pstate, r: r.owner.op is pt.log, FunctionPrinter([r"\log"]))
-    printer.assign(lambda pstate, r: r.owner.op is pt.sqrt, FunctionPrinter([r"\sqrt"]))
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.sqrt,
+        PatternPrinter((r"\sqrt{%(0)s}",)),
+    )
     printer.assign(lambda pstate, r: r.owner.op is pt.sin, FunctionPrinter([r"\sin"]))
     printer.assign(lambda pstate, r: r.owner.op is pt.cos, FunctionPrinter([r"\cos"]))
     printer.assign(lambda pstate, r: r.owner.op is pt.tanh, FunctionPrinter([r"\tanh"]))
