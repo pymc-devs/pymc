@@ -15,6 +15,7 @@
 import re
 
 import numpy as np
+import pytensor.tensor as pt
 
 from pytensor.tensor.random import normal
 from rich.console import Console
@@ -568,3 +569,62 @@ def test_model_table():
  beta_subject_penalty =  Potential(f(beta_subject))      subject[20]
 """
     assert [s.strip() for s in table_txt.splitlines()] == [s.strip() for s in expected.splitlines()]
+
+
+class TestDeterministicExprs:
+    @staticmethod
+    def model() -> Model:
+        with Model() as model:
+            x = pm.Data("x", 2.0)
+            sigma = HalfNormal("sigma", sigma=1)
+            alpha_a = Normal("alpha_a", 0, 1)
+            mu = Deterministic("mu", alpha_a * x + pt.log(sigma**2) + 3)
+            Deterministic("eta", mu / (1 + mu))
+            Potential("pot", sigma * 2)
+            Normal("y", mu=mu, sigma=sigma)
+        return model
+
+    def test_default_repr_unchanged(self):
+        """Without the flag, deterministics still render opaque f(...) calls."""
+        model_text = self.model().str_repr()
+        assert "mu = Deterministic(f(x, alpha_a, sigma))" in model_text
+        assert "eta = Deterministic(f(mu))" in model_text
+        assert "pot ~ Potential(f(sigma))" in model_text
+
+    def test_plain_expression_bodies(self):
+        model_text = self.model().str_repr(deterministic_exprs=True)
+        assert "mu = ((alpha_a * x) + Log((sigma ** 2))) + 3" in model_text
+        # Nested deterministics stop at named variables
+        assert "eta = mu / (1 + mu)" in model_text
+        # Potentials get bodies too
+        assert "pot ~ sigma * 2" in model_text
+
+    def test_latex_expression_bodies(self):
+        model_tex = self.model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert (
+            r"\text{mu} &= &((\text{alpha\_a} \cdot \text{x}) + \log({\text{sigma}}^{2})) + 3"
+            in model_tex
+        )
+        assert r"\text{eta} &= &\frac{\text{mu}}{(1 + \text{mu})}" in model_tex
+        assert r"\text{pot} &\sim & \text{sigma} \cdot 2" in model_tex
+
+    def test_latex_underscore_escaping_in_bodies(self):
+        model_tex = self.model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert "\\_" in model_tex
+        body_tex = model_tex.replace("\\_", "")
+        assert "_" not in body_tex.replace(r"\_", "")
+
+    def test_standalone_str_for_potential_or_deterministic(self):
+        from pymc.printing import str_for_potential_or_deterministic
+
+        model = self.model()
+        mu = [v for v in model.deterministics if v.name == "mu"][0]
+        named_vars = set(model.deterministics) | set(model.free_RVs) | set(model.data_vars)
+        assert (
+            str_for_potential_or_deterministic(mu, named_vars=named_vars, deterministic_exprs=True)
+            == "mu = ((alpha_a * x) + Log((sigma ** 2))) + 3"
+        )
+        assert (
+            str_for_potential_or_deterministic(mu, named_vars=named_vars)
+            == "mu = Deterministic(f(x, alpha_a, sigma))"
+        )
