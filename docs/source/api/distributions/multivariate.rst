@@ -22,4 +22,5 @@ Multivariate
    StickBreakingWeights
    Wishart
    WishartBartlett
+   WeightedZeroSumNormal
    ZeroSumNormal
