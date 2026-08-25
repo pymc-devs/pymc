@@ -84,6 +84,18 @@ class TestBugfixes:
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
 
 
+def test_rng_is_used_by_model_variable():
+    """`rng` must reach the RV whether or not the variable is named."""
+    rng = shared(np.random.default_rng(11))
+    unnamed = pm.Normal.dist(0.0, 1.0, rng=rng)
+    assert unnamed.owner.inputs[0] is rng
+
+    rng = shared(np.random.default_rng(11))
+    with pm.Model():
+        named = pm.Normal("x", 0.0, 1.0, rng=rng)
+    assert named.owner.inputs[0] is rng
+
+
 def test_all_distributions_have_support_points():
     import pymc.distributions as dist_module
 
