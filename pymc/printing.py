@@ -570,7 +570,8 @@ def _str_for_expression_body(var: Variable, formatting: str, named_vars: set[Var
         body = body.owner.inputs[0]
 
     named_names = {v.name.strip("$") for v in named_vars if v.name is not None}
-    named_names.discard(var.name)
+    if var.name is not None:
+        named_names.discard(var.name)
 
     def _named_leaf_condition(pstate, r) -> bool:
         r = _unwrap_viewops(r)
