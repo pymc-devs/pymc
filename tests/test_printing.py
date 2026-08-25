@@ -643,6 +643,22 @@ class TestDeterministicExprs:
         tex = model.str_repr(formatting="latex", deterministic_exprs=True)
         assert r"\text{d} &= &(\text{s} \cdot 2) + \text{s}" in tex
 
+    def test_latex_elemwise_fallback_and_memoized_nodes(self):
+        # Unregistered Elemwise ops degrade to \operatorname, and nodes
+        # referenced more than once render identically at each occurrence
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            X = pm.Data("X", np.eye(2))
+            c = pt.as_tensor_variable(2.0)
+            sig = pt.sigmoid(s)
+            XT = X.T
+            Deterministic("d", sig + sig / c + XT @ XT * c)
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{sigmoid}" in tex
+        assert tex.count(r"\operatorname{sigmoid}\left(\text{s}\right)") == 2
+        assert r"\frac{\operatorname{sigmoid}\left(\text{s}\right)}{2}" in tex
+        assert r"\operatorname{Matmul}\left(\text{X},\ \text{X}\right) \cdot 2" in tex
+
 
 class TestDeterministicExprsParametric:
     """Table-driven coverage across model families.
