@@ -719,12 +719,26 @@ class TestDeterministicExprsParametric:
                 "anchors_tex": [r"\frac{(-{\text{z}}^{2})}{2}"],
             }
 
+        def hierarchical(m):
+            # Non-centered hierarchical model: the pooled deterministic
+            # stops at named parents instead of inlining their graphs
+            mu = Normal("mu", 0, 5)
+            tau = HalfNormal("tau", 5)
+            z = Normal("z", 0, 1, shape=8)
+            theta = Deterministic("theta", mu + tau * z)
+            Normal("y", theta, 10, shape=8)
+            return {
+                "anchors_plain": ["theta = mu + (tau * z)"],
+                "anchors_tex": [r"\text{mu} + (\text{tau} \cdot \text{z})"],
+            }
+
         return {
             "linear_regression": linear_regression,
             "nonlinear": nonlinear,
             "matrix_ops": matrix_ops,
             "indexing_and_slicing": indexing_and_slicing,
             "potential_only": potential_only,
+            "hierarchical": hierarchical,
         }
 
     @staticmethod
