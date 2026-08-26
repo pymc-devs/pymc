@@ -88,11 +88,7 @@ from pymc.distributions.dist_math import (
     normal_lcdf,
     zvalue,
 )
-from pymc.distributions.distribution import (
-    DIST_PARAMETER_TYPES,
-    Continuous,
-    SymbolicRandomVariable,
-)
+from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous, SymbolicRandomVariable
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
 from pymc.math import invlogit, logdiffexp
@@ -264,7 +260,6 @@ class Uniform(BoundedContinuous):
         :context: close-figs
 
         import matplotlib.pyplot as plt
-
         import numpy as np
         import arviz as az
         plt.style.use('arviz-darkgrid')
@@ -384,9 +379,7 @@ class Flat(Continuous):
 
     def logcdf(value):
         return pt.switch(
-            pt.eq(value, -np.inf),
-            -np.inf,
-            pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5)),
+            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5))
         )
 
 
@@ -1603,9 +1596,7 @@ class Laplace(Continuous):
 
     def icdf(value, mu, b):
         res = pt.switch(
-            pt.le(value, 0.5),
-            mu + b * np.log(2 * value),
-            mu - b * np.log(2 - 2 * value),
+            pt.le(value, 0.5), mu + b * np.log(2 * value), mu - b * np.log(2 - 2 * value)
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(res, b > 0, msg="b > 0")
