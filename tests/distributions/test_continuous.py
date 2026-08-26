@@ -648,9 +648,7 @@ class TestMatchesScipy:
             lambda value, beta: st.halfcauchy.logcdf(value, scale=beta),
         )
         check_icdf(
-            pm.HalfCauchy,
-            {"beta": Rplusbig},
-            lambda q, beta: st.halfcauchy.ppf(q, scale=beta),
+            pm.HalfCauchy, {"beta": Rplusbig}, lambda q, beta: st.halfcauchy.ppf(q, scale=beta)
         )
 
     def test_gamma_logp(self):
@@ -1456,12 +1454,7 @@ class TestMoments:
         [
             (2, 1, None, 1 * 2 ** (1 / 2)),
             (2, 1, 5, np.full(5, 1 * 2 ** (1 / 2))),
-            (
-                np.arange(2, 7),
-                np.arange(1, 6),
-                None,
-                np.arange(1, 6) * 2 ** (1 / np.arange(2, 7)),
-            ),
+            (np.arange(2, 7), np.arange(1, 6), None, np.arange(1, 6) * 2 ** (1 / np.arange(2, 7))),
             (
                 np.arange(2, 7),
                 np.arange(1, 6),
@@ -1496,13 +1489,7 @@ class TestMoments:
             (None, 1, 1, 5, np.full(5, 1)),
             (1, None, np.ones(5), None, np.full(5, 1)),
             (3, np.full(5, 2), None, None, np.full(5, 3)),
-            (
-                np.arange(1, 6),
-                None,
-                np.arange(1, 6),
-                (2, 5),
-                np.full((2, 5), np.arange(1, 6)),
-            ),
+            (np.arange(1, 6), None, np.arange(1, 6), (2, 5), np.full((2, 5), np.arange(1, 6))),
         ],
     )
     def test_wald_support_point(self, mu, lam, phi, size, expected):
@@ -1614,12 +1601,7 @@ class TestMoments:
             (0, np.arange(1, 5), None, sp.expit(np.zeros(4))),
             (np.arange(4), 1, None, sp.expit(np.arange(4))),
             (1, 5, 4, sp.expit(np.ones(4))),
-            (
-                np.arange(4),
-                np.arange(1, 5),
-                (2, 4),
-                np.full((2, 4), sp.expit(np.arange(4))),
-            ),
+            (np.arange(4), np.arange(1, 5), (2, 4), np.full((2, 4), sp.expit(np.arange(4)))),
         ],
     )
     def test_logitnormal_support_point(self, mu, sigma, size, expected):
@@ -1675,12 +1657,7 @@ class TestMoments:
             (4.0, 3.0, None, 7.8110885363844345),
             (4.0, np.full(5, 3), None, np.full(5, 7.8110885363844345)),
             (np.arange(5), 1, None, np.arange(5) + 1.2703628454614782),
-            (
-                np.arange(5),
-                np.ones(5),
-                (2, 5),
-                np.full((2, 5), np.arange(5) + 1.2703628454614782),
-            ),
+            (np.arange(5), np.ones(5), (2, 5), np.full((2, 5), np.arange(5) + 1.2703628454614782)),
         ],
     )
     def test_moyal_support_point(self, mu, sigma, size, expected):
@@ -2005,10 +1982,7 @@ class TestHalfStudentT(BaseTestDistributionRandom):
     pymc_dist_params = {"nu": 5.0, "sigma": 2.0}
     expected_rv_op_params = {"nu": 5.0, "sigma": 2.0}
     reference_dist_params = {"df": 5.0, "loc": 0, "scale": 2.0}
-
-    def reference_dist(self):
-        return ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(self.halfstudentt_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2152,9 +2126,7 @@ class TestWald(BaseTestDistributionRandom):
 
     def check_pymc_draws_match_reference(self):
         npt.assert_array_almost_equal(
-            self.pymc_rv.eval(),
-            self.reference_dist_draws + self.alpha,
-            decimal=self.decimal,
+            self.pymc_rv.eval(), self.reference_dist_draws + self.alpha, decimal=self.decimal
         )
 
 
@@ -2244,10 +2216,7 @@ class TestLogitNormal(BaseTestDistributionRandom):
     pymc_dist_params = {"mu": 5.0, "sigma": 10.0}
     expected_rv_op_params = {"mu": 5.0, "sigma": 10.0}
     reference_dist_params = {"loc": 5.0, "scale": 10.0}
-
-    def reference_dist(self):
-        return ft.partial(self.logit_normal_rng_fn, rng=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(self.logit_normal_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2318,10 +2287,7 @@ class TestBeta(BaseTestDistributionRandom):
     expected_rv_op_params = {"alpha": 2.0, "beta": 5.0}
     reference_dist_params = {"a": 2.0, "b": 5.0}
     size = 15
-
-    def reference_dist(self):
-        return ft.partial(clipped_beta_rvs, random_state=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(clipped_beta_rvs, random_state=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2400,10 +2366,7 @@ class TestHalfCauchy(BaseTestDistributionRandom):
     pymc_dist_params = {"beta": 5.0}
     expected_rv_op_params = {"beta": 5.0}
     reference_dist_params = {"scale": 5.0}
-
-    def reference_dist(self):
-        return ft.partial(self.halfcauchy_rng_fn, rng=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(self.halfcauchy_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference_not_numba",
@@ -2545,10 +2508,7 @@ class TestPolyaGamma(BaseTestDistributionRandom):
     pymc_dist_params = {"h": 1.0, "z": 0.0}
     expected_rv_op_params = {"h": 1.0, "z": 0.0}
     reference_dist_params = {"h": 1.0, "z": 0.0}
-
-    def reference_dist(self):
-        return ft.partial(self.polyagamma_rng_fn, rng=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(self.polyagamma_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference",
@@ -2569,9 +2529,7 @@ class TestInterpolated(BaseTestDistributionRandom):
     pymc_dist_params = {"x_points": x_points, "pdf_points": pdf_points}
     reference_dist_params = {"mu": mu, "sigma": sigma}
 
-    def reference_dist(self):
-        return ft.partial(self.interpolated_rng_fn, rng=self.get_random_state())
-
+    reference_dist = lambda self: ft.partial(self.interpolated_rng_fn, rng=self.get_random_state())  # noqa: E731
     checks_to_run = [
         "check_rv_size",
         "check_draws",
