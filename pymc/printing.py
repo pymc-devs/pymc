@@ -16,6 +16,7 @@
 import re
 import sys
 
+from collections import deque
 from collections.abc import Iterable
 from functools import partial
 from numbers import Integral
@@ -35,6 +36,7 @@ from pytensor.printing import (
     PatternPrinter,
     PPrinter,
     Printer,
+    PrinterState,
     set_precedence,
 )
 from pytensor.printing import pprint as _pytensor_pprint
@@ -182,6 +184,10 @@ def str_for_model(
         rendered by name. Purely a graph traversal: no rewrites, compilation,
         or evaluation happen. ``include_params=False`` takes precedence,
         falling back to the opaque ``Deterministic``/``Potential`` rendering.
+        Expressions are bounded: unnamed subgraphs deeper than 64 levels
+        render as the opaque placeholder, and if more than 1000 nodes would
+        still be rendered, the whole expression degrades to it. Naming
+        intermediates keeps large models fully expanded.
     """
     named_vars: set[Variable] = set()
     named_vars.update(model.data_vars)
@@ -264,6 +270,10 @@ def str_for_potential_or_deterministic(
     If ``named_vars`` is omitted, every named variable reachable from ``var``
     is treated as a known variable and rendered by name, so standalone calls
     never inline distributions into the expression.
+
+    Expression bodies are bounded: unnamed subgraphs deeper than 64 levels
+    render as the opaque placeholder, and if more than 1000 nodes would
+    still be rendered, the whole expression degrades to it.
     """
     if named_vars is None:
         named_vars = {v for v in ancestors([var]) if v.name is not None}
@@ -543,7 +553,15 @@ class _LatexSumPrinter(Printer):
 
 
 class _BodyConstantPrinter(Printer):
-    """Render constants like the rest of the model repr does."""
+    """Render constants inside expression bodies.
+
+    Scalars and single-element arrays render their value, short 1-D arrays
+    inline their values, and larger arrays describe their dtype and shape
+    instead: geometry is the information a reader needs, and the values
+    would flood the line. This only affects opt-in expression bodies;
+    ``_str_for_constant_value`` keeps default ``str_for_model`` output
+    unchanged.
+    """
 
     def __init__(self, formatting: str):
         self.formatting = formatting
@@ -553,12 +571,31 @@ class _BodyConstantPrinter(Printer):
             return pstate.memo[output]
         data = output.data
         if isinstance(data, np.ndarray):
-            r = _str_for_constant_value(data, self.formatting)
+            r = self._render_array(data)
         else:
             # e.g. NoneConst placeholders inside RV signatures
             r = str(data)
         pstate.memo[output] = r
         return r
+
+    def _render_array(self, data: np.ndarray) -> str:
+        latex = "latex" in self.formatting
+        if data.ndim == 0 or data.size == 1:
+            return _str_for_constant_value(data, self.formatting)
+        if data.ndim == 1 and data.size <= _MAX_INLINE_CONST_ELEMENTS:
+            sep = r",\ " if latex else ", "
+            values = sep.join(f"{v:.3g}" for v in data)
+            return rf"\left[{values}\right]" if latex else f"[{values}]"
+        shape = ", ".join(map(str, data.shape))
+        if not latex:
+            return f"<constant {data.dtype} ({shape})>"
+        number_set = {"f": r"\mathbb{R}", "i": r"\mathbb{Z}", "u": r"\mathbb{Z}"}.get(
+            data.dtype.kind
+        )
+        if number_set is None:
+            return rf"\text{{<constant {data.dtype} ({shape})}}>"
+        dims = r" \times ".join(map(str, data.shape))
+        return rf"\text{{<constant {data.dtype}>}} \in {number_set}^{{{dims}}}"
 
 
 class _OwnerlessLeafPrinter(Printer):
@@ -828,6 +865,73 @@ def _parens_balanced(s: str) -> bool:
     return depth == 0
 
 
+_MAX_EXPR_NODES = 1000
+_MAX_EXPR_DEPTH = 64
+_MAX_INLINE_CONST_ELEMENTS = 4
+
+
+def _is_expr_leaf(r: Variable, leaf_vars: set[Variable]) -> bool:
+    """True for nodes rendered atomically, without expanding their inputs."""
+    return (
+        _unwrap_viewops(r) in leaf_vars
+        or isinstance(r, Constant)
+        or r.owner is None
+        or _is_random_op(r)
+        or _hides_inner_graph(r)
+    )
+
+
+def _print_plan(body: Variable, leaf_vars: set[Variable]) -> tuple[set[Variable], bool]:
+    """Decide how to print an expression body within the verbosity budget.
+
+    Printing renders the graph as a tree: pytensor's print memo avoids
+    recomputing shared subexpressions, not duplicating them, so output size
+    grows with the number of root-to-node paths, which is exponential for
+    shared intermediates (an adstock chain reused twice, ``v = v + v``
+    loops). Printer recursion depth also follows graph depth.
+
+    Returns ``(cut_roots, fits)``. Nodes at depth ``_MAX_EXPR_DEPTH + 1``
+    are cut: they render as the opaque ``f(inputs)`` placeholder via a
+    pre-seeded print memo, bounding recursion depth. ``fits`` is False when
+    even after these cuts more than ``_MAX_EXPR_NODES`` nodes would be
+    rendered; the caller should then fall back to a single placeholder for
+    the whole expression.
+    """
+    depth = {body: 0}
+    visited = {body}
+    queue = deque([body])
+    order = []
+    while queue:
+        r = queue.popleft()
+        order.append(r)
+        if _is_expr_leaf(r, leaf_vars):
+            continue
+        for i in r.owner.inputs:
+            if i not in visited:
+                visited.add(i)
+                depth[i] = depth[r] + 1
+                queue.append(i)
+
+    # Minimal cut: seeding only the shallowest nodes past the depth limit
+    # makes every deeper node unreachable, so each placeholder walk happens
+    # once instead of once per cut node.
+    cut_roots = {
+        r for r, d in depth.items() if d == _MAX_EXPR_DEPTH + 1 and not _is_expr_leaf(r, leaf_vars)
+    }
+
+    # Occurrences of each node in the rendered tree, counting only paths
+    # through visible (uncut) parents. ``order`` is breadth-first, so all
+    # parents are final before a child is accumulated.
+    occ = {body: 1}
+    for r in order:
+        if depth[r] > _MAX_EXPR_DEPTH or _is_expr_leaf(r, leaf_vars):
+            continue
+        for i in r.owner.inputs:
+            occ[i] = occ.get(i, 0) + occ[r]
+    occurrences = sum(o for r, o in occ.items() if depth[r] <= _MAX_EXPR_DEPTH)
+    return cut_roots, occurrences <= _MAX_EXPR_NODES
+
+
 def _str_for_expression_body(var: Variable, formatting: str, named_vars: set[Variable]) -> str:
     """Render the full symbolic body of an expression graph as text or LaTeX.
 
@@ -847,9 +951,20 @@ def _str_for_expression_body(var: Variable, formatting: str, named_vars: set[Var
         return _unwrap_viewops(r) in leaf_vars
 
     if "latex" in formatting:
-        s = _make_latex_body_printer(_named_leaf_condition, named_vars).process(body)
+        printer = _make_latex_body_printer(_named_leaf_condition, named_vars)
     else:
-        s = _make_plain_body_printer(_named_leaf_condition, named_vars).process(body)
+        printer = _make_plain_body_printer(_named_leaf_condition, named_vars)
+
+    cut_roots, fits = _print_plan(body, leaf_vars)
+    if not fits:
+        return _str_for_expression(var, formatting, named_vars)
+
+    pstate = PrinterState(pprinter=printer)
+    for r in cut_roots:
+        # Pre-seeding the memo makes every printer stop here, rendering the
+        # subtree as the opaque placeholder instead of recursing into it.
+        pstate.memo[r] = _str_for_expression(r, formatting, named_vars)
+    s = printer.process(body, pstate)
     return _strip_outer_parens(s)
 
 

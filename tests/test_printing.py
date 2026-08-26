@@ -936,3 +936,96 @@ class TestDeterministicExprsParametric:
         assert "RNG(" not in tex
         for anchor in expected["anchors_tex"]:
             assert anchor in tex
+
+
+class TestExpressionBounds:
+    """Verbosity bounds: pathological graphs degrade instead of exploding."""
+
+    @staticmethod
+    def _doubling_model(n: int) -> Model:
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            v = s
+            for _ in range(n):
+                v = v + v
+            Deterministic("d", v)
+        return model
+
+    def test_shared_subgraph_falls_back_to_placeholder(self):
+        # Each level doubles the rendered text; past the node budget the
+        # whole expression degrades to the opaque placeholder.
+        model = self._doubling_model(25)
+        text = model.str_repr(deterministic_exprs=True)
+        assert len(text) < 10_000
+        assert "d = f(s)" in text
+
+    def test_shared_subgraph_latex_bounded(self):
+        tex = self._doubling_model(25).str_repr(formatting="latex", deterministic_exprs=True)
+        assert len(tex) < 10_000
+
+    def test_deep_chain_degrades_gracefully(self):
+        # Printing must not raise RecursionError where the default repr works
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            v = s
+            for _ in range(6000):
+                v = v + 1.0
+            Deterministic("d", v)
+        text = model.str_repr(deterministic_exprs=True)
+        body = [ln for ln in text.splitlines() if ln.startswith("d =")][0]
+        assert "f(s)" in body  # expansion stops at the depth limit
+        assert len(text) < 10_000
+
+    def test_moderate_sharing_still_expands(self):
+        # A realistic adstock-style chain reused twice stays fully expanded
+        with Model() as model:
+            alpha = Uniform("alpha", 0, 1)
+            x = Data("x", np.arange(6.0))
+            acc = x
+            for lag in range(1, 8):
+                acc = acc + (alpha**lag) * x
+            sat = Deterministic("sat", acc / (acc + alpha))
+        text = model.str_repr(deterministic_exprs=True)
+        start = text.index("sat = ")
+        end = text.find("\n", start)
+        end = len(text) if end == -1 else end
+        line = text[start:end]
+        assert "f(" not in line
+        assert line.count("alpha") >= 2
+
+
+class TestBodyConstants:
+    """Array constants describe their geometry instead of hiding behind <constant>."""
+
+    @staticmethod
+    def _model() -> Model:
+        with Model() as model:
+            x = Data("x", np.ones(4))
+            vec = np.array([1.5, 2.5, 3.5])
+            mat = np.arange(400, dtype="float64").reshape(20, 20)
+            ints = np.arange(5, dtype="int32")
+            a = HalfNormal("a", 1)
+            Deterministic("vec", pt.constant(vec) * x)
+            Deterministic("mat", pt.constant(mat) @ x)
+            Deterministic("ints", pt.constant(ints) * x)
+        return model
+
+    def test_short_vector_inlines(self):
+        text = self._model().str_repr(deterministic_exprs=True)
+        assert "vec = [1.5, 2.5, 3.5] * x" in text
+
+    def test_matrix_shows_shape(self):
+        text = self._model().str_repr(deterministic_exprs=True)
+        assert "<constant float64 (20, 20)> @ x" in text
+        assert "<constant int32 (5)> * x" in text
+
+    def test_matrix_shape_as_math_notation(self):
+        tex = self._model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{<constant float64>} \in \mathbb{R}^{20 \times 20}" in tex
+        assert r"\text{<constant int32>} \in \mathbb{Z}^{5}" in tex
+        assert r"\left[1.5,\ 2.5,\ 3.5\right]" in tex
+
+    def test_default_repr_unchanged(self):
+        # Shape-aware rendering is opt-in only; defaults keep <constant>
+        text = self._model().str_repr()
+        assert "(20, 20)" not in text
