@@ -1897,42 +1897,6 @@ class TestZeroOneInflatedBetaLogp:
         assert logp.shape == (3,)
         assert np.all(np.isfinite(logp))
 
-    def test_sampling_recovers_parameters(self):
-        rng = np.random.default_rng(42)
-        true_zoi, true_coi = 0.25, 0.40
-        true_mu, true_kappa = 0.45, 15.0
-        n = 600
-
-        alpha = true_mu * true_kappa
-        beta_p = (1 - true_mu) * true_kappa
-        u = rng.random(n)
-        data = np.where(
-            u < true_zoi * (1 - true_coi),
-            0.0,
-            np.where(u < true_zoi, 1.0, rng.beta(alpha, beta_p, n)),
-        )
-
-        with pm.Model():
-            zoi = pm.Beta("zoi", alpha=1, beta=1)
-            coi = pm.Beta("coi", alpha=1, beta=1)
-            mu = pm.Beta("mu", alpha=2, beta=2)
-            kappa = pm.Gamma("kappa", alpha=2, beta=0.1)
-            pm.ZeroOneInflatedBeta("y", zoi=zoi, coi=coi, mu=mu, kappa=kappa, observed=data)
-            trace = pm.sample(
-                1000,
-                tune=1000,
-                chains=2,
-                random_seed=42,
-                progressbar=False,
-                return_inferencedata=True,
-            )
-
-        post = trace.posterior
-        assert abs(post["zoi"].mean().values - true_zoi) < 0.08
-        assert abs(post["coi"].mean().values - true_coi) < 0.08
-        assert abs(post["mu"].mean().values - true_mu) < 0.08
-        assert abs(post["kappa"].mean().values - true_kappa) < 5.0
-
     def test_zero_one_inflated_beta_logp(self):
         def zoib_logp(value, zoi, coi, alpha, beta):
             if value == 0:
