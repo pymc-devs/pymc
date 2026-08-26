@@ -1824,6 +1824,10 @@ class TestZeroOneInflatedBetaLogp:
                 dist = pm.ZeroOneInflatedBeta.dist(zoi=0.3, coi=0.4, alpha=-1.0, beta=5.0)
                 pm.logp(dist, 0.5).eval()
 
+    def test_incompatible_parametrization_raises(self):
+        with pytest.raises(ValueError, match="Incompatible parametrization"):
+            pm.ZeroOneInflatedBeta.dist(zoi=0.8, coi=0.25, mu=0.5, kappa=10, alpha=5, beta=5)
+
     def test_zib_special_case(self):
         with pm.Model():
             y = pm.ZeroOneInflatedBeta("y", zoi=0.5, coi=0.0, mu=0.5, kappa=10, size=1000)
