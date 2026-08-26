@@ -657,7 +657,136 @@ class TestDeterministicExprs:
         assert r"\operatorname{sigmoid}" in tex
         assert tex.count(r"\operatorname{sigmoid}\left(\text{s}\right)") == 2
         assert r"\frac{\operatorname{sigmoid}\left(\text{s}\right)}{2}" in tex
-        assert r"\operatorname{Matmul}\left(\text{X},\ \text{X}\right) \cdot 2" in tex
+        assert r"({\text{X}}^{T} \cdot {\text{X}}^{T}) \cdot 2" in tex
+
+    def test_transpose_rendered_not_deleted(self):
+        # Adversarial review bug 1: real axis permutations must stay visible
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            Deterministic("dT", X.T)
+            Deterministic("dTX", X.T @ X)
+            Deterministic("dXX", X @ X)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "dT = X.T" in text
+        assert "dTX = X.T @ X" in text
+        assert "dXX = X @ X" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"{\text{X}}^{T}" in tex
+        assert r"{\text{X}}^{T} \cdot \text{X}" in tex
+
+    def test_axis_permutation_shows_order(self):
+        with Model() as model:
+            w = pm.Data("w", np.zeros((2, 3, 4)))
+            Deterministic("d", w.dimshuffle((2, 0, 1)))
+        text = model.str_repr(deterministic_exprs=True)
+        assert "transpose(w, order=(2, 0, 1))" in text
+
+    def test_latex_sum_axes_distinguished(self):
+        # Adversarial review bug 2: axis reductions must not collapse
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            Deterministic("d", X.sum(axis=0) + X.sum(axis=1) + X.sum())
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\sum\_{0}\left(\text{X}\right)" in tex
+        assert r"\sum\_{1}\left(\text{X}\right)" in tex
+        assert r"\sum\left(\text{X}\right)" in tex
+
+    def test_latex_blockwise_ops_unwrapped(self):
+        # Adversarial review bug 2: Blockwise core op must be shown, and
+        # eigh/cholesky/solve must not collapse onto the same output
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            L = pt.linalg.cholesky(X)
+            sol = pt.linalg.solve(L, X)
+            Deterministic("d", sol[0, 0])
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{Cholesky}" in tex
+        assert r"\operatorname{Solve}" in tex
+        assert "Blockwise" not in tex
+
+    def test_latex_cast_shows_dtype(self):
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Deterministic("d", pt.cast(s + 1.5, "int32"))
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{cast}" in tex
+        assert r"\text{int32}" in tex
+
+    def test_scan_renders_opaque_placeholder(self):
+        # Adversarial review bug 4: inner-graph machinery must not leak
+        from pytensor.scan import scan as pt_scan
+
+        with Model() as model:
+            seq = pm.Data("seq", np.arange(5.0))
+            out = pt_scan(
+                fn=lambda a, acc: acc + a,
+                sequences=seq,
+                outputs_info=[pt.constant(0.0, dtype=seq.dtype)],
+                n_steps=5,
+                return_updates=False,
+            )
+            Deterministic("path", out)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "AllocEmpty" not in text
+        assert "set_subtensor" not in text
+        assert "Scan{" not in text
+        assert "f(seq)" in text
+
+    def test_include_params_false_takes_precedence(self):
+        text = self.model().str_repr(include_params=False, deterministic_exprs=True)
+        assert "mu = Deterministic" in text
+        assert "= ((alpha_a" not in text
+
+    def test_standalone_without_named_vars_stops_at_named(self):
+        from pymc.printing import str_for_potential_or_deterministic
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            inter = s + 1
+            d = Deterministic("d", s * inter)
+        res = str_for_potential_or_deterministic(d, deterministic_exprs=True)
+        assert res == "d = s * (s + 1)"
+        assert "~" not in res.split("=", 1)[1]
+
+    def test_named_leaves_matched_by_identity(self):
+        with Model() as model:
+            a = Normal("a", 0, 1)
+            decoy = pt.vector("z") + 1
+            decoy.name = "a"
+            Deterministic("d", a * 2)
+            Deterministic("e", decoy * 3)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = a * 2" in text
+        # A same-named non-model variable expands instead of masquerading
+        assert "e = (z + 1) * 3" in text
+
+    def test_named_leaf_beats_dict_registered_op(self):
+        # PPrinter checks dict-keyed registrations before condition rules;
+        # a potential whose owner op is a shared Elemwise instance must still
+        # stop traversal at the leaf boundary
+        from pymc.printing import str_for_potential_or_deterministic
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Potential("pot", s * 2)
+            det = Deterministic("d", model.potentials[0] + 1)
+        named_vars = set(model.free_RVs) | set(model.deterministics) | set(model.potentials)
+        res = str_for_potential_or_deterministic(
+            det, named_vars=named_vars, deterministic_exprs=True
+        )
+        assert res == "d = pot + 1"
+
+    def test_ownerless_leaf_consistent_across_formats(self):
+        import pytensor
+
+        with Model() as model:
+            ext = pytensor.shared(np.ones(3), name="ext")
+            z = Normal("z", 0, 1, shape=3)
+            Deterministic("d", z * ext)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = z * ext" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{ext}" in tex
 
 
 class TestDeterministicExprsParametric:
@@ -694,10 +823,12 @@ class TestDeterministicExprsParametric:
         def matrix_ops(m):
             X = pm.Data("X", np.eye(2))
             b = Normal("b", 0, 1, shape=2)
-            pm.Deterministic("p", pt.dot(X, b) + b.sum())
+            pm.Deterministic("p", pt.dot(X, b) + b.sum(axis=0))
             return {
-                "anchors_plain": [r"(X \dot b) + sum(b"],
-                "anchors_tex": [r"\text{X} \cdot \text{b} + \sum\left(\text{b}\right)"],
+                "anchors_plain": ["(X @ b) + sum(b, axis=(0,))"],
+                "anchors_tex": [
+                    r"(\text{X} \cdot \text{b}) + \sum\_{0}\left(\text{b}\right)",
+                ],
             }
 
         def indexing_and_slicing(m):
@@ -708,7 +839,10 @@ class TestDeterministicExprsParametric:
                 # plain renders real Python-style indexing...
                 "anchors_plain": ["X[:, 0]", "sum(X[:2]"],
                 # ...latex degrades gracefully to \operatorname for subtensors (#8407 open question)
-                "anchors_tex": [r"\operatorname{Subtensor}", r"\sum\left(\operatorname{Subtensor}"],
+                "anchors_tex": [
+                    r"\operatorname{Subtensor}",
+                    r"\sum\_{0}\left(\operatorname{Subtensor}",
+                ],
             }
 
         def potential_only(m):
@@ -751,7 +885,7 @@ class TestDeterministicExprsParametric:
                 ],
                 "anchors_tex": [
                     r"(2 + (1.5 \cdot \text{z}))",
-                    r"\text{Scalar(float64, shape=())}",
+                    r"\text{<Scalar(float64, shape=())>}",
                     r"\sum\left(\operatorname{Normal}(0,~2)\right)",
                 ],
             }
