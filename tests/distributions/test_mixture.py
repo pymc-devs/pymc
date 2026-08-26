@@ -62,6 +62,7 @@ from pymc.distributions.shape_utils import change_dist_size, to_tuple
 from pymc.distributions.transforms import _default_transform
 from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform, LogTransform, SimplexTransform
+from pymc.logprob.utils import ParameterValueError
 from pymc.math import expand_packed_triangular
 from pymc.model import Model
 from pymc.pytensorf import floatX
@@ -1809,8 +1810,6 @@ class TestZeroOneInflatedBetaLogp:
         np.testing.assert_allclose(float(sp), expected, rtol=1e-6)
 
     def test_parameter_constraints(self):
-        from pymc.logprob.utils import ParameterValueError
-
         with pytest.raises(ParameterValueError):
             with pm.Model():
                 dist = pm.ZeroOneInflatedBeta.dist(zoi=1.5, coi=0.4, mu=0.5, kappa=10)
