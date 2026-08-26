@@ -38,7 +38,7 @@ from pytensor.printing import (
 from pytensor.printing import pprint as _pytensor_pprint
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.math import Dot, Sum
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
@@ -368,7 +368,8 @@ class _TransparentFirstInputPrinter(Printer):
     """Render a node as its first input.
 
     Used for ``ViewOp`` (identity wrappers around deterministics) and
-    ``DimShuffle`` (broadcasting noise that carries no mathematical meaning).
+    ``DimShuffle`` (axis manipulation that would add clutter without
+    changing the expression a reader cares about).
     """
 
     def process(self, output, pstate):
@@ -481,13 +482,9 @@ def _is_unary_viewop(r) -> bool:
 
 
 def _is_random_op(r) -> bool:
-    if r.owner is None:
-        return False
-    # Imported lazily: pymc.distributions imports printing lazily, so a
-    # module-level import here would create an import cycle.
-    from pymc.distributions.distribution import SymbolicRandomVariable
-
-    return isinstance(r.owner.op, RandomVariable | SymbolicRandomVariable)
+    # Covers both pytensor RandomVariables and PyMC SymbolicRandomVariables,
+    # which also derive from RNGConsumerOp.
+    return r.owner is not None and isinstance(r.owner.op, RNGConsumerOp)
 
 
 def _unwrap_viewops(r):
