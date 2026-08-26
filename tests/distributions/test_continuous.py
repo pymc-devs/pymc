@@ -819,20 +819,8 @@ class TestMatchesScipy:
             (50.0, 50.000, 10.000, 10.000, -1.433714),
             (1000.0, 500.000, 10.000, 20.000, -1.573708e-11),
             (0.01, 0.01, 100.0, 0.01, -0.69314718),  # Fails in scipy version
-            (
-                -0.43402407,
-                0.0,
-                0.1,
-                0.1,
-                -13.59615423,
-            ),  # Previous 32-bit version failed here
-            (
-                -0.72402009,
-                0.0,
-                0.1,
-                0.1,
-                -31.26571842,
-            ),  # Previous 64-bit version failed here
+            (-0.43402407, 0.0, 0.1, 0.1, -13.59615423),  # Previous 32-bit version failed here
+            (-0.72402009, 0.0, 0.1, 0.1, -31.26571842),  # Previous 64-bit version failed here
         ],
     )
     def test_ex_gaussian_cdf(self, value, mu, sigma, nu, logcdf_val):
