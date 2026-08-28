@@ -643,6 +643,39 @@ def test_shape_without_dims() -> None:
     assert graph.edges() == []
 
 
+def test_custom_dist_without_random() -> None:
+    """A CustomDist with no `random` callable can still be plotted.
+
+    Getting the plates evaluates each variable's shape. Without shape rewrites
+    that runs the variable itself, which raises NotImplementedError here.
+    See https://github.com/pymc-devs/pymc/issues/8077.
+    """
+
+    def my_logp(value, mu, sigma):
+        return -0.5 * pt.log(2 * pt.pi * sigma**2) - 0.5 * ((value - mu) / sigma) ** 2
+
+    with pm.Model() as model:
+        mu = pm.Normal("mu", 0, 1)
+        sigma = pm.Exponential("sigma", 1)
+        pm.CustomDist("y", mu, sigma, logp=my_logp, shape=3)
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[
+                NodeInfo(var=model["mu"], node_type=NodeType.FREE_RV),
+                NodeInfo(var=model["sigma"], node_type=NodeType.FREE_RV),
+            ],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(3,)),
+            variables=[NodeInfo(var=model["y"], node_type=NodeType.FREE_RV)],
+        ),
+    ]
+
+
 def test_scalars_dim_info() -> None:
     with pm.Model() as model:
         pm.Normal("x")

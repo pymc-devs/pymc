@@ -21,12 +21,12 @@ from os import path
 from typing import Any, cast
 
 from pytensor import function
+from pytensor.compile.mode import Mode
 from pytensor.graph.basic import Variable
 from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.shape import Shape
 
 from pymc.model.core import modelcontext
-from pymc.pytensorf import _cheap_eval_mode
 from pymc.util import get_default_varnames, get_var_name
 
 __all__ = (
@@ -73,8 +73,15 @@ def create_plate_label_with_dim_length(
     )
 
 
+# Shape rewrites are needed here: without them, evaluating a random variable's
+# shape runs the variable itself, which fails for a CustomDist that was given no
+# `random` callable. With them the shape is inferred from the parameters and the
+# variable is never drawn from.
+_shape_eval_mode = Mode(linker="py", optimizer="fast_compile")
+
+
 def fast_eval(var):
-    return function([], var, mode=_cheap_eval_mode)()
+    return function([], var, mode=_shape_eval_mode)()
 
 
 class NodeType(str, Enum):
