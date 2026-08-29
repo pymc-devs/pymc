@@ -676,6 +676,30 @@ def test_custom_dist_without_random() -> None:
     ]
 
 
+def test_flat_variable() -> None:
+    """A model containing a Flat variable can be plotted.
+
+    Flat cannot be sampled from, so evaluating its shape by running it fails.
+    See https://github.com/pymc-devs/pymc/issues/8024.
+    """
+    with pm.Model() as model:
+        pm.Flat("intercept")
+        pm.Normal("y", mu=model["intercept"], sigma=1.0, shape=7)
+
+    graph = ModelGraph(model)
+
+    assert graph.get_plates() == [
+        Plate(
+            dim_info=DimInfo(names=(), lengths=()),
+            variables=[NodeInfo(var=model["intercept"], node_type=NodeType.FREE_RV)],
+        ),
+        Plate(
+            dim_info=DimInfo(names=(None,), lengths=(7,)),
+            variables=[NodeInfo(var=model["y"], node_type=NodeType.FREE_RV)],
+        ),
+    ]
+
+
 def test_scalars_dim_info() -> None:
     with pm.Model() as model:
         pm.Normal("x")
