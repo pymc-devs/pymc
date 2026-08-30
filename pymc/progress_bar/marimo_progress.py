@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Callable
+from html import escape
 from time import perf_counter
 from typing import Any, Self
 
@@ -397,7 +398,7 @@ class MarimoSimpleProgress:
             bar_class += " finished"
 
         loss_header = "<th>Loss</th>" if self.loss is not None else ""
-        loss_cell = f"<td>{self.loss}</td>" if self.loss is not None else ""
+        loss_cell = f"<td>{escape(str(self.loss))}</td>" if self.loss is not None else ""
 
         return f"""<style>{self._css_theme}</style>
 <table class="pymc-progress-table">

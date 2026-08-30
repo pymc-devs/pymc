@@ -695,13 +695,19 @@ def test_fit_with_loss_uses_marimo_progress_in_marimo():
 
     with (
         patch("pymc.variational.inference.in_marimo_notebook", return_value=True),
-        patch.object(MarimoSimpleProgress, "__enter__", return_value=None),
+        patch.object(MarimoSimpleProgress, "__enter__", return_value=None) as mock_enter,
         patch.object(MarimoSimpleProgress, "__exit__", return_value=None),
-        patch.object(MarimoSimpleProgress, "add_task", return_value=0),
-        patch.object(MarimoSimpleProgress, "advance"),
-        patch.object(MarimoSimpleProgress, "update"),
+        patch.object(MarimoSimpleProgress, "add_task", return_value=0) as mock_add_task,
+        patch.object(MarimoSimpleProgress, "advance") as mock_advance,
+        patch.object(MarimoSimpleProgress, "update") as mock_update,
     ):
         with pm.Model():
             pm.Normal("x", 0, 1)
             # score=True → _iterate_with_loss → should pick MarimoSimpleProgress
             pm.fit(n=10, score=True, progressbar=True)
+
+        # Prove the Marimo branch was actually taken, not silently skipped.
+        mock_enter.assert_called_once()
+        mock_add_task.assert_called_once()
+        assert mock_advance.call_count == 10
+        mock_update.assert_called_once()
