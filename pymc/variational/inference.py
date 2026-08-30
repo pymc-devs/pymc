@@ -23,7 +23,10 @@ from rich.progress import Progress, TextColumn, track
 
 import pymc as pm
 
-from pymc.progress_bar import CustomProgress, default_progress_theme
+from pymc.progress_bar import create_simple_progress, default_progress_theme
+from pymc.progress_bar.marimo_progress import MarimoSimpleProgress, in_marimo_notebook
+from pymc.progress_bar.progress import NullSimpleProgress
+from pymc.progress_bar.rich_progress import CustomProgress
 from pymc.pytensorf import resolve_backend_compile_kwargs
 from pymc.variational import test_functions
 from pymc.variational.approximations import Empirical, FullRank, MeanField
@@ -188,14 +191,15 @@ class Inference:
 
     def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):
         i = 0
+        progress = create_simple_progress(
+            progressbar=progressbar, progressbar_theme=progressbar_theme
+        )
         try:
-            with CustomProgress(
-                console=Console(theme=progressbar_theme), disable=not progressbar
-            ) as progress:
-                task = progress.add_task("Fitting", total=n)
+            with progress:
+                task = progress.add_task("Fitting", completed=0, total=n)
                 for i in range(n):
                     step_func()
-                    progress.update(task, advance=1)
+                    progress.advance(task, advance=1)
                     current_param = self.approx.params[0].get_value()
                     if np.isnan(current_param).any():
                         name_slc = []
@@ -239,17 +243,24 @@ class Inference:
         scores = np.empty(n)
         scores[:] = np.nan
         i = 0
-        try:
-            with CustomProgress(
+        if not progressbar:
+            progress = NullSimpleProgress()
+        elif in_marimo_notebook():
+            progress = MarimoSimpleProgress(
+                theme=progressbar_theme if isinstance(progressbar_theme, str) else None
+            )
+        else:
+            progress = CustomProgress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
                 console=Console(theme=progressbar_theme),
-                disable=not progressbar,
-            ) as progress:
+            )
+        try:
+            with progress:
                 task = progress.add_task("Fitting:", total=n, loss="")
                 for i in range(n):
                     e = step_func()
-                    progress.update(task, advance=1)
+                    progress.advance(task, advance=1)
                     if np.isnan(e):
                         scores = scores[:i]
                         self.hist = np.concatenate([self.hist, scores])
@@ -279,8 +290,6 @@ class Inference:
                     scores[i] = e
                     if i % 10 == 0:
                         avg_loss = _infmean(scores[max(0, i - 1000) : i + 1])
-                        progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
-                        avg_loss = scores[max(0, i - 1000) : i + 1].mean()
                         progress.update(task, loss=f"Average Loss = {avg_loss:,.5g}")
                     for callback in callbacks:
                         callback(self.approx, scores[: i + 1], i + s + 1)
