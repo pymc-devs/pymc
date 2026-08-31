@@ -188,6 +188,7 @@ from pymc.exceptions import UndefinedMomentException
         [Uniform, uniform, {"lower": -3, "upper": 2}, {"loc": -3, "scale": 5}],
         [VonMises, vonmises, {"mu": 2, "kappa": 2}, {"loc": 2, "kappa": 2}],
         [Wald, invgauss, {"mu": 2, "lam": 1}, {"mu": 2, "scale": 1}],
+        [Wald, invgauss, {"mu": 2, "lam": 1, "alpha": 3}, {"mu": 2, "scale": 1, "loc": 3}],
         [Weibull, weibull_min, {"alpha": 2, "beta": 2}, {"c": 2, "scale": 2}],
     ],
 )

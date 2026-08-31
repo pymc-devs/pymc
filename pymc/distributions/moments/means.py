@@ -442,7 +442,7 @@ def vonmisses_mean(op, rv, rng, size, mu, kappa):
 
 @_mean.register(WaldRV)
 def wald_mean(op, rv, rng, size, mu, lam, alpha):
-    return maybe_resize(pt.broadcast_arrays(mu, lam, alpha)[0], size)
+    return maybe_resize(pt.broadcast_arrays(mu + alpha, lam)[0], size)
 
 
 @_mean.register(WeibullBetaRV)

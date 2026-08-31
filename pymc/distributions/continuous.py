@@ -1047,10 +1047,10 @@ class Wald(PositiveContinuous):
         return super().dist([mu, lam, alpha], **kwargs)
 
     def support_point(rv, size, mu, lam, alpha):
-        mu, _, _ = pt.broadcast_arrays(mu, lam, alpha)
+        mean, _ = pt.broadcast_arrays(mu + alpha, lam)
         if not rv_size_is_none(size):
-            mu = pt.full(size, mu)
-        return mu
+            mean = pt.full(size, mean)
+        return mean
 
     @staticmethod
     def get_mu_lam_phi(mu, lam, phi):

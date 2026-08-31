@@ -1498,6 +1498,20 @@ class TestMoments:
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
+        "mu, lam, alpha, size, expected",
+        [
+            (2, 1, 3, None, 5),
+            (1, 1, np.arange(3), (2, 3), np.full((2, 3), 1 + np.arange(3))),
+        ],
+    )
+    def test_wald_support_point_with_alpha(self, mu, lam, alpha, size, expected):
+        # `alpha` shifts the support, so the support point has to shift with it,
+        # otherwise it can land outside the distribution's own support.
+        with pm.Model() as model:
+            pm.Wald("x", mu=mu, lam=lam, alpha=alpha, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
         "alpha, beta, size, expected",
         [
             (1, 1, None, 1),
