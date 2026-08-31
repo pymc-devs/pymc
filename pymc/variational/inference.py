@@ -20,6 +20,7 @@ import numpy as np
 
 from rich.console import Console
 from rich.progress import Progress, TextColumn, track
+from rich.theme import Theme
 
 import pymc as pm
 
@@ -253,7 +254,9 @@ class Inference:
             progress = CustomProgress(
                 *Progress.get_default_columns(),
                 TextColumn("{task.fields[loss]}"),
-                console=Console(theme=progressbar_theme),
+                console=Console(
+                    theme=progressbar_theme if isinstance(progressbar_theme, Theme) else None
+                ),
             )
         try:
             with progress:

@@ -354,7 +354,7 @@ class MarimoSimpleProgress:
             self.loss = kwargs["loss"]
             refresh = True
         if refresh:
-            self._render()
+            self._render(force=True)
 
     def _render(self, force: bool = False) -> None:
         """Render HTML progress to marimo output."""
