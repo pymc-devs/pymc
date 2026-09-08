@@ -42,7 +42,7 @@ from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
-from pytensor.graph.traversal import ancestors
+from pytensor.graph.traversal import ancestors, toposort
 from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar import Switch
 from pytensor.scalar import switch as scalar_switch
@@ -492,10 +492,10 @@ def split_valued_ifelse(fgraph, node):
             )
         )
 
-    toposort = fgraph.toposort()
+    node_order = {node: i for i, node in enumerate(fgraph.toposort())}
     then_else_valued_outputs = sorted(
         then_else_valued_outputs,
-        key=lambda x: max(toposort.index(x[0].owner), toposort.index(x[1].owner)),
+        key=lambda x: max(node_order[x[0].owner], node_order[x[1].owner]),
     )
 
     (first_then, first_else, first_value_var, first_valued_out), *remaining_vars = (
@@ -508,20 +508,33 @@ def split_valued_ifelse(fgraph, node):
     if remaining_vars:
         first_ifelse_ancestors = {a for a in ancestors((first_then, first_else)) if a.owner}
         remaining_thens = [then_out for (then_out, _, _, _) in remaining_vars]
-        remaininng_elses = [else_out for (_, else_out, _, _) in remaining_vars]
-        if set(remaining_thens + remaininng_elses) & first_ifelse_ancestors:
+        remaining_elses = [else_out for (_, else_out, _, _) in remaining_vars]
+        if set(remaining_thens + remaining_elses) & first_ifelse_ancestors:
             # IfElse graph cannot be split, because some remaining variables are inputs to first ifelse
             return None
 
-        remaining_ifelses = ifelse(cond, remaining_thens, remaininng_elses)
-        # Replace potential dependencies on first_then, first_else in remaining ifelse by first_valued_ifelse
-        dummy_first_valued_ifelse = first_valued_ifelse.type()
-        temp_fgraph = FunctionGraph(
-            outputs=[*remaining_ifelses, dummy_first_valued_ifelse], clone=False
+        # Rebuild direct consumers of first_then and first_else to use first_valued_ifelse;
+        # the owning graph installs their output replacements and updates client records.
+        branch_replacements = {
+            first_then: first_valued_ifelse,
+            first_else: first_valued_ifelse,
+        }
+        for branch_node in toposort(
+            remaining_thens + remaining_elses, blockers=tuple(branch_replacements)
+        ):
+            if first_then not in branch_node.inputs and first_else not in branch_node.inputs:
+                continue
+            new_inputs = [branch_replacements.get(inp, inp) for inp in branch_node.inputs]
+            new_node = branch_node.clone_with_new_inputs(new_inputs)
+            node_replacements = dict(zip(branch_node.outputs, new_node.outputs))
+            branch_replacements.update(node_replacements)
+            replacements.update(node_replacements)
+
+        remaining_ifelses = ifelse(
+            cond,
+            [branch_replacements.get(out, out) for out in remaining_thens],
+            [branch_replacements.get(out, out) for out in remaining_elses],
         )
-        temp_fgraph.replace(first_then, dummy_first_valued_ifelse)
-        temp_fgraph.replace(first_else, dummy_first_valued_ifelse)
-        temp_fgraph.replace(dummy_first_valued_ifelse, first_valued_ifelse, import_missing=True)
         for remaining_ifelse, (_, _, remaining_value_var, remaining_valued_out) in zip(
             remaining_ifelses, remaining_vars
         ):
