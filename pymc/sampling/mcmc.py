@@ -92,6 +92,10 @@ from pymc.vartypes import discrete_types
 if TYPE_CHECKING:
     from pymc.backends.zarr import ZarrChain, ZarrTrace
 
+    # Annotation-only: importing `Sampler` at runtime would cycle back through
+    # `pymc.sampling.samplers`, whose modules import this one.
+    from pymc.sampling.samplers.base import Sampler
+
 NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
 NUTPIE_MIN_VERSION = (0, 16, 10)
 
@@ -395,22 +399,6 @@ def _sample_external_nuts(
     compile_kwargs = compile_kwargs.copy()
     idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
 
-    if "backend" in nuts_kwargs:
-        warnings.warn(
-            "`backend` should be passed as a top-level argument to `pm.sample`, "
-            "not nested in the NUTS step kwargs.",
-            FutureWarning,
-        )
-        compile_kwargs["mode"] = get_mode(nuts_kwargs.pop("backend"))
-
-    if "gradient_backend" in nuts_kwargs:
-        warnings.warn(
-            "`gradient_backend` should be passed via `compile_kwargs` to `pm.sample`, "
-            "not nested in the NUTS step kwargs.",
-            FutureWarning,
-        )
-        compile_kwargs["gradient_backend"] = nuts_kwargs.pop("gradient_backend")
-
     if not quiet:
         _log.info(f"NUTS[{sampler}]: {model.free_RVs}")
 
@@ -550,6 +538,64 @@ def _sample_external_nuts(
         )
 
 
+def _reject_arguments_incompatible_with_sampler(
+    *,
+    step,
+    nuts_sampler,
+    return_inferencedata,
+    trace,
+    callback,
+    mp_ctx,
+    progressbar_theme,
+    init,
+    n_init,
+    jitter_max_retries,
+    backend,
+    compile_kwargs,
+    kwargs,
+):
+    """Reject `pm.sample` arguments that a `sampler=` cannot receive.
+
+    `pm.sample(sampler=...)` forwards only the shared run configuration.
+    Anything a sampler owns -- its algorithm parameters, initialization
+    strategy, trace backend, callbacks, multiprocessing context and how the
+    model is compiled -- belongs to the sampler's constructor, and is
+    rejected here rather than forwarded for reinterpretation.
+    """
+    if step is not None:
+        raise ValueError("`step` and `sampler` cannot be used together.")
+    if nuts_sampler is not None:
+        raise ValueError("`nuts_sampler` and `sampler` cannot be used together.")
+    if not return_inferencedata:
+        raise ValueError("`return_inferencedata=False` is not supported with `sampler`.")
+    if trace is not None:
+        raise ValueError("A custom `trace` backend is not supported with `sampler`.")
+    if callback is not None:
+        raise ValueError("`callback` is not supported with `sampler`.")
+
+    constructor_arguments = {
+        "mp_ctx": mp_ctx is not None,
+        "progressbar_theme": progressbar_theme is not None,
+        "backend": backend is not None,
+        "compile_kwargs": compile_kwargs is not None,
+        "init": init != "auto",
+        "n_init": n_init != 200_000,
+        "jitter_max_retries": jitter_max_retries != 10,
+    }
+    for name, was_given in constructor_arguments.items():
+        if was_given:
+            raise ValueError(
+                f"`{name}` is not supported with `sampler`. Configure it when constructing "
+                f"the sampler instead, e.g. `pm.StepSampler({name}=...)`."
+            )
+    if kwargs:
+        raise TypeError(
+            f"Arguments {sorted(kwargs)} are not supported together with `sampler`. "
+            "Configure the sampler when constructing it instead, e.g. "
+            "`pm.nutpie.nuts(target_accept=0.9)`."
+        )
+
+
 @overload
 def sample(
     draws: int = 1000,
@@ -564,6 +610,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -574,7 +621,6 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[True] = True,
     idata_kwargs: dict[str, Any] | None = None,
-    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
@@ -597,6 +643,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -607,7 +654,6 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: Literal[False],
     idata_kwargs: dict[str, Any] | None = None,
-    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     model: Model | None = None,
@@ -630,6 +676,7 @@ def sample(
     step=None,
     var_names: Sequence[str] | None = None,
     nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,
+    sampler: Sampler | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
     init: str = "auto",
     jitter_max_retries: int = 10,
@@ -640,7 +687,6 @@ def sample(
     keep_warning_stat: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: dict[str, Any] | None = None,
-    nuts_sampler_kwargs: dict[str, Any] | None = None,
     callback=None,
     mp_ctx=None,
     blas_cores: int | None | Literal["auto"] = "auto",
@@ -704,6 +750,24 @@ def sample(
         This requires the chosen sampler to be installed.
         All samplers, except "pymc", require the full model to be continuous.
         If ``None`` (default), "nutpie" is used if installed and can be compiled to the desired backend.
+
+        .. deprecated:: 6.2
+            Use ``sampler`` instead, e.g. ``pm.sample(sampler=pm.nutpie.nuts())``.
+    sampler : Sampler, optional
+        A configured sampler instance that samples the whole model, e.g.
+        ``pm.nutpie.nuts()``, ``pm.numpyro.nuts()``, ``pm.blackjax.nuts()`` or
+        ``pm.StepSampler(step=pm.Metropolis())``. The constructor takes the
+        algorithm configuration; ``pm.sample`` contributes only the shared run
+        configuration, which it forwards to the sampler's ``sample_from_init``
+        method. Arguments a sampler owns are rejected rather than forwarded:
+        ``step``, ``nuts_sampler``, ``init``, ``n_init``,
+        ``jitter_max_retries``, ``trace``, ``callback``, ``mp_ctx``,
+        ``backend``, ``compile_kwargs``, ``progressbar_theme``, step keyword
+        arguments and ``return_inferencedata=False``. Compilation in
+        particular is algorithm configuration, so it belongs to the
+        constructor, e.g. ``pm.nutpie.nuts(backend="jax")``. Equivalent to the
+        sampler's flat entry point (e.g. ``pm.nutpie.nuts.sample(...)``),
+        which combines algorithm and run arguments in a single call.
     blas_cores: int or "auto" or None, default = "auto"
         The total number of threads blas and openmp functions should use during sampling.
         Setting it to "auto" will ensure that the total number of active blas threads is the
@@ -751,9 +815,6 @@ def sample(
         `MultiTrace` (False). Defaults to `True`.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`
-    nuts_sampler_kwargs : dict, optional
-        Deprecated. Pass NUTS keyword arguments via ``nuts={...}`` instead
-        (e.g. ``pm.sample(..., nuts={"target_accept": 0.9})``).
     callback : function, default=None
         A function which gets called for every sample from the trace of a chain. The function is
         called with the trace and the current draw and will contain all samples for a single trace.
@@ -840,6 +901,25 @@ def sample(
             mean     sd  hdi_3%  hdi_97%
         p  0.609  0.047   0.528    0.699
     """
+    if sampler is not None:
+        # Checked before any argument rewriting below, so the error names the
+        # argument the caller actually passed.
+        _reject_arguments_incompatible_with_sampler(
+            step=step,
+            nuts_sampler=nuts_sampler,
+            return_inferencedata=return_inferencedata,
+            trace=trace,
+            callback=callback,
+            mp_ctx=mp_ctx,
+            progressbar_theme=progressbar_theme,
+            init=init,
+            n_init=n_init,
+            jitter_max_retries=jitter_max_retries,
+            backend=backend,
+            compile_kwargs=compile_kwargs,
+            kwargs=kwargs,
+        )
+
     if return_inferencedata is False:
         warnings.warn(
             "`return_inferencedata=False` is deprecated and will be removed in a future "
@@ -848,18 +928,6 @@ def sample(
             FutureWarning,
             stacklevel=2,
         )
-    if nuts_sampler_kwargs is not None:
-        warnings.warn(
-            "`nuts_sampler_kwargs` is deprecated. Pass NUTS keyword arguments via the "
-            "`nuts={...}` argument to `pm.sample`.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        if "nuts" in kwargs:
-            raise ValueError(
-                "Cannot pass both `nuts_sampler_kwargs` and `nuts=`. Use `nuts=` only."
-            )
-        kwargs["nuts"] = nuts_sampler_kwargs
     if "target_accept" in kwargs:
         if "nuts" in kwargs and "target_accept" in kwargs["nuts"]:
             raise ValueError(
@@ -892,6 +960,30 @@ def sample(
     if chains is None:
         chains = max(2, cores)
 
+    if sampler is not None:
+        # `pm.sample(sampler=...)` is sugar over the sampler's own
+        # `sample_from_init`: it contributes only the shared run-level
+        # configuration. How the model is compiled and how workers are spawned
+        # are the sampler's own, so the multiprocessing context and the BLAS
+        # limiter are set up inside `sample_from_init`, not here.
+        return sampler.sample_from_init(
+            model=model,
+            draws=draws,
+            tune=tune,
+            chains=chains,
+            cores=cores,
+            blas_cores=blas_cores,
+            initvals=initvals,
+            random_seed=random_seed,
+            progressbar=progressbar,
+            quiet=quiet,
+            discard_tuned_samples=discard_tuned_samples,
+            keep_warning_stat=keep_warning_stat,
+            var_names=var_names,
+            idata_kwargs=idata_kwargs,
+            compute_convergence_checks=compute_convergence_checks,
+        )
+
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
     mp_ctx = _initialize_multiprocessing_context(
         mp_ctx, mode=compile_kwargs.get("mode"), quiet=quiet
@@ -906,6 +998,26 @@ def sample(
         )
     rngs = get_random_generator(random_seed).spawn(chains)
     random_seed_list = [rng.integers(2**30) for rng in rngs]
+
+    if nuts_sampler is not None:
+        warnings.warn(
+            "The `nuts_sampler` argument is deprecated. Use the `sampler` argument "
+            "instead, e.g. `pm.sample(sampler=pm.nutpie.nuts())`, "
+            "`pm.sample(sampler=pm.numpyro.nuts())`, "
+            "`pm.sample(sampler=pm.blackjax.nuts())` or "
+            "`pm.sample(sampler=pm.StepSampler())`, or the flat entry points "
+            "such as `pm.nutpie.nuts.sample(...)`.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+    if init != "auto" or n_init != 200_000 or jitter_max_retries != 10:
+        warnings.warn(
+            "The NUTS-specific `init`, `n_init` and `jitter_max_retries` arguments of "
+            "`pm.sample` are deprecated and will move to the sampler configuration. "
+            'Use `pm.sample(sampler=pm.StepSampler(init="jitter+adapt_diag", ...))` instead.',
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     if (
         not discard_tuned_samples
@@ -1028,11 +1140,100 @@ def sample(
                 **kwargs,
             )
 
+    return _sample_with_step_methods(
+        model=model,
+        step=step,
+        step_kwargs=kwargs,
+        init=init,
+        n_init=n_init,
+        jitter_max_retries=jitter_max_retries,
+        trace=trace,
+        callback=callback,
+        progressbar_theme=progressbar_theme,
+        return_inferencedata=return_inferencedata,
+        draws=draws,
+        tune=tune,
+        chains=chains,
+        cores=cores,
+        rngs=rngs,
+        random_seed_list=random_seed_list,
+        initvals=initvals,
+        progressbar=progressbar,
+        quiet=quiet,
+        discard_tuned_samples=discard_tuned_samples,
+        keep_warning_stat=keep_warning_stat,
+        var_names=var_names,
+        idata_kwargs=idata_kwargs,
+        compute_convergence_checks=compute_convergence_checks,
+        compile_kwargs=compile_kwargs,
+        mp_ctx=mp_ctx,
+        joined_blas_limiter=joined_blas_limiter,
+        num_blas_cores_per_worker=num_blas_cores_per_worker,
+        _assigned=(provided_steps, selected_steps, exclusive_nuts),
+    )
+
+
+def _sample_with_step_methods(
+    *,
+    model,
+    step,
+    step_kwargs,
+    init,
+    n_init,
+    jitter_max_retries,
+    trace,
+    callback,
+    progressbar_theme,
+    return_inferencedata,
+    draws,
+    tune,
+    chains,
+    cores,
+    rngs,
+    random_seed_list,
+    initvals,
+    progressbar,
+    quiet,
+    discard_tuned_samples,
+    keep_warning_stat,
+    var_names,
+    idata_kwargs,
+    compute_convergence_checks,
+    compile_kwargs,
+    mp_ctx,
+    joined_blas_limiter,
+    num_blas_cores_per_worker,
+    _assigned=None,
+):
+    """Run the native step-method machinery (the engine behind plain ``pm.sample``).
+
+    Called by ``pm.sample`` on its internal path and by
+    :class:`~pymc.sampling.samplers.step.StepSampler.sample_from_init`, so the
+    two cannot drift apart. ``_assigned`` carries a precomputed
+    ``(provided_steps, selected_steps, exclusive_nuts)`` triple to avoid a
+    second step-assignment pass; when ``None`` it is computed here.
+    """
+    if quiet:
+        progressbar = False
+    progress_bool = bool(progressbar)
+
+    if _assigned is not None:
+        provided_steps, selected_steps, exclusive_nuts = _assigned
+    else:
+        provided_steps, selected_steps = assign_step_methods(model, step, methods=STEP_METHODS)
+        exclusive_nuts = (
+            not selected_steps and len(provided_steps) == 1 and isinstance(provided_steps[0], NUTS)
+        ) or (
+            not provided_steps
+            and len(selected_steps) == 1
+            and issubclass(next(iter(selected_steps)), NUTS)
+        )
+
     if exclusive_nuts and not provided_steps:
         # Special path for NUTS initialization
-        if "nuts" in kwargs:
-            nuts_kwargs = kwargs.pop("nuts")
-            [kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
+        if "nuts" in step_kwargs:
+            nuts_kwargs = step_kwargs.pop("nuts")
+            [step_kwargs.setdefault(k, v) for k, v in nuts_kwargs.items()]
         with joined_blas_limiter():
             initial_points, step = init_nuts(
                 init=init,
@@ -1046,7 +1247,7 @@ def sample(
                 tune=tune,
                 initvals=initvals,
                 compile_kwargs=compile_kwargs,
-                **kwargs,
+                **step_kwargs,
             )
     else:
         # Get initial points
@@ -1063,7 +1264,7 @@ def sample(
             model,
             steps=provided_steps,
             selected_steps=selected_steps,
-            step_kwargs=kwargs,
+            step_kwargs=step_kwargs,
             initial_point=initial_points[0],
             compile_kwargs=compile_kwargs,
         )
@@ -1112,7 +1313,7 @@ def sample(
         "blas_cores": num_blas_cores_per_worker,
     }
 
-    sample_args.update(kwargs)
+    sample_args.update(step_kwargs)
 
     has_population_samplers = np.any(
         [
