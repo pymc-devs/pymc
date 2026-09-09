@@ -303,7 +303,7 @@ class Weibull(PositiveDimDistribution):
 
 @copy_docstring(regular_dists.Pareto)
 class Pareto(PositiveDimDistribution):
-    def __new__(cls, name, alpha, m=1.0, *, default_transform=UNSET, observed=None, **kwargs):
+    def __new__(cls, name, alpha, m, default_transform=UNSET, observed=None, **kwargs):
         if observed is None and default_transform is UNSET:
             default_transform = IntervalTransform(m, float("inf"))
         return super().__new__(
