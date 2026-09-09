@@ -12,6 +12,8 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import warnings
+
 from functools import reduce
 from operator import add
 
@@ -19,9 +21,14 @@ import numpy as np
 import numpy.testing as npt
 import pytensor.tensor as pt
 import pytest
+import scipy.stats as st
+
+from scipy.integrate import quad
+from scipy.special import gammaln
 
 import pymc as pm
 
+from pymc.gp.util import JITTER_DEFAULT
 from pymc.math import cartesian
 
 
@@ -354,6 +361,7 @@ class TestTP:
             f = gp.prior("f", X, reparameterize=False)
             p = gp.conditional("p", Xnew)
         self.gp_latent_logp = model1.compile_logp()({"f": y, "p": pnew})
+        self.gp_latent_conditional_logp = model1.compile_logp(vars=[p])({"f": y, "p": pnew})
         self.X = X
         self.y = y
         self.Xnew = Xnew
@@ -363,7 +371,7 @@ class TestTP:
     def testTPvsLatent(self):
         with pm.Model() as model:
             scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu)
+            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu, paper_covariance=False)
             f = tp.prior("f", self.X, reparameterize=False)
             p = tp.conditional("p", self.Xnew)
         assert tuple(f.shape.eval()) == (self.X.shape[0],)
@@ -374,23 +382,204 @@ class TestTP:
     def testTPvsLatentReparameterized(self):
         with pm.Model() as model:
             scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu)
+            tp = pm.gp.TP(scale_func=scale_func, nu=self.nu, paper_covariance=False)
             f = tp.prior("f", self.X, reparameterize=True)
             p = tp.conditional("p", self.Xnew)
         assert tuple(f.shape.eval()) == (self.X.shape[0],)
         assert tuple(p.shape.eval()) == (self.Xnew.shape[0],)
-        chol = np.linalg.cholesky(scale_func(self.X).eval())
+        cov = scale_func(self.X).eval() + JITTER_DEFAULT * np.eye(self.X.shape[0])
+        chol = np.linalg.cholesky(cov)
         f_rotated = np.linalg.solve(chol, self.y)
-        tp_logp = model.compile_logp()({"f_rotated_": f_rotated, "p": self.pnew})
-        npt.assert_allclose(self.gp_latent_logp, tp_logp, atol=0, rtol=1e-2)
+        tp_logp = model.compile_logp(vars=[p])(
+            {"f_rotated_": f_rotated, "f_scale_log__": 0.0, "p": self.pnew}
+        )
+        npt.assert_allclose(self.gp_latent_conditional_logp, tp_logp, atol=0, rtol=1e-2)
+
+    def testTPReparameterizedPriorUsesSharedScale(self):
+        X = np.array([[0.0], [1.0]])
+        y = np.array([0.5, -0.75])
+        scale_value = 4.0
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.3)
+
+        with pm.Model() as model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=3.0, paper_covariance=False)
+            f = tp.prior("f", X, reparameterize=True, jitter=0.0)
+            (f_value,) = model.replace_rvs_by_values([f])
+            f_fn = model.compile_fn(f_value)
+
+        chol = np.linalg.cholesky(scale_func(X).eval())
+        f_rotated = np.linalg.solve(chol, y * np.sqrt(scale_value))
+        npt.assert_allclose(
+            f_fn({"f_rotated_": f_rotated, "f_scale_log__": np.log(scale_value)}),
+            y,
+        )
+
+    def testTPReparameterizedPriorMatchesNonReparameterizedPrior(self):
+        nu = 3.0
+        X = np.array([[0.0], [1.0]])
+        y = np.array([0.5, -0.75])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.3)
+
+        with pm.Model() as reparam_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=False)
+            tp.prior("f", X, reparameterize=True, jitter=0.0)
+            reparam_logp_fn = reparam_model.compile_logp()
+
+        with pm.Model() as direct_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=False)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            direct_logp_fn = direct_model.compile_logp()
+
+        chol = np.linalg.cholesky(scale_func(X).eval())
+        n = X.shape[0]
+        log_det_chol = np.log(np.linalg.det(chol))
+
+        def integrand(log_scale):
+            mixing_scale = np.exp(log_scale)
+            f_rotated = np.linalg.solve(chol, y * np.sqrt(mixing_scale))
+            log_integrand = (
+                reparam_logp_fn({"f_rotated_": f_rotated, "f_scale_log__": log_scale})
+                + (n / 2) * log_scale
+                - log_det_chol
+            )
+            return np.exp(log_integrand)
+
+        integral, _ = quad(integrand, -30, 30, epsabs=1e-10, epsrel=1e-10)
+        npt.assert_allclose(np.log(integral), direct_logp_fn({"f": y}), rtol=1e-6)
 
     def testAdditiveTPRaises(self):
         with pm.Model() as model:
             scale_func = pm.gp.cov.ExpQuad(3, [0.1, 0.2, 0.3])
-            gp1 = pm.gp.TP(scale_func=scale_func, nu=10)
-            gp2 = pm.gp.TP(scale_func=scale_func, nu=10)
+            gp1 = pm.gp.TP(scale_func=scale_func, nu=10, paper_covariance=False)
+            gp2 = pm.gp.TP(scale_func=scale_func, nu=10, paper_covariance=False)
             with pytest.raises(Exception) as e_info:
                 gp1 + gp2
+
+    def testTPDefaultPaperCovarianceEmitsFutureWarning(self):
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.0)
+        with pytest.warns(FutureWarning, match="paper_covariance"):
+            pm.gp.TP(scale_func=scale_func, nu=5.0)
+        # Explicit values must not emit the deprecation warning.
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", FutureWarning)
+            pm.gp.TP(scale_func=scale_func, nu=5.0, paper_covariance=False)
+            pm.gp.TP(scale_func=scale_func, nu=5.0, paper_covariance=True)
+
+    def testTPInvalidPaperCovarianceRaises(self):
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.0)
+        with pytest.raises(TypeError, match="paper_covariance must be a bool"):
+            pm.gp.TP(scale_func=scale_func, nu=5.0, paper_covariance="not a bool")
+
+    def testTPPaperCovarianceFalseLogpMatchesMvStudentT(self):
+        """paper_covariance=False keeps the kernel as the MvStudentT scale matrix."""
+        nu = 5.0
+        X = np.array([[0.0], [1.0], [2.0]])
+        y = np.array([0.5, -0.75, 0.3])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.0)
+
+        with pm.Model() as model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=False)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            logp_fn = model.compile_logp()
+
+        K = scale_func(X).eval()
+        expected = st.multivariate_t.logpdf(y, loc=np.zeros(len(y)), shape=K, df=nu)
+        npt.assert_allclose(logp_fn({"f": y}), expected, rtol=1e-6)
+
+    def testTPPaperCovarianceTrueLogpMatchesPaper(self):
+        """paper_covariance=True reproduces the Shah/Wilson/Ghahramani density."""
+        nu = 5.0
+        X = np.array([[0.0], [1.0], [2.0]])
+        y = np.array([0.5, -0.75, 0.3])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.0)
+
+        with pm.Model() as model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=True)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            logp_fn = model.compile_logp()
+
+        K = scale_func(X).eval()
+        n = X.shape[0]
+        beta = float(y @ np.linalg.solve(K, y))
+        expected = (
+            gammaln((nu + n) / 2)
+            - gammaln(nu / 2)
+            - (n / 2) * np.log(np.pi * (nu - 2))
+            - 0.5 * np.linalg.slogdet(K)[1]
+            - ((nu + n) / 2) * np.log1p(beta / (nu - 2))
+        )
+        npt.assert_allclose(logp_fn({"f": y}), expected, rtol=1e-6)
+
+    def testTPPaperCovarianceReparameterizedMatchesDirect(self):
+        """Under paper_covariance=True the two prior paths still agree."""
+        nu = 3.0
+        X = np.array([[0.0], [1.0]])
+        y = np.array([0.5, -0.75])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.3)
+
+        with pm.Model() as reparam_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=True)
+            tp.prior("f", X, reparameterize=True, jitter=0.0)
+            reparam_logp_fn = reparam_model.compile_logp()
+
+        with pm.Model() as direct_model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=True)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            direct_logp_fn = direct_model.compile_logp()
+
+        # Same Cholesky as the kernel-as-scale variant, just rescaled by (nu-2)/nu.
+        scale = (nu - 2) / nu * scale_func(X).eval()
+        chol = np.linalg.cholesky(scale)
+        n = X.shape[0]
+        log_det_chol = np.log(np.linalg.det(chol))
+
+        def integrand(log_scale):
+            mixing_scale = np.exp(log_scale)
+            f_rotated = np.linalg.solve(chol, y * np.sqrt(mixing_scale))
+            log_integrand = (
+                reparam_logp_fn({"f_rotated_": f_rotated, "f_scale_log__": log_scale})
+                + (n / 2) * log_scale
+                - log_det_chol
+            )
+            return np.exp(log_integrand)
+
+        integral, _ = quad(integrand, -30, 30, epsabs=1e-10, epsrel=1e-10)
+        npt.assert_allclose(np.log(integral), direct_logp_fn({"f": y}), rtol=1e-6)
+
+    def testTPPaperCovarianceConditionalMatchesPaper(self):
+        """Conditional under paper_covariance=True matches the paper covariance."""
+        nu = 5.0
+        X = np.array([[0.0], [1.0], [2.0]])
+        y = np.array([0.5, -0.75, 0.3])
+        Xnew = np.array([[0.5], [1.5]])
+        pnew = np.array([0.1, -0.2])
+        scale_func = pm.gp.cov.ExpQuad(1, ls=1.0)
+
+        with pm.Model() as model:
+            tp = pm.gp.TP(scale_func=scale_func, nu=nu, paper_covariance=True)
+            tp.prior("f", X, reparameterize=False, jitter=0.0)
+            p = tp.conditional("p", Xnew, jitter=0.0)
+            logp_fn = model.compile_logp(vars=[p])
+
+        # Paper conditional covariance under paper_covariance=True:
+        # K' = (nu + beta - 2) / (nu + n - 2) * (Kss - Kxs^T Kxx^-1 Kxs)
+        Kxx = scale_func(X).eval()
+        Kxs = scale_func(X, Xnew).eval()
+        Kss = scale_func(Xnew).eval()
+        Kxx_inv = np.linalg.inv(Kxx)
+        cov_gp = Kss - Kxs.T @ Kxx_inv @ Kxs
+        beta = float(y @ Kxx_inv @ y)
+        n = X.shape[0]
+        nu2 = nu + n
+        cov_paper = (nu + beta - 2) / (nu2 - 2) * cov_gp
+        mu_post = Kxs.T @ Kxx_inv @ y
+
+        # scipy.stats.multivariate_t.shape == MvStudentT scale, so to get a
+        # predictive with actual covariance == cov_paper we need shape =
+        # (nu2 - 2) / nu2 * cov_paper.
+        shape_for_scipy = (nu2 - 2) / nu2 * cov_paper
+        expected = st.multivariate_t.logpdf(pnew, loc=mu_post, shape=shape_for_scipy, df=nu2)
+        npt.assert_allclose(logp_fn({"f": y, "p": pnew}), expected, rtol=1e-6)
 
 
 class TestLatentKron:
