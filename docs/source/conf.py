@@ -45,6 +45,7 @@ extensions = [
     "jupyter_sphinx",
     "sphinxext.rediraffe",
     "sphinx_sitemap",
+    "sphinxext.opengraph",
 ]
 
 # Don't auto-generate summary for class members.
@@ -341,8 +342,18 @@ def setup(app):
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = "pymc_sphinx_theme"
-html_baseurl = "https://www.pymc.io/projects/docs/"
-sitemap_url_scheme = f"{{lang}}{rtd_version}/{{link}}"
+# The canonical URL of every page points at the stable build, no matter which
+# version is being built: old and development versions of a page then transfer
+# their search ranking to the stable one instead of competing with it.
+html_baseurl = "https://www.pymc.io/projects/docs/en/stable/"
+sitemap_url_scheme = "{link}"
+
+# Open Graph tags plus a <meta name="description"> generated from page content
+# (search engines use it as the result snippet).
+ogp_site_url = "https://www.pymc.io/projects/docs/en/stable/"
+ogp_image = "https://www.pymc.io/_static/PyMC.jpg"
+ogp_use_first_image = True
+ogp_enable_meta_description = True
 
 
 # Theme options are theme-specific and customize the look and feel of a theme
