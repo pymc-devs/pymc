@@ -301,6 +301,28 @@ class Weibull(PositiveDimDistribution):
         return xop(alpha, beta, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
+@copy_docstring(regular_dists.Pareto)
+class Pareto(PositiveDimDistribution):
+    def __new__(cls, name, alpha, m, default_transform=UNSET, observed=None, **kwargs):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(m, float("inf"))
+        return super().__new__(
+            cls,
+            name,
+            alpha,
+            m,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    xrv_op = ptxr.pareto
+
+    @classmethod
+    def dist(cls, alpha, m, **kwargs):
+        return super().dist([alpha, m], **kwargs)
+
+
 @copy_docstring(regular_dists.Poisson)
 class Poisson(DimDistribution):
     xrv_op = ptxr.poisson
