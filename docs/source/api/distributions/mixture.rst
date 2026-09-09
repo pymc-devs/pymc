@@ -12,6 +12,7 @@ Mixture
    ZeroInflatedBinomial
    ZeroInflatedNegativeBinomial
    ZeroInflatedPoisson
+   ZeroOneInflatedBeta
    HurdlePoisson
    HurdleNegativeBinomial
    HurdleGamma
