@@ -150,3 +150,16 @@ def test_docstring_example():
         pm.compute_deterministics(trace, extend_dataset=True)
 
     assert "mu" in trace.posterior
+
+
+def test_compute_deterministics_thinned_dataset():
+    with Model() as m:
+        intercept = Normal("intercept", 0, 1, shape=(5, 1))
+        det = Deterministic("det", intercept.cumsum())
+
+    idata = sample_prior_predictive(draws=10, model=m, var_names=["intercept"], random_seed=42)
+    thinned_idata = idata.sel(draw=slice(None, None, 2))
+    computed = compute_deterministics(thinned_idata.prior, extend_dataset=True, model=m, progressbar=False)
+
+    assert not np.isnan(computed["det"].values).any()
+    assert computed.sizes["draw"] == 5

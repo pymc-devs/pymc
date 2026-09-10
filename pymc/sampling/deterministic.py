@@ -171,6 +171,14 @@ def compute_deterministics(
 
     group_dataset: Dataset = dataset.dataset if isinstance(dataset, DataTree) else dataset
 
+    # Preserve thinned sample_dims coordinates from dataset to prevent NaN fill on coordinate mismatch (#8424)
+    sample_coords = {
+        dim: group_dataset.coords[dim].values
+        for dim in sample_dims
+        if dim in group_dataset.coords
+    }
+    coords = {**coords, **sample_coords}
+
     new_dataset = apply_function_over_dataset(
         fn,
         group_dataset[[rv.name for rv in model.free_RVs]],
