@@ -43,27 +43,23 @@ from typing import TypeAlias
 import numpy as np
 import pytensor.tensor as pt
 
+from pytensor.configdefaults import config as pytensor_config
 from pytensor.graph.basic import Variable
-from pytensor.graph.fg import FunctionGraph, Output
+from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.graph.traversal import ancestors, walk
-from pytensor.tensor.random.type import RandomType
 
 from pymc.logprob.abstract import (
-    DensityQuery,
+    LogprobQuery,
     MeasurableOp,
-    ValuedRV,
     _icdf_helper,
     _logccdf_helper,
     _logcdf_helper,
-    _logprob,
-    density_query,
     request_logprob,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import Transform
-from pymc.logprob.utils import get_related_valued_nodes
 from pymc.pytensorf import expand_inner_graph
 
 TensorLike: TypeAlias = Variable | float | np.ndarray
@@ -106,72 +102,13 @@ def _warn_rvs_in_inferred_graph(graph: Variable | Sequence[Variable]):
 
 
 def resolve_density_queries(terms, **logprob_kwargs):
-    """Replace every `DensityQuery` in `terms` by the density term it stands for.
+    from pymc.logprob.query import derive_graph
 
-    Process nodes in reverse topological order to collect all queries before dispatching.
-    The Op determines whether the collected values suffice to derive its density.
-    """
-
-    def pending_queries(variables) -> list:
-        return [
-            var.owner
-            for var in ancestors(variables)
-            if var.owner is not None and isinstance(var.owner.op, DensityQuery)
-        ]
-
-    if not pending_queries(terms):
+    if not any(isinstance(var.owner_op, LogprobQuery) for var in ancestors(terms)):
         return list(terms)
-
     fgraph = FunctionGraph(outputs=list(terms), clone=False)
-
-    set_aside: set = set()
-    while (
-        pending := {query.inputs[0].owner for query in pending_queries(fgraph.outputs)} - set_aside
-    ):
-        # Density derivation may introduce new subgraphs, requiring a fresh topological order.
-        order = {apply: i for i, apply in enumerate(fgraph.toposort())}
-        node = max(pending, key=order.__getitem__)
-
-        queries = [
-            client
-            for out in node.outputs
-            for client, _ in fgraph.clients[out]
-            if isinstance(client.op, DensityQuery)
-        ]
-        if len({query.inputs[0] for query in queries}) != len(queries):
-            # Repeated queries for one output (e.g. abs preimages) are unsupported.
-            set_aside.add(node)
-            continue
-
-        node_terms = _logprob(
-            node.op,
-            [query.inputs[1] for query in queries],
-            *node.inputs,
-            **logprob_kwargs,
-        )
-        if not isinstance(node_terms, list | tuple):
-            node_terms = [node_terms]
-        replacements = []
-        for query, term in zip(queries, node_terms, strict=True):
-            if term.name is None:
-                term.name = query.outputs[0].name
-            replacements.append((query.outputs[0], term))
-        fgraph.replace_all(replacements, reason="resolve_density_queries", import_missing=True)
-
-    if pending := pending_queries(fgraph.outputs):
-        counts = Counter(query.inputs[0] for query in pending)
-        repeated = [var for var, n in counts.items() if n > 1]
-        raise NotImplementedError(f"More than one density term was requested for {repeated}.")
-    return list(fgraph.outputs)
-
-
-def _variables_leading_to_values(fgraph: FunctionGraph) -> set[Variable]:
-    """Return variables upstream of a conditioning point."""
-    leads: set[Variable] = set()
-    for node in reversed(fgraph.toposort()):
-        if isinstance(node.op, ValuedRV) or any(out in leads for out in node.outputs):
-            leads.update(node.inputs)
-    return leads
+    derive_graph(fgraph, **logprob_kwargs)
+    return fgraph.outputs
 
 
 def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
@@ -264,13 +201,21 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
         [expr] = resolve_density_queries([request_logprob(rv, value, **kwargs)], **kwargs)
-        return expr
-    except NotImplementedError:
-        fgraph = construct_ir_fgraph({rv: value})
-        [ir_valued_var] = fgraph.outputs
-        [ir_rv, ir_value] = ir_valued_var.owner.inputs
-        [expr] = resolve_density_queries([request_logprob(ir_rv, ir_value, **kwargs)], **kwargs)
         [expr] = cleanup_ir([expr])
+        return expr.astype(pytensor_config.floatX)
+    except NotImplementedError as original_error:
+        if value.ndim > rv.ndim:
+            dummy_value = rv.type()
+            inner_logp = logp(rv, dummy_value, warn_rvs=warn_rvs, **kwargs)
+            from pytensor.graph.replace import vectorize_graph
+
+            return vectorize_graph(inner_logp, replace={dummy_value: value})
+        try:
+            expr = conditional_logp({rv: value}, warn_rvs=False, **kwargs)[value]
+        except NotImplementedError as error:
+            raise original_error from error
+        if rv.name:
+            expr.name = f"{rv.name}_logprob"
         if warn_rvs:
             _warn_rvs_in_inferred_graph([expr])
         return expr
@@ -597,93 +542,43 @@ def conditional_logp(
     if extra_rewrites is not None:
         extra_rewrites.rewrite(fgraph)
 
-    # Walk the graph from its inputs to its outputs and construct the
-    # log-probability
-    values_to_logprobs = {}
     original_values = tuple(rv_values.values())
+    if len(set(original_values)) != len(original_values):
+        repeated = next(value for value, count in Counter(original_values).items() if count > 1)
+        raise ValueError(f"More than one logprob term was assigned to the value var {repeated}")
 
-    # Downstream reachability is unaffected by the upstream replacements below.
-    leads_to_value = _variables_leading_to_values(fgraph)
+    from pymc.logprob.query import (
+        UnsupportedObservation,
+        contains_random,
+        derive_graph,
+        logprob_query,
+    )
 
-    for node in fgraph.toposort():
-        if not isinstance(node.op, MeasurableOp):
-            continue
-
-        valued_nodes = get_related_valued_nodes(fgraph, node)
-
-        if not valued_nodes:
-            continue
-
-        node_rvs = [valued_var.inputs[0] for valued_var in valued_nodes]
-        node_values = [valued_var.inputs[1] for valued_var in valued_nodes]
-        node_output_idxs = [
-            fgraph.outputs.index(valued_var.outputs[0]) for valued_var in valued_nodes
-        ]
-
-        valued_here = set(node_rvs)
-        if any(
-            out in leads_to_value
-            for out in node.outputs
-            if out not in valued_here and not isinstance(out.type, RandomType)
-        ):
-            # Defer until values reached through other measurable chains are available.
-            node_logprobs = [
-                density_query(node_rv, node_value)
-                for node_rv, node_value in zip(node_rvs, node_values, strict=True)
-            ]
-        else:
-            node_logprobs = _logprob(
-                node.op,
-                node_values,
-                *node.inputs,
-                **kwargs,
+    for binding, original_value in zip(list(fgraph.outputs), original_values, strict=True):
+        if not contains_random(binding.owner.inputs[0]):
+            raise RuntimeError(
+                f"The logprob terms of the following value variables could not be derived: {{{original_value}}}"
             )
-
-            if not isinstance(node_logprobs, list | tuple):
-                node_logprobs = [node_logprobs]
-
-        # Substitute downstream values in place to preserve node identity for query grouping.
-        for valued_node, node_value in zip(valued_nodes, node_values):
-            [valued_out] = valued_node.outputs
-            # Keep graph outputs attached so their measurable nodes are not pruned.
-            clients = [
-                (client, input_idx)
-                for client, input_idx in fgraph.clients[valued_out]
-                if not isinstance(client.op, Output)
-            ]
-            if not clients:
-                continue
-            # Preserve static shape constraints with specify_shape when needed.
-            node_value = valued_out.type.filter_variable(node_value, allow_convert=True)
-            for client, input_idx in clients:
-                fgraph.change_node_input(
-                    client, input_idx, node_value, reason="conditional_logp", import_missing=True
-                )
-
-        for node_output_idx, node_value, node_logprob in zip(
-            node_output_idxs, node_values, node_logprobs
-        ):
-            original_value = original_values[node_output_idx]
-
-            if original_value.name:
-                node_logprob.name = f"{original_value.name}_logprob"
-
-            if original_value in values_to_logprobs:
-                raise ValueError(
-                    f"More than one logprob term was assigned to the value var {original_value}"
-                )
-
-            values_to_logprobs[original_value] = node_logprob
-
-    missing_value_terms = set(original_values) - set(values_to_logprobs)
-    if missing_value_terms:
-        raise RuntimeError(
-            f"The logprob terms of the following value variables could not be derived: {missing_value_terms}"
-        )
-
-    # Ensure same order as input
-    logprobs = resolve_density_queries([values_to_logprobs[v] for v in original_values], **kwargs)
+        try:
+            query = logprob_query(binding)
+        except UnsupportedObservation as error:
+            raise UnsupportedObservation(
+                f"The logprob terms of the following value variables could not be derived: {{{original_value}}}. {error}"
+            ) from error
+        fgraph.add_output(query, reason="request density", import_missing=True)
+    for _ in original_values:
+        fgraph.remove_output(0, reason="replace RV outputs by density outputs")
+    try:
+        derive_graph(fgraph, **kwargs)
+    except UnsupportedObservation as error:
+        raise UnsupportedObservation(
+            f"The logprob terms of the following value variables could not be derived: {set(original_values)}. {error}"
+        ) from error
+    logprobs = resolve_density_queries(fgraph.outputs, **kwargs)
     logprobs = cleanup_ir(tuple(logprobs))
+    for value, term in zip(original_values, logprobs):
+        if value.name:
+            term.name = f"{value.name}_logprob"
 
     if warn_rvs:
         rvs_in_logp_expressions = _find_unallowed_rvs_in_graph(logprobs)

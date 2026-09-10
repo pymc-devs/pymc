@@ -38,6 +38,7 @@ import abc
 from collections.abc import Callable
 
 import numpy as np
+import pytensor.scalar as ps
 import pytensor.tensor as pt
 
 from pytensor import scan
@@ -77,6 +78,7 @@ from pytensor.scalar import (
     Sqrt,
     Tanh,
 )
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.math import (
     abs,
@@ -129,6 +131,18 @@ from pymc.logprob.abstract import (
     _logprob,
     request_logprob,
 )
+from pymc.logprob.query import (
+    Measure,
+    UnsupportedObservation,
+    contains_random,
+    infer_measure,
+    measure,
+    query_parts,
+    rewrite_logprob_query,
+)
+from pymc.logprob.query import (
+    request_logprob as request_logprob_query,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import (
     CheckParameterValue,
@@ -141,6 +155,11 @@ from pymc.math import logdiffexp
 
 class Transform(abc.ABC):
     ndim_supp: int | None = None
+
+    def support_axes(self, value):
+        if self.ndim_supp is None:
+            raise NotImplementedError(f"{self} must declare ndim_supp")
+        return tuple(range(value.ndim - self.ndim_supp, value.ndim))
 
     @abc.abstractmethod
     def forward(self, value: TensorVariable, *inputs: Variable) -> TensorVariable:
@@ -1166,3 +1185,75 @@ class ChainedTransform(Transform):
             else:
                 det += det_
         return det
+
+
+@infer_measure.register(Elemwise)
+def measure_elemwise(op, var):
+    candidates = [inp for inp in var.owner.inputs if contains_random(inp)]
+    if not candidates:
+        return Measure(())
+    metas = []
+    for inp in candidates:
+        meta = measure(inp)
+        if meta.support_axes is None:
+            raise UnsupportedObservation(
+                "Elementwise transform of grouped events is not implemented"
+            )
+        axes = tuple(axis + var.ndim - inp.ndim for axis in meta.support_axes)
+        metas.append(Measure(axes))
+    if len(set(metas)) != 1:
+        raise UnsupportedObservation("The measurable input's support axes are ambiguous")
+    return metas[0]
+
+
+@rewrite_logprob_query.register(Elemwise)
+def rewrite_elemwise_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    inputs = list(rv.owner.inputs)
+    unknown = [i for i, var in enumerate(inputs) if contains_random(var)]
+    if len(unknown) != 1:
+        return None
+    (index,) = unknown
+    base = inputs[index]
+    if base.dtype.startswith(("int", "uint", "bool")):
+        return None
+    other = [var for i, var in enumerate(inputs) if i != index]
+    correction = pt.zeros_like(value)
+    valid = pt.ones_like(value, dtype="bool")
+    scalar = op.scalar_op
+    if isinstance(scalar, ps.Exp):
+        backward, correction, valid = pt.log(value), -pt.log(value), value > 0
+    elif isinstance(scalar, ps.Log):
+        backward, correction = pt.exp(value), value
+    elif isinstance(scalar, ps.Add):
+        backward = value - sum(other)
+    elif isinstance(scalar, ps.Mul):
+        scale = pt.prod(pt.stack(other), axis=0) if len(other) > 1 else other[0]
+        backward, correction = value / scale, -pt.log(pt.abs(scale))
+    elif isinstance(scalar, ps.Neg):
+        backward = -value
+    else:
+        if isinstance(op, MeasurableElemwise):
+            return [_logprob(op, [value], *rv.owner.inputs, **kwargs)]
+        return None
+    axes = measure(rv).support_axes
+    term = request_logprob_query(fgraph, base, backward)
+    jacobian = pt.broadcast_to(correction, value.shape).sum(axis=axes)
+    domain = pt.all(valid, axis=axes)
+    return [pt.switch(domain, term + jacobian, -np.inf)]
+
+
+@rewrite_logprob_query.register(MeasurableTransform)
+def rewrite_transform_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    inputs = list(rv.owner.inputs)
+    base = inputs.pop(op.measurable_input_idx)
+    backward = op.transform_elemwise.backward(value, *inputs)
+    if isinstance(backward, tuple) or base.dtype.startswith(("int", "uint", "bool")):
+        return [_logprob(op, [value], *rv.owner.inputs, **kwargs)]
+    axes = measure(rv).support_axes
+    term = request_logprob_query(fgraph, base, backward)
+    jacobian = op.transform_elemwise.log_jac_det(value, *inputs)
+    if axes:
+        jacobian = pt.broadcast_to(jacobian, value.shape).sum(axis=axes)
+    return [pt.switch(pt.isnan(jacobian), -np.inf, term + jacobian)]

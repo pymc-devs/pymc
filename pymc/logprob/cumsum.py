@@ -42,6 +42,15 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
 from pymc.logprob.abstract import MeasurableOp, _logprob, request_logprob
+from pymc.logprob.query import (
+    infer_measure,
+    measure,
+    query_parts,
+    rewrite_logprob_query,
+)
+from pymc.logprob.query import (
+    request_logprob as request_logprob_query,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables
 
@@ -104,3 +113,20 @@ measurable_ir_rewrites_db.register(
     "basic",
     "cumsum",
 )
+
+
+@infer_measure.register(CumOp)
+def measure_cumsum(op, var):
+    if op.mode != "add" or (op.axis is None and var.owner.inputs[0].ndim > 1):
+        raise NotImplementedError("Only cumulative sums along one axis are supported")
+    return measure(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(CumOp)
+def rewrite_cumsum_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    axis = op.axis or 0
+    backward = pt.concatenate(
+        [pt.take(value, [0], axis=axis), pt.diff(value, axis=axis)], axis=axis
+    )
+    return [request_logprob_query(fgraph, rv.owner.inputs[0], backward)]

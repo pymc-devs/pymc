@@ -43,6 +43,8 @@ from pymc.logprob.abstract import (
     request_logprob,
     supp_axes,
 )
+from pymc.logprob.query import infer_measure, measure, query_parts, rewrite_logprob_query
+from pymc.logprob.query import request_logprob as request_logprob_query
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.tensor import MeasurableDimShuffle
 from pymc.logprob.utils import filter_measurable_variables, get_related_valued_nodes
@@ -390,3 +392,15 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             )
         case _:
             raise NotImplementedError(f"expand_dist_dims not implemented for {dist} with op {op}")
+
+
+@infer_measure.register(XTensorFromTensor)
+def measure_xtensor_from_tensor(op, var):
+    return measure(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(MeasurableXTensorFromTensor)
+def rewrite_xtensor_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    term = request_logprob_query(fgraph, rv.owner.inputs[0], _to_tensor(op, value))
+    return [_to_xtensor(op, value, term)]

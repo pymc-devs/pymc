@@ -223,7 +223,7 @@ def test_fail_multiple_clip_single_base():
 
     cens_vv1 = cens_rv1.clone()
     cens_vv2 = cens_rv2.clone()
-    with pytest.raises(ValueError, match="too many values to unpack"):
+    with pytest.raises(ValueError, match="More than one value was assigned"):
         conditional_logp({cens_rv1: cens_vv1, cens_rv2: cens_vv2})
 
 

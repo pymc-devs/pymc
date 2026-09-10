@@ -51,8 +51,16 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.subtensor import IncSubtensor, Subtensor
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, supp_axes
+from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.basic import conditional_logp
+from pymc.logprob.query import (
+    Measure,
+    infer_measure,
+    measure,
+    output_queries,
+    query_parts,
+    rewrite_logprob_query,
+)
 from pymc.logprob.rewriting import (
     construct_ir_fgraph,
     logprob_rewrites_db,
@@ -323,11 +331,13 @@ def get_initval_from_scan_tap_input(inp) -> TensorVariable:
 
 
 @_logprob.register(MeasurableScan)
-def logprob_scan(op, values, *inputs, name=None, **kwargs):
+def logprob_scan(op, values, *inputs, name=None, output_indices=None, **kwargs):
     new_node = op.make_node(*inputs)
     # clone=True thaws the frozen inner graph into a mutable copy
     scan_args = ScanArgs.from_node(new_node, clone=True)
     rv_outer_outs = get_random_outer_outputs(scan_args)
+    if output_indices is not None:
+        rv_outer_outs = [item for item in rv_outer_outs if item[0] in output_indices]
 
     # values = (pt.zeros(11)[1:].set(values[0]),)
     # For random variable sequences with taps, we need to place the value variable in the
@@ -360,6 +370,12 @@ def logprob_scan(op, values, *inputs, name=None, **kwargs):
         value_map,
         inner_out_fn=create_inner_out_logp,
     )
+
+    # Unrequested mapping outputs do not carry state between steps. Keep only
+    # the density outputs; auxiliary stochastic outputs must not retain sampling.
+    logp_scan_args.inner_out_nit_sot = logp_scan_args.inner_out_nit_sot[-len(values) :]
+    logp_scan_args.outer_in_nit_sot = logp_scan_args.outer_in_nit_sot[-len(values) :]
+    logp_scan_args.outer_out_nit_sot = []
 
     # Remove the shared variables corresponding to replaced terms.
 
@@ -465,8 +481,9 @@ def find_measurable_scans(fgraph, node):
     # We need to replace references of original out1 by the new MeasurableExp(normal())
     inner_rvs_replacements = []
     for idx, new_inner_rv in zip(valued_output_idxs, inner_rvs, strict=True):
-        old_inner_rv = inner_outs[idx]
-        inner_outs[idx] = new_inner_rv
+        inner_idx = mapping[idx][-1]
+        old_inner_rv = inner_outs[inner_idx]
+        inner_outs[inner_idx] = new_inner_rv
         inner_rvs_replacements.append((old_inner_rv, new_inner_rv))
     temp_fgraph = FunctionGraph(
         outputs=inner_outs + [a for a, _ in inner_rvs_replacements],
@@ -480,8 +497,12 @@ def find_measurable_scans(fgraph, node):
         inner_idxs = mapping[outer_idx]
         inner_out = inner_outs[inner_idxs[-1]] if inner_idxs else None
         declared_supp_axes.append(
-            supp_axes(inner_out)
-            if (inner_out is not None and inner_out.owner is not None)
+            tuple(axis - inner_out.ndim for axis in measure(inner_out).support_axes)
+            if (
+                inner_out is not None
+                and inner_out.owner is not None
+                and not isinstance(inner_out.type, RandomType)
+            )
             else None
         )
     op.supp_axes = tuple(declared_supp_axes)
@@ -511,3 +532,32 @@ measurable_ir_rewrites_db.register(
 # Add scan canonicalizations that aren't in the canonicalization DB
 logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, "basic", "scan")
 logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, "basic", "scan")
+
+
+@infer_measure.register(Scan)
+def measure_scan(op, var):
+    mapping = op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
+    inner = op.inner_outputs[mapping[var.index][-1]]
+    axes = measure(inner).support_axes
+    return Measure(tuple(axis + var.ndim - inner.ndim for axis in axes))
+
+
+@rewrite_logprob_query.register(Scan)
+def rewrite_scan_logprob(op, fgraph, query, **kwargs):
+    rv, _ = query_parts(query)
+    producer = rv.owner
+    if not isinstance(op, MeasurableScan):
+        replacements = find_measurable_scans.transform(fgraph, producer)
+        if replacements:
+            fgraph.replace_all(
+                replacements.items(), reason="measurable scan query", import_missing=True
+            )
+        return None
+    queries = output_queries(fgraph, producer)
+    outputs = [out for out in producer.outputs if out in queries]
+    values = [query_parts(queries[out])[1] for out in outputs]
+    terms = logprob_scan(
+        op, values, *producer.inputs, output_indices=[out.index for out in outputs], **kwargs
+    )
+    terms = terms if isinstance(terms, list | tuple) else [terms]
+    return {queries[out].outputs[0]: term for out, term in zip(outputs, terms, strict=True)}

@@ -39,7 +39,6 @@ import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
-from itertools import zip_longest
 
 from pytensor.configdefaults import config
 from pytensor.graph import Apply, Op, Variable
@@ -49,7 +48,7 @@ from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.utils import broadcast_static_dim_lengths
+from pytensor.xtensor.type import XTensorType
 
 
 @singledispatch
@@ -75,11 +74,11 @@ def request_logprob(rv, value, **kwargs):
     """Return the log-density term of `rv` at `value`, or a stand-in for it.
 
     Use within `_logprob` implementations; use `logp` for a standalone derivation.
-    Nodes with multiple non-RNG outputs return a `DensityQuery`, allowing
+    Nodes with multiple non-RNG outputs return a `LogprobQuery`, allowing
     `resolve_density_queries` to collect their values into one `_logprob` call.
     """
     if n_potential_valued_outputs(rv.owner) > 1:
-        return density_query(rv, value)
+        return logprob_query(valued_rv(rv, value))
 
     logprob = _logprob(rv.owner.op, (value,), *rv.owner.inputs, **kwargs)
 
@@ -200,7 +199,7 @@ class MeasurableOp(abc.ABC):
     deriving it from inputs so equal nodes agree. Unlike ``values`` passed to ``_logprob``,
     it covers every output.
 
-    ``None`` means unknown support axes; ``()`` means scalar support. `DensityQuery`
+    ``None`` means unknown support axes; ``()`` means scalar support. `LogprobQuery`
     requires known axes to determine its output type.
     """
 
@@ -313,54 +312,6 @@ class ValuedRV(Op):
 valued_rv = ValuedRV()
 
 
-class PromisedValuedRV(Op):
-    r"""Marks a variable as being promised a valued variable that will only be assigned by the logprob method.
-
-    Some measurable RVs like Join/MakeVector can combine multiple, potentially interdependent, RVs into a single
-    composite valued node. Only in the logp function is this value split and sent to each component,
-    but we still want to achieve the same goals that ValuedRVs achieve during the IR rewrites.
-
-    Here is an example analogous to the one described in the docstrings of ValuedRV:
-
-    ```python
-    a_base = pt.random.normal()
-    a = a_base * 5
-    b = pt.random.normal(a * 8)
-    ab = pt.stack([a, b])
-    ab_value = pt.vector(shape=(2,))
-
-    logp(ab, ab_value)
-    ```
-
-    The density of `ab[1]` (that is `b`) depends on `ab_value[1]` and `ab_value[0] * 8`, but this is not apparent
-    in the IR representation because the values of `a` and `b` are merged together, and will only be split by the logp
-    function (see why next). For the time being we introduce a PromisedValue to isolate the graphs of a and b, and
-    freezing the dependency of `b` on `a` (not `a_base`).
-
-    Now why use a new Op and not just ValuedRV? Just for convenience! In the end we still want a function from
-    `ab_value` to `stack([logp(a), logp(b | a)])`, and if we split the values ahead of time we wouldn't know how to
-    stack them later (or even know that we were supposed to).
-
-    One final point, while this achieves the same goal as introducing ValuedRVs, it already constitutes a form of inference
-    (knowing how/when to measure Join/MakeVectors), so we have to do it as an IR rewrite. However, we have to do it
-    before any other rewrites, so you'll see that the related rewrites are registered in `early_measurable_ir_rewrites_db`.
-
-    """
-
-    def make_node(self, rv):
-        assert isinstance(rv, Variable)
-        return Apply(self, [rv], [rv.type(name=rv.name)])
-
-    def perform(self, node, inputs, out):
-        raise NotImplementedError("PromisedValuedRV should not be present in the final graph!")
-
-    def infer_shape(self, node, input_shapes):
-        return [input_shapes[0]]
-
-
-promised_valued_rv = PromisedValuedRV()
-
-
 def supp_axes(var: Variable) -> tuple[int, ...] | None:
     """Return support axes from the Op's `supp_axes` or `ndim_supp`, or None if unknown."""
     node = var.owner
@@ -372,41 +323,28 @@ def supp_axes(var: Variable) -> tuple[int, ...] | None:
     return None if ndim_supp is None else tuple(range(-ndim_supp, 0))
 
 
-class DensityQuery(Op):
-    r"""A deferred request for the log-density of a measurable variable at a value.
+class LogprobQuery(Op):
+    """A density tensor with known rank and unknown axis lengths."""
 
-    `resolve_density_queries` answers queries targeting the same node in one `_logprob` call.
-    The placeholder shape broadcasts the variable and value shapes, then removes support axes.
-    """
+    def make_node(self, binding):
+        if not isinstance(binding.owner_op, ValuedRV):
+            raise TypeError("LogprobQuery requires an explicit RV-value binding")
+        from pymc.logprob.query import density_ndim, measure
 
-    def make_node(self, rv, value):
-        assert isinstance(rv, Variable)
-        assert isinstance(value, Variable)
-        axes = supp_axes(rv)
-        if axes is None:
-            raise NotImplementedError(
-                f"{rv.owner.op} has several outputs whose values reach its density by separate "
-                f"paths, so it must declare which axes its measure is over. "
-                f"Set `supp_axes` on the Op."
-            )
-        # Log-probabilities are floating point, including for discrete variables.
-        dtype = value.type.dtype if value.type.dtype.startswith("float") else config.floatX
-        shape = [
-            broadcast_static_dim_lengths(lengths)
-            for lengths in zip_longest(
-                reversed(rv.type.shape), reversed(value.type.shape), fillvalue=1
-            )
-        ][::-1]
-        shape = tuple(
-            length for axis, length in enumerate(shape, start=-len(shape)) if axis not in axes
-        )
-        return Apply(self, [rv, value], [tensor(dtype=dtype, shape=shape)])
+        ndim = density_ndim(binding)
+        if isinstance(binding.type, XTensorType):
+            axes = measure(binding).support_axes
+            dims = tuple(dim for axis, dim in enumerate(binding.type.dims) if axis not in axes)
+            output = XTensorType(config.floatX, dims=dims)()
+        else:
+            output = tensor(dtype=config.floatX, shape=(None,) * ndim)
+        return Apply(self, [binding], [output])
 
-    def perform(self, node, inputs, out):
-        raise NotImplementedError("DensityQuery should not be present in the final graph!")
+    def perform(self, node, inputs, outputs):
+        raise NotImplementedError("Unresolved LogprobQuery")
 
 
-density_query = DensityQuery()
+logprob_query = LogprobQuery()
 
 
 def n_potential_valued_outputs(node) -> int:

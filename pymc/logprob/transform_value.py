@@ -32,6 +32,15 @@ from pymc.logprob.abstract import (
     request_logprob,
     valued_rv,
 )
+from pymc.logprob.query import (
+    Measure,
+    infer_measure,
+    measure,
+    output_queries,
+    query_parts,
+    rewrite_logprob_query,
+)
+from pymc.logprob.query import request_logprob as request_logprob_query
 from pymc.logprob.rewriting import cleanup_ir_rewrites_db
 from pymc.logprob.transforms import Transform
 from pymc.logprob.utils import get_related_valued_nodes
@@ -103,7 +112,10 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
             for rv_out, value in zip(rv_outs, values, strict=True)
         ]
 
-    # Handle jacobian
+    return _add_value_jacobians(op, values, logprobs, rv_op, rv_inputs, use_jacobian)
+
+
+def _add_value_jacobians(op, values, logprobs, rv_op, rv_inputs, use_jacobian=True):
     assert len(values) == len(logprobs) == len(op.transforms)
     logprobs_jac = []
     for value, transform, logp in zip(values, op.transforms, logprobs):
@@ -279,3 +291,34 @@ cleanup_ir_rewrites_db.register(
     "cleanup",
     "transform",
 )
+
+
+@infer_measure.register(TransformedValueRV)
+def measure_transformed_value(op, var):
+    base = var.owner.inputs[var.index]
+    axes = measure(base).support_axes
+    transform = op.transforms[var.index]
+    if transform is not None:
+        axes = tuple(sorted(set(axes) | set(transform.support_axes(base))))
+    return Measure(axes)
+
+
+@rewrite_logprob_query.register(TransformedValueRV)
+def rewrite_transformed_value_logprob(op, fgraph, query, **kwargs):
+    rv, _ = query_parts(query)
+    producer = rv.owner
+    queries = output_queries(fgraph, producer)
+    if len(queries) != len(producer.outputs):
+        return None
+    values = [query_parts(queries[out])[1] for out in producer.outputs]
+    bases = list(producer.inputs)
+    rv_op, rv_inputs = bases[0].owner.op, list(bases[0].owner.inputs)
+    terms = [
+        request_logprob_query(fgraph, rv, value) for rv, value in zip(bases, values, strict=True)
+    ]
+    terms = _add_value_jacobians(
+        op, values, terms, rv_op, rv_inputs, kwargs.get("use_jacobian", True)
+    )
+    return {
+        queries[out].outputs[0]: term for out, term in zip(producer.outputs, terms, strict=True)
+    }

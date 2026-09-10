@@ -43,6 +43,8 @@ def multiout_measurable_op():
     mu1, mu2 = pt.scalars("mu1", "mu2")
 
     class TestOpFromGraph(MeasurableOp, OpFromGraph):
+        supp_axes = ((), ())
+
         def do_constant_folding(self, fgraph, node):
             False
 
@@ -595,7 +597,8 @@ def test_halfstudent_t_with_frozen_dims():
 
     fmodel = freeze_dims_and_data(model)
     [x_logp] = fmodel.logp(sum=False)
-    assert x_logp.type.shape == (1,)
+    [evaluated] = fmodel.compile_logp(sum=False)(fmodel.initial_point())
+    assert evaluated.shape == (1,)
 
 
 def test_weakref_leak():

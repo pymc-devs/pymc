@@ -601,3 +601,28 @@ def test_broadcasted_logp_does_not_reference_rv():
         pm.CustomDist("x", np.ones(3), logp=logp)
 
     assert_no_rvs(m.logp())
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_inverted_values_condition_parameters_and_other_inverses(reverse):
+    mu = pt.random.normal()
+    log_sigma = pt.random.normal()
+    sigma = pt.exp(log_sigma)
+    y = pt.random.normal(mu, sigma)
+    z = mu + sigma * pt.random.normal()
+    exp_mu = pt.exp(mu)
+    rvs = [exp_mu, sigma, y, z]
+    values = [rv.type(name=f"v{i}") for i, rv in enumerate(rvs)]
+    pairs = list(zip(rvs, values))
+    terms = conditional_logp(dict(pairs[::-1] if reverse else pairs))
+    for term in terms.values():
+        assert_no_rvs(term)
+    fn = pytensor.function(values, [terms[value] for value in values])
+    point = [2.0, 3.0, 4.0, 5.0]
+    expected = [
+        sp.norm.logpdf(np.log(2.0)) - np.log(2.0),
+        sp.norm.logpdf(np.log(3.0)) - np.log(3.0),
+        sp.norm.logpdf(4.0, np.log(2.0), 3.0),
+        sp.norm.logpdf(5.0, np.log(2.0), 3.0),
+    ]
+    np.testing.assert_allclose(fn(*point), expected)
