@@ -85,6 +85,20 @@ def rebuild_exc(exc, tb):
     return exc
 
 
+def _numpy_uses_accelerate() -> bool:
+    """Return whether NumPy is linked against Apple Accelerate.
+
+    Accelerate's internal worker threads do not survive ``fork()``, so a forked
+    sampling worker crashes as soon as it reaches Accelerate's threaded BLAS
+    path. This is the same restriction that already applies to JAX below.
+    """
+    try:
+        blas = np.__config__.CONFIG["Build Dependencies"]["blas"]
+    except (AttributeError, KeyError, TypeError):
+        return False
+    return str(blas.get("name", "")).lower() == "accelerate"
+
+
 def _initialize_multiprocessing_context(
     mp_ctx: str | multiprocessing.context.BaseContext | None,
     *,
@@ -99,12 +113,28 @@ def _initialize_multiprocessing_context(
         # Related issue https://github.com/pymc-devs/pymc/issues/5339
         if mp_ctx is None and platform.system() == "Darwin":
             if platform.processor() == "arm":
-                mp_ctx = "fork"
-                if not quiet:
-                    logger.debug(
-                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
+                if _numpy_uses_accelerate():
+                    # Accelerate is not fork-safe, so keeping the 'fork' default
+                    # segfaults every worker on any model large enough to reach
+                    # its threaded BLAS path.
+                    mp_ctx = (
+                        "forkserver"
+                        if "forkserver" in multiprocessing.get_all_start_methods()
+                        else "spawn"
                     )
+                    if not quiet:
+                        logger.debug(
+                            f"mp_ctx is set to '{mp_ctx}' for MacOS with ARM architecture, "
+                            + "because NumPy is linked against Apple Accelerate, "
+                            + "whose threads do not survive fork()."
+                        )
+                else:
+                    mp_ctx = "fork"
+                    if not quiet:
+                        logger.debug(
+                            "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
+                            + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
+                        )
             else:
                 mp_ctx = "forkserver"
 
