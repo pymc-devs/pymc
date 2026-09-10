@@ -173,9 +173,7 @@ def compute_deterministics(
 
     # Preserve thinned sample_dims coordinates from dataset to prevent NaN fill on coordinate mismatch (#8424)
     sample_coords = {
-        dim: group_dataset.coords[dim].values
-        for dim in sample_dims
-        if dim in group_dataset.coords
+        dim: group_dataset.coords[dim].values for dim in sample_dims if dim in group_dataset.coords
     }
     coords = {**coords, **sample_coords}
 

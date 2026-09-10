@@ -159,7 +159,9 @@ def test_compute_deterministics_thinned_dataset():
 
     idata = sample_prior_predictive(draws=10, model=m, var_names=["intercept"], random_seed=42)
     thinned_idata = idata.sel(draw=slice(None, None, 2))
-    computed = compute_deterministics(thinned_idata.prior, extend_dataset=True, model=m, progressbar=False)
+    computed = compute_deterministics(
+        thinned_idata.prior, extend_dataset=True, model=m, progressbar=False
+    )
 
     assert not np.isnan(computed["det"].values).any()
     assert computed.sizes["draw"] == 5
