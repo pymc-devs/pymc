@@ -241,6 +241,8 @@ pytensor.compile.optdb["canonicalize"].register(
 class DiracDelta(MeasurableOp, Op):
     """An `Op` that represents a Dirac-delta distribution."""
 
+    ndim_supp = 0
+
     __props__ = ("rtol", "atol")
 
     def __init__(self, rtol=1e-5, atol=1e-8):

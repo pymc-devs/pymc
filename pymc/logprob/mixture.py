@@ -66,10 +66,15 @@ from pytensor.tensor.variable import TensorVariable
 from pymc.logprob.abstract import (
     MeasurableElemwise,
     MeasurableOp,
-    PromisedValuedRV,
     _logprob,
     request_logprob,
     valued_rv,
+)
+from pymc.logprob.query import (
+    Measure,
+    UnsupportedObservation,
+    infer_measure,
+    measure,
 )
 from pymc.logprob.rewriting import (
     early_measurable_ir_rewrites_db,
@@ -250,11 +255,6 @@ def get_stack_mixture_vars(
         join_axis = joined_rvs.owner.op.axis
         mixture_rvs = joined_rvs.owner.inputs
 
-    # Join and MakeVector can introduce PromisedValuedRV to prevent losing interdependencies
-    mixture_rvs = [
-        rv.owner.inputs[0] if rv.owner and isinstance(rv.owner.op, PromisedValuedRV) else rv
-        for rv in mixture_rvs
-    ]
     return mixture_rvs, join_axis
 
 
@@ -289,8 +289,12 @@ def find_measurable_index_mixture(fgraph, node):
     if mixture_rvs is None:
         return None
 
-    if set(filter_measurable_variables(mixture_rvs)) != set(mixture_rvs):
+    measurable = set(filter_measurable_variables(mixture_rvs))
+    if not measurable:
         return None
+    if any(rv not in measurable and check_potential_measurability([rv]) for rv in mixture_rvs):
+        return None
+    mixture_rvs = [rv if rv in measurable else dirac_delta(rv) for rv in mixture_rvs]
 
     # Replace this sub-graph with a `MixtureRV`
     mix_op = MixtureRV(
@@ -589,3 +593,23 @@ def logprob_ifelse(op, values, if_var, rv_then, rv_else, **kwargs):
     logps_then = request_logprob(rv_then, value, **kwargs)
     logps_else = request_logprob(rv_else, value, **kwargs)
     return ifelse(if_var, logps_then, logps_else)
+
+
+@infer_measure.register(IfElse)
+def measure_ifelse(op, var):
+    left = var.owner.inputs[1 + var.index]
+    right = var.owner.inputs[1 + op.n_outs + var.index]
+    if measure(left) != measure(right):
+        raise UnsupportedObservation("IfElse branches have different measures")
+    return measure(left)
+
+
+@infer_measure.register(MixtureRV)
+def measure_mixture(op, var):
+    components = var.owner.inputs[op.indices_end_idx :]
+    measures = [measure(component) for component in components]
+    if any(meta.support_axes for meta in measures):
+        raise UnsupportedObservation(
+            "Index mixtures over support dimensions need an explicit measure"
+        )
+    return Measure(())

@@ -40,8 +40,8 @@ import numpy as np
 from pytensor import tensor as pt
 from pytensor.assumptions.specify import SpecifyAssumptions
 from pytensor.compile.ops import DeepCopyOp
-from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
+from pytensor.graph.traversal import ancestors
 from pytensor.scalar.basic import Cast
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.basic import Alloc, Join, MakeVector, ScalarFromTensor, Split
@@ -54,6 +54,7 @@ from pytensor.tensor.reshape import JoinDims, SplitDims, join_dims, split_dims
 from pytensor.tensor.rewriting.basic import elemwise_of
 
 from pymc.logprob.abstract import (
+    LogprobQuery,
     MeasurableElemwise,
     MeasurableOp,
     ValuedRV,
@@ -62,25 +63,35 @@ from pymc.logprob.abstract import (
     _logcdf,
     _logcdf_helper,
     _logprob,
-    promised_valued_rv,
     request_logprob,
     supp_axes,
 )
 from pymc.logprob.censoring import MeasurableRound
+from pymc.logprob.mixture import rv_pull_down
+from pymc.logprob.query import (
+    Measure,
+    UnsupportedObservation,
+    contains_random,
+    density_ndim,
+    infer_measure,
+    measure,
+    output_queries,
+    query_parts,
+    rewrite_logprob_query,
+)
+from pymc.logprob.query import (
+    request_logprob as request_logprob_query,
+)
 from pymc.logprob.rewriting import (
-    assume_valued_outputs,
     early_measurable_ir_rewrites_db,
     measurable_ir_rewrites_db,
-    remove_promised_valued_rvs,
 )
 from pymc.logprob.utils import (
     check_potential_measurability,
-    dirac_delta,
     filter_measurable_variables,
     get_related_valued_nodes,
-    replace_rvs_by_values,
 )
-from pymc.pytensorf import constant_fold, get_symbolic_rv_shapes
+from pymc.pytensorf import constant_fold, get_symbolic_rv_shapes, resolve_shapes
 
 
 class MeasurableMakeVector(MeasurableOp, MakeVector):
@@ -92,17 +103,12 @@ def logprob_make_vector(op, values, *base_rvs, **kwargs):
     """Compute the log-likelihood graph for a `MeasurableMakeVector`."""
     (value,) = values
 
-    base_rvs = remove_promised_valued_rvs(base_rvs)
-
     base_rvs_to_values = {base_rv: value[i] for i, base_rv in enumerate(base_rvs)}
     for i, (base_rv, value) in enumerate(base_rvs_to_values.items()):
         base_rv.name = f"base_rv[{i}]"
         value.name = f"value[{i}]"
 
-    logps = [request_logprob(base_rv, value) for base_rv, value in base_rvs_to_values.items()]
-
-    # If the stacked variables depend on each other, we have to replace them by the respective values
-    logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_values)
+    logps = [request_logprob(rv, value) for rv, value in base_rvs_to_values.items()]
 
     return pt.stack(logps)
 
@@ -117,8 +123,6 @@ def logprob_join(op, values, *base_rvs, **kwargs):
     (value,) = values
     axis = op.axis
 
-    base_rvs = remove_promised_valued_rvs(base_rvs)
-
     base_rv_shapes = [base_var.shape[axis] for base_var in base_rvs]
 
     # We don't need the graph to be constant, just to have RandomVariables removed
@@ -132,19 +136,13 @@ def logprob_join(op, values, *base_rvs, **kwargs):
     )
 
     base_rvs_to_split_values = dict(zip(base_rvs, split_values))
-    logps = [
-        request_logprob(base_var, split_value)
-        for base_var, split_value in base_rvs_to_split_values.items()
-    ]
+    logps = [request_logprob(rv, value) for rv, value in base_rvs_to_split_values.items()]
 
     if len({logp.ndim for logp in logps}) != 1:
         raise ValueError(
             "Joined logps have different number of dimensions, this can happen when "
             "joining univariate and multivariate distributions",
         )
-
-    # If the stacked variables depend on each other, we have to replace them by the respective values
-    logps = replace_rvs_by_values(logps, rvs_to_values=base_rvs_to_split_values)
 
     # Adjust for multivariate logp fewer dimensions to the right
     axis = min(axis, logps[0].ndim - 1)
@@ -159,39 +157,12 @@ def logprob_join(op, values, *base_rvs, **kwargs):
 @node_rewriter([MakeVector, Join])
 def find_measurable_stacks(fgraph, node) -> list[TensorVariable] | None:
     r"""Find `Joins`\s and `MakeVector`\s for which a `logprob` can be computed."""
-    from pymc.pytensorf import toposort_replace
-
     if isinstance(node.op, MeasurableOp):
         return None
-
     is_join = isinstance(node.op, Join)
-
-    base_vars = node.inputs
-
-    # Allow mixing potentially measurable inputs with deterministic ones.
-    new_base_vars: list[TensorVariable] = []
-    has_measurable = False
-    for base_var in base_vars:
-        if check_potential_measurability([base_var]):
-            has_measurable = True
-            new_base_vars.append(base_var)
-        else:
-            # `Op.__call__` is typed as returning `Variable | list[Variable]`, so mypy can't infer this is a TensorVariable
-            new_base_vars.append(dirac_delta(base_var))  # type: ignore[arg-type]
-    if not has_measurable:
+    if not check_potential_measurability(node.inputs):
         return None
-    base_vars = new_base_vars
-    base_vars = assume_valued_outputs(base_vars)
-    if not all(var.owner and isinstance(var.owner.op, MeasurableOp) for var in base_vars):
-        return None
-
-    # Each base var will be "valued" by the logprob method, so other rewrites shouldn't mess with it
-    # and potentially break interdependencies. For this reason, this rewrite should be applied early in
-    # the IR construction
-    replacements = [(base_var, promised_valued_rv(base_var)) for base_var in base_vars]
-    temp_fgraph = FunctionGraph(outputs=base_vars, clone=False)
-    toposort_replace(temp_fgraph, replacements)  # type: ignore[arg-type]
-    new_base_vars = temp_fgraph.outputs  # type: ignore[assignment]
+    new_base_vars = list(node.inputs)
 
     if is_join:
         measurable_stack = MeasurableJoin(axis=node.op.axis)(*new_base_vars)
@@ -735,3 +706,228 @@ measurable_ir_rewrites_db.register(
     "basic",
     "tensor",
 )
+
+
+@infer_measure.register(Join)
+def measure_join(op, var):
+    metas = [measure(inp) for inp in var.owner.inputs]
+    if len({density_ndim(inp) for inp in var.owner.inputs}) != 1:
+        raise ValueError("Joined logps have different number of dimensions")
+    first = metas[0]
+    if any(meta.support_axes != first.support_axes for meta in metas):
+        raise UnsupportedObservation("Joined variables have different support axes")
+    axes = first.support_axes
+    if axes is not None and op.axis % var.ndim in axes:
+        axes = None
+    return Measure(axes)
+
+
+@infer_measure.register(MakeVector)
+def measure_vector(op, var):
+    if any(density_ndim(inp) != 0 for inp in var.owner.inputs):
+        raise UnsupportedObservation("MakeVector requires scalar density terms")
+    return Measure(())
+
+
+@infer_measure.register(Split)
+def measure_split(op, var):
+    return measure(var.owner.inputs[0])
+
+
+@infer_measure.register(DimShuffle)
+def measure_dimshuffle(op, var):
+    meta = measure(var.owner.inputs[0])
+    if meta.support_axes is None:
+        raise UnsupportedObservation("Cannot remove or reinterpret these support axes")
+    axes = tuple(i for i, axis in enumerate(op.new_order) if axis in meta.support_axes)
+    return Measure(axes)
+
+
+@infer_measure.register(JoinDims)
+def measure_join_dims(op, var):
+    axes = measure(var.owner.inputs[0]).support_axes
+    if axes is None:
+        raise UnsupportedObservation("Cannot merge axes with an unknown event layout")
+    region = set(op.axis_range)
+    if region & set(axes) and region - set(axes):
+        return Measure(None)
+    result = {
+        axis if axis < op.start_axis else axis - op.n_axes + 1
+        for axis in axes
+        if axis not in region
+    }
+    if region & set(axes):
+        result.add(op.start_axis)
+    return Measure(tuple(sorted(result)))
+
+
+@infer_measure.register(SplitDims)
+def measure_split_dims(op, var):
+    base = var.owner.inputs[0]
+    axes = measure(base).support_axes
+    if axes is None:
+        raise UnsupportedObservation("Cannot split axes with an unknown event layout")
+    n_axes = var.ndim - base.ndim + 1
+    result = [axis if axis < op.axis else axis + n_axes - 1 for axis in axes if axis != op.axis]
+    if op.axis in axes:
+        result.extend(range(op.axis, op.axis + n_axes))
+    return Measure(tuple(sorted(result)))
+
+
+@rewrite_logprob_query.register(Join)
+def rewrite_join_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    components = list(rv.owner.inputs)
+    axis = op.axis % rv.ndim
+    lengths = resolve_shapes([component.shape[axis] for component in components], fgraph=fgraph)
+    if any(contains_random(length) for length in lengths):
+        raise UnsupportedObservation("Join lengths still depend on unvalued random variables")
+    rv, value = query_parts(query)
+    components = list(rv.owner.inputs)
+    values = pt.split(value, lengths, n_splits=len(components), axis=axis)
+    terms = [
+        request_logprob_query(fgraph, component, val) for component, val in zip(components, values)
+    ]
+    axes = measure(components[0]).support_axes
+    density_axis = axis - sum(a < axis for a in axes) if axes is not None else axis
+    density_axis = min(density_axis, max(0, terms[0].ndim - 1))
+    return [pt.concatenate([pt.atleast_1d(term) for term in terms], axis=density_axis)]
+
+
+@rewrite_logprob_query.register(MakeVector)
+def rewrite_vector_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    return [
+        pt.stack(
+            [
+                request_logprob_query(fgraph, inp, value[i])
+                for i, inp in enumerate(list(rv.owner.inputs))
+            ]
+        )
+    ]
+
+
+@rewrite_logprob_query.register(Split)
+def rewrite_split_logprob(op, fgraph, query, **kwargs):
+    rv, _ = query_parts(query)
+    producer = rv.owner
+    queries = output_queries(fgraph, producer)
+    base, lengths = producer.inputs
+    axis = op.axis % base.ndim
+    meta = measure(base)
+    if len(queries) != len(producer.outputs):
+        if meta.support_axes is None or axis in meta.support_axes:
+            return None
+        # Wait while another query can still expose a value for a sibling output.
+        for other in fgraph.apply_nodes:
+            if isinstance(other.op, LogprobQuery):
+                other_rv, _ = query_parts(other)
+                if other_rv.owner is not producer and any(
+                    out in ancestors([other_rv]) for out in producer.outputs
+                ):
+                    return None
+        offsets = pt.concatenate([pt.zeros(1, dtype=lengths.dtype), pt.cumsum(lengths)])
+        replacements = {}
+        for out, pending in queries.items():
+            index = (slice(None),) * axis + (slice(offsets[out.index], offsets[out.index + 1]),)
+            marginal = rv_pull_down(base[index])
+            if not isinstance(marginal.owner_op, RandomVariable):
+                return None
+            replacements[pending.outputs[0]] = request_logprob_query(
+                fgraph, marginal, query_parts(pending)[1]
+            )
+        return replacements
+    if meta.support_axes is None:
+        raise UnsupportedObservation("Splitting an event needs support-axis metadata")
+    value = pt.concatenate([query_parts(queries[out])[1] for out in producer.outputs], axis=axis)
+    term = request_logprob_query(fgraph, base, value)
+    if axis in meta.support_axes:
+        # Preserve the allocation of a joint event density by component size.
+        weights = lengths / pt.sum(lengths)
+        terms = [term * weights[i] for i in range(len(queries))]
+    else:
+        density_axis = axis - sum(a < axis for a in meta.support_axes)
+        terms = pt.split(term, lengths, n_splits=len(queries), axis=density_axis)
+    return {queries[out].outputs[0]: term for out, term in zip(producer.outputs, terms)}
+
+
+@rewrite_logprob_query.register(DimShuffle)
+def rewrite_dimshuffle_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    (base,) = rv.owner.inputs
+    meta = measure(base)
+    undo = [i for i, axis in enumerate(op.new_order) if axis != "x"]
+    for axis in op.drop:
+        undo.insert(axis, "x")
+    value = value.dimshuffle(undo)
+    shuffle = list(op.shuffle)
+    for axis in op.drop:
+        shuffle.insert(axis, axis)
+    value = value.dimshuffle([shuffle.index(i) for i in range(len(shuffle))])
+    term = request_logprob_query(fgraph, base, value)
+    batch_axes = [axis for axis in range(base.ndim) if axis not in meta.support_axes]
+    order = [
+        "x" if axis == "x" else batch_axes.index(axis)
+        for axis in op.new_order
+        if axis == "x" or axis in batch_axes
+    ]
+    return [term.dimshuffle(order)]
+
+
+@rewrite_logprob_query.register(JoinDims)
+def rewrite_join_dims_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    (base,) = rv.owner.inputs
+    axes = measure(base).support_axes
+    shapes = resolve_shapes([base.shape[i] for i in op.axis_range], fgraph=fgraph)
+    backward = split_dims(value, shape=shapes, axis=op.start_axis)
+    term = request_logprob_query(fgraph, base, backward)
+    batch_axes = [axis for axis in range(base.ndim) if axis not in axes]
+    n_axes = sum(axis in op.axis_range for axis in batch_axes)
+    if n_axes == 0 and op.n_axes != 0:
+        return [term]
+    start = sum(axis < op.start_axis for axis in batch_axes)
+    return [join_dims(term, start_axis=start, n_axes=n_axes)]
+
+
+@rewrite_logprob_query.register(SplitDims)
+def rewrite_split_dims_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base, shape = rv.owner.inputs
+    axes = measure(base).support_axes
+    n_axes = value.ndim - base.ndim + 1
+    backward = join_dims(value, start_axis=op.axis, n_axes=n_axes)
+    term = request_logprob_query(fgraph, base, backward)
+    if op.axis in axes:
+        return [term]
+    axis = op.axis - sum(axis < op.axis for axis in axes)
+    return [split_dims(term, shape=shape, axis=axis)]
+
+
+@infer_measure.register(Alloc)
+def measure_broadcast(op, var):
+    base = var.owner.inputs[0]
+    offset = var.ndim - base.ndim
+    axes = {axis + offset for axis in measure(base).support_axes}
+    axes.update(range(offset))
+    axes.update(
+        i + offset
+        for i, (a, b) in enumerate(zip(base.broadcastable, var.broadcastable[offset:]))
+        if a and not b
+    )
+    return Measure(tuple(sorted(axes)))
+
+
+@infer_measure.register(ScalarFromTensor)
+@infer_measure.register(SpecifyAssumptions)
+@infer_measure.register(DeepCopyOp)
+def measure_identity(op, var):
+    return measure(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(ScalarFromTensor)
+@rewrite_logprob_query.register(SpecifyAssumptions)
+@rewrite_logprob_query.register(DeepCopyOp)
+def rewrite_identity_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    return [request_logprob_query(fgraph, rv.owner.inputs[0], pt.as_tensor_variable(value))]

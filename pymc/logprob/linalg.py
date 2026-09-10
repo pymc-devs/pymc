@@ -24,6 +24,8 @@ from pymc.logprob.utils import check_potential_measurability, filter_measurable_
 class MeasurableMatMul(MeasurableBlockwise):
     """Measurable matrix multiplication operation."""
 
+    ndim_supp = 2
+
     right_measurable: bool
 
     def __init__(self, measurable_right: bool, **kwargs):

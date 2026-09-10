@@ -43,6 +43,15 @@ from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
 from pymc.logprob.abstract import MeasurableOp, _logprob, request_logprob
+from pymc.logprob.query import (
+    infer_measure,
+    measure,
+    query_parts,
+    rewrite_logprob_query,
+)
+from pymc.logprob.query import (
+    request_logprob as request_logprob_query,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables, replace_rvs_by_values
 
@@ -120,3 +129,24 @@ measurable_ir_rewrites_db.register(
     "basic",
     "assert",
 )
+
+
+@infer_measure.register(SpecifyShape)
+@infer_measure.register(CheckAndRaise)
+def measure_check(op, var):
+    return measure(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(SpecifyShape)
+def rewrite_specify_shape_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base, *shape = rv.owner.inputs
+    return [request_logprob_query(fgraph, base, pt.specify_shape(value, shape))]
+
+
+@rewrite_logprob_query.register(CheckAndRaise)
+def rewrite_check_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base, *checks = rv.owner.inputs
+    checks = replace_rvs_by_values(checks, rvs_to_values={base: value})
+    return [request_logprob_query(fgraph, base, CheckAndRaise(op.exc_type, op.msg)(value, *checks))]

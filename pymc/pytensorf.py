@@ -1050,12 +1050,28 @@ def constant_fold(
 
 def resolve_shapes(
     shapes: Sequence[TensorVariable],
+    *,
+    fgraph: FunctionGraph | None = None,
 ) -> tuple[TensorVariable, ...]:
     """Rewrite shape expressions via ShapeFeature + infer_shape rewrites.
 
     Replaces Shape(rv) and similar references with equivalent expressions
     derived from the op's inputs (e.g. distribution parameters).
+
+    When ``fgraph`` is provided, resolve the expressions in that graph so references
+    to its variables and conditioning boundaries retain their identity.
     """
+    if fgraph is not None:
+        n_outputs = len(fgraph.outputs)
+        for shape in shapes:
+            fgraph.add_output(shape, reason="resolve_shapes", import_missing=True)
+        try:
+            infer_shape_db.default_query.rewrite(fgraph)
+            return tuple(fgraph.outputs[n_outputs:])
+        finally:
+            for _ in shapes:
+                fgraph.remove_output(n_outputs, reason="resolve_shapes")
+
     shape_fg = FunctionGraph(
         outputs=list(shapes), features=[ShapeFeature()], clone=True, copy_inputs=False
     )

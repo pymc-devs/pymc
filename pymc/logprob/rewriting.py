@@ -39,7 +39,6 @@ from collections.abc import Sequence
 from pytensor.compile.mode import optdb
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import (
     GraphRewriter,
     node_rewriter,
@@ -52,7 +51,6 @@ from pytensor.graph.rewriting.db import (
     SequenceDB,
     TopoDB,
 )
-from pytensor.graph.traversal import ancestors, truncated_graph_inputs
 from pytensor.tensor.basic import Alloc
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
@@ -65,9 +63,8 @@ from pytensor.tensor.subtensor import (
     IncSubtensor,
     Subtensor,
 )
-from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import PromisedValuedRV, ValuedRV, valued_rv
+from pymc.logprob.abstract import MeasurableElemwise, ValuedRV, valued_rv
 from pymc.logprob.utils import DiracDelta
 from pymc.pytensorf import toposort_replace
 
@@ -82,19 +79,6 @@ def local_remove_valued_rv(fgraph, node):
 
 
 remove_valued_rvs = out2in(local_remove_valued_rv)
-
-
-@node_rewriter([PromisedValuedRV])
-def local_remove_promised_value_rv(fgraph, node):
-    rv = node.inputs[0]
-    return [rv]
-
-
-def remove_promised_valued_rvs(outputs):
-    fgraph = FunctionGraph(outputs=outputs, clone=False)
-    rewrite = out2in(local_remove_promised_value_rv)
-    rewrite.apply(fgraph)
-    return fgraph.outputs
 
 
 @register_canonicalize
@@ -297,36 +281,9 @@ def cleanup_ir(vars: Sequence[Variable]) -> Sequence[Variable]:
     return fgraph.outputs
 
 
-def assume_valued_outputs(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
-    """Run IR rewrite assuming each output is measured.
+@node_rewriter([MeasurableElemwise])
+def remove_measurable_elemwise(fgraph, node):
+    return Elemwise(node.op.scalar_op)(*node.inputs, return_list=True)
 
-    IR variables could depend on each other in a way that looks unmeasurable without a value variable assigned to each.
-    For instance `join([add(x, z), z])` is a potentially measurable join, but `add(x, z)` can look unmeasurable
-    because neither `x` and `z` are valued in the IR representation.
-    This helper runs an inner ir rewrite after giving each output a dummy value variable.
-    We replace inputs by dummies and then undo it so that any dependency on outer variables is preserved.
-    """
-    # Replace inputs by dummy variables (so they are not affected)
-    inputs = [
-        valued_var
-        for valued_var in ancestors(outputs)
-        if (valued_var.owner and isinstance(valued_var.owner.op, ValuedRV))
-    ]
-    replaced_inputs = {
-        var: var.type()
-        for var in truncated_graph_inputs(outputs, ancestors_to_include=inputs)
-        if var in inputs
-    }
-    cloned_outputs = clone_replace(outputs, replace=replaced_inputs)
 
-    dummy_rv_values = {base_var: base_var.type() for base_var in cloned_outputs}
-    fgraph = construct_ir_fgraph(dummy_rv_values)
-    remove_valued_rvs.apply(fgraph)
-
-    # Replace dummy variables by original inputs
-    fgraph.replace_all(
-        tuple((repl, orig) for orig, repl in replaced_inputs.items()),
-        import_missing=True,
-    )
-
-    return fgraph.outputs
+cleanup_ir_rewrites_db.register("remove_measurable_elemwise", remove_measurable_elemwise, "cleanup")

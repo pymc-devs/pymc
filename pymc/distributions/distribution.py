@@ -785,6 +785,13 @@ class PartialObservedRV(SymbolicRandomVariable):
     See `create_partial_observed_rv` for more details.
     """
 
+    @property
+    def supp_axes(self):
+        # Multivariate partial observations return flattened joint density factors.
+        return tuple(
+            tuple(range(1 - out.ndim, 0)) if self.ndim_supp else () for out in self.inner_outputs
+        )
+
 
 def create_partial_observed_rv(
     rv: TensorVariable,
