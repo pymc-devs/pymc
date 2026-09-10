@@ -15,7 +15,8 @@ import numpy as np
 import pytest
 
 from numpy.testing import assert_allclose
-from xarray import DataTree
+from xarray import Dataset, DataTree
+from xarray.testing import assert_equal
 
 from pymc.distributions import Normal
 from pymc.model.core import Deterministic, Model
@@ -71,6 +72,22 @@ def test_compute_deterministics(via):
     assert set(only_sigma.data_vars.variables) == {"sigma"}
     assert only_sigma["sigma"].dims == ("chain", "draw")
     assert_allclose(only_sigma["sigma"], np.exp(dataset["sigma_raw"]))
+
+
+def test_compute_deterministics_thinned_dataset():
+    # Regression test for #8424: thinning must not relabel the computed draws.
+    with Model() as model:
+        mu_raw = Normal("mu_raw")
+        Deterministic("mu", 2 * mu_raw)
+
+    dataset = Dataset(
+        {"mu_raw": (("chain", "draw"), np.arange(16, dtype=float).reshape(2, 8))},
+        coords={"chain": [0, 1], "draw": np.arange(8)},
+    ).isel(draw=slice(None, None, 2))
+
+    result = compute_deterministics(dataset, model=model, extend_dataset=True, progressbar=False)
+
+    assert_equal(result["mu"], (2 * dataset["mu_raw"]).rename("mu"))
 
 
 def test_compute_deterministics_extend_dataset():

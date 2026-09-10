@@ -21,16 +21,19 @@ import xarray
 from arviz_base.testing import check_multiple_attrs
 from numpy import ma
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
+from xarray.testing import assert_equal
 
 import pymc as pm
 
 from pymc.backends.arviz import (
     DataTreeConverter,
+    apply_function_over_dataset,
     dataset_to_point_list,
     predictions_to_inference_data,
     to_inference_data,
 )
 from pymc.exceptions import ImputationWarning
+from pymc.pytensorf import PointFunc
 
 # Turn all warnings into errors for this module
 pytestmark = pytest.mark.filterwarnings(
@@ -871,6 +874,22 @@ class TestDatasetToPointList:
         assert tuple(pl[0]) == ("x",)
         assert pl[0]["x"].shape == (0, 5)
         assert pl[0]["x"].dtype == np.float64
+
+
+def test_apply_function_over_dataset_preserves_sample_coords():
+    dataset = xarray.Dataset(
+        {"x": (("chain", "draw"), np.arange(6, dtype=float).reshape(2, 3))},
+        coords={"chain": [1, 3], "draw": [0, 4, 8]},
+    )
+    result = apply_function_over_dataset(
+        PointFunc(lambda x: [2 * x]),
+        dataset,
+        output_var_names=["y"],
+        coords={},
+        dims={},
+        progressbar=False,
+    )
+    assert_equal(result["y"], (2 * dataset["x"]).rename("y"))
 
 
 def test_incompatible_coordinate_lengths():
