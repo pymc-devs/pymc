@@ -835,7 +835,7 @@ def apply_function_over_dataset(
         out_trace,
         inference_library=pymc,
         dims=dims,
-        coords=coords,
+        coords={**coords, **stacked_dims},
         sample_dims=list(sample_dims),
         skip_event_dims=True,
     )
