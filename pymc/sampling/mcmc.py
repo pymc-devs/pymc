@@ -395,6 +395,20 @@ def _sample_external_nuts(
     compile_kwargs = compile_kwargs.copy()
     idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
 
+    if kwargs:
+        # Anything left in `kwargs` at this point is a `sample()` keyword argument
+        # that isn't recognized by this function and isn't one of the NUTS-kernel
+        # options nested under `nuts={...}` either. Previously these were silently
+        # swallowed here without ever reaching the sampler (e.g. a stray top-level
+        # `jitter=False` looked like it worked but was quietly ignored). Raise
+        # instead so a typo or an option that needs to move into `nuts={...}` is
+        # caught immediately rather than producing a silently wrong sample.
+        raise TypeError(
+            f"sample() got unexpected keyword arguments {sorted(kwargs)} for "
+            f"nuts_sampler={sampler!r}. Options for the underlying sampler must be "
+            "passed via the `nuts={...}` argument, e.g. `nuts={'jitter': False}`."
+        )
+
     if "backend" in nuts_kwargs:
         warnings.warn(
             "`backend` should be passed as a top-level argument to `pm.sample`, "
