@@ -41,6 +41,11 @@ def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     S = (pt.max(X, axis=0) - pt.min(X, axis=0)) / 2.0
 
     L = (c * S).eval()  # eval() makes sure L is not changed with out-of-sample preds
+    if np.any(L <= 0):
+        raise ValueError(
+            "Boundary size L must be strictly positive for all dimensions. "
+            "Check that input data X has non-zero range (max - min > 0) for each feature column."
+        )
     return L
 
 
