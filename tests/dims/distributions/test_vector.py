@@ -21,8 +21,8 @@ from pytensor.xtensor import as_xtensor
 
 import pymc.distributions as regular_distributions
 
-from pymc import Model
-from pymc.dims import Categorical, Dirichlet, MvNormal, ZeroSumNormal
+from pymc import Model, draw
+from pymc.dims import Categorical, Data, Dirichlet, MvNormal, WeightedZeroSumNormal, ZeroSumNormal
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
 pytestmark = pytest.mark.filterwarnings("error")
@@ -108,6 +108,53 @@ def test_zerosumnormal():
     # Logp is correct, but we have join(..., -1) and join(..., 1), that don't get canonicalized to the same
     # Should work once https://github.com/pymc-devs/pytensor/issues/1505 is fixed
     # assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_weighted_zerosumnormal():
+    w = np.array([0.9, 0.05, 0.03, 0.02])
+    coords = {"a": range(3), "b": range(4)}
+    with Model(coords=coords) as model:
+        WeightedZeroSumNormal("x", weights=w, core_dims=("b",), dims=("a", "b"))
+        WeightedZeroSumNormal("y", sigma=3, weights=w, core_dims=("b",), dims=("a", "b"))
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.WeightedZeroSumNormal("x", weights=w, dims=("a", "b"))
+        regular_distributions.WeightedZeroSumNormal("y", sigma=3, weights=w, dims=("a", "b"))
+
+    assert_equivalent_random_graph(model, reference_model)
+
+
+def test_weighted_zerosumnormal_matches_zerosumnormal_with_equal_weights():
+    n = 4
+    coords = {"b": range(n)}
+    with Model(coords=coords) as model:
+        WeightedZeroSumNormal("x", weights=np.full(n, 1.0 / n), core_dims=("b",))
+    with Model(coords=coords) as ref_model:
+        ZeroSumNormal("x", core_dims=("b",))
+
+    # Transformed value variables have different names, but both initial
+    # points are the zero vector on the constrained space
+    np.testing.assert_allclose(
+        model.compile_logp(sum=False)(model.initial_point()),
+        ref_model.compile_logp(sum=False)(ref_model.initial_point()),
+    )
+
+
+def test_weighted_zerosumnormal_symbolic_weights():
+    # weights passed as model data stay symbolic in both the RV and the
+    # default transform, so set_data keeps the constraint in sync
+    w = np.array([0.9, 0.05, 0.03, 0.02])
+    u = w / np.linalg.norm(w)
+    coords = {"b": range(4)}
+    with Model(coords=coords) as model:
+        weights = Data("w", w, dims=("b",))
+        WeightedZeroSumNormal("x", weights=weights, core_dims=("b",))
+
+    ip = model.initial_point()
+    assert np.isfinite(model.compile_logp()(ip))
+
+    draws = draw(model["x"], draws=100, random_seed=1)
+    assert np.abs(draws @ u).max() < 1e-9
 
 
 def test_zerosumnormal_batch_sigma():

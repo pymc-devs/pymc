@@ -696,6 +696,52 @@ class ZeroSumTransform(Transform):
         return value.sum(self.zerosum_axes).zeros_like()
 
 
+class WeightedZeroSumTransform(Transform):
+    """
+    Constrains random samples to satisfy ``sum(weights * value) = 0`` along the last axis.
+
+    The map is the restriction of the Householder reflection sending the
+    normalized weight vector ``u = weights / |weights|`` to ``-e_n``. It is an
+    isometry between the unconstrained space and the constraint hyperplane, so
+    the log Jacobian determinant is zero. With equal weights it reproduces
+    ``ZeroSumTransform(zerosum_axes=(-1,))`` exactly.
+
+    Parameters
+    ----------
+    weights : tensor_like
+        1-d vector of strictly positive weights defining the constraint
+        ``sum(weights * value) = 0``. Only a single constrained axis (the
+        last) is supported.
+    """
+
+    name = "weighted_zerosum"
+
+    def __init__(self, weights):
+        weights = pt.as_tensor(weights).astype("floatX")
+        if weights.type.ndim != 1:
+            raise ValueError("weights must be a 1-d vector")
+        self.weights = weights
+        self.ndim_supp = 1
+
+    def _weight_direction(self):
+        u = self.weights / pt.sqrt(pt.sum(self.weights**2))
+        return u[:-1], u[-1]
+
+    def forward(self, value, *rv_inputs):
+        u_head, u_last = self._weight_direction()
+        coef = value[..., -1:] / (1 + u_last)
+        return value[..., :-1] - coef * u_head
+
+    def backward(self, value, *rv_inputs):
+        u_head, u_last = self._weight_direction()
+        sum_vals = pt.sum(value * u_head, axis=-1, keepdims=True)
+        head = value - sum_vals / (1 + u_last) * u_head
+        return pt.concatenate([head, -sum_vals], axis=-1)
+
+    def log_jac_det(self, value, *rv_inputs):
+        return value.sum(-1).zeros_like()
+
+
 log_exp_m1 = LogExpM1()
 log_exp_m1.__doc__ = """
 Instantiation of :class:`pymc.distributions.transforms.LogExpM1`
