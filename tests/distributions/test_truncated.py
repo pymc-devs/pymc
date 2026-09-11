@@ -39,7 +39,7 @@ from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated, TruncatedRV, _truncated
 from pymc.exceptions import TruncationError
 from pymc.logprob.abstract import _icdf
-from pymc.logprob.basic import logcdf, logp
+from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.transforms import IntervalTransform
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import compile as pymc_compile
@@ -238,6 +238,42 @@ def test_truncation_continuous_logcdf(op_type, lower, upper, custom_dist):
             assert np.isclose(xt_logcdf_fn(test_xt_v), ref_xt.logcdf(test_xt_v))
 
 
+@pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])
+@pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+@pytest.mark.parametrize("custom_dist", [False, True])
+def test_truncation_continuous_icdf(op_type, lower, upper, custom_dist):
+    loc = 0.15
+    scale = 10
+    if custom_dist:
+        op = icdf_normal_customdist if op_type == "icdf" else rejection_normal_customdist
+    else:
+        op = icdf_normal if op_type == "icdf" else rejection_normal
+
+    x = op(loc, scale, name="x")
+    xt = Truncated.dist(x, lower=lower, upper=upper)
+    assert isinstance(xt.owner.op, TruncatedRV)
+
+    q_vv = pt.dvector("q")
+    if op_type == "rejection":
+        with pytest.raises(NotImplementedError):
+            icdf(xt, q_vv)
+        return
+
+    xt_icdf_fn = pytensor.function([q_vv], icdf(xt, q_vv))
+
+    ref_xt = scipy.stats.truncnorm(
+        (lower - loc) / scale,
+        (upper - loc) / scale,
+        loc,
+        scale,
+    )
+    test_q = np.array([0.0, 1e-6, 0.3, 0.5, 0.9, 1 - 1e-6, 1.0])
+    np.testing.assert_allclose(xt_icdf_fn(test_q), ref_xt.ppf(test_q), rtol=1e-6)
+
+    # Values outside [0, 1] are not valid quantiles
+    assert np.all(np.isnan(xt_icdf_fn(np.array([-0.1, 1.1]))))
+
+
 @pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5)])
 @pytest.mark.parametrize("op_type", ["icdf", "rejection"])
 def test_truncation_discrete_random(op_type, lower, upper):
@@ -335,6 +371,43 @@ def test_truncation_discrete_logcdf(op_type, lower, upper):
         for offset in (-1, 0, 1):
             test_xt_v = bound + offset
             assert np.isclose(xt_logcdf_fn(test_xt_v), ref_xt_logcdf(test_xt_v))
+
+
+@pytest.mark.parametrize("lower, upper", [(2, np.inf), (2, 5), (-np.inf, 5), (1, 5)])
+@pytest.mark.parametrize("op_type", ["icdf", "rejection"])
+def test_truncation_discrete_icdf(op_type, lower, upper):
+    p = 0.7
+    op = icdf_geometric if op_type == "icdf" else rejection_geometric
+
+    x = op(p, name="x")
+    xt = Truncated.dist(x, lower=lower, upper=upper)
+    assert isinstance(xt.owner.op, TruncatedRV)
+
+    q_vv = pt.dvector("q")
+    if op_type == "rejection":
+        with pytest.raises(NotImplementedError):
+            icdf(xt, q_vv)
+        return
+
+    xt_icdf_fn = pytensor.function([q_vv], icdf(xt, q_vv))
+
+    ref_xt = scipy.stats.geom(p)
+    cdf_lower = ref_xt.cdf(lower - 1)
+    norm = ref_xt.cdf(upper) - cdf_lower
+
+    def ref_xt_icdf(q):
+        return ref_xt.ppf(cdf_lower + q * norm)
+
+    test_q = np.array([0.0, 1e-6, 0.3, 0.5, 0.9, 1.0])
+    expected = np.array([ref_xt_icdf(q) for q in test_q])
+    if np.isinf(upper):
+        # At q=1 the truncated icdf matches the base distribution's convention,
+        # which returns the int64 cast of inf rather than scipy's inf
+        expected[-1] = pytensor.function([q_vv], icdf(x, q_vv))([1.0]).item()
+    np.testing.assert_allclose(xt_icdf_fn(test_q), expected)
+
+    # Values outside [0, 1] are not valid quantiles
+    assert np.all(np.isnan(xt_icdf_fn(np.array([-0.1, 1.1]))))
 
 
 def test_truncation_exceptions():
