@@ -92,6 +92,7 @@ jobs:
           - |
             tests/tuning/test_scaling.py
             tests/tuning/test_starting.py
+            tests/tuning/test_scipy_interface.py
             tests/distributions/test_dist_math.py
             tests/distributions/test_transform.py
             tests/sampling/test_mcmc.py
