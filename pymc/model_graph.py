@@ -201,7 +201,15 @@ DEFAULT_NODE_FORMATTERS: NodeTypeFormatterMapping = {
 
 
 def update_node_formatters(node_formatters: NodeTypeFormatterMapping) -> NodeTypeFormatterMapping:
-    node_formatters = {**DEFAULT_NODE_FORMATTERS, **node_formatters}
+    # Convert string keys matching NodeType values to NodeType members
+    value_to_node_type = {nt.value: nt for nt in NodeType}
+    converted = {}
+    for key, formatter in node_formatters.items():
+        if isinstance(key, str) and key in value_to_node_type:
+            converted[value_to_node_type[key]] = formatter
+        else:
+            converted[key] = formatter
+    node_formatters = {**DEFAULT_NODE_FORMATTERS, **converted}
 
     unknown_keys = set(node_formatters.keys()) - set(NodeType)
     if unknown_keys:
