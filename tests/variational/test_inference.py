@@ -671,3 +671,43 @@ class TestUntransformedData:
         # Unconstrained: p_simplex__ (shape 2, K-1 dims)
         assert "p_simplex__" in s.mean
         assert s.mean["p_simplex__"].values.shape == (2,)
+
+
+@pytest.mark.parametrize("score", [False])
+def test_fit_uses_create_simple_progress(score):
+    from unittest.mock import patch
+
+    with patch("pymc.variational.inference.create_simple_progress") as mock_csp:
+        with pm.Model():
+            pm.Normal("x", 0, 1)
+            pm.fit(n=10, score=score, progressbar=True)
+        assert mock_csp.called
+        mock_csp.assert_called_once_with(
+            progressbar=True, progressbar_theme=pm.progress_bar.default_progress_theme
+        )
+
+
+def test_fit_with_loss_uses_marimo_progress_in_marimo():
+    """_iterate_with_loss branches to MarimoSimpleProgress when inside Marimo."""
+    from unittest.mock import patch
+
+    from pymc.progress_bar.marimo_progress import MarimoSimpleProgress
+
+    with (
+        patch("pymc.variational.inference.in_marimo_notebook", return_value=True),
+        patch.object(MarimoSimpleProgress, "__enter__", return_value=None) as mock_enter,
+        patch.object(MarimoSimpleProgress, "__exit__", return_value=None),
+        patch.object(MarimoSimpleProgress, "add_task", return_value=0) as mock_add_task,
+        patch.object(MarimoSimpleProgress, "advance") as mock_advance,
+        patch.object(MarimoSimpleProgress, "update") as mock_update,
+    ):
+        with pm.Model():
+            pm.Normal("x", 0, 1)
+            # score=True → _iterate_with_loss → should pick MarimoSimpleProgress
+            pm.fit(n=10, score=True, progressbar=True)
+
+        # Prove the Marimo branch was actually taken, not silently skipped.
+        mock_enter.assert_called_once()
+        mock_add_task.assert_called_once()
+        assert mock_advance.call_count == 10
+        mock_update.assert_called_once()
