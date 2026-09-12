@@ -18,7 +18,7 @@ import pytest
 import xarray as xr
 
 from numpy.testing import assert_allclose
-from scipy.optimize import OptimizeResult
+from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
 from scipy.sparse.linalg import LinearOperator
 
 import pymc as pm
@@ -246,7 +246,8 @@ def test_find_MAP_inferencedata(
     assert ("covariance_matrix" in idata.fit) == compute_hessian
     assert idata.fit.rows.values.tolist() == ["mu", "sigma_log__"]
     assert idata.optimizer_result["method"].item() == method
-    assert ("hess_inv" in idata.optimizer_result) == (method in ("BFGS", "L-BFGS-B"))
+    assert ("hess_inv" in idata.optimizer_result) == (method == "BFGS")
+    assert ("hess_inv_sk" in idata.optimizer_result) == (method == "L-BFGS-B")
     for key in ("hess", "hess_inv"):
         if key in idata.optimizer_result:
             assert idata.optimizer_result[key].dims == ("variables", "variables_aux")
@@ -434,6 +435,19 @@ class TestOptimizerResultToDataset:
         assert ds["hess_inv"].dims == ("variables", "variables_aux")
         assert ds["hess_inv"].coords["variables_aux"].values.tolist() == self.names
         assert_allclose(ds["hess_inv"].values, 2 * np.eye(2))
+
+    def test_lbfgs_hess_inv_kept_low_rank(self):
+        rng = np.random.default_rng(0)
+        n, m = 2, 3
+        sk, yk = rng.normal(size=(m, n)), rng.normal(size=(m, n))
+        yk = yk + np.sign(np.sum(sk * yk, axis=1))[:, None] * sk  # keep s.y > 0
+        result = OptimizeResult(x=np.ones(n), hess_inv=LbfgsInvHessProduct(sk, yk))
+        ds = _optimizer_result_to_dataset(result, "L-BFGS-B", self.names)
+        assert "hess_inv" not in ds
+        for key, pairs in (("hess_inv_sk", sk), ("hess_inv_yk", yk)):
+            assert ds[key].dims == ("lbfgs_corrections", "variables")
+            assert ds[key].coords["variables"].values.tolist() == self.names
+            assert_allclose(ds[key].values, pairs)
 
     def test_basinhopping_nested_result(self):
         result = OptimizeResult(
