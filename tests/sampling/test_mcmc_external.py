@@ -563,3 +563,43 @@ class TestJaxSamplerKwargForwarding:
 
         # Stray kwargs are dropped rather than forwarded to the sampler.
         assert "not_a_real_kwarg" not in captured
+
+    @pytest.mark.parametrize("nuts_sampler", ["numpyro", "blackjax"])
+    def test_jax_options_via_nuts_dict_do_not_warn(self, nuts_sampler):
+        """The `nuts={...}` route is the supported replacement and is silent."""
+        pytest.importorskip(nuts_sampler)
+
+        import pymc.sampling.jax as pymc_jax
+
+        captured = {}
+
+        def fake_sample_jax_nuts(*args, **kwargs):
+            captured.update(kwargs)
+            return SimpleNamespace()
+
+        with mock.patch.object(pymc_jax, "sample_jax_nuts", side_effect=fake_sample_jax_nuts):
+            with Model():
+                Normal("x", 0, 1)
+                with warnings.catch_warnings():
+                    warnings.simplefilter("error", FutureWarning)
+                    warnings.simplefilter("error", UserWarning)
+                    sample(
+                        draws=2,
+                        tune=2,
+                        chains=2,
+                        nuts_sampler=nuts_sampler,
+                        nuts={
+                            "chain_method": "vectorized",
+                            "postprocessing_backend": "cpu",
+                        },
+                        progressbar=False,
+                        compute_convergence_checks=False,
+                        random_seed=42,
+                    )
+
+        # The jax options reach the sampler by name...
+        assert captured.get("chain_method") == "vectorized"
+        assert captured.get("postprocessing_backend") == "cpu"
+        # ...and are not also left in nuts_kwargs, which goes to the inner MCMC.
+        assert "chain_method" not in captured.get("nuts_kwargs", {})
+        assert "postprocessing_backend" not in captured.get("nuts_kwargs", {})

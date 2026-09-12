@@ -511,27 +511,29 @@ def _sample_external_nuts(
         # jax-specific sampler options (chain execution + postprocessing) are
         # named parameters of `sample_jax_nuts`. Historically they leaked in via
         # `**kwargs` on `pm.sample`; forwarding arbitrary top-level kwargs is
-        # fragile (each sampler needs a different set), so instead detect the
-        # known jax options explicitly, warn that the top-level route is
-        # deprecated, and pass them on by name. Anything left over is a stray
-        # kwarg the jax samplers don't understand -- warn that it is ignored.
+        # fragile (each sampler needs a different set), so instead pull them out
+        # of `nuts_kwargs` -- the `nuts={...}` route -- and pass them on by name.
+        # The old top-level route still works but warns, and anything left over
+        # is a stray kwarg the jax samplers don't understand.
         jax_sampler_kwargs = {}
-        for key in (
+        jax_option_names = (
             "chain_method",
             "postprocessing_backend",
             "postprocessing_vectorize",
             "postprocessing_chunks",
-        ):
+        )
+        for key in jax_option_names:
+            if key in jax_nuts_kwargs:
+                jax_sampler_kwargs[key] = jax_nuts_kwargs.pop(key)
             if key in kwargs:
                 warnings.warn(
                     f"Passing `{key}` as a top-level argument to `pm.sample` is "
-                    "deprecated and will be removed in a future release; the jax "
-                    "NUTS samplers will accept it through a dedicated route "
-                    "instead. See https://github.com/pymc-devs/pymc/issues/8366.",
+                    f"deprecated and will be removed in a future release. Pass it "
+                    f'via `nuts={{"{key}": ...}}` instead.',
                     FutureWarning,
                     stacklevel=2,
                 )
-                jax_sampler_kwargs[key] = kwargs.pop(key)
+                jax_sampler_kwargs.setdefault(key, kwargs.pop(key))
 
         if kwargs:
             warnings.warn(
