@@ -1,4 +1,5 @@
 arviz>=1.1.0,<2.0
+better-optimize>=0.4.2,<1.0
 cachetools>=4.2.1,<7
 cloudpickle
 numpy>=1.25.0

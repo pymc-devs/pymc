@@ -24,7 +24,7 @@ import sys
 import time
 import warnings
 
-from collections.abc import Callable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -1699,6 +1699,7 @@ def _init_jitter(
     jitter: bool,
     jitter_max_retries: int,
     logp_fn: Callable[[PointType], np.ndarray] | None = None,
+    jitter_rvs: Iterable[Variable] | None = None,
 ) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
@@ -1716,6 +1717,8 @@ def _init_jitter(
     logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
         logp function that takes the output of initial point functions as input.
         If None, will use the results of model.compile_logp().
+    jitter_rvs: iterable of random variables, optional
+        Variables to jitter. Defaults to all free variables.
 
     Returns
     -------
@@ -1725,7 +1728,7 @@ def _init_jitter(
     ipfns = make_initial_point_fns_per_chain(
         model=model,
         overrides=initvals,
-        jitter_rvs=set(model.free_RVs) if jitter else set(),
+        jitter_rvs=set(model.free_RVs if jitter_rvs is None else jitter_rvs) if jitter else set(),
         chains=len(seeds),
     )
 
@@ -1958,7 +1961,13 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "advi_map":
-        start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
+        start = pm.find_MAP(
+            include_transformed=True,
+            random_seed=random_seed_list[0],
+            return_inferencedata=False,
+            progressbar=progressbar and not quiet,
+            compile_kwargs=compile_kwargs,
+        )
         approx = pm.MeanField(model=model, start=start)
         pm.fit(
             random_seed=random_seed_list[0],
@@ -1979,7 +1988,13 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "map":
-        start = pm.find_MAP(include_transformed=True, seed=random_seed_list[0])
+        start = pm.find_MAP(
+            include_transformed=True,
+            random_seed=random_seed_list[0],
+            return_inferencedata=False,
+            progressbar=progressbar and not quiet,
+            compile_kwargs=compile_kwargs,
+        )
         cov = -pm.find_hessian(point=start, negate_output=False)
         initial_points = [start] * chains
         potential = quadpotential.QuadPotentialFull(cov, rng=random_seed_list[0])
