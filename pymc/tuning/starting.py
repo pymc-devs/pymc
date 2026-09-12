@@ -29,7 +29,7 @@ from better_optimize import basinhopping, minimize
 from better_optimize.constants import MINIMIZE_MODE_KWARGS, minimize_method
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor import TensorVariable
-from scipy.optimize import OptimizeResult
+from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
 from scipy.sparse.linalg import LinearOperator
 from xarray import DataTree
 
@@ -125,6 +125,13 @@ def _optimizer_result_to_dataset(
     data = {"method": xr.DataArray(method)}
     for key, value in result.items():
         if value is None:
+            continue
+        if isinstance(value, LbfgsInvHessProduct):
+            # L-BFGS-B's inverse Hessian is m correction pairs; densifying it is O(n^2) memory
+            for suffix, pairs in (("sk", value.sk), ("yk", value.yk)):
+                data[f"{key}_{suffix}"] = xr.DataArray(
+                    np.asarray(pairs), dims=("lbfgs_corrections", "variables")
+                )
             continue
         if isinstance(value, LinearOperator):
             value = np.column_stack([value.matvec(e) for e in np.eye(len(names))])
