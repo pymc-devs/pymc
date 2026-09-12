@@ -25,7 +25,6 @@ import numpy as np
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars, StatsType
 from pymc.exceptions import SamplingError
 from pymc.model import Point, modelcontext
-from pymc.pytensorf import floatX
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods.arraystep import GradientSharedStep
 from pymc.step_methods.compound import StepMethodState
@@ -164,9 +163,16 @@ class BaseHMC(GradientSharedStep):
         self.tune = True
 
         if scaling is None and potential is None:
-            mean = floatX(np.zeros(size))
-            var = floatX(np.ones(size))
-            potential = QuadPotentialDiagAdapt(size, mean, var, 10, rng=self.rng.spawn(1)[0])
+            # Use the same dtype as the logp/dlogp function (which honors the
+            # requested ``dtype``) rather than ``floatX`` unconditionally, so the
+            # default mass matrix always matches the integrator's expected dtype.
+            # See GH #8213.
+            dtype = self._logp_dlogp_func.dtype
+            mean = np.zeros(size, dtype=dtype)
+            var = np.ones(size, dtype=dtype)
+            potential = QuadPotentialDiagAdapt(
+                size, mean, var, 10, dtype=dtype, rng=self.rng.spawn(1)[0]
+            )
 
         if isinstance(scaling, dict):
             point = Point(scaling, model=self._model)
