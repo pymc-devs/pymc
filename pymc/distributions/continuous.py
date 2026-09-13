@@ -3576,7 +3576,7 @@ class Rice(PositiveContinuous):
     nu : tensor_like of float, optional
         Noncentrality parameter (only required if b is not specified).
     sigma : tensor_like of float, default 1
-        scale parameter.
+        Scale parameter.
     b : tensor_like of float, optional
         Shape parameter (alternative to nu, only required if nu is not specified).
 
