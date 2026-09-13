@@ -262,7 +262,7 @@ def change_value_transforms(
             w = pm.Binomial("w", n=9, p=p, observed=6)
 
         with change_value_transforms(base_m, {"p": logodds}) as transformed_p:
-            mean_q = pm.find_MAP()
+            mean_q = pm.find_MAP(return_inferencedata=False)
 
         with change_value_transforms(transformed_p, {"p": None}) as untransformed_p:
             new_p = untransformed_p["p"]
@@ -343,7 +343,7 @@ def remove_value_transforms(
         with pm.Model() as transformed_m:
             p = pm.Uniform("p", 0, 1)
             w = pm.Binomial("w", n=9, p=p, observed=6)
-            mean_q = pm.find_MAP()
+            mean_q = pm.find_MAP(return_inferencedata=False)
 
         with remove_value_transforms(transformed_m) as untransformed_m:
             new_p = untransformed_m["p"]

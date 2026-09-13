@@ -334,7 +334,7 @@ def test_change_value_transforms():
         new_p = transformed_p["p"]
         assert transformed_p.rvs_to_transforms[new_p] == logodds
         assert transformed_p.rvs_to_values[new_p].name == "p_logodds__"
-        mean_q = pm.find_MAP(progressbar=False)
+        mean_q = pm.find_MAP(progressbar=False, return_inferencedata=False)
 
     with change_value_transforms(transformed_p, {"p": None}) as untransformed_p:
         new_p = untransformed_p["p"]

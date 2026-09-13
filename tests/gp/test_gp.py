@@ -41,7 +41,9 @@ class TestMarginalVsMarginalApprox:
             self.gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             sigma = pm.HalfNormal("sigma", sigma=100)
             self.gp.marginal_likelihood("lik", self.x[:, None], self.y, sigma)
-            self.map_full = pm.find_MAP(method="bfgs")  # bfgs seems to work much better than lbfgsb
+            self.map_full = pm.find_MAP(
+                method="bfgs", return_inferencedata=False
+            )  # bfgs seems to work much better than lbfgsb
 
         self.x_new = np.linspace(-6, 6, 20)
 
@@ -71,7 +73,7 @@ class TestMarginalVsMarginalApprox:
             gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             sigma = pm.HalfNormal("sigma", sigma=100, initval=50.0)
             gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, sigma)
-            map_approx = pm.find_MAP(method="bfgs")
+            map_approx = pm.find_MAP(method="bfgs", return_inferencedata=False)
 
         # Check MAP gets approximately correct result
         npt.assert_allclose(self.map_full["c"], map_approx["c"], atol=0.01, rtol=0.1)
