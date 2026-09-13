@@ -33,6 +33,7 @@ dependencies:
 - sphinx-sitemap
 - sphinx>=5
 - sphinxext-rediraffe
+- sphinxext-opengraph
 - watermark
 - sphinx-remove-toctrees
 - pip:
