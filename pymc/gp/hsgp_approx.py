@@ -17,6 +17,7 @@ import warnings
 
 from collections.abc import Sequence
 from types import ModuleType
+from typing import Literal
 
 import numpy as np
 import pytensor.tensor as pt
@@ -28,6 +29,24 @@ from pymc.gp.gp import Base
 from pymc.gp.mean import Mean, Zero
 
 TensorLike = np.ndarray | pt.TensorVariable
+BoundaryConditionType = Literal["dirichlet", "neumann", "dirichlet-neumann", "neumann-dirichlet"]
+
+# Laplace eigenbasis on [-L, L]: phi_j(x) = trig(sqrt(lambda_j) (x + L)) with
+# lambda_j = (pi j / (2 L))**2, j = j0, j0 + 1, ..., j0 + m - 1. The name reads as
+# "<condition at -L>-<condition at +L>"; dirichlet pins phi to zero, neumann pins its slope.
+_BOUNDARY_CONDITIONS: dict[str, tuple[float, str]] = {
+    "dirichlet": (1.0, "sin"),
+    "neumann": (0.0, "cos"),  # j = 0 is the constant eigenfunction
+    "dirichlet-neumann": (0.5, "sin"),
+    "neumann-dirichlet": (0.5, "cos"),
+}
+
+
+def _check_boundary(boundary: str) -> None:
+    if not isinstance(boundary, str) or boundary not in _BOUNDARY_CONDITIONS:
+        raise ValueError(
+            f"`boundary` must be one of {tuple(_BOUNDARY_CONDITIONS)}, got {boundary!r}."
+        )
 
 
 def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
@@ -44,9 +63,32 @@ def set_boundary(X: TensorLike, c: numbers.Real | TensorLike) -> np.ndarray:
     return L
 
 
-def calc_eigenvalues(L: TensorLike, m: Sequence[int]):
-    """Calculate eigenvalues of the Laplacian."""
-    S = np.meshgrid(*[np.arange(1, 1 + m[d]) for d in range(len(m))])
+def calc_eigenvalues(
+    L: TensorLike, m: Sequence[int], boundary: BoundaryConditionType = "dirichlet"
+):
+    """Calculate eigenvalues of the Laplacian on the box ``[-L, L]``.
+
+    Parameters
+    ----------
+    L : array-like
+        Half-width of the approximation domain, one value per dimension.
+    m : Sequence[int]
+        Number of basis vectors per dimension.
+    boundary : {"dirichlet", "neumann", "dirichlet-neumann", "neumann-dirichlet"}
+        Boundary condition of the eigenbasis, applied to every dimension. All conditions
+        share ``lambda_j = (pi j / (2 L))**2`` and differ in the index set: Dirichlet
+        ``j = 1, ..., m``; Neumann ``j = 0, ..., m - 1`` (``j = 0`` is the constant mode);
+        mixed ``j = 1/2, 3/2, ..., m - 1/2``.
+
+    Returns
+    -------
+    array-like
+        Array of shape ``(prod(m), len(m))`` with one eigenvalue per dimension per basis vector
+        (NumPy if ``L`` is NumPy, otherwise a PyTensor expression).
+    """
+    _check_boundary(boundary)
+    j0, _ = _BOUNDARY_CONDITIONS[boundary]
+    S = np.meshgrid(*[np.arange(j0, j0 + m[d]) for d in range(len(m))])
     S_arr = np.vstack([s.flatten() for s in S]).T
 
     return np.square((np.pi * S_arr) / (2 * L))
@@ -57,19 +99,50 @@ def calc_eigenvectors(
     L: TensorLike,
     eigvals: TensorLike,
     m: Sequence[int],
+    boundary: BoundaryConditionType = "dirichlet",
 ):
-    """Calculate eigenvectors of the Laplacian.
+    """Calculate eigenvectors of the Laplacian on the box ``[-L, L]``.
 
-    These are used as basis vectors in the HSGP approximation.
+    These are used as basis vectors in the HSGP approximation. They are orthonormal on
+    ``[-L, L]`` with respect to the Lebesgue measure.
+
+    Parameters
+    ----------
+    Xs : array-like
+        Centered inputs of shape ``(n, len(m))``.
+    L : array-like
+        Half-width of the approximation domain, one value per dimension.
+    eigvals : array-like
+        Output of :func:`calc_eigenvalues` computed with the same ``boundary``.
+    m : Sequence[int]
+        Number of basis vectors per dimension.
+    boundary : {"dirichlet", "neumann", "dirichlet-neumann", "neumann-dirichlet"}
+        Boundary condition of the eigenbasis. With ``omega_j = sqrt(lambda_j)``:
+        ``"dirichlet"`` and ``"dirichlet-neumann"`` use ``sin(omega_j (x + L)) / sqrt(L)``
+        (zero at ``-L``); ``"neumann"`` and ``"neumann-dirichlet"`` use
+        ``cos(omega_j (x + L)) / sqrt(L)`` (zero slope at ``-L``). The condition at ``+L``
+        is set by the index set chosen in :func:`calc_eigenvalues`. The constant Neumann
+        mode (``omega = 0``) is normalised by ``1 / sqrt(2 L)`` instead.
+
+    Returns
+    -------
+    pt.TensorVariable
+        Tensor of shape ``(n, prod(m))``.
     """
+    _check_boundary(boundary)
+    j0, trig_name = _BOUNDARY_CONDITIONS[boundary]
+    trig = getattr(pt, trig_name)
     m_star = int(np.prod(m))
 
     phi = pt.ones((Xs.shape[0], m_star))
     for d in range(len(m)):
+        omega = pt.sqrt(eigvals[:, d])
         c = 1.0 / pt.sqrt(L[d])
-        term1 = pt.sqrt(eigvals[:, d])
+        if j0 == 0:
+            # The constant Neumann eigenfunction (omega == 0) has squared norm 2L, not L.
+            c = pt.switch(pt.eq(omega, 0.0), 1.0 / pt.sqrt(2.0 * L[d]), c)
         term2 = pt.tile(Xs[:, d][:, None], m_star) + L[d]
-        phi *= c * pt.sin(term1 * term2)
+        phi *= c * trig(omega * term2)
 
     return phi
 
@@ -194,7 +267,7 @@ class HSGP(Base):
         The number of basis vectors to use for each active dimension (covariance parameter
         `active_dim`).
     L: list
-        The boundary of the space for each `active_dim`.  It is called the boundary condition.
+        The boundary of the space for each `active_dim`.
         Choose L such that the domain `[-L, L]` contains all points in the column of X given by the
         `active_dim`.
     c: float
@@ -204,14 +277,69 @@ class HSGP(Base):
     drop_first: bool
         Default `False`. Sometimes the first basis vector is quite "flat" and very similar to
         the intercept term.  When there is an intercept in the model, ignoring the first basis
-        vector may improve sampling. This argument will be deprecated in future versions.
+        vector may improve sampling. With ``boundary="neumann"`` the first basis vector is
+        exactly constant (its prior variance is the spectral density at zero frequency divided
+        by the volume of the box); with the mixed conditions it is not constant. This argument
+        will be deprecated in future versions.
     parametrization: str
         Whether to use the `centered` or `noncentered` parametrization when multiplying the
         basis by the coefficients.
+    boundary: str, default "dirichlet"
+        Boundary condition of the Laplace eigenbasis at the two ends of the approximation box,
+        applied to every active dimension. The name reads as ``"<at lower end>-<at upper end>"``:
+
+        - ``"dirichlet"``: sine basis, the approximate GP is pinned to zero at both ends and its
+          prior variance shrinks to zero there.
+        - ``"neumann"``: cosine basis (including the constant), the approximate GP has zero
+          slope at both ends and its prior variance is doubled there.
+        - ``"dirichlet-neumann"`` / ``"neumann-dirichlet"``: zero value at one end and zero
+          slope at the other.
+
+        For ``ExpQuad`` and Matérn kernels all conditions deviate from the exact stationary GP
+        only within roughly ``1.5`` lengthscales of an end, and by the same amount, so the
+        guidance for ``m`` and ``c`` is the same for all of them (heavy-tailed kernels such as
+        ``RatQuad`` reach further into the box, for every condition). A boundary condition is a
+        modeling assumption about the edge, not a better approximation. Use a Neumann end where
+        the function is known to have zero slope (symmetry axis, zero flux, plateau) and a
+        Dirichlet end where it is known to vanish (e.g. a radial profile decaying to background);
+        place the end of the box on that point (see the note on the box below). A mismatched
+        condition is worse than the default. When forecasting a short horizon just past the data
+        with a small ``c``, a Neumann end keeps the forecast uncertainty where Dirichlet collapses
+        it to zero; over horizons of a lengthscale or more, or to approximate the unconstrained
+        GP, increase ``c`` instead (``approx_hsgp_hyperparams`` with the prediction range
+        included in ``x_range``).
+
+        ``"neumann"`` evaluates the spectral density at frequency zero. For ``RatQuad`` this is
+        finite only for ``alpha > input_dim / 2`` and becomes very large as ``alpha`` approaches
+        that value; at or below it the constant basis vector gets a ``nan`` or ``inf``
+        coefficient (also mid-chain, if ``alpha`` is a free parameter). Use ``drop_first=True``
+        or another boundary condition in that case.
     cov_func: Covariance function, must be an instance of `Stationary` and implement a
         `power_spectral_density` method.
     mean_func: None, instance of Mean
         The mean function.  Defaults to zero.
+
+    Notes
+    -----
+    The approximation box is ``[center - L, center + L]`` per active dimension, where
+    ``center`` is the midpoint of the ``X`` first passed to ``prior`` or ``prior_linearized``
+    and ``L`` is either given or ``c`` times the half-range of that ``X``. To place the ends of
+    the box on physical boundaries (required for the mixed conditions to mean what you intend),
+    make ``X`` span the physical domain: build the basis on a grid covering the domain with
+    ``prior_linearized`` and index the observed rows in the likelihood, e.g.
+
+    .. code-block:: python
+
+        r_grid = np.linspace(0.0, R, 200)[:, None]  # whole physical domain
+        with pm.Model():
+            gp = pm.gp.HSGP(m=[30], L=[R / 2], boundary="neumann-dirichlet", cov_func=cov_func)
+            phi, sqrt_psd = gp.prior_linearized(r_grid)
+            beta = pm.Normal("beta", size=gp.n_basis_vectors)
+            f = pm.Deterministic("f", phi @ (beta * sqrt_psd))
+            pm.Normal("y", mu=f[observed_idx], sigma=sigma, observed=y)
+
+    Inputs outside the box, for ``prior`` or ``conditional``, are not checked: the basis simply
+    reflects, and the result is not a GP prediction.
 
     Examples
     --------
@@ -233,6 +361,10 @@ class HSGP(Base):
             # so the boundaries occur at -1.5 and 2.5.  The data, both for
             # training and prediction should reside well within that boundary..
             gp = pm.gp.HSGP(m=[25, 25], c=4.0, cov_func=cov_func)
+
+            # If the function is known to have zero slope at the edges of its domain
+            # (symmetry, zero flux), encode that instead of extending the box:
+            # gp = pm.gp.HSGP(m=[25, 25], c=1.0, boundary="neumann", cov_func=cov_func)
 
             # Place a GP prior over the function f.
             f = gp.prior("f", X=X)
@@ -263,6 +395,7 @@ class HSGP(Base):
         drop_first: bool = False,
         parametrization: str | None = "noncentered",
         *,
+        boundary: BoundaryConditionType = "dirichlet",
         mean_func: Mean = Zero(),
         cov_func: Covariance,
     ):
@@ -293,6 +426,8 @@ class HSGP(Base):
         if parametrization not in ["centered", "noncentered"]:
             raise ValueError("`parametrization` must be either 'centered' or 'noncentered'.")
 
+        _check_boundary(boundary)
+
         if drop_first:
             warnings.warn(
                 "The drop_first argument will be deprecated in future versions."
@@ -301,6 +436,7 @@ class HSGP(Base):
             )
 
         self._drop_first = drop_first
+        self._boundary = boundary
         self._m = m
         self._m_star = self.n_basis_vectors = int(np.prod(self._m))
         self._L: pt.TensorVariable | None = None
@@ -344,7 +480,10 @@ class HSGP(Base):
         Parameters
         ----------
         X: array-like
-            Function input values.
+            Function input values. On the first call, their midpoint fixes the centre of the
+            approximation box and (with ``c``) its half-width ``L``; later calls, e.g. through
+            ``pm.set_data``, reuse that box. Inputs outside the box are not checked: the basis
+            reflects there and the result is not a GP prediction.
 
         Returns
         -------
@@ -416,8 +555,8 @@ class HSGP(Base):
         else:
             self.L = self._L
 
-        eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m)
+        eigvals = calc_eigenvalues(self.L, self._m, boundary=self._boundary)
+        phi = calc_eigenvectors(Xs, self.L, eigvals, self._m, boundary=self._boundary)
         omega = pt.sqrt(eigvals)
         psd = self.cov_func.power_spectral_density(omega)
 
@@ -487,8 +626,8 @@ class HSGP(Base):
 
         Xnew, _ = self.cov_func._slice(Xnew)
 
-        eigvals = calc_eigenvalues(self.L, self._m)
-        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m)
+        eigvals = calc_eigenvalues(self.L, self._m, boundary=self._boundary)
+        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m, boundary=self._boundary)
         i = int(self._drop_first is True)
 
         if self._parametrization == "noncentered":
@@ -506,7 +645,9 @@ class HSGP(Base):
         name
             Name of the random variable
         Xnew : array-like
-            Function input values.
+            Function input values. Inputs outside the box ``[center - L, center + L]`` fixed by
+            ``prior`` are not checked: the basis reflects there and the result is not a GP
+            prediction.
         dims: None
             Dimension name for the GP random variable.
         """
