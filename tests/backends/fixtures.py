@@ -450,7 +450,7 @@ class DumpLoadTestCase(ModelBackendSampledTestCase):
         try:
             with cls.model:
                 cls.dumped = cls.load_func(cls.name)
-        except:
+        except Exception:
             remove_file_or_directory(cls.name)
             raise
 
