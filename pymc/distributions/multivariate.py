@@ -72,6 +72,7 @@ from pymc.distributions.shape_utils import (
 from pymc.distributions.transforms import (
     CholeskyCorrTransform,
     CholeskyCovTransform,
+    WeightedZeroSumTransform,
     ZeroSumTransform,
     _default_transform,
 )
@@ -100,6 +101,7 @@ __all__ = [
     "MvStudentT",
     "OrderedMultinomial",
     "StickBreakingWeights",
+    "WeightedZeroSumNormal",
     "Wishart",
     "WishartBartlett",
     "ZeroSumNormal",
@@ -2770,6 +2772,108 @@ class ZeroSumNormal(Distribution):
         if not n_zerosum_axes > 0:
             raise ValueError("n_zerosum_axes has to be > 0")
         return n_zerosum_axes
+
+
+class WeightedZeroSumNormalRV(SymbolicRandomVariable):
+    """WeightedZeroSumNormal random variable."""
+
+    name = "WeightedZeroSumNormal"
+    extended_signature = "[rng],[size],(),(n)->[rng],(n)"
+    _print_name = ("WeightedZeroSumNormal", "\\operatorname{WeightedZeroSumNormal}")
+
+    @classmethod
+    def rv_op(cls, sigma, weights, *, size=None, rng=None):
+        sigma = pt.as_tensor(sigma)
+        weights = pt.as_tensor(weights)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            # Size is implied by the batch shape of sigma
+            size = sigma.shape
+
+        shape = (*tuple(size), weights.shape[-1])
+        next_rng, normal_dist = pm.Normal.dist(
+            sigma=pt.shape_padright(sigma), shape=shape, rng=rng, return_next_rng=True
+        )
+
+        # Project onto the hyperplane orthogonal to u = weights / |weights|
+        u = weights / pt.sqrt(pt.sum(weights**2))
+        weighted_zerosum_rv = normal_dist - pt.sum(normal_dist * u, axis=-1, keepdims=True) * u
+
+        return cls(
+            inputs=[rng, size, sigma, weights],
+            outputs=[next_rng, weighted_zerosum_rv],
+        )(rng, size, sigma, weights)
+
+
+class WeightedZeroSumNormal(Distribution):
+    r"""
+    Normal distribution where the last axis is constrained to sum to zero under weights.
+
+    Generalizes :class:`~pymc.ZeroSumNormal`: draws satisfy
+    ``sum(weights * value) = 0`` along the last axis instead of
+    ``sum(value) = 0``. Writing :math:`u = w / \|w\|`,
+
+    .. math::
+
+        WZSN(\sigma, w) = N\Big(0, \sigma^2 (I_n - u u^T)\Big)
+
+    With equal weights this is exactly ``ZeroSumNormal`` with one zero-sum
+    axis. Only a single constrained axis (the last) is supported.
+
+    Parameters
+    ----------
+    sigma : tensor_like of float
+        Scale parameter (sigma > 0), the standard deviation of the underlying
+        unconstrained Normal distribution. Defaults to 1. It cannot vary along
+        the constrained axis.
+    weights : tensor_like
+        1-d vector of strictly positive weights defining the constraint.
+        Its length defines the support shape.
+    """
+
+    rv_type = WeightedZeroSumNormalRV
+    rv_op = WeightedZeroSumNormalRV.rv_op
+
+    @classmethod
+    def dist(cls, sigma=1.0, *, weights, **kwargs):
+        weights = pt.as_tensor(weights).astype("floatX")
+        if weights.type.ndim != 1:
+            raise ValueError("weights must be a 1-d vector")
+
+        sigma = pt.as_tensor(sigma)
+
+        return super().dist([sigma, weights], **kwargs)
+
+
+@_support_point.register(WeightedZeroSumNormalRV)
+def weighted_zerosumnormal_support_point(op, rv, *rv_inputs):
+    return pt.zeros_like(rv)
+
+
+@_default_transform.register(WeightedZeroSumNormalRV)
+def weighted_zerosum_default_transform(op, rv):
+    weights = rv.owner.inputs[3]
+    return WeightedZeroSumTransform(weights)
+
+
+@_logprob.register(WeightedZeroSumNormalRV)
+def weighted_zerosumnormal_logp(op, values, rng, size, sigma, weights, **kwargs):
+    (value,) = values
+    n = value.shape[-1].astype("floatX")
+
+    u = weights / pt.sqrt(pt.sum(weights**2))
+    atol = 1e-9 if value.dtype == "float64" else 1e-6
+    weighted_zerosum = pt.all(pt.isclose(pt.sum(value * u, axis=-1), 0, atol=atol))
+
+    out = pt.sum(
+        -0.5 * pt.pow(value / sigma, 2)
+        - (pt.log(pt.sqrt(2.0 * np.pi)) + pt.log(sigma)) * (n - 1) / n,
+        axis=-1,
+    )
+
+    return check_parameters(out, weighted_zerosum, msg="sum(weights * value, axis=-1) = 0")
 
 
 @_support_point.register(ZeroSumNormalRV)
