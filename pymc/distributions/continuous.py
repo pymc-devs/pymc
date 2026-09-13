@@ -1451,7 +1451,7 @@ class Exponential(PositiveContinuous):
     ----------
     lam : tensor_like of float
         Rate or inverse scale (``lam`` > 0).
-    scale: tensor_like of float
+    scale : tensor_like of float, optional
         Alternative parameter (scale = 1/lam).
     """
 
@@ -1637,8 +1637,9 @@ class AsymmetricLaplace(Continuous):
     The pdf of this distribution is
 
     .. math::
-        {f(x|\\b,\kappa,\mu) =
-            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
+        f(x \mid b, \kappa, \mu) =
+            \left(\frac{b}{\kappa + 1/\kappa}\right)
+            \exp\left(-(x-\mu) \, b \, s \, \kappa^{s}\right)
 
     where
 
@@ -1648,7 +1649,7 @@ class AsymmetricLaplace(Continuous):
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Mean      :math:`\mu-\frac{\kappa-1/\kappa}b`
     Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
     ========  ========================
 
@@ -2030,12 +2031,12 @@ class SkewStudentT(Continuous):
         Second kurtosis parameter (b > 0).
     mu : tensor_like of float
         Location parameter.
-    sigma : tensor_like of float
+    sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0). Converges to the standard deviation as a and b
-        become close (only required if lam is not specified). Defaults to 1.
-    lam : tensor_like of float, optional
+        become close (only required if lam is not specified).
+    lam : tensor_like of float, default 1
         Scale parameter (lam > 0). Converges to the precision as a and b
-        become close (only required if sigma is not specified). Defaults to 1.
+        become close (only required if sigma is not specified).
 
     """
 
@@ -2777,9 +2778,9 @@ class Weibull(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha : tensor_like of float
         Shape parameter (alpha > 0).
-    beta : float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
 
@@ -3040,7 +3041,7 @@ class ExGaussian(Continuous):
     ----------
     mu : tensor_like of float, default 0
         Mean of the normal distribution.
-    sigma : tensor_like of float
+    sigma : tensor_like of float, default 1
         Standard deviation of the normal distribution (sigma > 0).
     nu : tensor_like of float
         Mean of the exponential distribution (nu > 0).
@@ -3861,12 +3862,12 @@ class Interpolated(BoundedContinuous):
     different size and it is possible to vary the precision between regions
     of the support.
 
-    The probability density function values don not have to be normalized, as the
-    interpolated density is any way normalized to make the total probability
-    equal to $1$.
+    The probability density function values do not have to be normalized, as the
+    interpolated density is normalized automatically so that the total
+    probability equals 1.
 
-    Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
-    plain array-like objects, so they are constant and cannot be sampled.
+    The parameters ``x_points`` and ``pdf_points`` are plain array-like objects,
+    not variables, so they are constant and cannot be sampled.
 
     .. plot::
         :context: close-figs
