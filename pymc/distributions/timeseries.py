@@ -780,8 +780,9 @@ class GARCH11RV(SymbolicRandomVariable):
 
 
 class GARCH11(Distribution):
-    r"""
-    GARCH(1,1) with Normal innovations. The model is specified by:
+    r"""GARCH(1,1) with Normal innovations model.
+
+    The model is specified by:
 
     .. math::
         y_t \sim N(0, \sigma_t^2)
