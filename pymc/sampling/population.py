@@ -231,8 +231,8 @@ class PopulationStepper:
         ----------
         c : int
             number of this chain
-        stepper : BlockedStep
-            a step method such as CompoundStep
+        stepper_dumps : bytes
+            a step method such as CompoundStep, pickled with cloudpickle
         secondary_end : multiprocessing.connection.PipeConnection
             This is our connection to the main process
         """

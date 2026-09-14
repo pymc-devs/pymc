@@ -196,7 +196,7 @@ def get_default_varnames(var_iterator, include_transformed):
 
     Parameters
     ----------
-    varname_iterator: iterator
+    var_iterator: iterator
         Elements will be cast to string to check whether it is transformed, and optionally filtered
     include_transformed: boolean
         Should transformed variable names be included in return value

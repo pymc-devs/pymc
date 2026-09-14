@@ -263,7 +263,7 @@ class _DefaultTrace:
             Name of the variable.
         v: anything that can go into a numpy array (including a numpy array)
             The value of the `idx`th sample from variable `k`
-        ids: int
+        idx: int
             The index of the sample we are inserting into the trace.
         """
         value_shape = np.shape(v)
