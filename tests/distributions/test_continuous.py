@@ -963,7 +963,6 @@ class TestMatchesScipy:
         expected = st.moyal.logcdf(xs, loc=0.0, scale=1.0)
         np.testing.assert_allclose(res, expected, rtol=1e-5)
 
-
     def test_moyal_icdf(self):
         check_icdf(
             pm.Moyal,
