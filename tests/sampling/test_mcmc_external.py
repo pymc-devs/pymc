@@ -123,6 +123,52 @@ def test_jax_sampler_kwargs_routing():
     assert call_kwargs["nuts_kwargs"] == {"max_tree_depth": 7}
 
 
+@pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
+def test_jax_sampler_jitter_kwarg_routing(nuts_sampler):
+    # Regression test for #8352: `jitter` is a `sample_jax_nuts` argument, not a
+    # NUTS-kernel one, so it must be lifted out of `nuts={...}` the same way
+    # `chain_method` is (see test_jax_sampler_kwargs_routing above).
+    pytest.importorskip(nuts_sampler)
+
+    with mock.patch("pymc.sampling.jax.sample_jax_nuts") as mock_sampler:
+        with Model():
+            Normal("a")
+            sample(
+                nuts_sampler=nuts_sampler,
+                nuts={"jitter": False},
+                random_seed=1411,
+                progressbar=False,
+            )
+
+    call_kwargs = mock_sampler.call_args.kwargs
+    assert call_kwargs["jitter"] is False
+    assert "jitter" not in call_kwargs["nuts_kwargs"]
+
+
+@pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
+def test_external_nuts_sampler_rejects_stray_top_level_kwargs(nuts_sampler):
+    # Regression test for #8352: passing sampler options directly as a top-level
+    # `sample()` keyword (e.g. `jitter=False`, the pre-refactor calling
+    # convention) used to be silently swallowed by `_sample_external_nuts`'s
+    # catch-all `**kwargs` -- the option was neither applied nor reported, so a
+    # user could believe jitter was disabled while it silently stayed on. It
+    # must now raise so the mistake is caught immediately instead of producing
+    # a silently-wrong sample.
+    pytest.importorskip(nuts_sampler)
+
+    with Model():
+        Normal("a")
+        with pytest.raises(TypeError, match=r"unexpected keyword arguments \['jitter'\]"):
+            sample(
+                nuts_sampler=nuts_sampler,
+                jitter=False,
+                chains=1,
+                tune=5,
+                draws=5,
+                progressbar=False,
+            )
+
+
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
 def test_sample_var_names(nuts_sampler):
     if nuts_sampler != "pymc":
