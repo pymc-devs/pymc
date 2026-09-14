@@ -2572,3 +2572,37 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
                 )
+
+
+@pytest.mark.parametrize("value", [-1e8, -1e10, -1e12, -1e16, -1e20, -1e30])
+def test_cauchy_logcdf_lower_tail(value):
+    """Cauchy logcdf must stay finite and accurate far into the lower tail.
+
+    ``log(0.5 + arctan(z) / pi)`` cancels catastrophically for z << 0. It is
+    off by more than 0.01 nats from about -5e13, by 0.75 nats at -2.5e15, and
+    returns ``-inf`` from about -6e15 onwards, while ``logp`` stays finite at
+    the very same points.
+    """
+    dist = pm.Cauchy.dist(alpha=0.0, beta=1.0)
+    result = logcdf(dist, value).eval()
+    expected = st.cauchy(0.0, 1.0).logcdf(value)
+
+    assert np.isfinite(result)
+    npt.assert_allclose(result, expected, rtol=1e-12)
+
+
+@pytest.mark.parametrize("nu", [1.0, 2.0, 5.0, 10.0])
+@pytest.mark.parametrize("value", [-1e8, -1e10, -1e12, -1e16, -1e20])
+def test_studentt_logcdf_lower_tail(nu, value):
+    """StudentT logcdf must stay finite and accurate far into the lower tail.
+
+    ``x = (t + sqrt(t**2 + nu)) / (2 * sqrt(t**2 + nu))`` cancels for t << 0 and
+    underflows x to zero, which returned ``-inf`` from about -7e7 (nu=1) to
+    -4e8 (nu=30) onwards.
+    """
+    dist = pm.StudentT.dist(nu=nu, mu=0.0, sigma=1.0)
+    result = logcdf(dist, value).eval()
+    expected = st.t(nu).logcdf(value)
+
+    assert np.isfinite(result)
+    npt.assert_allclose(result, expected, rtol=1e-10)
