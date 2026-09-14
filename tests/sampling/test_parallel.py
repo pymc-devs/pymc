@@ -42,6 +42,47 @@ def test_context():
             pm.sample(tune=2, draws=2, chains=2, cores=2, mp_ctx=ctx)
 
 
+class TestMpCtxAccelerateSwitch:
+    @staticmethod
+    def _macos_arm(monkeypatch, *, accelerate: bool):
+        monkeypatch.setattr(platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(platform, "processor", lambda: "arm")
+        monkeypatch.setattr(ps, "_numpy_uses_accelerate", lambda: accelerate)
+
+    def test_avoids_fork_when_numpy_uses_accelerate(self, monkeypatch):
+        self._macos_arm(monkeypatch, accelerate=True)
+        ctx = ps._initialize_multiprocessing_context(None)
+        assert ctx.get_start_method() != "fork"
+
+    def test_keeps_fork_without_accelerate(self, monkeypatch):
+        if "fork" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork start method not available on this platform")
+        self._macos_arm(monkeypatch, accelerate=False)
+        ctx = ps._initialize_multiprocessing_context(None)
+        assert ctx.get_start_method() == "fork"
+
+    def test_explicit_fork_is_still_honoured(self, monkeypatch):
+        if "fork" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork start method not available on this platform")
+        self._macos_arm(monkeypatch, accelerate=True)
+        ctx = ps._initialize_multiprocessing_context("fork")
+        assert ctx.get_start_method() == "fork"
+
+    @pytest.mark.parametrize(
+        ("blas_name", "expected"),
+        [("accelerate", True), ("Accelerate", True), ("openblas", False), (None, False)],
+    )
+    def test_detects_accelerate_from_numpy_config(self, monkeypatch, blas_name, expected):
+        blas = {} if blas_name is None else {"name": blas_name}
+        config = {"Build Dependencies": {"blas": blas}}
+        monkeypatch.setattr(np.__config__, "CONFIG", config, raising=False)
+        assert ps._numpy_uses_accelerate() is expected
+
+    def test_detection_survives_a_missing_config(self, monkeypatch):
+        monkeypatch.delattr(np.__config__, "CONFIG", raising=False)
+        assert ps._numpy_uses_accelerate() is False
+
+
 class TestMpCtxJaxSwitch:
     def test_switches_default_away_from_fork_under_jax(self):
         if ps._initialize_multiprocessing_context(None).get_start_method() != "fork":
