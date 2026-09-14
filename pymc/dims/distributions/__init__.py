@@ -12,5 +12,6 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from pymc.dims.distributions.censored import Censored
+from pymc.dims.distributions.custom import CustomDist
 from pymc.dims.distributions.scalar import *
 from pymc.dims.distributions.vector import *
