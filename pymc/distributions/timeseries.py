@@ -781,7 +781,7 @@ class GARCH11RV(SymbolicRandomVariable):
 
 class GARCH11(Distribution):
     r"""
-    GARCH(1,1) with Normal innovations. The model is specified by.
+    GARCH(1,1) with Normal innovations. The model is specified by:
 
     .. math::
         y_t \sim N(0, \sigma_t^2)
@@ -789,7 +789,7 @@ class GARCH11(Distribution):
     .. math::
         \sigma_t^2 = \omega + \alpha_1 * y_{t-1}^2 + \beta_1 * \sigma_{t-1}^2
 
-    where \sigma_t^2 (the error variance) follows a ARMA(1, 1) model.
+    where :math:`\sigma_t^2` (the error variance) follows an ARMA(1, 1) model.
 
     Parameters
     ----------
