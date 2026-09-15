@@ -31,6 +31,8 @@ from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.utils import lazy_scipy_module
+from pytensor.xtensor.basic import tensor_from_xtensor, xtensor_from_tensor
+from pytensor.xtensor.type import XTensorVariable
 
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
@@ -65,13 +67,25 @@ def check_parameters(
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
     """
+    expr_dims = None
+    if isinstance(expr, XTensorVariable):
+        expr_dims = expr.dims
+        expr = tensor_from_xtensor(expr)
+
     # pt.all does not accept True/False, but accepts np.array(True)/np.array(False)
-    conditions_ = [
-        cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
-    ]
+    conditions_ = []
+    for cond in conditions:
+        if cond is True or cond is False:
+            cond = np.array(cond)
+        elif isinstance(cond, XTensorVariable):
+            cond = tensor_from_xtensor(cond)
+        conditions_.append(cond)
     all_true_scalar = pt.all([pt.all(cond) for cond in conditions_])
 
-    return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
+    checked_expr = CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
+    if expr_dims is not None:
+        return xtensor_from_tensor(checked_expr, dims=expr_dims)
+    return checked_expr
 
 
 check_icdf_parameters = partial(check_parameters, can_be_replaced_by_ninf=False)
