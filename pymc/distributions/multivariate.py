@@ -2094,10 +2094,6 @@ class CARRV(RandomVariable):
 
         if not (W.ndim >= 2 and all(W.type.broadcastable[:-2])):
             raise TypeError("W must be a matrix")
-        if not all(tau.type.broadcastable):
-            raise TypeError("tau must be a scalar")
-        if not all(alpha.type.broadcastable):
-            raise TypeError("alpha must be a scalar")
 
         return super().make_node(rng, size, mu, W, alpha, tau, W_is_valid)
 
@@ -2166,9 +2162,9 @@ class CAR(Continuous):
 
     .. math::
 
-       f(x \mid W, \alpha, \tau) =
-           \frac{|T|^{1/2}}{(2\pi)^{k/2}}
-           \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T^{-1} (x-\mu) \right\}
+        f(x \mid W, \alpha, \tau) =
+            \frac{|T|^{1/2}}{(2\pi)^{k/2}}
+            \exp\left\{ -\frac{1}{2} (x-\mu)^{\prime} T^{-1} (x-\mu) \right\}
 
     where :math:`T = (\tau D(I-\alpha W))^{-1}` and :math:`D = diag(\sum_i W_{ij})`.
 
@@ -2274,8 +2270,17 @@ class CAR(Continuous):
         if value.ndim == 1:
             value = value[None, :]
 
-        logtau = d * pt.log(tau).sum(axis=-1)
-        logdet = pt.log(1 - alpha.T * lam[:, None]).sum()
+        # Handle broadcasting for vector-valued or scalar tau and alpha
+        if tau.ndim > 0:
+            logtau = d * pt.log(tau).sum(axis=-1)
+        else:
+            logtau = d * pt.log(tau)
+
+        if alpha.ndim > 0:
+            logdet = pt.log(1 - alpha[:, None] * lam[None, :]).sum(axis=-1)
+        else:
+            logdet = pt.log(1 - alpha * lam).sum()
+
         delta = value - mu
 
         if sparse:
@@ -2283,8 +2288,13 @@ class CAR(Continuous):
         else:
             Wdelta = pt.dot(delta, W)
 
-        tau_dot_delta = D[None, :] * delta - alpha * Wdelta
-        logquad = (tau * delta * tau_dot_delta).sum(axis=-1)
+        # Ensure correct dimensions for broadcasting vector/scalar alpha and tau with delta/Wdelta
+        alpha_col = alpha[:, None] if alpha.ndim > 0 else alpha
+        tau_col = tau[:, None] if tau.ndim > 0 else tau
+
+        tau_dot_delta = D[None, :] * delta - alpha_col * Wdelta
+        logquad = (tau_col * delta * tau_dot_delta).sum(axis=-1)
+
         return check_parameters(
             0.5 * (logtau + logdet - logquad),
             -1 < alpha,
