@@ -3792,6 +3792,9 @@ class LogitNormal:
 
     def __new__(cls, name, mu=0, sigma=None, tau=None, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
+        # CustomDist builds a new Op type per call, so the UnitContinuous default
+        # transform can't be dispatched on it. Set it explicitly instead.
+        kwargs.setdefault("default_transform", transforms.logodds)
         return CustomDist(
             name,
             mu,
