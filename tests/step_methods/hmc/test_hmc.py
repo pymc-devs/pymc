@@ -16,6 +16,7 @@ import warnings
 
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 import pymc as pm
@@ -88,3 +89,35 @@ def test_nuts_tuning():
     ss_tuned = idata.warmup_sample_stats["step_size"][0, -1]
     ss_posterior = idata.sample_stats["step_size"][0, :]
     np.testing.assert_array_equal(ss_posterior, ss_tuned)
+
+
+def test_default_potential_honors_dtype():
+    """The default mass matrix must use the sampler's dtype, not ``floatX``.
+
+    ``BaseHMC`` forwards ``dtype`` to the logp/dlogp function but used to build
+    the default ``QuadPotentialDiagAdapt`` with ``floatX`` unconditionally. When
+    the requested ``dtype`` differed from ``pytensor.config.floatX`` the potential
+    and the logp function ended up with mismatched dtypes and
+    ``CpuLeapfrogIntegrator`` raised ``ValueError: dtypes of potential ... and
+    logp function ... don't match``. See GH #8213.
+    """
+
+    class HMC(BaseHMC):
+        def _hamiltonian_step(self, *args, **kwargs):
+            pass
+
+    # Build a float64 model, then construct the step method while the global
+    # floatX is float32. The requested dtype (float64) must win for the
+    # potential, matching the logp function, so no dtype mismatch is raised.
+    with pm.Model() as model:
+        pm.Normal("x", 0.0, 1.0)
+
+    assert all(v.dtype == "float64" for v in model.value_vars)
+
+    with pytensor.config.change_flags(floatX="float32"):
+        step = HMC(vars=model.value_vars, model=model, dtype="float64")
+
+    assert step.potential.dtype == np.dtype("float64")
+    assert step.potential._var.dtype == np.dtype("float64")
+    # The integrator's own check must agree (it raises on a mismatch on init).
+    assert step.integrator._potential.dtype == step.integrator._dtype
