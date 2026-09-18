@@ -69,9 +69,9 @@ class DictToArrayBijection:
         """Map a dictionary of names and variables to a concatenated 1D array space."""
         vars_info = tuple((v, k, v.shape, v.size, v.dtype) for k, v in var_dict.items())
         if vars_info:
-            result = np.concatenate(tuple(v[0].ravel() for v in vars_info))
+            result = np.concatenate(tuple(v[0].ravel().astype(np.float64) for v in vars_info))
         else:
-            result = np.array([])
+            result = np.array([], dtype=np.float64)
         return RaveledVars(result, tuple(v[1:] for v in vars_info))
 
     @staticmethod
