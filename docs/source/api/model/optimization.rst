@@ -6,3 +6,5 @@ Model Optimization
 
    freeze_dims_and_data
    freeze_model
+   model_to_float32
+   model_to_float64

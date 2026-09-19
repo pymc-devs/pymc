@@ -12,17 +12,24 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor
 import pytest
 
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant
+
+import pymc as pm
 
 from pymc import Deterministic, do
 from pymc.data import Data
 from pymc.distributions import HalfNormal, Normal
 from pymc.exceptions import NotConstantValueError
 from pymc.model import Model
-from pymc.model.transform.optimization import freeze_dims_and_data
+from pymc.model.transform.optimization import (
+    freeze_dims_and_data,
+    model_to_float32,
+    model_to_float64,
+)
 from pymc.pytensorf import constant_fold
 
 
@@ -179,3 +186,124 @@ def test_freeze_dims_and_data_partially_observed_rv():
 
     frozen_y = freeze_dims_and_data(model)["y"]
     assert constant_fold([frozen_y.shape]) == (3,)
+
+
+class TestModelToFloat32:
+    @staticmethod
+    def _mixed_model():
+        rng = np.random.default_rng(4)
+        x_data = rng.normal(size=10)
+        with Model(coords={"g": range(3)}) as m:
+            x = Data("x", x_data)
+            idx = Data("idx", np.arange(10))
+            beta = Normal("beta")
+            sigma = HalfNormal("sigma")
+            z = pm.ZeroSumNormal("z", dims="g")
+            det = Deterministic("det", beta * x + z.mean())
+            Normal("y", mu=det[idx], sigma=sigma, observed=x_data * 2)
+        return m
+
+    def test_dtypes_converted(self):
+        m = self._mixed_model()
+        m32 = model_to_float32(m)
+
+        for name in ("x", "beta", "sigma", "z", "det", "y"):
+            assert m32[name].type.dtype == "float32", name
+        assert m32["idx"].type.dtype == m["idx"].type.dtype
+        for rv in m32.free_RVs + m32.observed_RVs:
+            assert m32.rvs_to_values[rv].type.dtype == "float32"
+        # Static shapes and transforms are preserved
+        for name in ("x", "beta", "sigma", "z", "det", "y"):
+            assert m32[name].type.shape == m[name].type.shape, name
+        assert type(m32.rvs_to_transforms[m32["z"]]) is type(m.rvs_to_transforms[m["z"]])
+        with Model() as m_static:
+            pm.ZeroSumNormal("z", shape=(3,))
+        assert model_to_float32(m_static)["z"].type.shape == (3,)
+
+    def test_logp_and_draws(self):
+        m = self._mixed_model()
+        m32 = model_to_float32(m)
+
+        ip64 = m.initial_point()
+        logp64 = m.compile_logp()(ip64)
+        with pytensor.config.change_flags(floatX="float32"):
+            ip32 = m32.initial_point()
+            assert all(v.dtype == "float32" for v in ip32.values())
+            logp32 = m32.compile_logp()(ip32)
+            dlogp32 = m32.compile_dlogp()(ip32)
+        np.testing.assert_allclose(logp32, logp64, rtol=1e-5)
+        assert np.asarray(dlogp32).dtype == "float32"
+        assert pm.draw(m32["z"], random_seed=1).dtype == "float32"
+
+    def test_round_trip(self):
+        m = self._mixed_model()
+        m64 = model_to_float64(model_to_float32(m))
+        for name in ("x", "beta", "sigma", "z", "det", "y"):
+            assert m64[name].type.dtype == "float64", name
+        np.testing.assert_allclose(
+            m64.compile_logp()(m64.initial_point()),
+            m.compile_logp()(m.initial_point()),
+            rtol=1e-5,
+        )
+
+    def test_explicit_cast_redirected(self):
+        with Model() as m:
+            x = Data("x", np.arange(5))  # int64
+            Normal("y", mu=x.astype("float64"), observed=np.zeros(5))
+        m32 = model_to_float32(m)
+        assert m32["y"].type.dtype == "float32"
+        assert m32["y"].owner.inputs[3].type.dtype == "float32"
+
+    def test_preserves_initvals(self):
+        with Model() as m:
+            sigma = HalfNormal("sigma", initval=np.array(5.0))
+            beta = Normal("beta", initval="prior")
+        m32 = model_to_float32(m)
+        initval = m32.rvs_to_initial_values[m32["sigma"]]
+        assert initval.dtype == "float32" and initval == 5.0
+        assert m32.rvs_to_initial_values[m32["beta"]] == "prior"
+
+    def test_sample_smoke(self):
+        m32 = model_to_float32(self._mixed_model())
+        with pytensor.config.change_flags(floatX="float32"):
+            with m32:
+                idata = pm.sample(
+                    draws=10,
+                    tune=10,
+                    chains=1,
+                    progressbar=False,
+                    random_seed=1,
+                    compute_convergence_checks=False,
+                )
+        # The sampler may store draws as float64; just check sampling worked
+        assert np.isfinite(idata.posterior["beta"]).all()
+
+    def test_transform_with_foreign_dtype_constants(self):
+        # Transforms travel with the model as objects and may bake float64 constants
+        # into value-space graphs; model_to_float32 must keep those graphs float32.
+        import pytensor.tensor as pt
+
+        from pymc.logprob.transforms import Transform
+
+        class ScaledTransform(Transform):
+            name = "scaled"
+            scale = np.array(2.0, dtype="float64")  # baked float64 constant
+
+            def forward(self, value, *inputs):
+                return value * self.scale
+
+            def backward(self, value, *inputs):
+                return value / self.scale
+
+            def log_jac_det(self, value, *inputs):
+                return -pt.log(self.scale) * pt.ones_like(value)
+
+        with Model() as m:
+            Normal("x", 0, 1, default_transform=ScaledTransform())
+
+        m32 = model_to_float32(m)
+        with pytensor.config.change_flags(floatX="float32"):
+            ip32 = m32.initial_point()
+            assert all(v.dtype == "float32" for v in ip32.values())
+            logp32 = m32.compile_logp()(ip32)
+        np.testing.assert_allclose(logp32, m.compile_logp()(m.initial_point()), rtol=1e-5)
