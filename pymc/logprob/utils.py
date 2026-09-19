@@ -298,13 +298,7 @@ def find_negated_var(var):
 
 
 def get_related_valued_nodes(fgraph: FunctionGraph, node: Apply) -> list[Apply]:
-    """Get all ValuedVars related to the same RV node.
-
-    Returns
-    -------
-        rv_node
-        valued_nodes
-    """
+    """Get all ValuedVars related to the same RV node."""
     clients = fgraph.clients
     return [
         client

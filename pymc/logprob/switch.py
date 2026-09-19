@@ -50,7 +50,7 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logprob, request_logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.transforms import MeasurableTransform
 from pymc.logprob.utils import (
@@ -212,8 +212,8 @@ def logprob_switch_non_overlapping(op, values, cond, x, neg_branch, **kwargs):
 
     logp_expr = pt.switch(
         value_implies_true_branch,
-        _logprob_helper(x, value, **kwargs),
-        _logprob_helper(neg_branch, value, **kwargs),
+        request_logprob(x, value, **kwargs),
+        request_logprob(neg_branch, value, **kwargs),
     )
 
     return CheckParameterValue("switch non-overlapping scale > 0")(logp_expr, a_is_positive)

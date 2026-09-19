@@ -42,7 +42,7 @@ from pytensor.raise_op import CheckAndRaise
 from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
+from pymc.logprob.abstract import MeasurableOp, _logprob, request_logprob
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables, replace_rvs_by_values
 
@@ -56,7 +56,7 @@ def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
     (value,) = values
     # transfer specify_shape from rv to value
     value = pt.specify_shape(value, shapes)
-    return _logprob_helper(inner_rv, value)
+    return request_logprob(inner_rv, value)
 
 
 @node_rewriter([SpecifyShape])
@@ -93,7 +93,7 @@ def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
     # transfer assertion from rv to value
     assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})
     value = op(value, *assertions)
-    return _logprob_helper(inner_rv, value)
+    return request_logprob(inner_rv, value)
 
 
 @node_rewriter([CheckAndRaise])

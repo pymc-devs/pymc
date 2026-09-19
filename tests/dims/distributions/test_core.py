@@ -14,10 +14,14 @@
 import re
 
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 import pytest
 import scipy
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.xtensor import as_xtensor
+from pytensor.xtensor.basic import xtensor_from_tensor
 from xarray import DataArray
 
 import pymc as pm
@@ -25,6 +29,8 @@ import pymc as pm
 from pymc import dims as pmx
 from pymc import icdf, logccdf, logcdf, logp
 from pymc.dims import Normal
+from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.basic import conditional_logp
 
 pytestmark = pytest.mark.filterwarnings(
     "error",
@@ -284,3 +290,70 @@ def test_density_helpers(rv_unique_dims, value_unique_dims, value_aligned):
         x_icdf.eval({x_value: DataArray(icdf_test_value, dims=x_value.dims)}),
         scipy.stats.norm.ppf(icdf_aligned_test_value, mean, sigma),
     )
+
+
+def test_joint_logp_over_mixed_xtensor_and_tensor_values():
+    """A joint logp whose values are a mix of dims and plain tensor variables.
+
+    Each value is valued on a different node -- the dims one through an XTensorFromTensor, the
+    tensor one directly on the measurable node -- but the logp still has to see both at once.
+    """
+
+    class MixedPairOp(MeasurableOp, OpFromGraph):
+        # The first value's density is over its trailing axis; the second's is elementwise
+        supp_axes = ((-1,), ())
+
+    @_logprob.register(MixedPairOp)
+    def mixed_pair_logp(op, values, *inputs, **kwargs):
+        assert len(values) == 2, f"joint logp needs both values, got {len(values)}"
+        v1, v2 = values
+        return v1.sum(axis=-1) + v2, pt.zeros_like(v2)
+
+    mu = pt.vector("mu", shape=(3,))
+    op = MixedPairOp(inputs=[mu], outputs=[pt.broadcast_to(mu[:, None], (3, 5)), mu * 2])
+    out1, out2 = op(mu)
+
+    y1 = xtensor_from_tensor(out1, dims=("trial", "obs"))  # dims dependent
+    v1, v2 = y1.type(), out2.type()  # out2 keeps its value as a plain tensor
+    logps = conditional_logp({y1: v1, out2: v2})
+
+    lp1, lp2 = logps[v1], logps[v2]
+    # Each term comes back in the flavour of its own value
+    assert lp1.type.dims == ("trial",)
+    assert not hasattr(lp2.type, "dims")
+
+    fn = pytensor.function([v1, v2], [lp1.values, lp2])
+    v1_test = np.arange(15, dtype="float64").reshape(3, 5)
+    v2_test = np.array([1.0, 2.0, 3.0])
+    got1, got2 = fn(v1_test, v2_test)
+    np.testing.assert_allclose(got1, v1_test.sum(axis=-1) + v2_test)
+    np.testing.assert_allclose(got2, np.zeros(3))
+
+
+def test_joint_logp_term_labelled_by_the_dims_that_survive():
+    """A density that is not over the rightmost dim still labels its term correctly.
+
+    The term's dims cannot be read off positionally: what is left after a density is taken
+    depends on which dims it was over, which only the Op knows.
+    """
+
+    class ReducesLeadingDim(MeasurableOp, OpFromGraph):
+        supp_axes = ((-2,),)  # the density is over "trial", not over "obs"
+
+    @_logprob.register(ReducesLeadingDim)
+    def reduces_leading_dim_logp(op, values, mu, **kwargs):
+        [v] = values
+        return v.sum(axis=0)
+
+    mu = pt.vector("mu", shape=(3,))
+    [out] = ReducesLeadingDim(inputs=[mu], outputs=[pt.broadcast_to(mu[:, None], (3, 5))])(
+        mu, return_list=True
+    )
+    y = xtensor_from_tensor(out, dims=("trial", "obs"))
+    v = y.type()
+
+    [lp] = conditional_logp({y: v}).values()
+    assert lp.type.dims == ("obs",)
+
+    v_test = np.arange(15, dtype="float64").reshape(3, 5)
+    np.testing.assert_allclose(lp.values.eval({v: v_test}), v_test.sum(axis=0))

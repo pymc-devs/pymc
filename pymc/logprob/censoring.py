@@ -74,6 +74,7 @@ from pymc.logprob.abstract import (
     _logcdf,
     _logcdf_helper,
     _logprob,
+    request_logprob,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import (
@@ -215,7 +216,7 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
     base_rv_op = base_rv.owner.op
     base_rv_inputs = base_rv.owner.inputs
 
-    logprob = _logprob(base_rv_op, (value,), *base_rv_inputs, **kwargs)
+    logprob = request_logprob(base_rv, value, **kwargs)
     logcdf = _logcdf(base_rv_op, value, *base_rv_inputs)
 
     if base_rv_op.name:

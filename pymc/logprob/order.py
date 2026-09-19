@@ -59,7 +59,7 @@ from pymc.logprob.abstract import (
     MeasurableOp,
     _logcdf_helper,
     _logprob,
-    _logprob_helper,
+    request_logprob,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables
@@ -145,7 +145,7 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
     bcast_value = pt.broadcast_to(value, base_rv_shape)
-    logprob = _logprob_helper(base_rv, bcast_value)[0]
+    logprob = request_logprob(base_rv, bcast_value)[0]
     logcdf = _logcdf_helper(base_rv, bcast_value)[0]
 
     n = pt.prod(base_rv_shape)

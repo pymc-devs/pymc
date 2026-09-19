@@ -51,7 +51,7 @@ from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.subtensor import IncSubtensor, Subtensor
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableOp, _logprob
+from pymc.logprob.abstract import MeasurableOp, _logprob, supp_axes
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.rewriting import (
     construct_ir_fgraph,
@@ -474,6 +474,19 @@ def find_measurable_scans(fgraph, node):
     )
     toposort_replace(temp_fgraph, inner_rvs_replacements)
     op = MeasurableScan(inner_inps, inner_outs, node.op.info, mode=copy(node.op.mode))
+    # A scan stacks each inner output over time on the left, so the axes its measure is over --
+    # counted from the right -- are the ones the inner variable was measured over. Outputs that
+    # are not valued here may still be asked about later, through a chain, so all of them answer.
+    declared_supp_axes: list[tuple[int, ...] | None] = []
+    for outer_idx in range(len(node.outputs)):
+        inner_idxs = mapping[outer_idx]
+        inner_out = inner_outs[inner_idxs[-1]] if inner_idxs else None
+        declared_supp_axes.append(
+            supp_axes(inner_out)
+            if (inner_out is not None and inner_out.owner is not None)
+            else None
+        )
+    op.supp_axes = tuple(declared_supp_axes)
     new_outs = op.make_node(*node.inputs).outputs
 
     old_outs = node.outputs

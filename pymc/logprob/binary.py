@@ -28,7 +28,7 @@ from pymc.logprob.abstract import (
     _logccdf_helper,
     _logcdf_helper,
     _logprob,
-    _logprob_helper,
+    request_logprob,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import check_potential_measurability, filter_measurable_variables
@@ -108,7 +108,7 @@ def comparison_logprob(op, values, base_rv, operand, **kwargs):
         raise TypeError(f"Unsupported scalar_op {op.scalar_op}")
 
     if base_rv.dtype.startswith("int"):
-        logpmf = _logprob_helper(base_rv, operand, **kwargs)
+        logpmf = request_logprob(base_rv, operand, **kwargs)
         logcdf_prev = _logcdf_helper(base_rv, operand - 1)
         if isinstance(op.scalar_op, LT):
             return pt.switch(condn_exp, logcdf_prev, pt.logaddexp(logccdf, logpmf))
@@ -156,6 +156,6 @@ measurable_ir_rewrites_db.register(
 def bitwise_not_logprob(op, values, base_rv, **kwargs):
     (value,) = values
 
-    logprob = _logprob_helper(base_rv, invert(value), **kwargs)
+    logprob = request_logprob(base_rv, invert(value), **kwargs)
 
     return logprob

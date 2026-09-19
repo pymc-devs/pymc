@@ -34,10 +34,18 @@ from pymc import SymbolicRandomVariable, modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims_with_ellipsis
-from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
+from pymc.logprob.abstract import (
+    MeasurableOp,
+    _icdf,
+    _logccdf,
+    _logcdf,
+    _logprob,
+    request_logprob,
+    supp_axes,
+)
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.tensor import MeasurableDimShuffle
-from pymc.logprob.utils import filter_measurable_variables
+from pymc.logprob.utils import filter_measurable_variables, get_related_valued_nodes
 from pymc.util import UNSET
 
 
@@ -102,9 +110,23 @@ def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] |
 
         new_out = MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=core_dims)(measurable_x)
     else:
-        # If this happens we know there's no measurable transpose in between and we can
-        # safely infer the core_dims positionally when the inner logp is returned
-        new_out = MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=None)(*node.inputs)
+        # There's no measurable transpose in between, so the dims are laid out in the order of
+        # the inner variable's axes, and the ones its density is over -- counted from the
+        # right -- index them directly.
+        [x] = node.inputs
+        axes = supp_axes(x)
+        if (
+            axes is not None
+            and axes != tuple(range(-len(axes), 0))
+            # Rewrites that compose on top read the support axes off the ndim of the density and
+            # assume they were the rightmost ones -- see `find_measurable_dimshuffles`. Nothing
+            # composes on top of a variable that is itself the conditioning point, so there is
+            # no one to misread it there.
+            and not get_related_valued_nodes(fgraph, node)
+        ):
+            return None
+        core_dims = None if axes is None else tuple(node.op.dims[axis] for axis in axes)
+        new_out = MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=core_dims)(x)
     return [cast(XTensorVariable, new_out)]
 
 
@@ -129,25 +151,17 @@ def _to_xtensor(
     all_dims = (*extra_value_dims, *op.dims)
     # core_dims are not present in the generated variable, exclude them
     if op.core_dims is None:
-        # The core_dims of the inner rv are on the right
+        # Nothing said where they are, so assume the core_dims of the inner rv are on the right
         var_dims = all_dims[: var.ndim]
     else:
-        # We inferred where the core_dims are!
         var_dims = tuple(d for d in all_dims if d not in op.core_dims)
     return xtensor_from_tensor(var, dims=var_dims)
 
 
 @_logprob.register(MeasurableXTensorFromTensor)
 def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
-    tensor_values = tuple(_to_tensor(op, v) for v in values)
-    rv_logps_tensor = _logprob(rv.owner.op, tensor_values, *rv.owner.inputs, **kwargs)
-    if not isinstance(rv_logps_tensor, tuple | list):
-        rv_logps_tensor = (rv_logps_tensor,)
-    rv_logps = tuple(
-        _to_xtensor(op, value, rv_logp)
-        for value, rv_logp in zip(values, rv_logps_tensor, strict=True)
-    )
-    return rv_logps[0] if len(rv_logps) == 1 else rv_logps
+    [value] = values
+    return _to_xtensor(op, value, request_logprob(rv, _to_tensor(op, value), **kwargs))
 
 
 @_logcdf.register(MeasurableXTensorFromTensor)

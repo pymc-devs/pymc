@@ -39,13 +39,17 @@ import warnings
 
 from collections.abc import Sequence
 from functools import singledispatch
+from itertools import zip_longest
 
+from pytensor.configdefaults import config
 from pytensor.graph import Apply, Op, Variable
 from pytensor.graph.utils import MetaType
-from pytensor.tensor import TensorVariable, log1mexp
+from pytensor.tensor import TensorVariable, log1mexp, tensor
 from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.utils import broadcast_static_dim_lengths
 
 
 @singledispatch
@@ -61,18 +65,37 @@ def _logprob(
     of ``RandomVariable``.  If you want to implement new density/mass graphs
     for a ``RandomVariable``, register a new function on this dispatcher.
 
+    Calling the dispatcher directly asserts that ``values`` are all the values the density of
+    ``op``'s node is over -- something only a caller that collected them can claim. An
+    implementation that recurses into a measurable input holds just its own value, and must ask
+    through `request_logprob` instead.
     """
     raise NotImplementedError(f"Logprob method not implemented for {op}")
 
 
-def _logprob_helper(rv, *values, **kwargs):
-    """Help call `_logprob` dispatcher."""
-    logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+def request_logprob(rv, value, **kwargs):
+    """Return the log-density term of `rv` at `value`, or a stand-in for it.
 
-    name = rv.name
-    if (not name) and (len(values) == 1):
-        name = values[0].name
-    if name:
+    This is how a `_logprob` implementation recurses into its measurable input: holding one
+    variable's value, it cannot promise that no other value reaches that variable's node. A node
+    with a single output a value could attach to cannot be asked for more, and is dispatched on
+    the spot; one that could be asked for more gets a `DensityQuery` placeholder, and
+    `resolve_density_queries` answers every request about the node in one `_logprob` call.
+
+    A node's values are therefore requested one variable at a time, each naming the output it
+    belongs to, which is what lets requests arriving by different routes be recognized as being
+    about the same node.
+
+    Of the three entry points, `logp` derives a variable's density from scratch and resolves
+    the queries it raises; `request_logprob` recurses within a derivation already underway; and
+    the `_logprob` dispatcher is called directly only with all of a node's values in hand.
+    """
+    if n_potential_valued_outputs(rv.owner) > 1:
+        return density_query(rv, value)
+
+    logprob = _logprob(rv.owner.op, (value,), *rv.owner.inputs, **kwargs)
+
+    if name := (rv.name or value.name):
         if isinstance(logprob, list | tuple):
             for i, term in enumerate(logprob):
                 term.name = f"{name}_logprob.{i}"
@@ -80,6 +103,18 @@ def _logprob_helper(rv, *values, **kwargs):
             logprob.name = f"{name}_logprob"
 
     return logprob
+
+
+def _logprob_helper(rv, *values, **kwargs):
+    warnings.warn(
+        "_logprob_helper has been renamed to request_logprob",
+        FutureWarning,
+        stacklevel=2,
+    )
+    if len(values) != 1:
+        # The old API let a caller hand over every value of a node at once
+        return _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+    return request_logprob(rv, values[0], **kwargs)
 
 
 @singledispatch
@@ -170,7 +205,26 @@ def _icdf_helper(rv, value):
 
 
 class MeasurableOp(abc.ABC):
-    """An operation whose outputs can be assigned a measure/log-probability."""
+    """An operation whose outputs can be assigned a measure/log-probability.
+
+    ``supp_axes`` is meta-information about that measure: for each output, which of its axes the
+    measure is defined over, counted from the right so that they do not depend on how many batch
+    dimensions the variable carries. It is set when the Op is built, by whichever rewrite made
+    the variable measurable and therefore knows what the measure it wraps looks like. Derive it
+    from the node's inputs, so that nodes which compare equal necessarily agree on it.
+
+    There is one entry per output, in ``node.outputs`` order, so an output that carries no
+    measure of its own -- an RNG update, say -- pads the tuple with ``None``. That is not the
+    indexing of the ``values`` a ``_logprob`` implementation receives, which only ever covers
+    the outputs a value can attach to.
+
+    ``None`` -- the default, or a single entry of it -- means this Op was not told, which is not
+    the same as having no support axes. Whoever asks decides what to do without an answer; a
+    `DensityQuery` refuses, having no way to type the term it stands for. See #6360, which also
+    wants ``ndim_supp`` and a discrete/continuous/mixed ``type`` carried the same way.
+    """
+
+    supp_axes: tuple[tuple[int, ...] | None, ...] | None = None
 
 
 MeasurableOp.register(RandomVariable)
@@ -298,7 +352,7 @@ class PromisedValuedRV(Op):
     logp(ab, ab_value)
     ```
 
-    The density of `ab[2]` (that is `b`) depends on `ab_value[1]` and `ab_value[0] * 8`, but this is not apparent
+    The density of `ab[1]` (that is `b`) depends on `ab_value[1]` and `ab_value[0] * 8`, but this is not apparent
     in the IR representation because the values of `a` and `b` are merged together, and will only be split by the logp
     function (see why next). For the time being we introduce a PromisedValue to isolate the graphs of a and b, and
     freezing the dependency of `b` on `a` (not `a_base`).
@@ -325,3 +379,77 @@ class PromisedValuedRV(Op):
 
 
 promised_valued_rv = PromisedValuedRV()
+
+
+def supp_axes(var: Variable) -> tuple[int, ...] | None:
+    """The axes of `var` that a measure over it is defined over, if that is known.
+
+    Read off the Op that produced it -- see `MeasurableOp.supp_axes`. A RandomVariable is the
+    case everything else is built out of, and already carries the equivalent as `ndim_supp`.
+    """
+    node = var.owner
+    # getattr: RandomVariable is a virtual subclass of MeasurableOp, so it has no default
+    if (declared := getattr(node.op, "supp_axes", None)) is not None:
+        return declared[node.outputs.index(var)]
+    # RandomVariable and SymbolicRandomVariable say it as a count of rightmost axes; a
+    # SymbolicRandomVariable without a signature says nothing at all.
+    ndim_supp = getattr(node.op, "ndim_supp", None)
+    return None if ndim_supp is None else tuple(range(-ndim_supp, 0))
+
+
+class DensityQuery(Op):
+    r"""A deferred request for the log-density of a measurable variable at a value.
+
+    `request_logprob` normally recurses immediately, which bottoms out on one variable at a
+    time. That cannot work when the target is one output of a node whose density is joint over
+    several values: the density would be derived with the other values missing. Such a target
+    gets a `DensityQuery` instead, and `resolve_density_queries` answers every query on the same
+    node in a single `_logprob` call.
+
+    Because the queries are clients of the node they target, collecting them is a plain lookup
+    and answering them a plain multi-output replacement -- there is nothing upstream to rewire.
+
+    The output has to stand in for the term before the term exists, and a density reduces the
+    axes its variable is defined over, so the value's own type will not do: the term's type
+    drops the axes `supp_axes` declares from the shape the variable and the value broadcast to.
+    """
+
+    def make_node(self, rv, value):
+        assert isinstance(rv, Variable)
+        assert isinstance(value, Variable)
+        axes = supp_axes(rv)
+        if axes is None:
+            raise NotImplementedError(
+                f"{rv.owner.op} has several outputs whose values reach its density by separate "
+                f"paths, so it must declare which axes its measure is over. "
+                f"Set `supp_axes` on the Op."
+            )
+        # A density is continuous, whatever the dtype of the variable it measures.
+        dtype = value.type.dtype if value.type.dtype.startswith("float") else config.floatX
+        # A term is evaluated at the value and taken over the variable, so it comes out on the
+        # shape the two broadcast to.
+        shape = [
+            broadcast_static_dim_lengths(lengths)
+            for lengths in zip_longest(
+                reversed(rv.type.shape), reversed(value.type.shape), fillvalue=1
+            )
+        ][::-1]
+        shape = tuple(
+            length for axis, length in enumerate(shape, start=-len(shape)) if axis not in axes
+        )
+        return Apply(self, [rv, value], [tensor(dtype=dtype, shape=shape)])
+
+    def perform(self, node, inputs, out):
+        raise NotImplementedError("DensityQuery should not be present in the final graph!")
+
+
+density_query = DensityQuery()
+
+
+def n_potential_valued_outputs(node) -> int:
+    """How many outputs of `node` a value could be associated with -- all but its RNG outputs.
+
+    More than one means the node's density may be joint over them -- something only the op
+    knows -- so every value that does arrive has to reach `_logprob` in the same call.
+    """
+    return sum(not isinstance(out.type, RandomType) for out in node.outputs)

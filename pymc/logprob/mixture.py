@@ -68,7 +68,7 @@ from pymc.logprob.abstract import (
     MeasurableOp,
     PromisedValuedRV,
     _logprob,
-    _logprob_helper,
+    request_logprob,
     valued_rv,
 )
 from pymc.logprob.rewriting import (
@@ -350,7 +350,7 @@ def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=N
             # this intentional one-off?
             rv_m = rv_pull_down(rv[m_indices] if m_indices else rv)
             val_m = value[idx_m_on_axis]
-            logp_m = _logprob_helper(rv_m, val_m)
+            logp_m = request_logprob(rv_m, val_m)
             logp_val = pt.set_subtensor(logp_val[idx_m_on_axis], logp_m)
 
     else:
@@ -368,7 +368,7 @@ def logprob_MixtureRV(op, values, *inputs: TensorVariable | slice | None, name=N
 
         logp_val = 0.0
         for i, comp_rv in enumerate(comp_rvs):
-            comp_logp = _logprob_helper(comp_rv, value)
+            comp_logp = request_logprob(comp_rv, value)
             if join_axis_val is not None:
                 comp_logp = pt.squeeze(comp_logp, axis=join_axis_val)
             logp_val += ifelse(
@@ -436,8 +436,8 @@ def logprob_switch_mixture(op, values, switch_cond, component_true, component_fa
 
     return switch(
         switch_cond,
-        _logprob_helper(component_true, value),
-        _logprob_helper(component_false, value),
+        request_logprob(component_true, value),
+        request_logprob(component_false, value),
     )
 
 
@@ -573,6 +573,6 @@ measurable_ir_rewrites_db.register(
 def logprob_ifelse(op, values, if_var, rv_then, rv_else, **kwargs):
     """Compute the log-likelihood graph for an `IfElse`."""
     [value] = values
-    logps_then = _logprob_helper(rv_then, value, **kwargs)
-    logps_else = _logprob_helper(rv_else, value, **kwargs)
+    logps_then = request_logprob(rv_then, value, **kwargs)
+    logps_else = request_logprob(rv_else, value, **kwargs)
     return ifelse(if_var, logps_then, logps_else)
