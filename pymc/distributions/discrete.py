@@ -1176,7 +1176,7 @@ class Categorical(Discrete):
 
     @staticmethod
     def _safe_index_value_p(value, p):
-        # Find the probabily of the given value by indexing in p,
+        # Find the probability of the given value by indexing in p,
         # after handling broadcasting and invalid values.
 
         # In the standard case p has one more dimension than value
