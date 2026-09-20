@@ -2572,3 +2572,37 @@ class TestInterpolated(BaseTestDistributionRandom):
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
                 )
+
+
+@pytest.mark.parametrize("value", [1e-20, 1e-18, 1e-17, 1e-16, 1e-14, 1e-12, 1e-8])
+def test_cauchy_icdf_extreme_quantiles(value):
+    """Cauchy icdf must stay accurate for quantiles very close to 0 and 1.
+
+    ``tan(pi * (value - 0.5))`` loses ``value`` once it drops below ~5.5e-17 and then
+    evaluates tan at its pole, so the result saturated at a constant near -1.6e16
+    regardless of how small the quantile was.
+    """
+    dist = pm.Cauchy.dist(alpha=0.0, beta=1.0)
+    for q in (value, 1.0 - value):
+        result = icdf(dist, q).eval()
+        expected = st.cauchy(0.0, 1.0).ppf(q)
+        npt.assert_allclose(result, expected, rtol=1e-12)
+
+
+def test_cauchy_icdf_median_is_exact():
+    """The median must remain exactly ``alpha``."""
+    npt.assert_array_equal(icdf(pm.Cauchy.dist(alpha=3.0, beta=2.0), 0.5).eval(), 3.0)
+
+
+@pytest.mark.parametrize("value", [1e-20, 1e-18, 1e-17, 1e-16, 1e-14, 1e-12, 1e-8])
+def test_exponential_icdf_small_quantiles(value):
+    """``-log(1 - value)`` rounds to -0 for value below machine epsilon."""
+    result = icdf(pm.Exponential.dist(lam=1.0), value).eval()
+    npt.assert_allclose(result, st.expon().ppf(value), rtol=1e-12)
+
+
+@pytest.mark.parametrize("value", [1e-20, 1e-18, 1e-17, 1e-16, 1e-14, 1e-12, 1e-8])
+def test_weibull_icdf_small_quantiles(value):
+    """``(-log(1 - value)) ** (1 / alpha)`` rounds to -0 for value below machine epsilon."""
+    result = icdf(pm.Weibull.dist(alpha=2.0, beta=1.0), value).eval()
+    npt.assert_allclose(result, st.weibull_min(2.0).ppf(value), rtol=1e-12)
