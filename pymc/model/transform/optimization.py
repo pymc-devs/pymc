@@ -100,7 +100,7 @@ def freeze_dims_and_data(
         # pt.unique(x).mean() has to be computed in every logp function evaluation
         print("Logp eval time (1000x): ", m.profile(m.logp()).fct_call_time)
 
-        # pt.uniqe(x).mean() is cached in the logp function
+        # pt.unique(x).mean() is cached in the logp function
         frozen_m = freeze_dims_and_data(m)
         print("Logp eval time (1000x): ", frozen_m.profile(frozen_m.logp()).fct_call_time)
 

@@ -17,7 +17,7 @@ All transforms have three core methods:
 
 The main use-cases for setting custom transforms include the following:
 
-#. The ``default_transform`` may need to be replaced with an alternative transform on the same constained space. For example, the ``default_transform`` for positive-valued random variables is the :class:`log` transform but in some cases it may be advantageous to use the :class:`log_exp_m1` transform instead.
+#. The ``default_transform`` may need to be replaced with an alternative transform on the same constrained space. For example, the ``default_transform`` for positive-valued random variables is the :class:`log` transform but in some cases it may be advantageous to use the :class:`log_exp_m1` transform instead.
 #. The ``default_transform`` may be removed entirely in some cases when using non-HMC samplers.
 #. Exceptionally, transforms can be used to *add* constraints to the model specification without modifying the ``default_transform``. This can be done by specifying the additional transform via the ``transform`` parameter. However this should not be viewed as a default use-case and, in practice, this is mostly limited to using :class:`ordered` in mixture models.
 
