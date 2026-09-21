@@ -622,6 +622,13 @@ def test_triangular_transform():
     assert np.isclose(transform.backward(np.inf, *x.owner.inputs).eval(), 2)
 
 
+def test_logitnormal_default_transform():
+    # Regression test for #8441
+    with pm.Model() as m:
+        x = pm.LogitNormal("x", mu=0, sigma=1)
+    assert m.rvs_to_transforms[x] is tr.logodds
+
+
 def test_interval_transform_raises():
     with pytest.raises(ValueError, match="Lower and upper interval bounds cannot both be None"):
         tr.Interval(None, None)
