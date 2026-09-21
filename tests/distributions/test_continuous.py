@@ -900,6 +900,17 @@ class TestMatchesScipy:
             ),
             decimal=select_by_precision(float64=6, float32=1),
         )
+        # The logcdf is derived from the sigmoid(normal) graph, which underflows
+        # to -inf once the normal logcdf drops below ~-700 (sigma < 0.5 here).
+        # The CustomDist wrapper this replaced inlined the same graph and had
+        # the same tail.
+        check_logcdf(
+            pm.LogitNormal,
+            Unit,
+            {"mu": R, "sigma": Rplusbig},
+            lambda value, mu, sigma: st.norm.logcdf(sp.logit(value), mu, sigma),
+            decimal=select_by_precision(float64=5, float32=1),
+        )
         check_icdf(
             pm.LogitNormal,
             {"mu": R, "sigma": Rplus},

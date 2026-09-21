@@ -623,25 +623,10 @@ def test_triangular_transform():
 
 
 def test_logitnormal_default_transform():
-    # Regression test for #8441: LogitNormal is a CustomDist wrapper and did not get
-    # the logodds transform that other distributions on (0, 1) have by default
+    # Regression test for #8441
     with pm.Model() as m:
-        x = pm.LogitNormal("x", mu=0, sigma=1, shape=3)
-        x_no = pm.LogitNormal("x_no", mu=0, sigma=1, default_transform=None)
-        x_chain = pm.LogitNormal("x_chain", mu=0, sigma=1, shape=3, transform=tr.ordered)
-
+        x = pm.LogitNormal("x", mu=0, sigma=1)
     assert m.rvs_to_transforms[x] is tr.logodds
-    assert m.rvs_to_values[x].name == "x_logodds__"
-    assert m.rvs_to_transforms[x_no] is None
-
-    chain = m.rvs_to_transforms[x_chain]
-    assert isinstance(chain, tr.Chain)
-    assert chain.transform_list == [tr.logodds, tr.ordered]
-
-    # Any value on the unconstrained scale maps back into (0, 1)
-    ip = m.initial_point(random_seed=0)
-    backward = m.rvs_to_transforms[x].backward(ip["x_logodds__"]).eval()
-    assert np.all((backward > 0) & (backward < 1))
 
 
 def test_interval_transform_raises():

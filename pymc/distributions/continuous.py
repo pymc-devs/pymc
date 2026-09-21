@@ -52,7 +52,6 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.variable import TensorConstant, TensorVariable
 
-from pymc.distributions.custom import CustomDist
 from pymc.logprob.abstract import _logprob_helper
 from pymc.logprob.basic import TensorLike, icdf
 from pymc.pytensorf import normalize_rng_param
@@ -91,7 +90,7 @@ from pymc.distributions.dist_math import (
 from pymc.distributions.distribution import DIST_PARAMETER_TYPES, Continuous, SymbolicRandomVariable
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.distributions.transforms import _default_transform
-from pymc.math import invlogit, logdiffexp
+from pymc.math import logdiffexp
 
 stats = lazy_scipy_module("stats")
 interpolate = lazy_scipy_module("interpolate")
@@ -3738,7 +3737,32 @@ class Logistic(Continuous):
         )
 
 
-class LogitNormal:
+class LogitNormalRV(SymbolicRandomVariable):
+    name = "logit_normal"
+    extended_signature = "[rng],[size],(),()->[rng],()"
+    inline_logprob = True
+    _print_name = ("LogitNormal", "\\operatorname{LogitNormal}")
+
+    @classmethod
+    def rv_op(cls, mu, sigma, *, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        sigma = pt.as_tensor(sigma)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(mu, sigma, ndims_params=cls.ndims_params)
+
+        next_rng, z = normal(mu, sigma, size=size, rng=rng, return_next_rng=True)
+        draws = pt.sigmoid(z)
+
+        return cls(
+            inputs=[rng, size, mu, sigma],
+            outputs=[next_rng, draws],
+        )(rng, size, mu, sigma)
+
+
+class LogitNormal(UnitContinuous):
     r"""
     Logit-Normal distribution.
 
@@ -3786,30 +3810,20 @@ class LogitNormal:
         Defaults to 1.
     """
 
-    @staticmethod
-    def logitnormal_dist(mu, sigma, size):
-        return invlogit(Normal.dist(mu=mu, sigma=sigma, size=size))
-
-    def __new__(cls, name, mu=0, sigma=None, tau=None, **kwargs):
-        _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        # CustomDist builds a new Op type per call, so the UnitContinuous default
-        # transform can't be dispatched on it. Set it explicitly instead.
-        kwargs.setdefault("default_transform", transforms.logodds)
-        return CustomDist(
-            name,
-            mu,
-            sigma,
-            dist=cls.logitnormal_dist,
-            class_name="LogitNormal",
-            **kwargs,
-        )
+    rv_type = LogitNormalRV
+    rv_op = LogitNormalRV.rv_op
 
     @classmethod
-    def dist(cls, mu=0, sigma=None, tau=None, **kwargs):
+    def dist(cls, mu=0, sigma=None, tau=None, *args, **kwargs):
         _, sigma = get_tau_sigma(tau=tau, sigma=sigma)
-        return CustomDist.dist(
-            mu, sigma, dist=cls.logitnormal_dist, class_name="LogitNormal", **kwargs
-        )
+        return super().dist([mu, sigma], *args, **kwargs)
+
+    def support_point(rv, size, mu, sigma):
+        mean = pt.sigmoid(mu)
+        mean, _ = pt.broadcast_arrays(mean, sigma)
+        if not rv_size_is_none(size):
+            mean = pt.full(size, mean)
+        return mean
 
 
 def _interpolated_argcdf(p, pdf, cdf, x):
