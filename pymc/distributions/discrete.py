@@ -1071,7 +1071,7 @@ class DiscreteUniform(Discrete):
 
     def logcdf(value, lower, upper):
         res = pt.switch(
-            pt.le(value, lower),
+            pt.lt(value, lower),
             -np.inf,
             pt.switch(
                 pt.lt(value, upper),
