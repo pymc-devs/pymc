@@ -152,6 +152,13 @@ class TestBoundedContinuous:
         assert upper_interval is None
 
 
+def laplace_asymmetric_icdf(q, kappa, b, mu):
+    p_star = kappa**2 / (kappa**2 + 1)
+    x_less = mu + (kappa / b) * np.log(q / p_star)
+    x_greater = mu - (1 / (b * kappa)) * np.log((1 - q) / (1 - p_star))
+    return np.where(q < p_star, x_less, x_greater)
+
+
 def laplace_asymmetric_logpdf(value, kappa, b, mu):
     kapinv = 1 / kappa
     value = value - mu
@@ -489,6 +496,11 @@ class TestMatchesScipy:
             {"b": Rplus, "kappa": Rplus, "mu": R},
             laplace_asymmetric_logpdf,
             decimal=select_by_precision(float64=6, float32=2),
+        )
+        check_icdf(
+            pm.AsymmetricLaplace,
+            {"b": Rplus, "kappa": Rplus, "mu": R},
+            lambda q, b, kappa, mu: st.laplace_asymmetric.ppf(q, kappa, loc=mu, scale=1 / b),
         )
 
     def test_lognormal(self):
