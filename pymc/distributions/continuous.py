@@ -1719,6 +1719,21 @@ class AsymmetricLaplace(Continuous):
             msg="b > 0, kappa > 0",
         )
 
+    def icdf(value, b, kappa, mu):
+        p_star = (kappa**2) / (kappa**2 + 1)
+        res = pt.switch(
+            pt.lt(value, p_star),
+            mu + (kappa / b) * pt.log(value / p_star),
+            mu - (1 / (b * kappa)) * pt.log((1 - value) / (1 - p_star)),
+        )
+        res = check_icdf_value(res, value)
+        return check_icdf_parameters(
+            res,
+            b > 0,
+            kappa > 0,
+            msg="b > 0, kappa > 0",
+        )
+
 
 class LogNormal(PositiveContinuous):
     r"""
