@@ -1099,6 +1099,55 @@ class TestMatchesScipy:
         assert np.isfinite(logp[1])
         assert np.isinf(logp[2])
 
+    # The support is closed, [a, b], so cdf(lower) == 0 and logcdf(lower) is
+    # -inf. The lower-bound guard used a strict `<`, so at value == lower the
+    # helper log_diff_normal_cdf was called with x == y, which its own docstring
+    # forbids ("must be strictly less than x"), and that returns nan rather
+    # than -inf. The upper-bound guard two lines down already used `<=`, and
+    # logp's own guard must stay strict because logp is finite at the bound.
+    @pytest.mark.parametrize(
+        "mu, sigma, lower, upper",
+        [
+            (0, 1, -1, 1),
+            (1, 2, -1, 3),
+            (0, 1, 0, 1),
+            (2, 1, 2, 5),
+        ],
+    )
+    def test_truncated_normal_logcdf_at_lower_bound(self, mu, sigma, lower, upper):
+        dist = pm.TruncatedNormal.dist(mu=mu, sigma=sigma, lower=lower, upper=upper)
+        values = np.array([lower, 0.5 * (lower + upper), upper])
+
+        result = logcdf(dist, values).eval()
+        expected = st.truncnorm.logcdf(
+            values, (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma
+        )
+
+        assert not np.isnan(result).any()
+        npt.assert_allclose(result, expected, atol=1e-6)
+
+    def test_truncated_normal_logcdf_strictly_below_bound(self):
+        # Values under the bound must still be -inf, not anything else.
+        dist = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=1)
+        result = logcdf(dist, np.array([-2.0, -1.5])).eval()
+        assert np.isneginf(result).all()
+
+    def test_censored_truncated_normal_at_lower_bound(self):
+        # Censored uses logcdf for the censored regions, so an observation
+        # sitting exactly on the bound made the whole model's logp nan.
+        with pm.Model() as model:
+            pm.Censored(
+                "v",
+                pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=1),
+                lower=-1,
+                upper=1,
+                observed=np.array([-1.0, 0.0, 0.5]),
+            )
+            logp = model.compile_logp()(model.initial_point())
+
+        assert not np.isnan(logp)
+        assert np.isneginf(logp)
+
     def test_get_tau_sigma(self):
         sigma = np.array(2)
         tau, _ = get_tau_sigma(sigma=sigma)
