@@ -95,8 +95,6 @@ def compute_deterministics(
         Cannot be combined with ``merge_dataset``.
     progressbar : bool, default True
         Whether to display a progress bar in the command line.
-    progressbar_theme : Theme, optional
-        Custom theme for the progress bar.
     backend: str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs: dict, optional
