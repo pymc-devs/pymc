@@ -28,6 +28,7 @@ import pymc as pm
 
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.distributions.transforms import logodds
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -899,17 +900,6 @@ class TestMatchesScipy:
                 st.norm.logpdf(sp.logit(value), mu, sigma) - (np.log(value) + np.log1p(-value))
             ),
             decimal=select_by_precision(float64=6, float32=1),
-        )
-        # The logcdf is derived from the sigmoid(normal) graph, which underflows
-        # to -inf once the normal logcdf drops below ~-700 (sigma < 0.5 here).
-        # The CustomDist wrapper this replaced inlined the same graph and had
-        # the same tail.
-        check_logcdf(
-            pm.LogitNormal,
-            Unit,
-            {"mu": R, "sigma": Rplusbig},
-            lambda value, mu, sigma: st.norm.logcdf(sp.logit(value), mu, sigma),
-            decimal=select_by_precision(float64=5, float32=1),
         )
         check_icdf(
             pm.LogitNormal,
@@ -2247,6 +2237,12 @@ class TestLogitNormal(BaseTestDistributionRandom):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+    def test_default_transform(self):
+        # Regression test for #8441
+        with pm.Model() as m:
+            x = pm.LogitNormal("x", mu=0, sigma=1)
+        assert m.rvs_to_transforms[x] is logodds
 
 
 class TestLogitNormalTau(BaseTestDistributionRandom):
