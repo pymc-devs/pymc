@@ -843,6 +843,20 @@ class TestBernoulliLogitP(BaseTestDistributionRandom):
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
 
+def test_bernoulli_logp_stable_when_logit_p_saturates():
+    """log(p) and log(1 - p) are rewritten into softplus, so logp and its gradient stay finite."""
+    a = pt.dscalar("a")
+    for value, sign in ((0, 1.0), (1, -1.0)):
+        logp_expr = pm.logp(pm.Bernoulli.dist(logit_p=a), value)
+        np.testing.assert_allclose(logp_expr.eval({a: sign * 800.0}), -800.0)
+
+        # Observed as an array, as in a model: where log1p(-p)'s gradient was nan from ~37
+        observed = pm.logp(pm.Bernoulli.dist(logit_p=a), np.array([value])).sum()
+        dlogp_expr = pytensor.grad(observed, a)
+        np.testing.assert_allclose(dlogp_expr.eval({a: sign * 40.0}), -sign)
+        np.testing.assert_allclose(dlogp_expr.eval({a: sign * 800.0}), -sign)
+
+
 class TestPoisson(BaseTestDistributionRandom):
     pymc_dist = pm.Poisson
     pymc_dist_params = {"mu": 4.0}
