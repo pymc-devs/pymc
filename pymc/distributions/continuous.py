@@ -754,15 +754,15 @@ class TruncatedNormal(BoundedContinuous):
         is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded:
-            # The support is closed, so cdf(lower) == 0 and logcdf is -inf there.
-            # A strict `<` left value == lower falling through to
-            # log_diff_normal_cdf with x == y, which returns nan; that helper
-            # documents that y must be strictly less than x. The upper-bound
-            # guard below already used `<=`.
+            # Closed support: cdf(lower) == 0.
             logcdf = pt.switch(value <= lower, -np.inf, logcdf)
 
         if is_upper_bounded:
-            logcdf = pt.switch(value <= upper, logcdf, 0.0)
+            # Closed support: cdf(upper) == 1. A `<=` guard let value == upper
+            # fall through to the formula, which returns 0 only up to rounding
+            # (~3e-9) because the two log_diff_normal_cdf terms are not
+            # evaluated identically.
+            logcdf = pt.switch(value < upper, logcdf, 0.0)
 
         if is_lower_bounded and is_upper_bounded:
             logcdf = check_parameters(

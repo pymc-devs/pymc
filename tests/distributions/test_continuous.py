@@ -1099,12 +1099,10 @@ class TestMatchesScipy:
         assert np.isfinite(logp[1])
         assert np.isinf(logp[2])
 
-    # The support is closed, [a, b], so cdf(lower) == 0 and logcdf(lower) is
-    # -inf. The lower-bound guard used a strict `<`, so at value == lower the
-    # helper log_diff_normal_cdf was called with x == y, which its own docstring
-    # forbids ("must be strictly less than x"), and that returns nan rather
-    # than -inf. The upper-bound guard two lines down already used `<=`, and
-    # logp's own guard must stay strict because logp is finite at the bound.
+    # Closed support: cdf(lower) == 0 and cdf(upper) == 1, so logcdf is -inf at
+    # the lower bound and exactly 0 at the upper bound. Both guards in
+    # TruncatedNormal.logcdf got one of the two wrong; the reference
+    # implementation is scipy.stats.truncnorm.
     @pytest.mark.parametrize(
         "mu, sigma, lower, upper",
         [
@@ -1125,6 +1123,10 @@ class TestMatchesScipy:
 
         assert not np.isnan(result).any()
         npt.assert_allclose(result, expected, atol=1e-6)
+        # atol above would hide the upper-bound error: logcdf(upper) must be
+        # exactly 0, and the formula returns ~1e-9 (either sign) instead.
+        assert np.isneginf(result[0])
+        assert result[-1] == 0.0
 
     def test_truncated_normal_logcdf_strictly_below_bound(self):
         # Values under the bound must still be -inf, not anything else.
@@ -1147,6 +1149,16 @@ class TestMatchesScipy:
 
         assert not np.isnan(logp)
         assert np.isneginf(logp)
+
+    def test_truncated_normal_logcdf_grad_at_lower_bound(self):
+        # The nan also reached the gradient, which is what samplers read.
+        mu, sigma = pt.dscalars("mu", "sigma")
+        dist = pm.TruncatedNormal.dist(mu=mu, sigma=sigma, lower=-1.0, upper=1.0)
+        logcdf_sum = logcdf(dist, pt.as_tensor([-1.0, 0.0])).sum()
+        grad = pt.grad(logcdf_sum, [mu, sigma])
+        values = [g.eval({mu: 0.0, sigma: 1.0}) for g in grad]
+
+        assert not np.isnan(np.asarray(values, dtype=float)).any()
 
     def test_get_tau_sigma(self):
         sigma = np.array(2)
