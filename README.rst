@@ -4,7 +4,7 @@
     :align: center
 
 |Build Status| |Coverage| |NumFOCUS_badge| |Binder| |Dockerhub| |DOIzenodo| |Conda Downloads|
-
+(the alingement should be fix here and border is ready to give the good fonting )
 PyMC (formerly PyMC3) is a Python package for Bayesian statistical modeling
 focusing on advanced Markov chain Monte Carlo (MCMC) and variational inference (VI)
 algorithms. Its flexibility and extensibility make it applicable to a
@@ -52,7 +52,8 @@ Imagine we conduct an experiment to predict the growth of a plant based on diffe
    x_data = pm.draw(x_dist, random_seed=seed)
 
    # Independent Variables:
-   # Sunlight Hours: Number of hours the plant is exposed to sunlight daily.
+   # Sunlight Hours: Number of hours the plant is exposed to sunlight daily.thatis the 
+   independent variable is the sunlight hours 
    # Water Amount: Daily water amount given to the plant (in milliliters).
    # Soil Nitrogen Content: Percentage of nitrogen content in the soil.
 
@@ -246,14 +247,14 @@ You can also follow us on these social media platforms for updates and other ann
 
 To report an issue with PyMC please use the `issue tracker <https://github.com/pymc-devs/pymc/issues>`__.
 
-License
+License (that is  the easy part )
 =======
 
 `Apache License, Version
 2.0 <https://github.com/pymc-devs/pymc/blob/main/LICENSE>`__
 
 
-Software using PyMC
+Software using PyMC(hows the software works with the baysing)
 ===================
 
 General purpose

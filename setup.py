@@ -17,7 +17,6 @@ from codecs import open
 from os.path import dirname, join, realpath
 
 import versioneer
-
 from setuptools import find_packages, setup
 
 DESCRIPTION = "Probabilistic Programming in Python: Bayesian Modeling and Probabilistic Machine Learning with PyTensor"
@@ -70,9 +69,9 @@ if __name__ == "__main__":
         long_description=LONG_DESCRIPTION,
         long_description_content_type="text/x-rst",
         packages=find_packages(exclude=["tests*"]),
-        # because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball.
+        # Because of an upload-size limit by PyPI, we're temporarily removing docs from the tarball.
         # Also see MANIFEST.in
-        # package_data={'docs': ['*']},
+        # package_data={"docs": ["*"]},
         classifiers=classifiers,
         python_requires=">=3.12",
         install_requires=install_reqs,
