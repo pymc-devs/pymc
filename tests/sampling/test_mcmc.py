@@ -64,7 +64,7 @@ class TestSample:
     def setup_method(self):
         self.model, self.start, self.step, _ = simple_init()
 
-    @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "map"))
+    @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "jitter+map"))
     @pytest.mark.parametrize("cores", (1, 2))
     @pytest.mark.parametrize(
         "chains, seeds",
@@ -159,7 +159,7 @@ class TestSample:
         (
             "advi",
             "advi_map",
-            "map",
+            "jitter+map",
             "adapt_diag",
             "jitter+adapt_diag",
             "jitter+adapt_diag_grad",
@@ -702,7 +702,7 @@ def check_exec_nuts_init(method):
         "advi_map",
         "jitter+adapt_diag",
         "adapt_diag",
-        "map",
+        "jitter+map",
         "adapt_full",
         "jitter+adapt_full",
     ],
@@ -713,6 +713,11 @@ def test_exec_nuts_init(method):
             check_exec_nuts_init(method)
     else:
         check_exec_nuts_init(method)
+
+
+def test_init_map_renamed_to_jitter_map():
+    with pytest.warns(FutureWarning, match='renamed to `init="jitter\\+map"`'):
+        check_exec_nuts_init("map")
 
 
 @pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")

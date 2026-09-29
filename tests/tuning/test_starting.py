@@ -98,9 +98,10 @@ def test_find_MAP_discrete():
         pm.Binomial("ss", n=n, p=p)
         pm.Binomial("s", n=n, p=p, observed=yes)
 
-        map_est1 = map_point()
+        map_est1 = map_point(random_seed=1)
+        # Joint discrete + continuous powell search: reference values are from the unjittered start
         with pytest.warns(UserWarning, match="Discrete variables are being optimized"):
-            map_est2 = map_point(vars=model.value_vars)
+            map_est2 = map_point(vars=model.value_vars, jitter=False)
 
     # ss is held fixed at its (jittered-p dependent) initial value; conjugate MAP given ss
     ss0 = map_est1["ss"]
