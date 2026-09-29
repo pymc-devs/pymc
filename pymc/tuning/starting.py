@@ -14,23 +14,21 @@
 
 """Maximum a posteriori (MAP) estimation."""
 
+from __future__ import annotations
+
 import warnings
 
 from collections.abc import Sequence
 from itertools import product
-from typing import Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, cast
 
 import numpy as np
 import pytensor.gradient as tg
 import pytensor.tensor as pt
 import xarray as xr
 
-from better_optimize import basinhopping, minimize
-from better_optimize.constants import MINIMIZE_MODE_KWARGS, minimize_method
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor import TensorVariable
-from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
-from scipy.sparse.linalg import LinearOperator
 from xarray import DataTree
 
 from pymc.backends.arviz import to_inference_data
@@ -54,17 +52,23 @@ from pymc.util import (
 )
 from pymc.vartypes import discrete_types, typefilter
 
+if TYPE_CHECKING:  # better_optimize and scipy.optimize are heavy; import on first use
+    from better_optimize.constants import minimize_method
+    from scipy.optimize import OptimizeResult
+
 __all__ = ["find_MAP"]
 
-_METHODS = {k.lower(): k for k in MINIMIZE_MODE_KWARGS} | {"basinhopping": "basinhopping"}
 _LEGACY_KWARGS = {"start": "initvals", "seed": "random_seed", "maxeval": "maxiter"}
 
 
 def _canonical_method(method: str) -> str:
+    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+
+    methods = {k.lower(): k for k in MINIMIZE_MODE_KWARGS} | {"basinhopping": "basinhopping"}
     try:
-        return _METHODS[method.lower()]
+        return methods[method.lower()]
     except (KeyError, AttributeError):
-        raise ValueError(f"Unknown method {method!r}. Valid methods are {list(_METHODS)}")
+        raise ValueError(f"Unknown method {method!r}. Valid methods are {list(methods)}")
 
 
 def _value_var_names(vars: Sequence[TensorVariable], model: Model) -> list[str]:
@@ -114,6 +118,9 @@ def _optimizer_result_to_dataset(
     result: OptimizeResult, method: str, names: list[str]
 ) -> xr.Dataset:
     """Store every field of a scipy ``OptimizeResult``, labelling per-parameter fields by ``names``."""
+    from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
+    from scipy.sparse.linalg import LinearOperator
+
     if "lowest_optimization_result" in result:
         # basinhopping nests the inner optimizer's result; flatten it over the outer fields
         result = OptimizeResult(
@@ -253,6 +260,8 @@ def find_MAP(
         )
     if optimizer_kwargs.pop("progressbar_theme", None) is not None:
         warnings.warn("`progressbar_theme` is ignored by find_MAP.", FutureWarning, stacklevel=2)
+
+    from better_optimize import basinhopping, minimize
 
     from pymc.sampling.mcmc import _init_jitter  # avoids a circular import
 

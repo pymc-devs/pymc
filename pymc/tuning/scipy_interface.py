@@ -14,24 +14,28 @@
 
 """Compile model log-densities into the callables expected by ``scipy.optimize``."""
 
+from __future__ import annotations
+
 import logging
 
 from collections.abc import Callable
 from importlib.util import find_spec
-from typing import Literal, cast, get_args
+from typing import TYPE_CHECKING, Literal, cast, get_args
 
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from better_optimize.constants import MINIMIZE_MODE_KWARGS, minimize_method
 from pytensor.compile import Function
 from pytensor.compile.mode import get_mode
 from pytensor.link.jax.linker import JAXLinker
 from pytensor.tensor import TensorVariable
-from scipy.optimize import OptimizeResult
 
 from pymc.pytensorf import compile, join_nonshared_inputs, rewrite_pregrad
+
+if TYPE_CHECKING:  # better_optimize and scipy.optimize are heavy; import on first use
+    from better_optimize.constants import minimize_method
+    from scipy.optimize import OptimizeResult
 
 GradientBackend = Literal["pytensor", "jax"]
 VALID_BACKENDS = get_args(GradientBackend)
@@ -43,6 +47,8 @@ def set_optimizer_function_defaults(
     method: str, use_grad: bool | None, use_hess: bool | None, use_hessp: bool | None
 ) -> tuple[bool, bool, bool]:
     """Resolve ``None`` gradient/hessian flags from what ``method`` can use, preferring hessp over hess."""
+    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+
     method_info = MINIMIZE_MODE_KWARGS[method]
 
     if use_hess and use_hessp:
