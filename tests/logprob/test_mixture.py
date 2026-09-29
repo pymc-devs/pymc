@@ -46,18 +46,13 @@ from pytensor.graph.basic import Variable
 from pytensor.ifelse import ifelse
 from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.basic import CategoricalRV
-from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
     AdvancedSubtensor,
     Subtensor,
-    as_index_constant,
 )
 
-from pymc.logprob.abstract import MeasurableOp
 from pymc.logprob.basic import conditional_logp, logp
-from pymc.logprob.mixture import MeasurableSwitchMixture, expand_indices
-from pymc.logprob.rewriting import construct_ir_fgraph
-from pymc.logprob.utils import dirac_delta
+from pymc.logprob.utils import ParameterValueError, dirac_delta
 from pymc.testing import assert_no_rvs
 from tests.logprob.utils import scipy_logprob
 
@@ -639,184 +634,6 @@ def test_hetero_mixture_categorical(
         np.testing.assert_almost_equal(logp_vals, exp_obs_logps, decimal=decimals)
 
 
-@pytest.mark.parametrize(
-    "A_parts, indices",
-    [
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (np.array([[0, 1], [2, 2]]), slice(2, 3)),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), np.array([[0, 1], [2, 2]])),
-        ),
-        (
-            (
-                np.random.normal(size=(5, 4, 3)),
-                np.random.normal(size=(5, 4, 3)),
-                np.random.normal(size=(5, 4, 3)),
-            ),
-            (
-                np.array([[0], [2], [1]]),
-                slice(None),
-                np.array([2, 1]),
-                slice(2, 3),
-            ),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), np.array([0, 1, 2])),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (np.array([[0, 1], [2, 2]]), np.array([[0, 1], [2, 2]])),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (
-                np.array([[0, 1], [2, 2]]),
-                np.array([[0, 1], [2, 2]]),
-                np.array([[0, 1], [2, 2]]),
-            ),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (np.array([[0, 1], [2, 2]]), np.array([[0, 1], [2, 2]]), 1),
-        ),
-        (
-            (
-                np.random.normal(size=(5, 4, 3)),
-                np.random.normal(size=(5, 4, 3)),
-            ),
-            (slice(0, 2),),
-        ),
-        (
-            (
-                np.random.normal(size=(5, 4, 3)),
-                np.random.normal(size=(5, 4, 3)),
-            ),
-            (slice(0, 2), np.random.randint(3, size=(2, 3))),
-        ),
-    ],
-)
-def test_expand_indices_basic(A_parts, indices):
-    A = pt.stack(A_parts)
-    at_indices = [as_index_constant(idx) for idx in indices]
-    full_indices = expand_indices(at_indices, shape_tuple(A))
-    assert len(full_indices) == A.ndim
-    exp_res = A[indices].eval()
-    res = A[full_indices].eval()
-    assert np.array_equal(res, exp_res)
-
-
-@pytest.mark.parametrize(
-    "A_parts, indices",
-    [
-        (
-            (
-                np.random.normal(size=(6, 5, 4, 3)),
-                np.random.normal(size=(6, 5, 4, 3)),
-                np.random.normal(size=(6, 5, 4, 3)),
-            ),
-            (
-                slice(None),
-                np.array([[0], [2], [1]]),
-                slice(None),
-                np.array([2, 1]),
-                slice(2, 3),
-            ),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (np.array([[0, 1], [2, 2]]), slice(None), np.array([[0, 1], [2, 2]])),
-        ),
-    ],
-)
-def test_expand_indices_moved_subspaces(A_parts, indices):
-    A = pt.stack(A_parts)
-    at_indices = [as_index_constant(idx) for idx in indices]
-    full_indices = expand_indices(at_indices, shape_tuple(A))
-    assert len(full_indices) == A.ndim
-    exp_res = A[indices].eval()
-    res = A[full_indices].eval()
-    assert np.array_equal(res, exp_res)
-
-
-@pytest.mark.parametrize(
-    "A_parts, indices",
-    [
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), np.array([0, 1, 2]), 1),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (slice(2, 3), 1, np.array([0, 1, 2])),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (1, slice(2, 3), np.array([0, 1, 2])),
-        ),
-        (
-            (
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-                np.random.normal(size=(4, 3)),
-            ),
-            (np.random.randint(2, size=(4, 3)), 1, 0),
-        ),
-    ],
-)
-def test_expand_indices_single_indices(A_parts, indices):
-    A = pt.stack(A_parts)
-    at_indices = [as_index_constant(idx) for idx in indices]
-    full_indices = expand_indices(at_indices, shape_tuple(A))
-    assert len(full_indices) == A.ndim
-    exp_res = A[indices].eval()
-    res = A[full_indices].eval()
-    assert np.array_equal(res, exp_res)
-
-
 def test_mixture_with_DiracDelta():
     srng = pt.random.RandomStream(29833)
 
@@ -859,9 +676,6 @@ def test_scalar_switch_mixture():
 
     z_vv = Z1_rv.clone()
     z_vv.name = "z1"
-
-    fgraph = construct_ir_fgraph({Z1_rv: z_vv, I_rv: i_vv})
-    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableSwitchMixture)
 
     # building the identical graph but with a stack to check that mixture logps are identical
     Z2_rv = pt.stack((Y_rv, X_rv))[I_rv]
@@ -932,17 +746,20 @@ def test_switch_mixture_invalid_bcast():
     invalid_false_branch = pt.abs(pt.random.normal(size=()))
 
     valid_mix = pt.switch(valid_switch_cond, valid_true_branch, valid_false_branch)
-    fgraph = construct_ir_fgraph({valid_mix: valid_mix.type()})
-    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
-    assert isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableSwitchMixture)
+    value = valid_mix.type()
+    term = logp(valid_mix, value)
+    expected = pt.switch(
+        valid_switch_cond, logp(valid_true_branch, value), logp(valid_false_branch, value)
+    )
+    point = {valid_switch_cond: [True, False, True, False], value: [0.2, 0.4, 0.6, 0.8]}
+    np.testing.assert_allclose(term.eval(point), expected.eval(point))
 
-    invalid_mix = pt.switch(invalid_switch_cond, valid_true_branch, valid_false_branch)
-    fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
-
-    invalid_mix = pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch)
-    fgraph = construct_ir_fgraph({invalid_mix: invalid_mix.type()})
-    assert not isinstance(fgraph.outputs[0].owner.inputs[0].owner.op, MeasurableOp)
+    for invalid_mix in (
+        pt.switch(invalid_switch_cond, valid_true_branch, valid_false_branch),
+        pt.switch(valid_switch_cond, valid_true_branch, invalid_false_branch),
+    ):
+        with pytest.raises(NotImplementedError):
+            logp(invalid_mix, invalid_mix.type())
 
 
 def test_switch_mixture_constant_branch_broadcast_ok():
@@ -1202,6 +1019,54 @@ def test_nested_ifelse():
     np.testing.assert_almost_equal(mix_logp_fn(0, test_value), sp.norm.logpdf(test_value, -5, 1))
     np.testing.assert_almost_equal(mix_logp_fn(1, test_value), sp.norm.logpdf(test_value, 0, 1))
     np.testing.assert_almost_equal(mix_logp_fn(2, test_value), sp.norm.logpdf(test_value, 5, 1))
+
+
+@pytest.mark.parametrize("transform", [lambda x: x, pt.exp])
+def test_switch_cannot_duplicate_random_entries(transform):
+    x = transform(pt.random.normal(size=2))
+    guard = pt.vector("guard", dtype="bool")
+    mixture = pt.switch(guard, x, x[::-1])
+    value = mixture.type("value")
+
+    # With guard=[True, False], both entries equal x[0]; an elementwise density is invalid.
+    with pytest.raises(RuntimeError, match="logprob terms.*could not be derived"):
+        conditional_logp({mixture: value})
+
+
+@pytest.mark.parametrize("singleton_index", [False, True])
+def test_indexed_inversion_does_not_evaluate_inactive_parameters(singleton_index):
+    x = pt.random.normal()
+    scale = pt.exp(x)
+    index = (
+        pt.tensor("index", dtype="int64", shape=(1,)) if singleton_index else pt.lscalar("index")
+    )
+    mixture = pt.stack([scale, -scale])[index]
+    offset = pt.scalar("offset")
+    y = pt.random.normal(scale=scale + offset)
+    value, y_value = mixture.type("value"), y.type("y_value")
+    terms = conditional_logp({mixture: value, y: y_value})
+    # Numba currently evaluates IfElse inputs eagerly (see #8036).
+    fn = pytensor.function(
+        [index, value, y_value, offset], [terms[value], terms[y_value]], mode="CVM"
+    )
+
+    for choice, sign in [(0, 1), (1, -1), (-2, 1), (-1, -1)]:
+        point_index = [choice] if singleton_index else choice
+        point_value = [sign * 1.7] if singleton_index else sign * 1.7
+        actual_mixture, actual_y = fn(point_index, point_value, 0.3, 0.0)
+        np.testing.assert_allclose(actual_mixture, sp.norm.logpdf(np.log(1.7)) - np.log(1.7))
+        np.testing.assert_allclose(actual_y, sp.norm(scale=1.7).logpdf(0.3))
+
+    for choice in [-3, 2]:
+        point_index = [choice] if singleton_index else choice
+        point_value = [1.7] if singleton_index else 1.7
+        with pytest.raises(IndexError, match="mixture index out of bounds"):
+            fn(point_index, point_value, 0.3, -2.0)
+
+    point_index = [0] if singleton_index else 0
+    point_value = [1.7] if singleton_index else 1.7
+    with pytest.raises(ParameterValueError, match="sigma > 0"):
+        fn(point_index, point_value, 0.3, -2.0)
 
 
 def test_advanced_subtensor_none_and_integer():

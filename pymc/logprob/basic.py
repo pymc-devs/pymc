@@ -45,17 +45,17 @@ import pytensor.tensor as pt
 
 from pytensor.configdefaults import config as pytensor_config
 from pytensor.graph.basic import Variable
-from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
-from pytensor.graph.traversal import ancestors, walk
+from pytensor.graph.traversal import walk
 
 from pymc.logprob.abstract import (
-    LogprobQuery,
     MeasurableOp,
     _icdf_helper,
     _logccdf_helper,
     _logcdf_helper,
-    request_logprob,
+    _logprob_helper,
+    logprob_query,
+    n_potential_valued_outputs,
 )
 from pymc.logprob.rewriting import cleanup_ir, construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
@@ -99,16 +99,6 @@ def _warn_rvs_in_inferred_graph(graph: Variable | Sequence[Variable]):
             "For example: `logp(model.replace_rvs_by_values([rv])[0], value)`",
             stacklevel=3,
         )
-
-
-def resolve_density_queries(terms, **logprob_kwargs):
-    from pymc.logprob.query import derive_graph
-
-    if not any(isinstance(var.owner_op, LogprobQuery) for var in ancestors(terms)):
-        return list(terms)
-    fgraph = FunctionGraph(outputs=list(terms), clone=False)
-    derive_graph(fgraph, **logprob_kwargs)
-    return fgraph.outputs
 
 
 def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) -> Variable:
@@ -200,8 +190,9 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        [expr] = resolve_density_queries([request_logprob(rv, value, **kwargs)], **kwargs)
-        [expr] = cleanup_ir([expr])
+        if n_potential_valued_outputs(rv.owner) > 1:
+            return conditional_logp({rv: value}, warn_rvs=warn_rvs, **kwargs)[value]
+        expr = _logprob_helper(rv, value, **kwargs)
         return expr.astype(pytensor_config.floatX)
     except NotImplementedError as original_error:
         if value.ndim > rv.ndim:
@@ -309,7 +300,7 @@ def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variabl
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return _logcdf_helper(rv, value)
+        expr = _logcdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
@@ -317,9 +308,9 @@ def logcdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variabl
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logcdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
-        if warn_rvs:
-            _warn_rvs_in_inferred_graph([expr])
-        return expr
+    if warn_rvs and not isinstance(rv.owner_op, MeasurableOp):
+        _warn_rvs_in_inferred_graph([expr])
+    return expr
 
 
 def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
@@ -374,7 +365,7 @@ def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variab
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype=rv.dtype)
     try:
-        return _logccdf_helper(rv, value)
+        expr = _logccdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
@@ -382,9 +373,9 @@ def logccdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variab
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _logccdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
-        if warn_rvs:
-            _warn_rvs_in_inferred_graph([expr])
-        return expr
+    if warn_rvs and not isinstance(rv.owner_op, MeasurableOp):
+        _warn_rvs_in_inferred_graph([expr])
+    return expr
 
 
 def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
@@ -457,7 +448,7 @@ def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
     if not isinstance(value, Variable):
         value = pt.as_tensor_variable(value, dtype="floatX")
     try:
-        return _icdf_helper(rv, value)
+        expr = _icdf_helper(rv, value)
     except NotImplementedError:
         # Try to rewrite rv
         fgraph = construct_ir_fgraph({rv: value})
@@ -465,9 +456,9 @@ def icdf(rv: Variable, value: Variable | TensorLike, warn_rvs=True) -> Variable:
         [ir_rv, ir_value] = ir_valued_rv.owner.inputs
         expr = _icdf_helper(ir_rv, ir_value)
         [expr] = cleanup_ir([expr])
-        if warn_rvs:
-            _warn_rvs_in_inferred_graph([expr])
-        return expr
+    if warn_rvs and not isinstance(rv.owner_op, MeasurableOp):
+        _warn_rvs_in_inferred_graph([expr])
+    return expr
 
 
 def conditional_logp(
@@ -525,10 +516,10 @@ def conditional_logp(
         the logp graph and doesn't have a corresponding value variable specified in
         `rv_values`.
     ir_rewriter
-        Rewriter that produces the intermediate representation of Measurable Variables.
+        Algebraic rewriter used to prepare the intermediate graph and revisited as
+        density query rewrites infer value bindings. Its exclusions remain in effect.
     extra_rewrites
-        Extra rewrites to be applied (e.g. reparameterizations, transforms,
-        etc.)
+        Extra rewrites of the initial density queries, applied before inference.
 
     Returns
     -------
@@ -539,9 +530,6 @@ def conditional_logp(
     """
     fgraph = construct_ir_fgraph(rv_values, ir_rewriter=ir_rewriter)
 
-    if extra_rewrites is not None:
-        extra_rewrites.rewrite(fgraph)
-
     original_values = tuple(rv_values.values())
     if len(set(original_values)) != len(original_values):
         repeated = next(value for value, count in Counter(original_values).items() if count > 1)
@@ -551,7 +539,6 @@ def conditional_logp(
         UnsupportedObservation,
         contains_random,
         derive_graph,
-        logprob_query,
     )
 
     for binding, original_value in zip(list(fgraph.outputs), original_values, strict=True):
@@ -568,14 +555,30 @@ def conditional_logp(
         fgraph.add_output(query, reason="request density", import_missing=True)
     for _ in original_values:
         fgraph.remove_output(0, reason="replace RV outputs by density outputs")
+    if extra_rewrites is not None:
+        extra_rewrites.rewrite(fgraph)
+    # Keep supplied value expressions opaque while inference rewrites the RV graph.
+    inference_values = tuple(value.clone() for value in original_values)
+    for value, placeholder in zip(original_values, inference_values, strict=True):
+        fgraph.replace(value, placeholder, reason="protect query values", import_missing=True)
     try:
-        derive_graph(fgraph, **kwargs)
+        derive_graph(fgraph, ir_rewriter=ir_rewriter, **kwargs)
     except UnsupportedObservation as error:
+        from pytensor.graph import ancestors
+
+        from pymc.logprob.abstract import LogprobQuery
+
+        unresolved_values = {
+            value
+            for value, term in zip(original_values, fgraph.outputs, strict=True)
+            if any(isinstance(var.owner_op, LogprobQuery) for var in ancestors([term]))
+        }
         raise UnsupportedObservation(
-            f"The logprob terms of the following value variables could not be derived: {set(original_values)}. {error}"
+            f"The logprob terms of the following value variables could not be derived: {unresolved_values}. {error}"
         ) from error
-    logprobs = resolve_density_queries(fgraph.outputs, **kwargs)
-    logprobs = cleanup_ir(tuple(logprobs))
+    for value, placeholder in zip(original_values, inference_values, strict=True):
+        fgraph.replace(placeholder, value, reason="restore query values", import_missing=True)
+    logprobs = cleanup_ir(tuple(fgraph.outputs))
     for value, term in zip(original_values, logprobs):
         if value.name:
             term.name = f"{value.name}_logprob"
@@ -612,14 +615,12 @@ def transformed_conditional_logp(
         if transform is not None
     }
     if values_to_transforms:
-        # There seems to be an incorrect type hint in TransformValuesRewrite
-        transform_rewrite = TransformValuesRewrite(values_to_transforms)  # type: ignore[arg-type]
+        transform_rewrite = TransformValuesRewrite(values_to_transforms, use_jacobian=jacobian)
 
     kwargs.setdefault("warn_rvs", False)
     temp_logp_terms = conditional_logp(
         rvs_to_values,
         extra_rewrites=transform_rewrite,
-        use_jacobian=jacobian,
         **kwargs,
     )
 

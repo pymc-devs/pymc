@@ -362,6 +362,13 @@ def test_joint_logp_over_multiple_values():
     assert calls == [((False, True), 1)]
     np.testing.assert_allclose(logp_v2.eval({v2: v2_test}), (v2_test - 1) - 100.0)
 
+    # Summing over alternative inverse values needs the whole joint density, not separate outputs.
+    calls.clear()
+    out1, out2 = op(mu)
+    with pytest.raises(NotImplementedError, match="shared unvalued source"):
+        conditional_logp({out1 + 1: v1, pt.abs(out2): v2}, ir_rewriter=ir_rewriter)
+    assert not calls
+
 
 def test_model_unchanged_logprob_access():
     # Issue #5007
@@ -374,6 +381,29 @@ def test_model_unchanged_logprob_access():
     model.logp()
     new_inputs = set(pytensor.graph.graph_inputs([c]))
     assert original_inputs == new_inputs
+
+
+def test_ir_rewriter_exclusions_during_value_propagation():
+    rv = pm.Normal.dist(shape=3)[1:]
+    value = pt.vector("value")
+    term = conditional_logp({rv: value})[value]
+    np.testing.assert_allclose(term.eval({value: [0.0, 1.0]}), sp.norm.logpdf([0.0, 1.0]))
+
+    ir_rewriter = logprob_rewrites_db.query(
+        logprob_rewrites_basic_query.excluding("subtensor_lift")
+    )
+    with pytest.raises(NotImplementedError, match="logprob terms.*could not be derived"):
+        conditional_logp({rv: value}, ir_rewriter=ir_rewriter)
+
+
+@pytest.mark.parametrize("transform", [pt.abs, lambda x: x**2])
+def test_multivariate_multiple_inverses_require_joint_rule(transform):
+    rv = transform(pm.MvNormal.dist(np.zeros(2), np.eye(2)))
+    value = pt.vector("value")
+
+    # The two-dimensional event has four inverse sign combinations, not two.
+    with pytest.raises(NotImplementedError, match="logprob terms.*could not be derived"):
+        conditional_logp({rv: value})
 
 
 def test_unexpected_rvs():
@@ -557,7 +587,7 @@ def test_ir_rewrite_does_not_disconnect_valued_rvs():
     )
 
 
-def test_ir_ops_can_be_evaluated_with_warning():
+def test_custom_logp_receives_explicit_values():
     _eval_values = [None, None]
 
     def my_logp(value, lam):
@@ -570,11 +600,7 @@ def test_ir_ops_can_be_evaluated_with_warning():
         lam = pm.Exponential("lam")
         pm.CustomDist("y", lam, logp=my_logp, observed=[0, 1, 2])
 
-    # Value substitution leaves only TransformedValue in the logp (see #8100).
-    with pytest.warns(
-        UserWarning, match="TransformedValue should not be present in the final graph"
-    ):
-        m.logp()
+    m.logp()
 
     assert _eval_values[0].sum() == 3
     assert _eval_values[1] == np.exp(-1.5)
@@ -626,3 +652,194 @@ def test_inverted_values_condition_parameters_and_other_inverses(reverse):
         sp.norm.logpdf(5.0, np.log(2.0), 3.0),
     ]
     np.testing.assert_allclose(fn(*point), expected)
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+def test_conditioning_unlocks_transform_query(reverse):
+    x = pm.Normal.dist()
+    z = pm.Normal.dist(x)
+    y = pt.sqrt(x + z)
+    w = pt.exp(x)
+    y_value, w_value = pt.scalars("y_value", "w_value")
+    pairs = [(y, y_value), (w, w_value)]
+    if reverse:
+        pairs.reverse()
+
+    # x + z has two unknown inputs until the query for exp(x) supplies x's value.
+    terms = conditional_logp(dict(pairs))
+    point = {y_value: 1.2, w_value: np.exp(0.3)}
+    np.testing.assert_allclose(
+        terms[y_value].eval(point),
+        sp.norm(0.3).logpdf(1.2**2 - 0.3) + np.log(2 * 1.2),
+    )
+    np.testing.assert_allclose(
+        terms[w_value].eval({w_value: point[w_value]}), sp.norm.logpdf(0.3) - 0.3
+    )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("indexed", [False, True])
+def test_mixture_waits_for_inverted_parameter(reverse, indexed):
+    x = pm.Normal.dist()
+    component = pt.exp(pm.Normal.dist(x))
+    selector = pt.scalar("selector", dtype="bool")
+    other_component = pm.LogNormal.dist()
+    y = (
+        pt.stack([other_component, component])[pt.cast(selector, "int64")]
+        if indexed
+        else pt.switch(selector, component, other_component)
+    )
+    w = pt.exp(x)
+    y_value, w_value = pt.scalars("y_value", "w_value")
+    pairs = [(y, y_value), (w, w_value)]
+    if reverse:
+        pairs.reverse()
+    terms = conditional_logp(dict(pairs))
+    point = {y_value: 1.2, w_value: np.exp(0.3), selector: True}
+    np.testing.assert_allclose(
+        terms[y_value].eval(point), sp.lognorm(s=1, scale=np.exp(0.3)).logpdf(1.2)
+    )
+    point[selector] = False
+    np.testing.assert_allclose(terms[y_value].eval(point), sp.lognorm(s=1).logpdf(1.2))
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("indexed", [False, True])
+def test_mixture_inversion_conditions_other_density(reverse, indexed):
+    x = pm.Normal.dist()
+    selector = pt.scalar("selector", dtype="bool")
+    left, right = pt.exp(x), pt.exp(2 * x)
+    mixture = (
+        pt.stack([right, left])[pt.cast(selector, "int64")]
+        if indexed
+        else pt.switch(selector, left, right)
+    )
+    y = pm.Normal.dist(x)
+    mixture_value, y_value = pt.scalars("mixture_value", "y_value")
+    pairs = [(mixture, mixture_value), (y, y_value)]
+    terms = conditional_logp(dict(pairs[::-1] if reverse else pairs))
+    fn = pytensor.function(
+        [selector, mixture_value, y_value], [terms[mixture_value], terms[y_value]]
+    )
+    for selected, scale in [(True, 1), (False, 2)]:
+        inverse = np.log(1.7) / scale
+        np.testing.assert_allclose(
+            fn(selected, 1.7, 0.3),
+            [sp.norm.logpdf(inverse) - np.log(scale * 1.7), sp.norm(inverse).logpdf(0.3)],
+        )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize(
+    "selection", ["ifelse", "scalar_switch", "array_switch", "index_first", "index_last"]
+)
+def test_vector_mixture_inversion_conditions_other_density(reverse, selection):
+    from pytensor.ifelse import ifelse
+
+    x = pm.Normal.dist(shape=3)
+    left, right = pt.exp(x), pt.exp(2 * x)
+    if selection == "array_switch":
+        selector = pt.vector("selector", dtype="bool")
+        mixture = pt.switch(selector, left, right)
+        selected = np.array([True, False, True])
+    else:
+        selector = pt.scalar("selector", dtype="bool")
+        selected = False
+        if selection == "ifelse":
+            mixture = ifelse(selector, left, right)
+        elif selection == "scalar_switch":
+            mixture = pt.switch(selector, left, right)
+        else:
+            axis = 0 if selection == "index_first" else 1
+            stacked = pt.stack([right, left], axis=axis)
+            index = pt.cast(selector, "int64")
+            mixture = stacked[index] if axis == 0 else stacked[:, index]
+    y = pm.Normal.dist(x)
+    mixture_value, y_value = pt.vectors("mixture_value", "y_value")
+    pairs = [(mixture, mixture_value), (y, y_value)]
+    terms = conditional_logp(dict(pairs[::-1] if reverse else pairs))
+    fn = pytensor.function(
+        [selector, mixture_value, y_value], [terms[mixture_value], terms[y_value]]
+    )
+    value = np.array([0.7, 1.7, 2.3])
+    point_y = np.array([-0.3, 0.1, 0.5])
+    for choice in (selected, np.logical_not(selected)):
+        scale = np.where(choice, 1, 2)
+        inverse = np.log(value) / scale
+        np.testing.assert_allclose(
+            fn(choice, value, point_y),
+            [sp.norm.logpdf(inverse) - np.log(scale * value), sp.norm(inverse).logpdf(point_y)],
+        )
+
+
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("operation", ["abs", "max"])
+def test_noninvertible_query_uses_inverted_parameter(reverse, operation):
+    x = pm.Normal.dist()
+    base = pm.Normal.dist(x, shape=3)
+    rv = pt.abs(base) if operation == "abs" else pt.max(pt.exp(base))
+    w = pt.exp(x)
+    value, w_value = rv.type("value"), pt.scalar("w_value")
+    pairs = [(rv, value), (w, w_value)]
+    terms = conditional_logp(dict(pairs[::-1] if reverse else pairs))
+    fn = pytensor.function([value, w_value], [terms[value], terms[w_value]])
+    point = np.array([0.7, 1.7, 2.3]) if operation == "abs" else 1.7
+    if operation == "abs":
+        expected = sp.foldnorm(c=0.3).logpdf(point)
+    else:
+        expected = (
+            np.log(3)
+            + 2 * sp.lognorm(s=1, scale=np.exp(0.3)).logcdf(point)
+            + sp.lognorm(s=1, scale=np.exp(0.3)).logpdf(point)
+        )
+    actual, x_term = fn(point, np.exp(0.3))
+    np.testing.assert_allclose(actual, expected)
+    np.testing.assert_allclose(x_term, sp.norm.logpdf(0.3) - 0.3)
+
+
+def test_vector_mixture_shared_latent_requires_marginalization():
+    x = pm.Normal.dist(shape=2)
+    selector = pt.vector("selector", dtype="bool")
+    mixture = pt.switch(selector, x, pm.Normal.dist(shape=2))
+    y = pm.Normal.dist(x)
+    with pytest.raises(NotImplementedError, match="requires marginalization"):
+        conditional_logp({mixture: mixture.type(), y: y.type()})
+
+
+def test_join_of_independent_scalar_mixtures():
+    selectors = pt.vector("selectors", dtype="bool")
+    value = pt.vector("value")
+    components = []
+    for i in range(12):
+        x = pm.Normal.dist()
+        components.append(pt.switch(selectors[i], pt.exp(x), pt.exp(2 * x)))
+    fn = pytensor.function([selectors, value], logp(pt.stack(components), value))
+    selected = np.arange(12) % 2 == 0
+    point = np.linspace(0.5, 2, 12)
+    scales = np.where(selected, 1, 2)
+    np.testing.assert_allclose(
+        fn(selected, point), sp.norm.logpdf(np.log(point) / scales) - np.log(scales * point)
+    )
+
+
+def test_transform_with_shared_deterministic_parameter():
+    parameter, value = pt.scalars("parameter", "value")
+    shift = parameter
+    shift_value = 0.1
+    for _ in range(24):
+        shift = pt.tanh(shift + shift)
+        shift_value = np.tanh(shift_value + shift_value)
+    rv = pt.exp(pm.Normal.dist()) + shift
+    fn = pytensor.function([parameter, value], logp(rv, value))
+    np.testing.assert_allclose(fn(0.1, 2.0), sp.lognorm(s=1).logpdf(2.0 - shift_value))
+
+
+def test_rng_chain_is_not_a_shared_latent_dependency():
+    rng = pytensor.shared(np.random.default_rng(23))
+    next_rng, x = pt.random.normal(rng=rng, return_next_rng=True)
+    _, y = pt.random.normal(rng=next_rng, return_next_rng=True)
+    absolute_x = pt.abs(x)
+    x_value, y_value = pt.scalars("x_value", "y_value")
+    terms = conditional_logp({absolute_x: x_value, y: y_value})
+    fn = pytensor.function([x_value, y_value], list(terms.values()))
+    np.testing.assert_allclose(fn(1.2, 0.3), [stats.halfnorm.logpdf(1.2), stats.norm.logpdf(0.3)])

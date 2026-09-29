@@ -53,9 +53,9 @@ from pymc.distributions.distribution import SymbolicRandomVariable
 from pymc.distributions.transforms import Interval
 from pymc.logprob.abstract import MeasurableOp, valued_rv
 from pymc.logprob.basic import logp
+from pymc.logprob.query import contains_random
 from pymc.logprob.utils import (
     ParameterValueError,
-    check_potential_measurability,
     dirac_delta,
     replace_rvs_by_values,
 )
@@ -308,7 +308,7 @@ def test_dirac_delta_logprob(dist_params, obs):
     scipy_logprob_tester(x, obs, dist_params, test_fn=scipy_logprob)
 
 
-def test_check_potential_measurability():
+def test_contains_random():
     x1 = pt.random.normal()
     x1_valued = valued_rv(x1, x1.type())
 
@@ -319,14 +319,14 @@ def test_check_potential_measurability():
 
     # In the first three cases, y is potentially measurable, because it has at least on unvalued RV input
     y = pt.exp(x1 + x2 + x3)
-    assert check_potential_measurability([y])
+    assert contains_random(y)
 
     y = pt.exp(x1_valued + x2 + x3)
-    assert check_potential_measurability([y])
+    assert contains_random(y)
 
     y = pt.exp(x1 + x2_valued + x3)
-    assert check_potential_measurability([y])
+    assert contains_random(y)
 
     # y is not potentially measurable because both RV inputs are valued
     y = pt.exp(x1_valued + x2_valued + x3)
-    assert not check_potential_measurability([y])
+    assert not contains_random(y)

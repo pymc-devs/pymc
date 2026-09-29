@@ -41,42 +41,28 @@ from typing import cast
 import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scan.op import Scan
 from pytensor.scan.rewriting import scan_eqopt1, scan_eqopt2
 from pytensor.scan.utils import ScanArgs
 from pytensor.tensor.basic import AllocEmpty
 from pytensor.tensor.random.type import RandomType
-from pytensor.tensor.subtensor import IncSubtensor, Subtensor
+from pytensor.tensor.subtensor import IncSubtensor
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableOp, _logprob
 from pymc.logprob.basic import conditional_logp
 from pymc.logprob.query import (
-    Measure,
-    infer_measure,
-    measure,
+    contains_random,
+    infer_support_axes,
+    other_query_uses,
     output_queries,
     query_parts,
     rewrite_logprob_query,
+    support_axes,
 )
 from pymc.logprob.rewriting import (
-    construct_ir_fgraph,
     logprob_rewrites_db,
-    measurable_ir_rewrites_db,
-    remove_valued_rvs,
 )
-from pymc.logprob.utils import get_related_valued_nodes, replace_rvs_by_values
-from pymc.pytensorf import toposort_replace
-
-
-class MeasurableScan(MeasurableOp, Scan):
-    """A placeholder used to specify a log-likelihood for a scan sub-graph."""
-
-    def __str__(self):
-        """Return a string representation of the object."""
-        return f"Measurable{super().__str__()}"
+from pymc.logprob.utils import replace_rvs_by_values
 
 
 def convert_outer_out_to_in(
@@ -274,14 +260,7 @@ def convert_outer_out_to_in(
 def get_random_outer_outputs(
     scan_args: ScanArgs,
 ) -> list[tuple[int, TensorVariable, TensorVariable]]:
-    """Get the measurable outputs of a `Scan` (well, its `ScanArgs`).
-
-    Returns
-    -------
-    A tuple of tuples containing the index of each outer-output variable, the
-    outer-output variable itself, and the inner-output variable that
-    is an instance of `MeasurableOp` variable.
-    """
+    """Return (outer index, outer output, inner output) for stochastic Scan outputs."""
     rv_vars = []
     for n, oo_var in enumerate(
         [o for o in scan_args.outer_outputs if not isinstance(o.type, RandomType)]
@@ -290,7 +269,7 @@ def get_random_outer_outputs(
         io_type = oo_info.name[(oo_info.name.index("_", 6) + 1) :]
         inner_out_type = f"inner_out_{io_type}"
         io_var = getattr(scan_args, inner_out_type)[oo_info.index]
-        if io_var.owner and isinstance(io_var.owner.op, MeasurableOp):
+        if contains_random(io_var):
             rv_vars.append((n, oo_var, io_var))
     return rv_vars
 
@@ -330,7 +309,6 @@ def get_initval_from_scan_tap_input(inp) -> TensorVariable:
     return initval
 
 
-@_logprob.register(MeasurableScan)
 def logprob_scan(op, values, *inputs, name=None, output_indices=None, **kwargs):
     new_node = op.make_node(*inputs)
     # clone=True thaws the frozen inner graph into a mutable copy
@@ -405,159 +383,63 @@ def logprob_scan(op, values, *inputs, name=None, output_indices=None, **kwargs):
     return logp_outputs
 
 
-@node_rewriter([Scan, Subtensor])
-def find_measurable_scans(fgraph, node):
-    r"""Find `Scan`\s for which a `logprob` can be computed."""
-    if isinstance(node.op, Subtensor):
-        node = node.inputs[0].owner
-        if not (node and isinstance(node.op, Scan)):
-            return None
-
-    if isinstance(node.op, MeasurableScan):
-        return None
-
-    if node.op.info.as_while:  # May work but we haven't tested it
-        return None
-
-    if node.op.info.n_mit_mot > 0:
-        return None
-
-    scan_args = ScanArgs.from_node(node)
-
-    # TODO: Check what outputs are actually needed for ValuedRVs more than one node deep
-
-    # To make the inner graph measurable, we need to know which inner outputs we are conditioning on from the outside
-    # If there is only one output, we could always try to make it measurable, but with more outputs it would be ambiguous.
-    # For example, if we have out1 = normal() and out2 = out1 + const, it's valid to condition on either (but not both).
-
-    # Find outputs of scan that are directly valued.
-    # These must be mapping outputs, such as `outputs_info = [None]` (i.e, no recurrence nit_sot outputs)
-    direct_valued_outputs = [
-        valued_node.inputs[0] for valued_node in get_related_valued_nodes(fgraph, node)
-    ]
-    if not all(valued_out in scan_args.outer_out_nit_sot for valued_out in direct_valued_outputs):
-        return None
-
-    # Find indirect (sliced) outputs of scan that are valued.
-    # These must be recurring outputs, such as `outputs_info = [{"initial": x0, "taps": [-1]}]` (i.e, recurring sit-sot or mit-sot outputs)
-    # For these outputs, the scan helper returns `out[abs(min(taps)):]` (out[:abs(min(taps))] includes the initial values)
-    # This means that it's a Subtensor output, not a direct Scan output, that the user requests the logp of.
-    sliced_valued_outputs = [
-        client.outputs[0]
-        for out in node.outputs
-        for client, _ in fgraph.clients[out]
-        if (isinstance(client.op, Subtensor) and get_related_valued_nodes(fgraph, client))
-    ]
-    indirect_valued_outputs = [out.owner.inputs[0] for out in sliced_valued_outputs]
-    if not all(
-        (valued_out in scan_args.outer_out_sit_sot or valued_out in scan_args.outer_out_mit_sot)
-        for valued_out in indirect_valued_outputs
-    ):
-        return None
-
-    valued_outputs = direct_valued_outputs + indirect_valued_outputs
-
-    if not valued_outputs:
-        return None
-
-    valued_output_idxs = [node.outputs.index(out) for out in valued_outputs]
-
-    # Make inner graph measurable
-    # The inner graph of the Scan is frozen, so we work on a mutable clone
-    clone_fgraph = node.op.fgraph.unfreeze()
-    inner_inps = clone_fgraph.inputs
-    inner_outs = clone_fgraph.outputs
-    mapping = node.op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
-    inner_rvs = [inner_outs[mapping[idx][-1]] for idx in valued_output_idxs]
-    inner_fgraph = construct_ir_fgraph({rv: rv.type() for rv in inner_rvs})
-    remove_valued_rvs(inner_fgraph)
-    inner_rvs = list(inner_fgraph.outputs)
-    if not all(isinstance(new_out.owner.op, MeasurableOp) for new_out in inner_rvs):
-        return None
-
-    # Create MeasurableScan with new inner outs
-    # We must also replace any lingering references to the old RVs by the new measurable RVS
-    # For example if we had measurable out1 = exp(normal()) and out2 = out1 - x
-    # We need to replace references of original out1 by the new MeasurableExp(normal())
-    inner_rvs_replacements = []
-    for idx, new_inner_rv in zip(valued_output_idxs, inner_rvs, strict=True):
-        inner_idx = mapping[idx][-1]
-        old_inner_rv = inner_outs[inner_idx]
-        inner_outs[inner_idx] = new_inner_rv
-        inner_rvs_replacements.append((old_inner_rv, new_inner_rv))
-    temp_fgraph = FunctionGraph(
-        outputs=inner_outs + [a for a, _ in inner_rvs_replacements],
-        clone=False,
-    )
-    toposort_replace(temp_fgraph, inner_rvs_replacements)
-    op = MeasurableScan(inner_inps, inner_outs, node.op.info, mode=copy(node.op.mode))
-    # Scan prepends a time axis, preserving negative support-axis indices for all outputs.
-    declared_supp_axes: list[tuple[int, ...] | None] = []
-    for outer_idx in range(len(node.outputs)):
-        inner_idxs = mapping[outer_idx]
-        inner_out = inner_outs[inner_idxs[-1]] if inner_idxs else None
-        declared_supp_axes.append(
-            tuple(axis - inner_out.ndim for axis in measure(inner_out).support_axes)
-            if (
-                inner_out is not None
-                and inner_out.owner is not None
-                and not isinstance(inner_out.type, RandomType)
-            )
-            else None
-        )
-    op.supp_axes = tuple(declared_supp_axes)
-    new_outs = op.make_node(*node.inputs).outputs
-
-    old_outs = node.outputs
-    replacements = {}
-    for old_out, new_out in zip(old_outs, new_outs):
-        if old_out in indirect_valued_outputs:
-            # We sidestep the Subtensor operation, which is not relevant for the logp
-            sliced_idx = indirect_valued_outputs.index(old_out)
-            old_out = sliced_valued_outputs[sliced_idx]
-            replacements[old_out] = new_out
-        else:
-            replacements[old_out] = new_out
-
-    return replacements
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_scans",
-    find_measurable_scans,
-    "basic",
-    "scan",
-)
-
 # Add scan canonicalizations that aren't in the canonicalization DB
 logprob_rewrites_db.register("scan_eqopt1", scan_eqopt1, "basic", "scan")
 logprob_rewrites_db.register("scan_eqopt2", scan_eqopt2, "basic", "scan")
 
 
-@infer_measure.register(Scan)
+@infer_support_axes.register(Scan)
 def measure_scan(op, var):
     mapping = op.get_oinp_iinp_iout_oout_mappings()["inner_out_from_outer_out"]
     inner = op.inner_outputs[mapping[var.index][-1]]
-    axes = measure(inner).support_axes
-    return Measure(tuple(axis + var.ndim - inner.ndim for axis in axes))
+    axes = support_axes(inner)
+    return tuple(axis + var.ndim - inner.ndim for axis in axes)
 
 
 @rewrite_logprob_query.register(Scan)
 def rewrite_scan_logprob(op, fgraph, query, **kwargs):
     rv, _ = query_parts(query)
     producer = rv.owner
-    if not isinstance(op, MeasurableScan):
-        replacements = find_measurable_scans.transform(fgraph, producer)
-        if replacements:
-            fgraph.replace_all(
-                replacements.items(), reason="measurable scan query", import_missing=True
-            )
+    if op.info.as_while or op.info.n_mit_mot > 0:
         return None
     queries = output_queries(fgraph, producer)
     outputs = [out for out in producer.outputs if out in queries]
+    missing = [
+        out
+        for out in producer.outputs
+        if out not in queries and not isinstance(out.type, RandomType)
+    ]
+    if other_query_uses(fgraph, missing, set(queries.values())):
+        return None
     values = [query_parts(queries[out])[1] for out in outputs]
     terms = logprob_scan(
         op, values, *producer.inputs, output_indices=[out.index for out in outputs], **kwargs
     )
     terms = terms if isinstance(terms, list | tuple) else [terms]
     return {queries[out].outputs[0]: term for out, term in zip(outputs, terms, strict=True)}
+
+
+def scan_slice_source(node):
+    """Recognize the slice that removes Scan's initial tap values."""
+    from pytensor.tensor.exceptions import NotScalarConstantError
+    from pytensor.tensor.subtensor import unflatten_index_variables
+
+    source = node.inputs[0]
+    args = ScanArgs.from_node(source.owner)
+    outputs = args.outer_out_sit_sot + args.outer_out_mit_sot
+    if source not in outputs:
+        return None
+    taps = [[-1]] * len(args.outer_out_sit_sot) + list(args.mit_sot_in_slices)
+    start = abs(min(taps[outputs.index(source)]))
+    indices = unflatten_index_variables(node.inputs[1:], node.op.idx_list)
+    if len(indices) != 1 or not isinstance(indices[0], slice):
+        return None
+    idx = indices[0]
+    if idx.stop is not None or idx.step is not None:
+        return None
+    try:
+        if pt.get_underlying_scalar_constant_value(idx.start) != start:
+            return None
+    except NotScalarConstantError:
+        return None
+    return source

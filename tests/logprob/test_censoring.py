@@ -44,8 +44,6 @@ import scipy.stats as st
 from pymc import logp
 from pymc.logprob import conditional_logp
 from pymc.logprob.basic import icdf, logcdf
-from pymc.logprob.censoring import MeasurableClip
-from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import LogTransform
 from pymc.testing import assert_no_rvs
@@ -69,6 +67,17 @@ def test_continuous_rv_clip():
     assert np.isclose(logp_fn(-2), ref_scipy.logcdf(-2))
     assert np.isclose(logp_fn(2), ref_scipy.logsf(2))
     assert np.isclose(logp_fn(0), ref_scipy.logpdf(0))
+
+
+@pytest.mark.parametrize("transform", [False, True])
+def test_censored_latent_parameter_requires_marginalization(transform):
+    latent = pt.random.normal()
+    censored = pt.clip(pt.exp(latent) if transform else latent, 0.5, 2.0)
+    dependent = pt.random.normal(latent, 1.0)
+    censored_value, dependent_value = pt.scalars("censored_value", "dependent_value")
+
+    with pytest.raises(NotImplementedError, match="requires marginalization"):
+        conditional_logp({censored: censored_value, dependent: dependent_value})
 
 
 def test_discrete_rv_clip():
@@ -472,9 +481,6 @@ def test_nested_clip_fusion():
     # Bounds combine with maximum/minimum: equivalent to clip(x, 0, 1)
     cens_x_rv = pt.clip(pt.clip(x_rv, -1.0, 1.0), 0.0, 2.0)
     cens_x_vv = cens_x_rv.clone()
-
-    fgraph = construct_ir_fgraph({cens_x_rv: cens_x_vv})
-    assert sum(isinstance(node.op, MeasurableClip) for node in fgraph.toposort()) == 1
 
     logp_fn = pytensor.function([cens_x_vv], logp(cens_x_rv, cens_x_vv))
     ref_scipy = st.norm(0.5, 1)

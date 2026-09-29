@@ -58,6 +58,7 @@ import pymc.logprob.scan
 import pymc.logprob.switch
 import pymc.logprob.tensor
 import pymc.logprob.transforms
+import pymc.logprob.measurable
 
 
 __all__ = (
