@@ -15,6 +15,7 @@ import numpy as np
 import pytest
 
 from pytensor import tensor as pt
+from scipy.optimize import OptimizeResult
 
 from pymc.tuning import scipy_interface
 from pymc.tuning.scipy_interface import (
@@ -109,6 +110,32 @@ def test_scipy_optimize_funcs_from_loss_invalid_args(simple_loss_and_inputs):
             gradient_backend="jax",
             compile_kwargs={"mode": "NUMBA"},
         )
+
+
+def test_scipy_optimize_funcs_from_loss_jax_missing(simple_loss_and_inputs, monkeypatch):
+    monkeypatch.setattr(scipy_interface, "find_spec", lambda name: None)
+    loss, inputs = simple_loss_and_inputs
+    with pytest.raises(ImportError, match="JAX must be installed"):
+        scipy_optimize_funcs_from_loss(
+            loss, inputs, {"x": np.zeros(2)}, use_grad=True, gradient_backend="jax"
+        )
+
+
+def test_scipy_optimize_funcs_from_loss_flat_input(simple_loss_and_inputs):
+    loss, [x] = simple_loss_and_inputs
+    f_fused, _ = scipy_optimize_funcs_from_loss(loss, x, use_grad=True, inputs_are_flat=True)
+    loss_val, grad_val = f_fused(np.array([1.0, 2.0]))
+    assert np.isclose(loss_val, 5.0)
+    np.testing.assert_allclose(grad_val, [2.0, 4.0])
+
+
+def test_compute_inverse_hessian_edge_cases():
+    with pytest.raises(ValueError, match="At least one of"):
+        scipy_interface._compute_inverse_hessian(None, None, None, None, False, "BFGS")
+    res = OptimizeResult(x=np.zeros(2), hess_inv=None)
+    assert (
+        scipy_interface._compute_inverse_hessian(res, None, None, None, False, "L-BFGS-B") is None
+    )
 
 
 @pytest.mark.parametrize("gradient_backend", ["pytensor", "jax"])
