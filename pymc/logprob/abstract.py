@@ -38,7 +38,12 @@ import abc
 import warnings
 
 from collections.abc import Sequence
+from dataclasses import dataclass
 from functools import singledispatch
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from pymc.logprob.transforms import Transform
 
 from pytensor.configdefaults import config
 from pytensor.graph import Apply, Op, Variable
@@ -175,7 +180,7 @@ class MeasurableOp(abc.ABC):
     it covers every output.
 
     ``None`` means unknown support axes; ``()`` means scalar support. `LogprobQuery`
-    requires known axes to determine its output type.
+    requires a known density rank, and known support axes for named dimensions.
     """
 
     supp_axes: tuple[tuple[int, ...] | None, ...] | None = None
@@ -184,13 +189,64 @@ class MeasurableOp(abc.ABC):
 MeasurableOp.register(RandomVariable)
 
 
+@dataclass(frozen=True)
+class DensityMetadata:
+    """Immutable density facts in node output order."""
+
+    supp_axes: tuple[tuple[int, ...] | None, ...]
+    logp_ndims: tuple[int | None, ...]
+    measurable_outputs: tuple[bool | None, ...]
+    transform: "Transform | None" = None
+    measured_input: int | None = None
+    output_ndims: tuple[int | None, ...] = ()
+
+
 class MeasurableTensorOp(MeasurableOp):
-    """A recognized tensor operation, carrying density metadata in the IR."""
+    """A tensor operation whose construction explicitly owns its density metadata.
+
+    Native methods and rewrite dispatch are retained by specialized subclasses.
+    Node construction lets the native Op normalize tensor types, then retains
+    the established density interpretation. Recognition is never repeated for
+    a clone or for the substitution of parameter values.
+    """
 
     native_type: type[Op]
-    logp_ndims: tuple[int | None, ...] | None = None
-    # Per-output recognition: True is ready, False is deterministic, None is unresolved.
-    measurable_outputs: tuple[bool | None, ...] | None = None
+
+    def __init__(self, base_op: Op, metadata: DensityMetadata):
+        self.__dict__.update(base_op.__dict__)
+        self.base_op = base_op
+        self.metadata = metadata
+
+    @property
+    def supp_axes(self):
+        return self.metadata.supp_axes
+
+    @property
+    def logp_ndims(self):
+        return self.metadata.logp_ndims
+
+    @property
+    def measurable_outputs(self):
+        return self.metadata.measurable_outputs
+
+    def make_node(self, *inputs):
+        native_node = self.base_op.make_node(*inputs)
+        if (
+            self.metadata.output_ndims
+            and tuple(getattr(out, "ndim", None) for out in native_node.outputs)
+            != self.metadata.output_ndims
+        ):
+            # Tensor rewrites can lift an elementwise Op across a DimShuffle.
+            # That constructs a different density layout and must create a
+            # fresh native node for recognition, not reuse this interpretation.
+            return native_node
+        return Apply(self, native_node.inputs, [out.type() for out in native_node.outputs])
+
+    def clone(self, **kwargs):
+        if not kwargs:
+            return type(self)(self.base_op, self.metadata)
+        # A structurally different operation must be recognized as a new node.
+        return self.base_op.clone(**kwargs)
 
 
 def is_measurable(var):
@@ -245,20 +301,49 @@ def supp_axes(var: Variable) -> tuple[int, ...] | None:
 
 
 class LogprobQuery(Op):
-    """A density tensor with known rank and unknown axis lengths."""
+    """A density tensor whose layout is inferred without deriving its formula."""
 
     def make_node(self, binding):
         if not isinstance(binding.owner_op, ValuedRV):
             raise TypeError("LogprobQuery requires an explicit RV-value binding")
-        from pymc.logprob.query import density_ndim, support_axes
+        from pymc.logprob.query import UnsupportedObservation, density_ndim, support_axes
 
-        ndim = density_ndim(binding)
+        rv, value = binding.owner.inputs
+        axes = support_axes(binding)
+
+        def broadcast_length(left, right):
+            if right == 1:
+                return left
+            if left == 1 or left is None:
+                return right
+            return left
+
         if isinstance(binding.type, XTensorType):
-            axes = support_axes(binding)
-            dims = tuple(dim for axis, dim in enumerate(binding.type.dims) if axis not in axes)
-            output = XTensorType(config.floatX, dims=dims)()
+            if axes is None:
+                raise UnsupportedObservation("Named density dimensions need known support axes")
+            core_dims = {rv.type.dims[axis] for axis in axes}
+            dims = tuple(dim for dim in value.type.dims if dim not in rv.type.dims) + tuple(
+                dim for dim in rv.type.dims if dim not in core_dims
+            )
+            rv_shape = dict(zip(rv.type.dims, rv.type.shape, strict=True))
+            value_shape = dict(zip(value.type.dims, value.type.shape, strict=True))
+            shape = tuple(
+                broadcast_length(rv_shape.get(dim, 1), value_shape.get(dim, 1)) for dim in dims
+            )
+            output = XTensorType(config.floatX, dims=dims, shape=shape)()
         else:
-            output = tensor(dtype=config.floatX, shape=(None,) * ndim)
+            offset = max(0, value.ndim - rv.ndim)
+            ndim = density_ndim(binding) + offset
+            shape = (None,) * ndim
+            if axes is not None and ndim == rv.ndim + offset - len(axes):
+                rv_shape = (1,) * offset + rv.type.shape
+                value_shape = (1,) * (len(rv_shape) - value.ndim) + value.type.shape
+                shape = tuple(
+                    broadcast_length(left, right)
+                    for axis, (left, right) in enumerate(zip(rv_shape, value_shape, strict=True))
+                    if axis - offset not in axes
+                )
+            output = tensor(dtype=config.floatX, shape=shape)
         return Apply(self, [binding], [output])
 
     def perform(self, node, inputs, outputs):

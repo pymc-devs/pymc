@@ -47,9 +47,11 @@ from pytensor.configdefaults import config as pytensor_config
 from pytensor.graph.basic import Variable
 from pytensor.graph.rewriting.basic import GraphRewriter, NodeRewriter
 from pytensor.graph.traversal import walk
+from pytensor.xtensor.type import XTensorType
 
 from pymc.logprob.abstract import (
     MeasurableOp,
+    ValuedRV,
     _icdf_helper,
     _logccdf_helper,
     _logcdf_helper,
@@ -195,7 +197,7 @@ def logp(rv: Variable, value: Variable | TensorLike, warn_rvs=True, **kwargs) ->
         expr = _logprob_helper(rv, value, **kwargs)
         return expr.astype(pytensor_config.floatX)
     except NotImplementedError as original_error:
-        if value.ndim > rv.ndim:
+        if value.ndim > rv.ndim and not isinstance(rv.type, XTensorType):
             dummy_value = rv.type()
             inner_logp = logp(rv, dummy_value, warn_rvs=warn_rvs, **kwargs)
             from pytensor.graph.replace import vectorize_graph
@@ -535,27 +537,42 @@ def conditional_logp(
         repeated = next(value for value, count in Counter(original_values).items() if count > 1)
         raise ValueError(f"More than one logprob term was assigned to the value var {repeated}")
 
+    from pytensor.graph.basic import equal_computations
+
     from pymc.logprob.query import (
         UnsupportedObservation,
         contains_random,
+        density_sources,
         derive_graph,
     )
 
+    observed_expressions = {}
     for binding, original_value in zip(list(fgraph.outputs), original_values, strict=True):
+        rv = binding.owner.inputs[0]
+        key = (rv.owner_op, frozenset(density_sources(rv)))
+        equivalent_candidates = observed_expressions.setdefault(key, [])
+        if any(equal_computations([rv], [other]) for other in equivalent_candidates):
+            raise ValueError(f"More than one value was assigned to {rv}")
+        equivalent_candidates.append(rv)
         if not contains_random(binding.owner.inputs[0]):
             raise RuntimeError(
                 f"The logprob terms of the following value variables could not be derived: {{{original_value}}}"
             )
         try:
             query = logprob_query(binding)
-        except UnsupportedObservation as error:
-            raise UnsupportedObservation(
-                f"The logprob terms of the following value variables could not be derived: {{{original_value}}}. {error}"
-            ) from error
+        except UnsupportedObservation:
+            # The observed path is declared, but its density layout may depend
+            # on an inverse value supplied by another request. Keep this root
+            # as an untyped request until the queue can construct its query.
+            query = binding
         fgraph.add_output(query, reason="request density", import_missing=True)
     for _ in original_values:
         fgraph.remove_output(0, reason="replace RV outputs by density outputs")
     if extra_rewrites is not None:
+        if any(isinstance(out.owner_op, ValuedRV) for out in fgraph.outputs):
+            raise UnsupportedObservation(
+                "Density layout must resolve before applying an initial density rewrite"
+            )
         extra_rewrites.rewrite(fgraph)
     # Keep supplied value expressions opaque while inference rewrites the RV graph.
     inference_values = tuple(value.clone() for value in original_values)
@@ -571,7 +588,8 @@ def conditional_logp(
         unresolved_values = {
             value
             for value, term in zip(original_values, fgraph.outputs, strict=True)
-            if any(isinstance(var.owner_op, LogprobQuery) for var in ancestors([term]))
+            if isinstance(term.owner_op, ValuedRV)
+            or any(isinstance(var.owner_op, LogprobQuery) for var in ancestors([term]))
         }
         raise UnsupportedObservation(
             f"The logprob terms of the following value variables could not be derived: {unresolved_values}. {error}"
