@@ -337,15 +337,15 @@ def test_change_value_transforms():
         new_p = transformed_p["p"]
         assert transformed_p.rvs_to_transforms[new_p] == logodds
         assert transformed_p.rvs_to_values[new_p].name == "p_logodds__"
-        mean_q = pm.find_MAP(progressbar=False, return_inferencedata=False)
+        mean_q = pm.find_MAP(progressbar=False).posterior["p"].item()
 
     with change_value_transforms(transformed_p, {"p": None}) as untransformed_p:
         new_p = untransformed_p["p"]
         assert untransformed_p.rvs_to_transforms[new_p] is None
         assert untransformed_p.rvs_to_values[new_p].name == "p"
-        std_q = ((1 / pm.find_hessian(mean_q, vars=[new_p])) ** 0.5)[0]
+        std_q = ((1 / pm.find_hessian({"p": mean_q}, vars=[new_p])) ** 0.5)[0]
 
-    np.testing.assert_allclose(np.round(mean_q["p"], 2), 0.67)
+    np.testing.assert_allclose(np.round(mean_q, 2), 0.67)
     np.testing.assert_allclose(np.round(std_q[0], 2), 0.16)
 
 

@@ -30,9 +30,15 @@ from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.step_methods.metropolis import tune
 from pymc.testing import select_by_precision
 from pymc.tuning import find_MAP
-from pymc.tuning.starting import _optimizer_result_to_dataset
+from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
+
+
+def map_point(*args, **kwargs):
+    """MAP point read from the returned InferenceData's single-draw posterior."""
+    posterior = find_MAP(*args, **{"progressbar": False, **kwargs}).posterior
+    return {name: da.values[0, 0] for name, da in posterior.items()}
 
 
 @pytest.fixture
@@ -52,9 +58,7 @@ def test_mle_jacobian(bounded):
     rtol = 1e-4  # this rtol should work on both floatX precisions
 
     _, model, _ = models.simple_normal(bounded_prior=bounded)
-    map_estimate = find_MAP(
-        method="BFGS", model=model, return_inferencedata=False, progressbar=False
-    )
+    map_estimate = map_point(method="BFGS", model=model)
     assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
 
 
@@ -68,9 +72,7 @@ def test_tune_not_inplace():
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
     with model:
-        newstart = find_MAP(
-            initvals=pm.Point(x=[-10.5, 100.5]), return_inferencedata=False, progressbar=False
-        )
+        newstart = map_point(initvals=pm.Point(x=[-10.5, 100.5]))
         assert_allclose(
             newstart["x"], [mu, mu], atol=select_by_precision(float64=1e-5, float32=1e-4)
         )
@@ -79,12 +81,7 @@ def test_accuracy_normal():
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
     with model:
-        newstart = find_MAP(
-            initvals=pm.Point(x=[0.5, 0.01, 0.95, 0.99]),
-            jitter=False,
-            return_inferencedata=False,
-            progressbar=False,
-        )
+        newstart = map_point(initvals=pm.Point(x=[0.5, 0.01, 0.95, 0.99]), jitter=False)
         assert_allclose(newstart["x"], mu, atol=select_by_precision(float64=1e-5, float32=1e-4))
 
 
@@ -101,11 +98,9 @@ def test_find_MAP_discrete():
         pm.Binomial("ss", n=n, p=p)
         pm.Binomial("s", n=n, p=p, observed=yes)
 
-        map_est1 = find_MAP(return_inferencedata=False, progressbar=False)
+        map_est1 = map_point()
         with pytest.warns(UserWarning, match="Discrete variables are being optimized"):
-            map_est2 = find_MAP(
-                vars=model.value_vars, return_inferencedata=False, progressbar=False
-            )
+            map_est2 = map_point(vars=model.value_vars)
 
     # ss is held fixed at its (jittered-p dependent) initial value; conjugate MAP given ss
     ss0 = map_est1["ss"]
@@ -144,9 +139,9 @@ def test_find_MAP():
         pm.Normal("y", mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization
-        map_est1 = find_MAP(progressbar=False, return_inferencedata=False)
+        map_est1 = map_point()
         # Test non-gradient minimization, with case-insensitive method name
-        map_est2 = find_MAP(progressbar=False, method="Powell", return_inferencedata=False)
+        map_est2 = map_point(method="Powell")
 
     assert_allclose(map_est1["mu"], 0, atol=tol)
     assert_allclose(map_est1["sigma"], 1, atol=tol)
@@ -171,9 +166,8 @@ def test_find_MAP_issue_5923():
         pm.Normal("y", mu=mu, tau=sigma**-2, observed=data)
 
         start = {"mu": -0.5, "sigma": 1.25}
-        kwargs = {"progressbar": False, "initvals": start, "return_inferencedata": False}
-        map_est1 = find_MAP(vars=[mu, sigma], **kwargs)
-        map_est2 = find_MAP(vars=[sigma, mu], **kwargs)
+        map_est1 = map_point(vars=[mu, sigma], initvals=start)
+        map_est2 = map_point(vars=[sigma, mu], initvals=start)
 
     assert_allclose(map_est1["mu"], 0, atol=tol)
     assert_allclose(map_est1["sigma"], 1, atol=tol)
@@ -188,9 +182,7 @@ def test_find_MAP_issue_4488():
         with pytest.warns(ImputationWarning):
             x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
         y = pm.Deterministic("y", x + 1)
-        map_estimate = find_MAP(
-            include_transformed=True, return_inferencedata=False, progressbar=False
-        )
+        map_estimate = map_point(include_transformed=True)
 
     assert not set.difference({"x_unobserved", "x_unobserved_log__", "y"}, set(map_estimate.keys()))
     assert_allclose(map_estimate["x_unobserved"], 0.2, rtol=1e-4, atol=1e-4)
@@ -206,18 +198,13 @@ def test_find_MAP_warning_non_free_RVs():
 
         msg = "Intermediate variables (such as Deterministic or Potential) were passed"
         with pytest.warns(UserWarning, match=re.escape(msg)):
-            r = pm.find_MAP(vars=[det], jitter=False, return_inferencedata=False, progressbar=False)
+            r = map_point(vars=[det], jitter=False)
         assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
 
 
 def test_find_MAP_vars_subset_holds_others_fixed(normal_model):
     with normal_model:
-        r = find_MAP(
-            vars=[normal_model["mu"]],
-            initvals={"sigma": 2.0},
-            return_inferencedata=False,
-            progressbar=False,
-        )
+        r = map_point(vars=[normal_model["mu"]], initvals={"sigma": 2.0})
     assert_allclose(r["sigma"], 2.0)
 
 
@@ -301,8 +288,10 @@ def test_find_MAP_return_inferencedata_consistent(normal_model):
         "random_seed": 1,
     }
     idata = find_MAP(**kwargs)
-    point = find_MAP(return_inferencedata=False, **kwargs)
+    with pytest.warns(FutureWarning, match="`return_inferencedata=False` is deprecated"):
+        point = find_MAP(return_inferencedata=False, **kwargs)
     assert set(point) == {"mu", "sigma", "sigma_log__"}
+    assert_allclose(_find_MAP_point(**kwargs)["sigma_log__"], point["sigma_log__"])
     for name, value in point.items():
         assert_allclose(idata.posterior[name].values.squeeze(), value)
 
@@ -390,11 +379,10 @@ def test_find_MAP_jitter_escapes_saddle():
         z = pm.Normal("z")
         pm.Normal("y", mu=w * z, sigma=0.1, observed=1.0)
 
-    kwargs = {"model": m, "progressbar": False, "return_inferencedata": False}
-    stuck = find_MAP(jitter=False, **kwargs)
+    stuck = map_point(model=m, jitter=False)
     assert_allclose([stuck["w"], stuck["z"]], 0.0)
-    r1 = find_MAP(random_seed=11, **kwargs)
-    r2 = find_MAP(random_seed=11, **kwargs)
+    r1 = map_point(model=m, random_seed=11)
+    r2 = map_point(model=m, random_seed=11)
     assert_allclose(r1["w"] * r1["z"], 1.0, atol=0.05)
     assert_allclose(r1["w"], r2["w"])
 
@@ -422,27 +410,22 @@ def test_find_MAP_unknown_method(normal_model):
 
 
 def test_find_MAP_legacy_kwargs(normal_model):
-    kwargs = {
-        "model": normal_model,
-        "progressbar": False,
-        "return_inferencedata": False,
-        "random_seed": 1,
-    }
+    kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
     with pytest.warns(FutureWarning, match="`start` is deprecated"):
-        r1 = find_MAP({"mu": 1.0}, **kwargs)
+        r1 = map_point({"mu": 1.0}, **kwargs)
     with pytest.warns(FutureWarning, match="`start` is deprecated"):
-        r2 = find_MAP(start={"mu": 1.0}, **kwargs)
+        r2 = map_point(start={"mu": 1.0}, **kwargs)
     assert_allclose(r1["mu"], r2["mu"])
     with pytest.warns(FutureWarning, match="`seed` is deprecated"):
         find_MAP(seed=1, **kwargs)
     with pytest.warns(FutureWarning, match="`maxeval` is deprecated"):
         find_MAP(maxeval=10, **kwargs)
     with pytest.warns(FutureWarning, match="`return_raw` is deprecated"):
-        point, res = find_MAP(return_raw=True, **kwargs)
+        idata, res = find_MAP(return_raw=True, **kwargs)
     with pytest.warns(FutureWarning, match="`progressbar_theme` is ignored"):
         find_MAP(progressbar_theme="default", **kwargs)
     assert isinstance(res, OptimizeResult)
-    assert set(point) == {"mu", "sigma"}
+    assert set(idata.posterior) == {"mu", "sigma"}
 
 
 class TestOptimizerResultToDataset:
