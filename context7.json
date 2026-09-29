@@ -1,0 +1,23 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "url": "https://context7.com/pymc-devs/pymc",
+  "public_key": "pk_VEVKqL1O3R30z9IzEQkg4",
+  "projectTitle": "PyMC",
+  "description": "Probabilistic programming in Python: Bayesian modeling and inference with MCMC and variational methods, built on PyTensor.",
+  "excludeFolders": [
+    ".github",
+    "benchmarks",
+    "binder",
+    "conda-envs",
+    "scripts",
+    "tests",
+    "docs/source/contributing"
+  ],
+  "excludeFiles": ["CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "GOVERNANCE.md"],
+  "rules": [
+    "Use `import pymc as pm`. PyMC 3 (`import pymc3`), Theano and Aesara are obsolete; the tensor backend is PyTensor (`import pytensor.tensor as pt`).",
+    "Use `pm.Data` for data containers and `pm.set_data` to swap values. `pm.MutableData` and `pm.ConstantData` were removed.",
+    "`pm.sample` returns an `xarray.DataTree`; use ArviZ 1.x (`import arviz as az`, or `pymc.stats` / `pymc.plots`) for diagnostics and plots.",
+    "Label dimensions with `coords` on `pm.Model` and `dims` on variables instead of bare `shape` tuples."
+  ]
+}
