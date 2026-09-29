@@ -36,7 +36,7 @@
 import typing
 import warnings
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Sequence
 
 import numpy as np
 import pytensor
@@ -150,29 +150,10 @@ def indices_from_subtensor(idx_list, indices):
 
 
 def filter_measurable_variables(inputs):
-    return [
-        inp for inp in inputs if (inp.owner is not None and isinstance(inp.owner.op, MeasurableOp))
-    ]
+    """Select inputs already recognized as measurable by forward rewrites."""
+    from pymc.logprob.abstract import is_measurable
 
-
-def check_potential_measurability(inputs: Iterable[TensorVariable]) -> bool:
-    def expand_fn(var):
-        # expand_fn does not go beyond valued_rvs or any MeasurableOp variables
-        if var.owner and not isinstance(var.owner.op, MeasurableOp | ValuedRV):
-            return var.owner.inputs
-        else:
-            return []
-
-    if any(
-        (
-            ancestor_var.owner
-            and isinstance(ancestor_var.owner.op, MeasurableOp)
-            and not isinstance(ancestor_var.owner.op, ValuedRV)
-        )
-        for ancestor_var in walk(inputs, expand=expand_fn, bfs=False)
-    ):
-        return True
-    return False
+    return [inp for inp in inputs if is_measurable(inp)]
 
 
 class ParameterValueError(ValueError):

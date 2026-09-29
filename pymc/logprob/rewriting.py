@@ -64,7 +64,7 @@ from pytensor.tensor.subtensor import (
     Subtensor,
 )
 
-from pymc.logprob.abstract import MeasurableElemwise, ValuedRV, valued_rv
+from pymc.logprob.abstract import ValuedRV, valued_rv
 from pymc.logprob.utils import DiracDelta
 from pymc.pytensorf import toposort_replace
 
@@ -150,7 +150,7 @@ logprob_rewrites_db.register(
     position=0.9,
 )
 # local_join_dims/local_split_dims are excluded so that JoinDims/SplitDims survive
-# until the measurable rewrites (and their measurable subclasses survive after);
+# until density queries can interpret their axis structure;
 # non-measurable ones are still lowered to Reshape when the logp graph is compiled
 CANONICALIZE_IR_QUERY_ARGS = (
     "+canonicalize",
@@ -166,9 +166,8 @@ logprob_rewrites_db.register(
     position=1,
 )
 
-# These rewrites convert un-measurable variables into their measurable forms,
-# but they need to be reapplied, because some of the measurable forms require
-# their inputs to be measurable.
+# Algebraic rewrites expose forms handled by density rules. They run to a fixed
+# point, and are revisited as query rewrites establish new conditioning points.
 measurable_ir_rewrites_db = EquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
@@ -225,24 +224,10 @@ def construct_ir_fgraph(
     A custom IR rewriter can be specified. By default,
     `logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))` is used.
 
-    Our measurable IR takes the form of a PyTensor graph that is more-or-less
-    equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
-    contains `Op`s that are subclasses of the `MeasurableOp` type in
-    place of ones that do not inherit from `MeasurableOp` in the original
-    graph but are nevertheless measurable.
-
-    `MeasurableOp` variables are mapped to log-probabilities, so this IR is how
-    non-trivial log-probabilities are constructed, especially when the
-    "measurability" of a term depends on the measurability of its inputs
-    (e.g. a mixture).
-
-    In some cases, entire sub-graphs in the original graph are replaced with a
-    single measurable node.  In other cases, the relevant nodes are already
-    measurable and there is no difference between the resulting measurable IR
-    graph and the original.  In general, some changes will be present,
-    because--at the very least--canonicalization is always performed and the
-    measurable IR includes manipulations that are not applicable to outside of
-    the context of measurability/log-probabilities.
+    The IR uses `ValuedRV` nodes to preserve conditioning points. Algebraic
+    rewrites recognize measurable tensor Ops and attach their support axes and
+    density rank. Query rules subsequently move values upstream and assemble
+    density expressions, enabling further forward recognition.
 
     Returns
     -------
@@ -278,12 +263,7 @@ def cleanup_ir(vars: Sequence[Variable]) -> Sequence[Variable]:
     fgraph = FunctionGraph(outputs=vars, clone=False)
     ir_rewriter = logprob_rewrites_db.query(logprob_rewrites_cleanup_query)
     ir_rewriter.rewrite(fgraph)
+    from pymc.logprob.measurable import remove_measurable_tensor
+
+    out2in(remove_measurable_tensor).rewrite(fgraph)
     return fgraph.outputs
-
-
-@node_rewriter([MeasurableElemwise])
-def remove_measurable_elemwise(fgraph, node):
-    return Elemwise(node.op.scalar_op)(*node.inputs, return_list=True)
-
-
-cleanup_ir_rewrites_db.register("remove_measurable_elemwise", remove_measurable_elemwise, "cleanup")

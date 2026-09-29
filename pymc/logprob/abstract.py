@@ -42,9 +42,7 @@ from functools import singledispatch
 
 from pytensor.configdefaults import config
 from pytensor.graph import Apply, Op, Variable
-from pytensor.graph.utils import MetaType
 from pytensor.tensor import TensorVariable, log1mexp, tensor
-from pytensor.tensor.blockwise import Blockwise
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
@@ -64,44 +62,21 @@ def _logprob(
     of ``RandomVariable``.  If you want to implement new density/mass graphs
     for a ``RandomVariable``, register a new function on this dispatcher.
 
-    Pass all values involved in the node's density together. Use `request_logprob` when
-    recursing into a measurable input.
+    Pass all values involved in the node's density together.
     """
     raise NotImplementedError(f"Logprob method not implemented for {op}")
 
 
-def request_logprob(rv, value, **kwargs):
-    """Return the log-density term of `rv` at `value`, or a stand-in for it.
-
-    Use within `_logprob` implementations; use `logp` for a standalone derivation.
-    Nodes with multiple non-RNG outputs return a `LogprobQuery`, allowing
-    `resolve_density_queries` to collect their values into one `_logprob` call.
-    """
-    if n_potential_valued_outputs(rv.owner) > 1:
-        return logprob_query(valued_rv(rv, value))
-
-    logprob = _logprob(rv.owner.op, (value,), *rv.owner.inputs, **kwargs)
-
-    if name := (rv.name or value.name):
+def _logprob_helper(rv, *values, **kwargs):
+    """Call the density dispatcher for an RV with an implemented formula."""
+    logprob = _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
+    if name := rv.name:
         if isinstance(logprob, list | tuple):
             for i, term in enumerate(logprob):
                 term.name = f"{name}_logprob.{i}"
         else:
             logprob.name = f"{name}_logprob"
-
     return logprob
-
-
-def _logprob_helper(rv, *values, **kwargs):
-    warnings.warn(
-        "_logprob_helper has been renamed to request_logprob",
-        FutureWarning,
-        stacklevel=2,
-    )
-    if len(values) != 1:
-        # The old API let a caller hand over every value of a node at once
-        return _logprob(rv.owner.op, values, *rv.owner.inputs, **kwargs)
-    return request_logprob(rv, values[0], **kwargs)
 
 
 @singledispatch
@@ -209,89 +184,35 @@ class MeasurableOp(abc.ABC):
 MeasurableOp.register(RandomVariable)
 
 
-class MeasurableElemwise(MeasurableOp, Elemwise):
-    """Base class for Measurable Elemwise variables."""
+class MeasurableTensorOp(MeasurableOp):
+    """A recognized tensor operation, carrying density metadata in the IR."""
 
-    valid_scalar_types: tuple[MetaType, ...] = ()
-
-    def __init__(self, scalar_op, *args, **kwargs):
-        if not isinstance(scalar_op, self.valid_scalar_types):
-            raise TypeError(
-                f"scalar_op {scalar_op} is not valid for class {self.__class__}. "
-                f"Acceptable types are {self.valid_scalar_types}"
-            )
-        super().__init__(scalar_op, *args, **kwargs)
-
-    def __str__(self):
-        """Return a string representation of the object."""
-        return f"Measurable{super().__str__()}"
+    native_type: type[Op]
+    logp_ndims: tuple[int | None, ...] | None = None
+    # Per-output recognition: True is ready, False is deterministic, None is unresolved.
+    measurable_outputs: tuple[bool | None, ...] | None = None
 
 
-class MeasurableBlockwise(MeasurableOp, Blockwise):
-    """Base class for Measurable Blockwise variables."""
+def is_measurable(var):
+    op = var.owner_op
+    if not isinstance(op, MeasurableOp):
+        return False
+    if isinstance(op, MeasurableTensorOp) and op.logp_ndims is None:
+        return False
+    outputs = getattr(op, "measurable_outputs", None)
+    return outputs is None or outputs[var.index] is True
 
 
 class ValuedRV(Op):
-    r"""Represents the association of a measurable variable and its value.
+    r"""Associate a random expression with its value in the density IR.
 
-    A `ValuedVariable` node represents the pair :math:`(Y, y)`, where  `y` the value at which :math:`Y`'s density
-    or probability mass function is evaluated.
+    The output marks a conditioning boundary for other expressions. A
+    `LogprobQuery` retains this pair to derive its density; parameter uses are
+    eventually replaced by the value. Inverting a query creates upstream
+    bindings, so dependent densities also see values inferred through transforms.
 
-    The log-probability function takes such pairs as input, which makes these nodes in a graph an intermediate form
-    that serves to construct a log-probability from a model graph.
-
-
-    Notes
-    -----
-    The introduction of these operations achieves two goals:
-    1. Identify the conditioning points between multiple, potentially interdependent measurable variables,
-    and introduce the respective value variables in the IR graph.
-    2. Prevent automatic rewrites across conditioning points
-
-    About point 2. In the current framework, a RV logp cannot depend on a transformation of the value variable
-    of a second RV it depends on. While this is mathematically trivial, we don't have the machinery to achieve it.
-
-    The only case we do something like this is in the ad-hoc transform_value rewrite, but there we are
-    told explicitly what value variables must be transformed before being used in the density of dependent RVs.
-
-    For example ,the following is not supported:
-
-    ```python
-    x_log = pt.random.normal()
-    x = pt.exp(x_log)
-    y = pt.random.normal(loc=x_log)
-
-    x_value = pt.scalar()
-    y_value = pt.scalar()
-    conditional_logprob({x: x_value, y: y_value})
-    ```
-
-    Our framework doesn't know that the density of y should depend on a (log) transform of x_value.
-
-    Importantly, we need to prevent this limitation from being introduced automatically by our IR rewrites.
-    For example given the following:
-
-    ```python
-    a_base = pm.Normal.dist()
-    a = a_base * 5
-    b = pm.Normal.dist(a * 8)
-
-    a_value = scalar()
-    b_value = scalar()
-    conditional_logp({a: a_value, b: b_value})
-    ```
-
-    We do not want `b` to be rewritten as `pm.Normal.dist(a_base * 40)`, as it would then be disconnected from the
-    valued `a` associated with `pm.Normal.dist(a_base * 5). By introducing `ValuedRV` nodes the graph looks like:
-
-    ```python
-    a_base = pm.Normal.dist()
-    a = valued_rv(a_base * 5, a_value)
-    b = valued_rv(a * 8, b_value)
-    ```
-
-    Since, PyTensor doesn't know what to do with `ValuedRV` nodes, there is no risk of rewriting across them
-    and breaking the dependency of `b` on `a`. The new nodes isolate the graphs between conditioning points.
+    Keeping the pair in the graph protects conditioning points from algebraic
+    rewrites and lets FunctionGraph maintain their dependencies.
     """
 
     view_map = {0: [0]}
@@ -329,11 +250,11 @@ class LogprobQuery(Op):
     def make_node(self, binding):
         if not isinstance(binding.owner_op, ValuedRV):
             raise TypeError("LogprobQuery requires an explicit RV-value binding")
-        from pymc.logprob.query import density_ndim, measure
+        from pymc.logprob.query import density_ndim, support_axes
 
         ndim = density_ndim(binding)
         if isinstance(binding.type, XTensorType):
-            axes = measure(binding).support_axes
+            axes = support_axes(binding)
             dims = tuple(dim for axis, dim in enumerate(binding.type.dims) if axis not in axes)
             output = XTensorType(config.floatX, dims=dims)()
         else:
@@ -350,3 +271,18 @@ logprob_query = LogprobQuery()
 def n_potential_valued_outputs(node) -> int:
     """Count non-RNG outputs that may participate in the node's density."""
     return sum(not isinstance(out.type, RandomType) for out in node.outputs)
+
+
+@_logcdf.register(Elemwise)
+def elemwise_logcdf(op, value, *inputs):
+    return _logcdf(op.scalar_op, value, *inputs)
+
+
+@_logccdf.register(Elemwise)
+def elemwise_logccdf(op, value, *inputs):
+    return _logccdf(op.scalar_op, value, *inputs)
+
+
+@_icdf.register(Elemwise)
+def elemwise_icdf(op, value, *inputs):
+    return _icdf(op.scalar_op, value, *inputs)

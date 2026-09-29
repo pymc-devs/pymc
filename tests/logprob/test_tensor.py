@@ -652,19 +652,14 @@ class TestMeasurableSplit:
         )
 
     def test_not_all_splits_used_core_dim(self):
-        # TODO: We could support this for univariate/batch dimensions by rewriting as
-        # split(x, splits_size=[2, 2, 2], n_splits=3, axis=1)[:2] -> split(x[:-2], splits_size=[2, 2], n_splits=2, axis=1)
-        # And letting logp infer the probability of x[:-2]
+        # Missing parts of a joint event require marginalization.
         x = pt.random.dirichlet(alphas=pt.ones(6), name="x")
         x_parts = pt.split(x, splits_size=[2, 2, 2], n_splits=3, axis=0)[
             :2
         ]  # Only use first two splits
         x_parts_vv = [x_part.clone() for x_part in x_parts]
 
-        with pytest.raises(
-            ValueError,
-            match="Split logp requires the number of values to match the number of splits",
-        ):
+        with pytest.raises(NotImplementedError, match="Partial Split"):
             conditional_logp(dict(zip(x_parts, x_parts_vv)))
 
     @pytest.mark.xfail(reason="Rewrite from subtensor to split not implemented yet")

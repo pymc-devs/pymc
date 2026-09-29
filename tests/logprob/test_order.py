@@ -201,14 +201,16 @@ class TestMax:
             rtol=1e-06,
         )
 
-    def test_min_non_mul_elemwise_fails(self):
-        """Test whether the logprob for ```pt.min``` for non-mul elemwise RVs is rejected correctly"""
-        x = pt.log(pt.random.beta(0, 1, size=(3,)))
-        x.name = "x"
-        x_min = pt.min(x, axis=-1)
-        x_min_value = pt.scalar("x_min_value")
-        with pytest.raises(RuntimeError, match=re.escape("Logprob method not implemented")):
-            logp(x_min, x_min_value)
+    def test_min_log_transform(self):
+        x = pt.log(pt.random.beta(2, 3, size=(3,)))
+        value = pt.scalar("value")
+        term = logp(pt.min(x), value)
+        point = -0.7
+        x_point = np.exp(point)
+        expected = (
+            np.log(3) + 2 * sp.beta(2, 3).logsf(x_point) + sp.beta(2, 3).logpdf(x_point) + point
+        )
+        np.testing.assert_allclose(term.eval({value: point}), expected)
 
     @pytest.mark.parametrize(
         "lam, size, value, axis",
