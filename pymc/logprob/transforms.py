@@ -119,7 +119,7 @@ from pymc.logprob.query import (
     infer_support_axes,
     is_random_source,
     other_query_uses,
-    query_at_value,
+    query_at_values,
     query_parts,
     random_inputs,
     rewrite_logprob_query,
@@ -1080,16 +1080,32 @@ def measure_elemwise(op, var):
 
 @rewrite_logprob_query.register(Elemwise)
 def rewrite_elemwise_logprob(op, fgraph, query, **kwargs):
+    if getattr(op, "metadata", None) is not None and op.metadata.transform is not None:
+        return rewrite_transform_logprob(op, fgraph, query, **kwargs)
     return rewrite_logprob_query(op.scalar_op, fgraph, query, **kwargs)
 
 
 @rewrite_logprob_query.register(ps.ScalarOp)
 def rewrite_transform_logprob(op, fgraph, query, **kwargs):
     rv, value = query_parts(query)
-    selection = select_transform(op, rv.owner.inputs)
-    if selection is None:
-        return None
-    base, transform, other_inputs = selection
+    metadata = getattr(op, "metadata", None)
+    if metadata is not None and metadata.transform is not None:
+        transform = metadata.transform
+        base = rv.owner.inputs[metadata.measured_input]
+        other_inputs = tuple(
+            inp for i, inp in enumerate(rv.owner.inputs) if i != metadata.measured_input
+        )
+        if isinstance(op.scalar_op, Add):
+            other_inputs = (variadic_add(*other_inputs),)
+        elif isinstance(op.scalar_op, Mul):
+            other_inputs = (variadic_mul(*other_inputs),)
+        elif isinstance(op.scalar_op, ps.Neg):
+            other_inputs = (-1,)
+    else:
+        selection = select_transform(op, rv.owner.inputs)
+        if selection is None:
+            return None
+        base, transform, other_inputs = selection
     backward = transform.backward(value, *other_inputs)
     axes = support_axes(rv)
     if isinstance(backward, tuple):
@@ -1100,7 +1116,7 @@ def rewrite_transform_logprob(op, fgraph, query, **kwargs):
         source_outputs = [out for source in density_sources(base) for out in source.owner.outputs]
         if other_query_uses(fgraph, source_outputs, {query}):
             return None
-        term = pt.logaddexp(*(query_at_value(base, val) for val in backward))
+        term = pt.logaddexp(*query_at_values(base, backward, **kwargs))
     else:
         term = logprob_query(bind_value(fgraph, base, backward))
     jacobian = transform.log_jac_det(value, *other_inputs)

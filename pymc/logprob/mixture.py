@@ -71,6 +71,7 @@ from pymc.logprob.query import (
     bind_value,
     contains_random,
     density_sources,
+    derive_graph,
     infer_support_axes,
     other_query_uses,
     query_parts,
@@ -129,7 +130,7 @@ def rewrite_switch_logprob(op, fgraph, query, **kwargs):
         return rewrite_switch_non_overlapping(fgraph, query, **kwargs)
     if any(contains_random(comp) and comp.broadcastable != rv.broadcastable for comp in components):
         return None
-    return rewrite_conditional_logprob(fgraph, query)
+    return rewrite_conditional_logprob(fgraph, query, **kwargs)
 
 
 @infer_support_axes.register(IfElse)
@@ -210,6 +211,7 @@ def rewrite_subtensor_logprob(op, fgraph, query, **kwargs):
             for comp in components
         ]
     outputs = conditioning_scope(fgraph, [rv])
+    pending_layout = any(isinstance(out.owner_op, ValuedRV) for out in outputs)
     scope = FunctionGraph(outputs=[*outputs, *components], clone=False)
     branches = []
     for i in range(len(components)):
@@ -225,6 +227,8 @@ def rewrite_subtensor_logprob(op, fgraph, query, **kwargs):
         ]
         branch.replace(selected, chosen, reason="select indexed component", import_missing=True)
         bind_selected_values(branch, bindings)
+        if pending_layout:
+            derive_graph(branch, **kwargs)
         branches.append(branch.outputs)
     if len(branches) == 1:
         return {
@@ -243,15 +247,20 @@ def rewrite_subtensor_logprob(op, fgraph, query, **kwargs):
 
 @rewrite_logprob_query.register(IfElse)
 def rewrite_ifelse_logprob(op, fgraph, query, **kwargs):
-    return rewrite_conditional_logprob(fgraph, query)
+    return rewrite_conditional_logprob(fgraph, query, **kwargs)
 
 
-def rewrite_conditional_logprob(fgraph, query):
+def rewrite_conditional_logprob(fgraph, query, **kwargs):
     branch_node = query_parts(query)[0].owner
     guard = branch_node.inputs[0]
     if contains_random(guard):
         return None
+    if guard.ndim and all(guard.broadcastable):
+        # Elemwise pads a scalar Switch condition to its components' rank.
+        # It still selects one whole branch, including scalar event densities.
+        guard = pt.squeeze(guard)
     outputs = conditioning_scope(fgraph, branch_node.outputs)
+    pending_layout = any(isinstance(out.owner_op, ValuedRV) for out in outputs)
     scope = FunctionGraph(outputs=outputs, clone=False)
     if guard.ndim:
         components = branch_node.inputs[1:]
@@ -305,6 +314,11 @@ def rewrite_conditional_logprob(fgraph, query):
                         out, chosen, reason="select conditional branch", import_missing=True
                     )
         bind_selected_values(branch, selected_bindings)
+        if pending_layout:
+            # These observations cannot become typed queries until this branch
+            # supplies their inverse values. Resolve the branch before building
+            # the conditional expression, whose density output types are now known.
+            derive_graph(branch, **kwargs)
         branches.append(branch.outputs)
     terms = (
         [pt.switch(guard, left, right) for left, right in zip(*branches, strict=True)]
@@ -330,8 +344,11 @@ def bind_selected_values(branch, bindings):
 
 def conditioning_scope(fgraph, sources):
     """Find terms connected by unbound randomness; independent factors need no branching."""
+    pending_roots = {out for out in fgraph.outputs if isinstance(out.owner_op, ValuedRV)}
 
     def inputs(var):
+        if var in pending_roots:
+            return var.owner.inputs
         if var.owner is None or isinstance(var.owner_op, ValuedRV):
             return ()
         if isinstance(var.owner_op, LogprobQuery):
@@ -347,7 +364,7 @@ def conditioning_scope(fgraph, sources):
 
     connected = dependencies(sources)
     terms = [node.outputs[0] for node in fgraph.toposort() if isinstance(node.op, LogprobQuery)]
-    terms.extend(out for out in fgraph.outputs if contains_random(out))
+    terms.extend(out for out in fgraph.outputs if out in pending_roots or contains_random(out))
     remaining = {term: dependencies([term]) for term in terms}
     selected = set()
     while remaining:
