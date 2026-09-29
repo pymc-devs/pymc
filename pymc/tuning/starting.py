@@ -482,7 +482,7 @@ def _fit_MAP(
 
 
 def _find_MAP_point(include_transformed: bool = True, **kwargs) -> PointType:
-    """MAP point as a ``{name: value}`` dict; the internal route for callers like ``init="map"``."""
+    """MAP point as a ``{name: value}`` dict; the internal route for callers like ``init="jitter+map"``."""
     return _fit_MAP(**kwargs).as_point(include_transformed)
 
 

@@ -723,8 +723,8 @@ def sample(
         Only applicable to the pymc nuts sampler.
     jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform
-        jitter that yields a finite probability. This applies to ``jitter+adapt_diag`` and
-        ``jitter+adapt_full`` init methods.
+        jitter that yields a finite probability. This applies to ``jitter+adapt_diag``,
+        ``jitter+adapt_full`` and ``jitter+map`` init methods.
     n_init : int
         Number of iterations of initializer. Only works for 'ADVI' init methods.
     trace : backend, optional
@@ -1801,7 +1801,9 @@ def init_nuts(
           sample variance of the tuning samples.
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map: Use the MAP as starting point. This is discouraged.
+        * jitter+map: Use the MAP, searched for from the test value plus a uniform jitter in
+          [-1, 1], as starting point. This is discouraged.
+        * map: Deprecated alias of ``jitter+map``.
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
@@ -1821,7 +1823,8 @@ def init_nuts(
         Whether or not to display a progressbar for advi sampling.
     jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
-        that yields a finite probability. This applies to ``jitter+adapt_diag`` and ``jitter+adapt_full``
+        that yields a finite probability. This applies to ``jitter+adapt_diag``, ``jitter+adapt_full``
+        and ``jitter+map``
         init methods.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc.NUTS.
@@ -1848,6 +1851,14 @@ def init_nuts(
 
     if init == "auto":
         init = "jitter+adapt_diag"
+    elif init == "map":
+        warnings.warn(
+            '`init="map"` has been renamed to `init="jitter+map"`, as the MAP search starts from '
+            "a jittered initial point. Use the new name to silence this warning.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        init = "jitter+map"
 
     if compile_kwargs is None:
         compile_kwargs = {}
@@ -1987,9 +1998,10 @@ def init_nuts(
         ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
-    elif init == "map":
+    elif init == "jitter+map":
         start = _find_MAP_point(
             model=model,
+            jitter_max_retries=jitter_max_retries,
             random_seed=random_seed_list[0],
             progressbar=progressbar and not quiet,
             compile_kwargs=compile_kwargs,
