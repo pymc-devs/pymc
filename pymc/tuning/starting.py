@@ -122,35 +122,51 @@ def _optimizer_result_to_dataset(
     from scipy.sparse.linalg import LinearOperator
 
     if "lowest_optimization_result" in result:
-        # basinhopping nests the inner optimizer's result; flatten it over the outer fields
+        # basinhopping nests the inner optimizer's result; outer totals (nit, nfev, ...) take precedence
+        inner = dict(result["lowest_optimization_result"])
         result = OptimizeResult(
-            {k: v for k, v in result.items() if k != "lowest_optimization_result"}
-            | dict(result["lowest_optimization_result"])
+            inner | {k: v for k, v in result.items() if k != "lowest_optimization_result"}
         )
-    vec: tuple[str, ...] = ("variables",)
-    mat: tuple[str, ...] = ("variables", "variables_aux")
-    data = {"method": xr.DataArray(method)}
-    for key, value in result.items():
+    n = len(names)
+    data: dict[str, xr.DataArray] = {}
+
+    def add(key, value):
         if value is None:
-            continue
+            return
         if isinstance(value, LbfgsInvHessProduct):
             # L-BFGS-B's inverse Hessian is m correction pairs; densifying it is O(n^2) memory
             for suffix, pairs in (("sk", value.sk), ("yk", value.yk)):
                 data[f"{key}_{suffix}"] = xr.DataArray(
                     np.asarray(pairs), dims=("lbfgs_corrections", "variables")
                 )
-            continue
+            return
         if isinstance(value, LinearOperator):
-            value = np.column_stack([value.matvec(e) for e in np.eye(len(names))])
+            value = np.column_stack([value.matvec(e) for e in np.eye(n)])
         elif key == "message":
             value = str(value)
-        value = np.asarray(value)
-        if key in ("x", "jac", "hess", "hess_inv") and value.ndim in (1, 2):
-            dims = vec if value.ndim == 1 else mat
-        else:
-            dims = tuple(f"{key}_dim_{i}" for i in range(value.ndim))
+        try:
+            value = np.asarray(value)
+        except ValueError:  # ragged tuple, e.g. nelder-mead's (vertices, values) final_simplex
+            for i, v in enumerate(value):
+                add(f"{key}_{i}", v)
+            return
+        dims = [f"{key}_dim_{i}" for i in range(value.ndim)]
+        if (
+            value.ndim in (1, 2) and value.shape[-1] == n
+        ):  # per-parameter axis, only when sizes match
+            dims[-1] = "variables"
+            if value.shape == (n, n):
+                dims = ["variables", "variables_aux"]
         data[key] = xr.DataArray(value, dims=dims)
-    coords = {d: names for d in mat if any(d in da.dims for da in data.values())}
+
+    for key, value in result.items():
+        add(key, value)
+    data["method"] = xr.DataArray(method)  # trust-constr reports its own sub-method under this key
+    coords = {
+        d: names
+        for d in ("variables", "variables_aux")
+        if any(d in da.dims for da in data.values())
+    }
     return xr.Dataset(data, coords=coords)
 
 
@@ -301,8 +317,10 @@ def find_MAP(
     if do_basinhopping:
         method = _canonical_method(minimizer_kwargs.pop("method", "L-BFGS-B"))
 
+    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+
     auto_grad = use_grad is None
-    if auto_grad and discrete:
+    if auto_grad and discrete and MINIMIZE_MODE_KWARGS[method]["uses_grad"]:
         warnings.warn(
             "Discrete variables are being optimized, so gradients are not available. "
             f"Using the gradient-free method 'powell' instead of '{method}'.",
@@ -369,10 +387,9 @@ def find_MAP(
 
     H_inv = None
     if compute_hessian:
-        H_inv = _compute_inverse_hessian(res, None, f_fused, f_hessp, use_hess, method)
-        if H_inv is None:  # gradient-free optimizer: compile a hessian-vector product for it
+        if not (use_hess or f_hessp):  # optimizer did not need 2nd-order info; compile hessp for it
             _, f_hessp = compile_funcs(False, False, True)
-            H_inv = _compute_inverse_hessian(res, None, None, f_hessp, False, method)
+        H_inv = _compute_inverse_hessian(res.x, f_fused, f_hessp, use_hess)
     x_star = RaveledVars(np.asarray(res.x), x0.point_map_info)
     point = DictToArrayBijection.rmap(x_star, start)
 
@@ -415,6 +432,8 @@ def find_MAP(
     idata = to_inference_data(
         MultiTrace([trace]), model=model, include_transformed=include_transformed, **idata_kwargs
     )
+    if not idata["sample_stats"].data_vars:  # a single optimum has no sampler stats
+        del idata["sample_stats"]
     labels = _unpacked_names(x0.point_map_info, model)
     idata["fit"] = DataTree(dataset=_fit_dataset(x_star, H_inv, labels))
     idata["optimizer_result"] = DataTree(

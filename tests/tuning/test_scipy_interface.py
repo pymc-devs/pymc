@@ -15,7 +15,6 @@ import numpy as np
 import pytest
 
 from pytensor import tensor as pt
-from scipy.optimize import OptimizeResult
 
 from pymc.tuning import scipy_interface
 from pymc.tuning.scipy_interface import (
@@ -129,13 +128,25 @@ def test_scipy_optimize_funcs_from_loss_flat_input(simple_loss_and_inputs):
     np.testing.assert_allclose(grad_val, [2.0, 4.0])
 
 
-def test_compute_inverse_hessian_edge_cases():
-    with pytest.raises(ValueError, match="At least one of"):
-        scipy_interface._compute_inverse_hessian(None, None, None, None, False, "BFGS")
-    res = OptimizeResult(x=np.zeros(2), hess_inv=None)
-    assert (
-        scipy_interface._compute_inverse_hessian(res, None, None, None, False, "L-BFGS-B") is None
+@pytest.mark.parametrize("use_hess", [True, False])
+def test_compute_inverse_hessian_is_exact(use_hess):
+    x = pt.vector("x", shape=(2,))
+    A = np.array([[3.0, 1.0], [1.0, 2.0]])
+    f_fused, f_hessp = scipy_optimize_funcs_from_loss(
+        loss=0.5 * x @ A @ x,
+        inputs=[x],
+        initial_point_dict={"x": np.zeros(2)},
+        use_grad=True,
+        use_hess=use_hess,
+        use_hessp=not use_hess,
     )
+    H_inv = scipy_interface._compute_inverse_hessian(np.ones(2), f_fused, f_hessp, use_hess)
+    np.testing.assert_allclose(H_inv, np.linalg.inv(A))
+
+
+def test_compute_inverse_hessian_requires_second_order():
+    with pytest.raises(ValueError, match="Either `f_hessp`"):
+        scipy_interface._compute_inverse_hessian(np.zeros(2))
 
 
 @pytest.mark.parametrize("gradient_backend", ["pytensor", "jax"])
