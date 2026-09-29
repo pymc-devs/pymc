@@ -78,6 +78,7 @@ from pymc.step_methods import NUTS, STEP_METHODS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.compound import flatten_steps
 from pymc.step_methods.hmc import quadpotential
+from pymc.tuning.starting import _find_MAP_point
 from pymc.util import (
     RandomSeed,
     RandomState,
@@ -1961,10 +1962,9 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "advi_map":
-        start = pm.find_MAP(
-            include_transformed=True,
+        start = _find_MAP_point(
+            model=model,
             random_seed=random_seed_list[0],
-            return_inferencedata=False,
             progressbar=progressbar and not quiet,
             compile_kwargs=compile_kwargs,
         )
@@ -1988,10 +1988,9 @@ def init_nuts(
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
     elif init == "map":
-        start = pm.find_MAP(
-            include_transformed=True,
+        start = _find_MAP_point(
+            model=model,
             random_seed=random_seed_list[0],
-            return_inferencedata=False,
             progressbar=progressbar and not quiet,
             compile_kwargs=compile_kwargs,
         )

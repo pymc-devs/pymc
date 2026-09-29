@@ -20,13 +20,14 @@ import warnings
 
 from collections.abc import Sequence
 from itertools import product
-from typing import TYPE_CHECKING, Any, Literal, cast
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 
 import numpy as np
 import pytensor.gradient as tg
 import pytensor.tensor as pt
 import xarray as xr
 
+from pytensor.compile import Function
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor import TensorVariable
 from xarray import DataTree
@@ -231,9 +232,12 @@ def find_MAP(
         Compute the inverse hessian at the optimum and store it as ``fit.covariance_matrix``.
         Needed for a Laplace approximation, but expensive for large models.
     return_inferencedata : bool, default True
-        If True return an :class:`arviz.InferenceData` with the MAP point as a single-draw
-        ``posterior`` (plus ``fit``, ``optimizer_result``, ``observed_data`` and
-        ``constant_data`` groups). If False return a ``dict`` mapping variable names to values.
+        Return an :class:`arviz.InferenceData` with the MAP point as a single-draw ``posterior``
+        (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data`` groups).
+
+        .. deprecated::
+            ``return_inferencedata=False``, which returns a ``dict`` mapping variable names to
+            values, will be removed in a future release.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`.
     freeze_model : bool, default True
@@ -277,6 +281,75 @@ def find_MAP(
     if optimizer_kwargs.pop("progressbar_theme", None) is not None:
         warnings.warn("`progressbar_theme` is ignored by find_MAP.", FutureWarning, stacklevel=2)
 
+    if not return_inferencedata:
+        warnings.warn(
+            "`return_inferencedata=False` is deprecated and will be removed in a future release. "
+            "Use the default `return_inferencedata=True` and work with the returned "
+            "`InferenceData` object.",
+            FutureWarning,
+            stacklevel=2,
+        )
+    fit = _fit_MAP(
+        method,
+        vars=vars,
+        use_grad=use_grad,
+        use_hess=use_hess,
+        use_hessp=use_hessp,
+        initvals=initvals,
+        jitter=jitter,
+        jitter_max_retries=jitter_max_retries,
+        random_seed=random_seed,
+        progressbar=progressbar,
+        compute_hessian=compute_hessian,
+        freeze_model=freeze_model,
+        model=model,
+        backend=backend,
+        compile_kwargs=compile_kwargs,
+        **optimizer_kwargs,
+    )
+    out = (
+        _map_to_inference_data(fit, include_transformed, idata_kwargs or {})
+        if return_inferencedata
+        else fit.as_point(include_transformed)
+    )
+    return (out, fit.res) if return_raw else out  # type: ignore[return-value]
+
+
+class _MAPFit(NamedTuple):
+    model: Model
+    point: PointType  # value variables at the optimum
+    values: dict[str, np.ndarray]  # every unobserved value: free, transformed and deterministic
+    fn: Function
+    res: OptimizeResult
+    x_star: RaveledVars
+    H_inv: np.ndarray | None
+    method: str
+
+    def as_point(self, include_transformed: bool) -> PointType:
+        names = get_default_varnames(self.values, include_transformed)
+        return {name: self.values[name] for name in names}
+
+
+def _fit_MAP(
+    method: minimize_method | Literal["basinhopping"] = "L-BFGS-B",
+    *,
+    vars: Sequence[TensorVariable] | None = None,
+    use_grad: bool | None = None,
+    use_hess: bool | None = None,
+    use_hessp: bool | None = None,
+    initvals: StartDict | None = None,
+    jitter: bool = True,
+    jitter_max_retries: int = 10,
+    random_seed: RandomState = None,
+    progressbar: bool = True,
+    compute_hessian: bool = False,
+    freeze_model: bool = True,
+    model: Model | None = None,
+    backend: str | None = None,
+    compile_kwargs: dict | None = None,
+    **optimizer_kwargs,
+) -> _MAPFit:
+    """Run the optimization behind :func:`find_MAP`; see there for the arguments."""
     from better_optimize import basinhopping, minimize
 
     from pymc.sampling.mcmc import _init_jitter  # avoids a circular import
@@ -293,7 +366,6 @@ def find_MAP(
         model = freeze_dims_and_data(model)
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
     gradient_backend = compile_kwargs.pop("gradient_backend", "pytensor")
-    idata_kwargs = {} if idata_kwargs is None else idata_kwargs
 
     value_vars = {var.name: var for var in model.value_vars}
     vars = [value_vars[name] for name in var_names]
@@ -404,21 +476,28 @@ def find_MAP(
     )
     values = dict(zip([var.name for var in unobserved], fn(**point)))
 
-    if not return_inferencedata:
-        result = {
-            var.name: values[var.name]
-            for var in get_default_varnames(unobserved, include_transformed)
-        }
-        return (result, res) if return_raw else result  # type: ignore[return-value]
+    return _MAPFit(
+        model, point, values, fn, res, x_star, H_inv, "basinhopping" if do_basinhopping else method
+    )
 
+
+def _find_MAP_point(include_transformed: bool = True, **kwargs) -> PointType:
+    """MAP point as a ``{name: value}`` dict; the internal route for callers like ``init="map"``."""
+    return _fit_MAP(**kwargs).as_point(include_transformed)
+
+
+def _map_to_inference_data(
+    fit: _MAPFit, include_transformed: bool, idata_kwargs: dict[str, Any]
+) -> DataTree:
+    model, values = fit.model, fit.values
     trace = NDArray(
         model=model,
-        fn=fn,
+        fn=fit.fn,
         var_shapes={k: v.shape for k, v in values.items()},
         var_dtypes={k: v.dtype for k, v in values.items()},
     )
     trace.setup(draws=1, chain=0)
-    trace.record(point, in_warmup=False)
+    trace.record(fit.point, in_warmup=False)
     trace.close()
     # Label transformed values (e.g. ``sigma_log__``) with their RV's dims when the shapes match
     dims = {
@@ -434,11 +513,9 @@ def find_MAP(
     )
     if not idata["sample_stats"].data_vars:  # a single optimum has no sampler stats
         del idata["sample_stats"]
-    labels = _unpacked_names(x0.point_map_info, model)
-    idata["fit"] = DataTree(dataset=_fit_dataset(x_star, H_inv, labels))
+    labels = _unpacked_names(fit.x_star.point_map_info, model)
+    idata["fit"] = DataTree(dataset=_fit_dataset(fit.x_star, fit.H_inv, labels))
     idata["optimizer_result"] = DataTree(
-        dataset=_optimizer_result_to_dataset(
-            res, "basinhopping" if do_basinhopping else method, labels
-        )
+        dataset=_optimizer_result_to_dataset(fit.res, fit.method, labels)
     )
-    return (idata, res) if return_raw else idata  # type: ignore[return-value]
+    return idata
