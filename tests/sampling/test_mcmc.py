@@ -159,6 +159,7 @@ class TestSample:
         (
             "advi",
             "advi_map",
+            "map",
             "jitter+map",
             "adapt_diag",
             "jitter+adapt_diag",
@@ -702,6 +703,7 @@ def check_exec_nuts_init(method):
         "advi_map",
         "jitter+adapt_diag",
         "adapt_diag",
+        "map",
         "jitter+map",
         "adapt_full",
         "jitter+adapt_full",
@@ -715,9 +717,17 @@ def test_exec_nuts_init(method):
         check_exec_nuts_init(method)
 
 
-def test_init_map_renamed_to_jitter_map():
-    with pytest.warns(FutureWarning, match='renamed to `init="jitter\\+map"`'):
-        check_exec_nuts_init("map")
+def test_init_map_jitter(monkeypatch):
+    jitters = []
+    find_map_point = pm.sampling.mcmc._find_MAP_point
+    monkeypatch.setattr(
+        pm.sampling.mcmc,
+        "_find_MAP_point",
+        lambda **kwargs: jitters.append(kwargs["jitter"]) or find_map_point(**kwargs),
+    )
+    for init in ("map", "jitter+map"):
+        check_exec_nuts_init(init)
+    assert jitters == [False, False, True, True]
 
 
 @pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")

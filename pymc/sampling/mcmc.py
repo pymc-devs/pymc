@@ -1801,9 +1801,10 @@ def init_nuts(
           sample variance of the tuning samples.
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * jitter+map: Use the MAP, searched for from the test value plus a uniform jitter in
-          [-1, 1], as starting point. This is discouraged.
-        * map: Deprecated alias of ``jitter+map``.
+        * map: Use the MAP, searched for from the test value, as starting point. This is
+          discouraged.
+        * jitter+map: Same as ``map``, but search from the test value plus a uniform jitter in
+          [-1, 1].
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
@@ -1851,14 +1852,6 @@ def init_nuts(
 
     if init == "auto":
         init = "jitter+adapt_diag"
-    elif init == "map":
-        warnings.warn(
-            '`init="map"` has been renamed to `init="jitter+map"`, as the MAP search starts from '
-            "a jittered initial point. Use the new name to silence this warning.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        init = "jitter+map"
 
     if compile_kwargs is None:
         compile_kwargs = {}
@@ -1998,9 +1991,10 @@ def init_nuts(
         ]
         cov = approx.std.eval() ** 2
         potential = quadpotential.QuadPotentialDiag(cov, rng=random_seed_list[0])
-    elif init == "jitter+map":
+    elif init in ("map", "jitter+map"):
         start = _find_MAP_point(
             model=model,
+            jitter=init == "jitter+map",
             jitter_max_retries=jitter_max_retries,
             random_seed=random_seed_list[0],
             progressbar=progressbar and not quiet,
