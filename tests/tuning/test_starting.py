@@ -14,6 +14,7 @@
 import re
 
 import numpy as np
+import pytensor.tensor as pt
 import pytest
 import xarray as xr
 
@@ -372,11 +373,21 @@ def test_find_MAP_jitter_escapes_saddle():
     assert_allclose(r1["w"], r2["w"])
 
 
-def test_find_MAP_invalid_start_raises():
+@pytest.mark.parametrize("jitter", [True, False])
+def test_find_MAP_invalid_start_raises(jitter):
     with pm.Model() as m:
         pm.Uniform("x", 0, 1, default_transform=None)
     with pytest.raises(SamplingError, match="Initial evaluation of model at starting point failed"):
-        find_MAP(model=m, initvals={"x": 2.0}, progressbar=False)
+        find_MAP(model=m, initvals={"x": 2.0}, jitter=jitter, progressbar=False)
+
+
+def test_find_MAP_invalid_vars():
+    with pm.Model() as m:
+        pm.Poisson("k", 3)
+    with pytest.raises(ValueError, match="no unobserved continuous variables"):
+        find_MAP(model=m, progressbar=False)
+    with pytest.raises(ValueError):
+        find_MAP(model=m, vars=[pt.constant(1.0)], progressbar=False)
 
 
 def test_find_MAP_unknown_method(normal_model):
@@ -402,6 +413,8 @@ def test_find_MAP_legacy_kwargs(normal_model):
         find_MAP(maxeval=10, **kwargs)
     with pytest.warns(FutureWarning, match="`return_raw` is deprecated"):
         point, res = find_MAP(return_raw=True, **kwargs)
+    with pytest.warns(FutureWarning, match="`progressbar_theme` is ignored"):
+        find_MAP(progressbar_theme="default", **kwargs)
     assert isinstance(res, OptimizeResult)
     assert set(point) == {"mu", "sigma"}
 
@@ -418,6 +431,7 @@ class TestOptimizerResultToDataset:
             jac=np.array([0.1, 0.2]),
             nit=5,
             custom_stat=np.array([42, 43]),
+            status=None,
         )
         ds = _optimizer_result_to_dataset(result, "BFGS", self.names)
         assert isinstance(ds, xr.Dataset)
