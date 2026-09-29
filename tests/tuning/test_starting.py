@@ -12,8 +12,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import re
+import warnings
 
 import numpy as np
+import pytensor
 import pytensor.tensor as pt
 import pytest
 import xarray as xr
@@ -114,12 +116,18 @@ def test_find_MAP_discrete():
     assert_allclose(map_est2["p"], 0.695642178810167, atol=tol2, rtol=0)
     assert map_est2["ss"] == 14
 
+    # Gradient-free methods handle discrete variables themselves, so no fallback to powell
+    with model, warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        idata = find_MAP("nelder-mead", vars=model.value_vars, progressbar=False, random_seed=1)
+    assert idata.optimizer_result["method"].item() == "nelder-mead"
+
 
 def test_find_MAP_no_gradient():
     _, model = simple_arbitrary_det()
     with pytest.warns(UserWarning, match="Gradient not available"):
         find_MAP(model=model, progressbar=False)
-    with pytest.raises(Exception):
+    with pytest.raises(NotImplementedError):
         find_MAP(model=model, use_grad=True, progressbar=False)
 
 
@@ -221,7 +229,9 @@ def test_find_MAP_vars_subset_holds_others_fixed(normal_model):
         ("BFGS", True, False, False),
         ("L-BFGS-B", True, False, False),
         ("trust-exact", True, True, False),
+        ("trust-constr", True, False, True),
         ("powell", False, False, False),
+        ("nelder-mead", False, False, False),
     ],
 )
 @pytest.mark.parametrize("include_transformed, compute_hessian", [(True, True), (False, False)])
@@ -238,8 +248,7 @@ def test_find_MAP_inferencedata(
         include_transformed=include_transformed,
         compute_hessian=compute_hessian,
     )
-    for group in ["posterior", "fit", "optimizer_result", "observed_data"]:
-        assert group in idata.children
+    assert set(idata.children) == {"posterior", "fit", "optimizer_result", "observed_data"}
 
     posterior = idata.posterior.dataset.squeeze(["chain", "draw"])
     assert posterior["mu"].shape == () and posterior["sigma"].shape == ()
@@ -252,6 +261,22 @@ def test_find_MAP_inferencedata(
     for key in ("hess", "hess_inv"):
         if key in idata.optimizer_result:
             assert idata.optimizer_result[key].dims == ("variables", "variables_aux")
+    if compute_hessian:
+        # Exact inverse Hessian of the loss at the optimum, never an optimizer's approximation
+        mean = idata.fit.mean_vector.values
+        d2loss = normal_model.compile_d2logp(jacobian=False, negate_output=True)
+        H = d2loss({"mu": mean[0], "sigma_log__": mean[1]})
+        assert_allclose(idata.fit.covariance_matrix.values, np.linalg.inv(H), rtol=1e-6)
+
+
+def test_find_MAP_compute_hessian_float32():
+    with pytensor.config.change_flags(floatX="float32"):
+        with pm.Model() as m:
+            mu = pm.Normal("mu")
+            sigma = pm.Exponential("sigma", 1)
+            pm.Normal("y", mu, sigma, observed=np.linspace(1, 5, 10))
+        idata = find_MAP(model=m, compute_hessian=True, progressbar=False, random_seed=1)
+    assert np.all(np.isfinite(idata.fit.covariance_matrix.values))
 
 
 @pytest.mark.parametrize("gradient_backend", ["jax", "pytensor"])
@@ -314,10 +339,11 @@ def test_find_MAP_basinhopping(normal_model, use_hess, use_hessp):
         progressbar=False,
         random_seed=1,
         minimizer_kwargs={"method": "Newton-CG"},
-        niter=1,
+        niter=3,
     )
     assert idata.posterior["mu"].shape == (1, 1)
     assert idata.optimizer_result["method"].item() == "basinhopping"
+    assert idata.optimizer_result["nit"].item() == 3  # basinhopping's totals, not one inner run's
 
 
 def test_find_MAP_with_coords():
@@ -430,7 +456,7 @@ class TestOptimizerResultToDataset:
             message="done",
             jac=np.array([0.1, 0.2]),
             nit=5,
-            custom_stat=np.array([42, 43]),
+            custom_stat=np.array([42, 43, 44]),
             status=None,
         )
         ds = _optimizer_result_to_dataset(result, "BFGS", self.names)
@@ -470,5 +496,18 @@ class TestOptimizerResultToDataset:
         )
         ds = _optimizer_result_to_dataset(result, "basinhopping", self.names)
         assert_allclose(ds["hess_inv"].values, 3 * np.eye(2))
-        assert_allclose(ds["x"].values, 0.0)
+        assert_allclose(ds["x"].values, 1.0)
         assert "lowest_optimization_result" not in ds
+
+    def test_ragged_and_mismatched_fields(self):
+        result = OptimizeResult(
+            x=np.ones(2),
+            method="tr_interior_point",  # trust-constr's sub-method must not overwrite ours
+            jac=[],  # trust-constr's (empty) constraint Jacobians are not per-parameter
+            final_simplex=(np.zeros((3, 2)), np.zeros(3)),  # nelder-mead
+        )
+        ds = _optimizer_result_to_dataset(result, "trust-constr", self.names)
+        assert ds["method"].item() == "trust-constr"
+        assert ds["jac"].dims == ("jac_dim_0",)
+        assert ds["final_simplex_0"].dims == ("final_simplex_0_dim_0", "variables")
+        assert ds["final_simplex_1"].dims == ("final_simplex_1_dim_0",)

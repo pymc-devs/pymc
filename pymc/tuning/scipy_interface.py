@@ -20,7 +20,7 @@ import logging
 
 from collections.abc import Callable
 from importlib.util import find_spec
-from typing import TYPE_CHECKING, Literal, cast, get_args
+from typing import Literal, cast, get_args
 
 import numpy as np
 import pytensor
@@ -31,11 +31,7 @@ from pytensor.compile.mode import get_mode
 from pytensor.link.jax.linker import JAXLinker
 from pytensor.tensor import TensorVariable
 
-from pymc.pytensorf import compile, join_nonshared_inputs, rewrite_pregrad
-
-if TYPE_CHECKING:  # better_optimize and scipy.optimize are heavy; import on first use
-    from better_optimize.constants import minimize_method
-    from scipy.optimize import OptimizeResult
+from pymc.pytensorf import compile, floatX, join_nonshared_inputs, rewrite_pregrad
 
 GradientBackend = Literal["pytensor", "jax"]
 VALID_BACKENDS = get_args(GradientBackend)
@@ -246,39 +242,22 @@ def get_nearest_psd(A: np.ndarray) -> np.ndarray:
 
 
 def _compute_inverse_hessian(
-    optimizer_result: OptimizeResult | None,
-    optimal_point: np.ndarray | None,
-    f_fused: Callable | None,
-    f_hessp: Callable | None,
-    use_hess: bool,
-    method: minimize_method | Literal["BFGS", "L-BFGS-B"],
-) -> np.ndarray | None:
-    """Inverse hessian at the optimum, taken from the cheapest available source.
+    optimal_point: np.ndarray,
+    f_fused: Callable | None = None,
+    f_hessp: Callable | None = None,
+    use_hess: bool = False,
+) -> np.ndarray:
+    """Exact inverse Hessian of the loss at ``optimal_point``, inverted after PSD projection.
 
-    BFGS results carry an inverse hessian estimate, L-BFGS-B a ``LinearOperator`` of it. Otherwise the
-    hessian is rebuilt from ``f_hessp`` or the fused hessian output and inverted after PSD projection.
+    Uses the fused dense Hessian when ``use_hess``, otherwise ``n`` Hessian-vector products. The
+    optimizers' own ``hess_inv`` (BFGS, L-BFGS-B) are approximations and are deliberately not used.
     """
-    if optimal_point is None and optimizer_result is None:
-        raise ValueError("At least one of `optimal_point` or `optimizer_result` must be provided.")
-
-    x_star = np.asarray(optimizer_result.x if optimizer_result is not None else optimal_point)
-    n_vars = len(x_star)
-    basis = np.eye(n_vars)
-
-    # basinhopping nests the inner optimizer's result
-    inner_result = getattr(optimizer_result, "lowest_optimization_result", optimizer_result)
-    hess_inv = getattr(inner_result, "hess_inv", None)
-
-    if method == "BFGS" and optimizer_result is not None:
-        return hess_inv
-    if method == "L-BFGS-B" and optimizer_result is not None:
-        if hess_inv is None:
-            return None
-        return np.stack([hess_inv(basis[:, i]) for i in range(n_vars)], axis=-1)
-    if f_hessp is not None:
-        H = np.stack([f_hessp(x_star, basis[:, i]) for i in range(n_vars)], axis=-1)
-        return np.linalg.inv(get_nearest_psd(H))
+    x_star = floatX(np.asarray(optimal_point))
     if use_hess and f_fused is not None:
         _, _, H = f_fused(x_star)
-        return np.linalg.inv(get_nearest_psd(H))
-    return None
+    elif f_hessp is not None:
+        basis = floatX(np.eye(len(x_star)))
+        H = np.stack([np.asarray(f_hessp(x_star, e)) for e in basis], axis=-1)
+    else:
+        raise ValueError("Either `f_hessp` or a fused hessian (`use_hess=True`) is required.")
+    return np.linalg.inv(get_nearest_psd(np.asarray(H, dtype="float64")))
