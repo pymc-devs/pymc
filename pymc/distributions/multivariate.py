@@ -1294,16 +1294,11 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     det_invjac = pt.log(corr_diag) - idx * pt.log(sd_vals)
     det_invjac = det_invjac.sum()
 
-    # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
+    # TODO: _lkj_normalizing_constant currently requires `n` to be a constant
     try:
         n = int(get_underlying_scalar_constant_value(n))
     except NotScalarConstantError:
         raise NotImplementedError("logp only implemented for constant `n`")
-
-    try:
-        eta = float(get_underlying_scalar_constant_value(eta))
-    except NotScalarConstantError:
-        raise NotImplementedError("logp only implemented for constant `eta`")
 
     norm = _lkj_normalizing_constant(eta, n)
 
