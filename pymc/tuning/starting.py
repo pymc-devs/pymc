@@ -69,7 +69,7 @@ def _canonical_method(method: str) -> str:
     try:
         return methods[method.lower()]
     except (KeyError, AttributeError):
-        raise ValueError(f"Unknown method {method!r}. Valid methods are {list(methods)}")
+        raise ValueError(f"Unknown method {method!r}. Valid methods are {list(methods.values())}")
 
 
 def _value_var_names(vars: Sequence[TensorVariable], model: Model) -> list[str]:
@@ -120,7 +120,6 @@ def _optimizer_result_to_dataset(
 ) -> xr.Dataset:
     """Store every field of a scipy ``OptimizeResult``, labelling per-parameter fields by ``names``."""
     from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
-    from scipy.sparse.linalg import LinearOperator
 
     if "lowest_optimization_result" in result:
         # basinhopping nests the inner optimizer's result; outer totals (nit, nfev, ...) take precedence
@@ -141,9 +140,7 @@ def _optimizer_result_to_dataset(
                     np.asarray(pairs), dims=("lbfgs_corrections", "variables")
                 )
             return
-        if isinstance(value, LinearOperator):
-            value = np.column_stack([value.matvec(e) for e in np.eye(n)])
-        elif key == "message":
+        if key == "message":
             value = str(value)
         try:
             value = np.asarray(value)
@@ -379,6 +376,11 @@ def _fit_MAP(
     if not vars:
         raise ValueError("Model has no unobserved continuous variables.")
     discrete = typefilter(vars, discrete_types)
+    if compute_hessian and discrete:
+        raise ValueError(
+            f"`compute_hessian` is undefined for discrete variables {[v.name for v in discrete]}; "
+            "exclude them via `vars`."
+        )
 
     rng = get_random_generator(random_seed)
     [start] = _init_jitter(
@@ -470,7 +472,7 @@ def _fit_MAP(
     H_inv = None
     if compute_hessian:
         if not (use_hess or f_hessp):  # optimizer did not need 2nd-order info; compile hessp for it
-            _, f_hessp = compile_funcs(False, False, True)
+            _, f_hessp = compile_funcs(True, False, True)  # grad on, so jax autodiff is honoured
         H_inv = _compute_inverse_hessian(res.x, f_fused, f_hessp, use_hess)
     x_star = RaveledVars(np.asarray(res.x), x0.point_map_info)
     point = DictToArrayBijection.rmap(x_star, start)

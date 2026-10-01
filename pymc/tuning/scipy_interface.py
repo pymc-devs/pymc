@@ -40,10 +40,9 @@ VALID_BACKENDS = get_args(GradientBackend)
 def set_optimizer_function_defaults(
     method: str, use_grad: bool | None, use_hess: bool | None, use_hessp: bool | None
 ) -> tuple[bool, bool, bool]:
-    """Resolve each ``None`` flag from what ``method`` uses; explicit values are respected.
+    """Resolve ``None`` flags from what ``method`` uses, ignoring flags it can't use.
 
-    Methods that accept both a Hessian and a Hessian-vector product get only one, preferring the
-    explicitly requested one and otherwise ``hessp``, which is cheaper.
+    Of a Hessian and a Hessian-vector product only one is used: the explicit one, else ``hessp``.
     """
     from better_optimize.constants import MINIMIZE_MODE_KWARGS
 
@@ -114,11 +113,9 @@ def _compile_functions_for_scipy_optimize(
     compute_hessp: bool,
     compile_kwargs: dict | None = None,
 ) -> list[Function | None]:
-    """Compile ``loss`` over a single flat input into ``[f_fused, f_hessp]``.
+    """Compile ``loss`` of one flat input into ``[f_fused, f_hessp]``, or ``[f_loss]`` without derivatives.
 
-    ``f_fused`` returns the loss, optionally fused with its gradient and dense hessian
-    (``loss``, ``(loss, grad)`` or ``(loss, grad, hess)``). ``f_hessp`` is a separate
-    hessian-vector product function, or None. Without any derivative the list is ``[f_loss]``.
+    ``f_fused`` returns the loss, optionally with gradient and dense Hessian; ``f_hessp`` may be None.
     """
     compile_kwargs = {} if compile_kwargs is None else compile_kwargs
     loss = rewrite_pregrad(loss)
@@ -244,12 +241,9 @@ def _compute_inverse_hessian(
     f_hessp: Callable | None = None,
     use_hess: bool = False,
 ) -> np.ndarray:
-    """Exact inverse Hessian of the loss at ``optimal_point``, projected to be positive definite.
+    """Inverse of the exact Hessian at ``optimal_point`` (never an optimizer's approximation).
 
-    Uses the fused dense Hessian when ``use_hess``, otherwise ``n`` Hessian-vector products. The
-    optimizers' own ``hess_inv`` (BFGS, L-BFGS-B) are approximations and are deliberately not used.
-    Eigenvalues below a relative tolerance are clipped to it, so numerical noise does not discard the
-    estimate; clearly negative ones mean the point is not a minimum and raise a warning.
+    Eigenvalues are clipped to a relative tolerance, warning when clearly negative (not a minimum).
     """
     x_star = floatX(np.asarray(optimal_point))
     if use_hess and f_fused is not None:
