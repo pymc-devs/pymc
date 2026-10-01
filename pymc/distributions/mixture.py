@@ -19,11 +19,19 @@ import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, equal_computations
 from pytensor.tensor import TensorVariable
+from pytensor.tensor.random.basic import beta, uniform
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
 
 from pymc.distributions import transforms
-from pymc.distributions.continuous import Gamma, LogNormal, Normal, get_tau_sigma
+from pymc.distributions.continuous import (
+    Beta,
+    Gamma,
+    LogNormal,
+    Normal,
+    UnitContinuous,
+    get_tau_sigma,
+)
 from pymc.distributions.discrete import Binomial, NegativeBinomial, Poisson
 from pymc.distributions.dist_math import check_parameters
 from pymc.distributions.distribution import (
@@ -33,12 +41,18 @@ from pymc.distributions.distribution import (
     _support_point,
     support_point,
 )
-from pymc.distributions.shape_utils import _change_dist_size, change_dist_size, rv_size_is_none
+from pymc.distributions.shape_utils import (
+    _change_dist_size,
+    change_dist_size,
+    implicit_size_from_params,
+    rv_size_is_none,
+)
 from pymc.distributions.transforms import _default_transform
 from pymc.distributions.truncated import Truncated
-from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob
+from pymc.logprob.abstract import _logcdf, _logcdf_helper, _logprob, _logprob_helper
 from pymc.logprob.basic import logp
 from pymc.logprob.transforms import IntervalTransform
+from pymc.pytensorf import normalize_rng_param
 from pymc.util import check_dist_not_registered
 from pymc.vartypes import continuous_types, discrete_types
 
@@ -52,6 +66,7 @@ __all__ = [
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
+    "ZeroOneInflatedBeta",
 ]
 
 
@@ -799,6 +814,240 @@ class ZeroInflatedNegativeBinomial:
             nonzero_p=psi,
             nonzero_dist=NegativeBinomial.dist(mu=mu, alpha=alpha, p=p, n=n),
             **kwargs,
+        )
+
+
+class ZeroOneInflatedBetaRV(SymbolicRandomVariable):
+    name = "zero_one_inflated_beta"
+    extended_signature = "[rng],[size],(),(),(),()->[rng],()"
+    _print_name = ("ZeroOneInflatedBeta", "\\operatorname{ZeroOneInflatedBeta}")
+
+    @classmethod
+    def rv_op(cls, zoi, coi, a, b, *, rng=None, size=None):
+        zoi = pt.as_tensor(zoi)
+        coi = pt.as_tensor(coi)
+        a = pt.as_tensor(a)
+        b = pt.as_tensor(b)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(zoi, coi, a, b, ndims_params=cls.ndims_params)
+
+        next_rng, u = uniform(size=size, rng=rng, return_next_rng=True)
+
+        next_rng, beta_draws = beta(a, b, size=size, rng=next_rng, return_next_rng=True)
+
+        draws = pt.switch(
+            pt.lt(u, zoi * (1 - coi)),
+            pt.zeros_like(beta_draws),
+            pt.switch(
+                pt.lt(u, zoi),
+                pt.ones_like(beta_draws),
+                beta_draws,
+            ),
+        )
+
+        return cls(
+            inputs=[rng, size, zoi, coi, a, b],
+            outputs=[next_rng, draws],
+        )(rng, size, zoi, coi, a, b)
+
+
+class ZeroOneInflatedBeta(UnitContinuous):
+    r"""
+    Zero-One-Inflated Beta Distribution.
+
+    The pdf of this distribution is:
+
+    .. math::
+
+        f(x \mid \text{zoi}, \text{coi}, \alpha, \beta) =
+        \begin{cases}
+            \text{zoi} \cdot (1 - \text{coi})
+                & \text{if } x = 0 \\
+            \text{zoi} \cdot \text{coi}
+                & \text{if } x = 1 \\
+            (1 - \text{zoi}) \cdot \dfrac{x^{\alpha - 1} (1 - x)^{\beta - 1}}{B(\alpha, \beta)}
+                & \text{if } x \in (0, 1)
+        \end{cases}
+
+    where :math:`B` is the Beta function, :math:`\alpha = \mu \kappa`, and :math:`\beta = (1 - \mu) \kappa`.
+
+    Examples
+    --------
+    Model proportion data with structural zeros and ones:
+
+    .. code-block:: python
+
+        import pymc as pm
+        import numpy as np
+
+        # Data with 30% boundary values, 40% of which are ones
+        true_zoi = 0.3
+        true_coi = 0.4
+        true_mu = 0.4
+        true_kappa = 20.0
+        n = 1000
+
+        rng = np.random.default_rng(100)
+        u = rng.random(n)
+        alpha = true_mu * true_kappa
+        beta  = (1 - true_mu) * true_kappa
+        beta_data = rng.beta(alpha, beta, n)
+        data = np.where(u < true_zoi * (1 - true_coi), 0.0,
+               np.where(u < true_zoi, 1.0,
+               beta_data))
+
+        # Fit model
+        with pm.Model() as model:
+            zoi   = pm.Beta("zoi", alpha=1, beta=1)
+            coi   = pm.Beta("coi", alpha=1, beta=1)
+            mu    = pm.Beta("mu", alpha=2, beta=2)
+            kappa = pm.Gamma("kappa", alpha=2, beta=0.1)
+            y = pm.ZeroOneInflatedBeta(
+                "y", zoi=zoi, coi=coi, mu=mu, kappa=kappa,
+                observed=data
+            )
+            trace = pm.sample(1000, tune=1000)
+
+
+    ========  ===============================================
+    Support   :math:`y \in [0, 1]`
+    Mean      :math:`(1 - \text{zoi})\mu + \text{zoi} \cdot \text{coi}`
+    Variance  :math:`(1-\text{zoi})\left[\dfrac{\mu(1-\mu)}{\kappa+1} + \text{zoi} \cdot \text{coi} \cdot (1 - \text{coi})\right] + \text{zoi}(1-\text{zoi})\mu^2`
+    ========  ===============================================
+
+
+    Setting :math:`coi = 0` recovers the Zero-Inflated Beta (ZIB) distribution.
+    Setting :math:`coi = 1` recovers the One-Inflated Beta (OIB) distribution.
+
+
+    Parameters
+    ----------
+    zoi : tensor_like of float
+        Probability of a structural value at 0 or 1, :math:`0 \leq zoi \leq 1`.
+    coi : tensor_like of float
+        Conditional probability given a structural value that it is a structural 1, :math:`0 \leq coi \leq 1`.
+    alpha : tensor_like of float, optional
+        ``alpha`` > 0. If not specified, then calculated using ``mu`` and ``kappa``.
+    beta : tensor_like of float, optional
+        ``beta`` > 0. If not specified, then calculated using ``mu`` and ``kappa``.
+    mu : tensor_like of float, optional
+        Mean of the Beta component, :math:`0 < \mu < 1`.
+    kappa : tensor_like of float, optional
+        Precision of the Beta component, :math:`\kappa > 0`.
+
+    References
+    ----------
+    .. [1] Ospina, R., & Ferrari, S. L. (2010). Inflated beta distributions.
+    .. [2] Ospina, R., & Ferrari, S. L. (2012). A general class of zero-or-one inflated
+           beta regression models.
+
+    Notes
+    -----
+    ZeroOneInflatedBeta is appropriate for modeling proportion data when exact zeros
+    or ones represent distinct processes (structural zeros and ones), separate from
+    the tails of the Beta component.
+    """
+
+    rv_type = ZeroOneInflatedBetaRV
+    rv_op = ZeroOneInflatedBetaRV.rv_op
+
+    @classmethod
+    def dist(cls, zoi, coi, mu=None, kappa=None, alpha=None, beta=None, **kwargs):
+        if (alpha is not None) and (beta is not None):
+            if (mu is not None) or (kappa is not None):
+                raise ValueError(
+                    "Incompatible parametrization. Specify either alpha and beta, or mu and kappa."
+                )
+        elif (mu is not None) and (kappa is not None):
+            alpha = mu * kappa
+            beta = (1.0 - mu) * kappa
+        else:
+            raise ValueError(
+                "Incompatible parametrization. Must specify alpha and beta, or mu and kappa."
+            )
+        zoi = pt.as_tensor_variable(zoi)
+        coi = pt.as_tensor_variable(coi)
+        alpha = pt.as_tensor_variable(alpha)
+        beta = pt.as_tensor_variable(beta)
+        return super().dist([zoi, coi, alpha, beta], **kwargs)
+
+    def support_point(rv, size, zoi, coi, alpha, beta):
+        mean = zoi * coi + (1.0 - zoi) * (alpha / (alpha + beta))
+        if not rv_size_is_none(size):
+            mean = pt.full(size, mean)
+        return mean
+
+    def logp(value, zoi, coi, alpha, beta):
+        # pt.switch evaluates both branches, so the Beta logp must remain
+        # finite (with finite gradients) even when a boundary or
+        # out-of-support branch is selected. Substitute a safe interior
+        # value into the unselected branch, following the approach used
+        # for Hurdle distributions (see #8057).
+        # Boundary parameter values (e.g. zoi == 0 with an observed 0)
+        # correctly yield -inf.
+        inside = pt.bitwise_and(pt.gt(value, 0.0), pt.lt(value, 1.0))
+        safe_value = pt.switch(inside, value, 0.5)
+
+        logp_beta = _logprob_helper(Beta.dist(alpha=alpha, beta=beta), safe_value)
+
+        res = pt.switch(
+            pt.eq(value, 0.0),
+            pt.log(zoi) + pt.log1p(-coi),
+            pt.switch(
+                pt.eq(value, 1.0),
+                pt.log(zoi) + pt.log(coi),
+                pt.log1p(-zoi) + logp_beta,
+            ),
+        )
+
+        res = pt.switch(
+            pt.bitwise_and(pt.ge(value, 0.0), pt.le(value, 1.0)),
+            res,
+            -np.inf,
+        )
+
+        return check_parameters(
+            res,
+            zoi >= 0,
+            zoi <= 1,
+            coi >= 0,
+            coi <= 1,
+            msg="0 <= zoi <= 1, 0 <= coi <= 1",
+        )
+
+    def logcdf(value, zoi, coi, alpha, beta):
+        inside = pt.bitwise_and(pt.gt(value, 0.0), pt.lt(value, 1.0))
+        safe_value = pt.switch(inside, value, 0.5)
+        beta_logcdf = _logcdf_helper(Beta.dist(alpha=alpha, beta=beta), safe_value)
+
+        res = pt.switch(
+            pt.lt(value, 0.0),
+            -np.inf,
+            pt.switch(
+                pt.eq(value, 0.0),
+                pt.log(zoi) + pt.log1p(-coi),
+                pt.switch(
+                    pt.lt(value, 1.0),
+                    pt.logaddexp(
+                        pt.log(zoi) + pt.log1p(-coi),
+                        pt.log1p(-zoi) + beta_logcdf,
+                    ),
+                    0.0,
+                ),
+            ),
+        )
+
+        return check_parameters(
+            res,
+            zoi >= 0,
+            zoi <= 1,
+            coi >= 0,
+            coi <= 1,
+            alpha > 0,
+            beta > 0,
+            msg="0 <= zoi <= 1, 0 <= coi <= 1, alpha > 0, beta > 0",
         )
 
 
