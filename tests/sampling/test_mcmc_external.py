@@ -94,7 +94,7 @@ def test_step_args():
             nuts_sampler="numpyro",
             target_accept=0.5,
             nuts={"max_tree_depth": 10},
-            random_seed=1411,
+            random_seed=6,
             progressbar=False,
         )
 
