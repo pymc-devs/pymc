@@ -262,7 +262,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
             for var_name, var_value in buffer.items():
                 array = group[var_name]
                 if array.attrs.get(OBJECT_CODEC_ATTR):
-                    values: np.ndarray = np.array(
+                    values = np.array(
                         [encode_object_value(value) for value in var_value], dtype=object
                     )
                 else:
@@ -647,7 +647,7 @@ class ZarrTrace(_ZarrTraceBase):
             name="sampling_state",
             shape=(chains,),
             chunks=(1,),
-            dtype=VariableLengthUTF8(),
+            dtype=VariableLengthUTF8(),  # type: ignore[arg-type]
             fill_value="",
             compressors=self.compressors,
             dimension_names=["chain"],
@@ -720,8 +720,8 @@ class ZarrTrace(_ZarrTraceBase):
                 name=name,
                 dtype=dtype,
                 fill_value=fill_value,
-                shape=(chains, draws, *shape),
-                chunks=(1, self.draws_per_chunk, *shape),
+                shape=(chains, draws, *shape),  # type: ignore[arg-type]
+                chunks=(1, self.draws_per_chunk, *shape),  # type: ignore[arg-type]
                 compressors=self.compressors,
                 dimension_names=dims,
                 attributes=attributes,
@@ -812,7 +812,7 @@ class ZarrTrace(_ZarrTraceBase):
                     dimension_names=["draw"],
                     compressors=self.compressors,
                 )
-                posterior_group.create_array(
+                posterior_group.create_array(  # type: ignore[union-attr]
                     name=name,
                     data=np.arange(array.shape[0] - tune),
                     dimension_names=["draw"],
@@ -830,7 +830,7 @@ class ZarrTrace(_ZarrTraceBase):
                     warmup_idx = slice(None)
                 warmup_group.create_array(  # type: ignore[union-attr]
                     name=name,
-                    data=array[warmup_idx],
+                    data=array[warmup_idx],  # type: ignore[arg-type]
                     chunks=array.chunks,
                     compressors=self.compressors,
                     dimension_names=dims,
@@ -839,7 +839,7 @@ class ZarrTrace(_ZarrTraceBase):
                 if len(dims) >= 2 and dims[:2] == ("chain", "draw"):
                     posterior_group.create_array(  # type: ignore[union-attr]
                         name=name,
-                        data=array[posterior_idx],
+                        data=array[posterior_idx],  # type: ignore[arg-type]
                         chunks=array.chunks,
                         overwrite=True,
                         compressors=self.compressors,
