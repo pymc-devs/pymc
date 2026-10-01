@@ -27,11 +27,18 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.step_methods.metropolis import tune
-from pymc.testing import select_by_precision
+from pymc.testing import fast_unstable_sampling_mode, select_by_precision
 from pymc.tuning import find_MAP, scipy_interface
 from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
+
+
+@pytest.fixture(autouse=True)
+def fast_compile_mode():
+    """Cheap compilation; the default backend is covered by the init="map", GP and JAX tests."""
+    with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+        yield
 
 
 def map_point(*args, **kwargs):

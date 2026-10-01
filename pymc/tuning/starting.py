@@ -390,6 +390,8 @@ def _fit_MAP(
         jitter,
         jitter_max_retries,
         jitter_rvs=[model.values_to_rvs[var] for var in vars if var not in discrete],
+        # Only checks a few jittered starts for finiteness; a full backend compile is wasted here
+        logp_fn=model.compile_logp(mode="FAST_COMPILE") if jitter else None,
     )
 
     method = _canonical_method(method)
