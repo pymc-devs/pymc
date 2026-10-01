@@ -410,6 +410,30 @@ def test_find_MAP_unknown_method(normal_model):
         find_MAP(method="gradient-descent", model=normal_model, progressbar=False)
 
 
+def test_find_MAP_initvals_variable_keys(normal_model):
+    # Variable keys must survive model freezing; maxiter=1 keeps the result near the start
+    kwargs = {"model": normal_model, "jitter": False, "maxiter": 1, "progressbar": False}
+    with pytest.warns(UserWarning, match="did not converge"):
+        by_var = find_MAP(initvals={normal_model["mu"]: -50.0}, **kwargs)
+    with pytest.warns(UserWarning, match="did not converge"):
+        by_name = find_MAP(initvals={"mu": -50.0}, **kwargs)
+    assert_allclose(by_var.posterior["mu"], by_name.posterior["mu"])
+    assert by_var.posterior["mu"].item() < -10
+
+
+@pytest.mark.parametrize(
+    "legacy, new",
+    [
+        ({"start": {"mu": 1.0}}, {"initvals": {"mu": 2.0}}),
+        ({"seed": 1}, {"random_seed": 2}),
+        ({"maxeval": 10}, {"maxiter": 20}),
+    ],
+)
+def test_find_MAP_legacy_and_new_kwargs_conflict(normal_model, legacy, new):
+    with pytest.raises(ValueError, match="Cannot pass both"):
+        find_MAP(model=normal_model, progressbar=False, **legacy, **new)
+
+
 def test_find_MAP_legacy_kwargs(normal_model):
     kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
     with pytest.warns(FutureWarning, match="`start` is deprecated"):
@@ -418,7 +442,7 @@ def test_find_MAP_legacy_kwargs(normal_model):
         r2 = map_point(start={"mu": 1.0}, **kwargs)
     assert_allclose(r1["mu"], r2["mu"])
     with pytest.warns(FutureWarning, match="`seed` is deprecated"):
-        find_MAP(seed=1, **kwargs)
+        find_MAP(seed=1, model=normal_model, progressbar=False)
     with pytest.warns(FutureWarning, match="`maxeval` is deprecated"):
         find_MAP(maxeval=10, **kwargs)
     with pytest.warns(FutureWarning, match="`return_raw` is deprecated"):

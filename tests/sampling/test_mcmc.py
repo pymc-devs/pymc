@@ -717,17 +717,24 @@ def test_exec_nuts_init(method):
         check_exec_nuts_init(method)
 
 
-def test_init_map_jitter(monkeypatch):
-    jitters = []
+def test_init_map_jitter_and_initvals(monkeypatch):
+    calls = []
     find_map_point = pm.sampling.mcmc._find_MAP_point
     monkeypatch.setattr(
         pm.sampling.mcmc,
         "_find_MAP_point",
-        lambda **kwargs: jitters.append(kwargs["jitter"]) or find_map_point(**kwargs),
+        lambda **kwargs: calls.append(kwargs) or find_map_point(**kwargs),
     )
-    for init in ("map", "jitter+map"):
+    for init in ("map", "jitter+map", "advi_map"):
         check_exec_nuts_init(init)
-    assert jitters == [False, False, True, True]
+    assert [c["jitter"] for c in calls] == [False, False, True, True, False, False]
+
+    calls.clear()
+    with pm.Model():
+        pm.Normal("a")
+        pm.init_nuts(init="map", initvals={"a": 2.0}, random_seed=[1])
+        pm.init_nuts(init="map", initvals=[{"a": 3.0}, {"a": 4.0}], chains=2, random_seed=[1, 2])
+    assert [c["initvals"] for c in calls] == [{"a": 2.0}, {"a": 3.0}]
 
 
 @pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")
