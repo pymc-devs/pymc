@@ -497,6 +497,11 @@ def test_sample(
         model_step.sampling_state = step_method_state
 
 
+@pytest.mark.xfail(
+    reason="Parallel and sequential ZarrTrace sampling differ on the ubuntu/numba/Python 3.14 CI "
+    "job, see https://github.com/pymc-devs/pymc/issues/8461",
+    strict=False,
+)
 def test_sampling_consistency(
     model,
     model_step,
