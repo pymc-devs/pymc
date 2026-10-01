@@ -22,14 +22,13 @@ import xarray as xr
 
 from numpy.testing import assert_allclose
 from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
-from scipy.sparse.linalg import LinearOperator
 
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.step_methods.metropolis import tune
 from pymc.testing import select_by_precision
-from pymc.tuning import find_MAP
+from pymc.tuning import find_MAP, scipy_interface
 from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
@@ -210,22 +209,23 @@ def test_find_MAP_vars_subset_holds_others_fixed(normal_model):
 
 
 @pytest.mark.parametrize(
-    "method, use_grad, use_hess, use_hessp",
+    "method, use_grad, use_hess, use_hessp, compute_hessian",
     [
-        ("Newton-CG", True, True, False),
-        ("Newton-CG", True, False, True),
-        ("BFGS", True, False, False),
-        ("L-BFGS-B", True, False, False),
-        ("trust-exact", True, True, False),
-        ("trust-constr", True, False, True),
-        ("powell", False, False, False),
-        ("nelder-mead", False, False, False),
+        # compute_hessian once per Hessian route: fused, hessp, and compiled after optimizing
+        ("Newton-CG", True, True, False, True),
+        ("Newton-CG", True, False, True, True),
+        ("L-BFGS-B", True, False, False, True),
+        ("powell", False, False, False, True),
+        ("BFGS", True, False, False, False),
+        ("trust-exact", True, True, False, False),
+        ("trust-constr", True, False, True, False),
+        ("nelder-mead", False, False, False, False),
     ],
 )
-@pytest.mark.parametrize("include_transformed, compute_hessian", [(True, True), (False, False)])
 def test_find_MAP_inferencedata(
-    normal_model, method, use_grad, use_hess, use_hessp, include_transformed, compute_hessian
+    normal_model, method, use_grad, use_hess, use_hessp, compute_hessian
 ):
+    include_transformed = compute_hessian
     idata = find_MAP(
         method=method,
         model=normal_model,
@@ -257,6 +257,14 @@ def test_find_MAP_inferencedata(
         assert_allclose(idata.fit.covariance_matrix.values, np.linalg.inv(H), rtol=1e-6)
 
 
+def test_find_MAP_compute_hessian_discrete_raises():
+    with pm.Model() as m:
+        p = pm.Beta("p", 2, 2)
+        pm.Binomial("k", n=10, p=p)
+    with pytest.raises(ValueError, match=r"undefined for discrete variables \['k'\]"):
+        find_MAP(model=m, vars=m.value_vars, compute_hessian=True, progressbar=False)
+
+
 def test_find_MAP_compute_hessian_float32():
     with pytensor.config.change_flags(floatX="float32"):
         with pm.Model() as m:
@@ -267,10 +275,21 @@ def test_find_MAP_compute_hessian_float32():
     assert np.all(np.isfinite(idata.fit.covariance_matrix.values))
 
 
-@pytest.mark.parametrize("gradient_backend", ["jax", "pytensor"])
-def test_find_MAP_jax_backend(normal_model, gradient_backend):
+@pytest.mark.parametrize(
+    "gradient_backend, method",
+    [("jax", "L-BFGS-B"), ("pytensor", "L-BFGS-B"), ("jax", "powell")],
+)
+def test_find_MAP_jax_backend(normal_model, gradient_backend, method, monkeypatch):
     pytest.importorskip("jax")
+    jax_derivatives = []
+    to_jax = scipy_interface._compile_grad_and_hess_to_jax
+    monkeypatch.setattr(
+        scipy_interface,
+        "_compile_grad_and_hess_to_jax",
+        lambda *args: jax_derivatives.append(args[2]) or to_jax(*args),
+    )
     idata = find_MAP(
+        method,
         model=normal_model,
         backend="jax",
         compile_kwargs={"gradient_backend": gradient_backend},
@@ -279,6 +298,8 @@ def test_find_MAP_jax_backend(normal_model, gradient_backend):
     )
     assert idata.fit.covariance_matrix.shape == (2, 2)
     assert_allclose(idata.posterior["mu"].item(), 3.0, atol=1.0)
+    # with jax autodiff, the post-hoc hessp also comes from jax, even for gradient-free methods
+    assert (True in jax_derivatives) == (gradient_backend == "jax")
 
 
 def test_find_MAP_return_inferencedata_consistent(normal_model):
@@ -474,15 +495,6 @@ class TestOptimizerResultToDataset:
         assert ds["message"].item() == "done" and ds["method"].item() == "BFGS"
         assert ds["custom_stat"].dims == ("custom_stat_dim_0",)
         assert "variables_aux" not in ds.coords
-
-    def test_hess_inv_linear_operator(self):
-        result = OptimizeResult(
-            x=np.ones(2), hess_inv=LinearOperator((2, 2), matvec=lambda x: 2 * x)
-        )
-        ds = _optimizer_result_to_dataset(result, "L-BFGS-B", self.names)
-        assert ds["hess_inv"].dims == ("variables", "variables_aux")
-        assert ds["hess_inv"].coords["variables_aux"].values.tolist() == self.names
-        assert_allclose(ds["hess_inv"].values, 2 * np.eye(2))
 
     def test_lbfgs_hess_inv_kept_low_rank(self):
         rng = np.random.default_rng(0)

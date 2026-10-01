@@ -37,6 +37,10 @@ of the topics below refer to that specific library
 * Model comparison, particularly efficient leave-one-out cross-validation approximation
 * Data structures for Bayesian inference data storage and manipulation
 
+### SciPy and better-optimize
+* Numerical optimization for {func}`pymc.find_MAP`, through `scipy.optimize` wrapped by
+  `better-optimize` (fused objectives, progress bars, early stopping)
+
 
 # Modules
 The codebase of PyMC is split among single Python file modules at the root

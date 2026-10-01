@@ -40,6 +40,7 @@ from pytensor.compile.mode import get_mode
 from pytensor.graph.basic import Variable
 from pytensor.link.jax.linker import JAXLinker
 from pytensor.link.numba.linker import NumbaLinker
+from pytensor.tensor import TensorVariable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
@@ -1700,7 +1701,7 @@ def _init_jitter(
     jitter: bool,
     jitter_max_retries: int,
     logp_fn: Callable[[PointType], np.ndarray] | None = None,
-    jitter_rvs: Iterable[Variable] | None = None,
+    jitter_rvs: Iterable[TensorVariable] | None = None,
 ) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 

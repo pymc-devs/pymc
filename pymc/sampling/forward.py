@@ -672,7 +672,7 @@ def sample_posterior_predictive(
     Parameters
     ----------
     trace : backend, list, Dataset, DataTree, or MultiTrace
-        Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
+        Trace generated from MCMC sampling or :func:`~pymc.find_MAP`, or a list of dicts (eg. points),
         or :class:`xarray.Dataset` (eg. DataTree.posterior or DataTree.prior)
     model : BaseModel (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will
