@@ -26,10 +26,11 @@ from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning, SamplingError
+from pymc.model.transform.optimization import freeze_model
 from pymc.step_methods.metropolis import tune
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
 from pymc.tuning import find_MAP, scipy_interface
-from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
+from pymc.tuning.starting import _find_MAP_point, _fit_MAP, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
 
@@ -207,6 +208,11 @@ def test_find_MAP_warning_non_free_RVs():
         with pytest.warns(UserWarning, match=re.escape(msg)):
             r = map_point(vars=[det], jitter=False)
         assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
+
+
+def test_find_MAP_keeps_frozen_model(normal_model):
+    frozen = freeze_model(normal_model)
+    assert _fit_MAP(model=frozen, progressbar=False).model is frozen
 
 
 def test_find_MAP_vars_subset_holds_others_fixed(normal_model):

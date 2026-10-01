@@ -38,6 +38,7 @@ from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
 from pymc.initial_point import StartDict
 from pymc.model import Model, modelcontext
+from pymc.model.core import FrozenModel
 from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
 from pymc.tuning.scipy_interface import (
@@ -241,7 +242,8 @@ def find_MAP(
         Keyword arguments for :func:`pymc.to_inference_data`.
     freeze_model : bool, default True
         Freeze data and dimension lengths before compiling, which allows constant folding and
-        is required by some backends (JAX).
+        is required by some backends (JAX). A model from :func:`pymc.model.transform.freeze_model`
+        is used as is, keeping its cached compiled functions.
     model : Model (optional if in ``with`` context)
     backend : str, optional
         Computational backend, one of "numba", "c" or "jax". Defaults to the PyTensor default mode.
@@ -366,7 +368,7 @@ def _fit_MAP(
     var_names = [str(var.name) for var in model.value_vars if var.name in names]
     # Variable keys would not match the frozen model's variables, so key by name
     initvals = initvals and {getattr(k, "name", k): v for k, v in initvals.items()}
-    if freeze_model:
+    if freeze_model and not isinstance(model, FrozenModel):
         model = freeze_dims_and_data(model)
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
     gradient_backend = compile_kwargs.pop("gradient_backend", "pytensor")
