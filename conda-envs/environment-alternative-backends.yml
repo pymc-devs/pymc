@@ -9,7 +9,7 @@ dependencies:
 - blas
 - cachetools>=4.2.1,<7
 - cloudpickle
-- zarr>=2.5.0,<3
+- zarr>=3.1.0,<4
 - numba
 # nutpie is installed from git in the CI workflow (see tests.yml) so we can track
 # the arviz 1.0 -compatible branch until an upstream release ships.

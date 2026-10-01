@@ -11,6 +11,10 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import base64
+import pickle
+import warnings
+
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import Any
 
@@ -41,27 +45,48 @@ from pymc.step_methods.compound import (
 from pymc.util import UNSET, _UnsetType, get_default_varnames, is_transformed_name
 
 try:
-    import numcodecs
     import zarr
 
-    from numcodecs.abc import Codec
     from zarr import Group
-    from zarr.storage import BaseStore, default_compressor
-    from zarr.sync import Synchronizer
+    from zarr.abc.store import Store
+    from zarr.codecs import ZstdCodec
+    from zarr.dtype import VariableLengthUTF8
 
     _zarr_available = True
 except ImportError:
     from typing import TYPE_CHECKING, TypeVar
 
     if not TYPE_CHECKING:
-        Codec = TypeVar("Codec")
+        Store = TypeVar("Store")
+        ZstdCodec = TypeVar("ZstdCodec")
+        VariableLengthUTF8 = TypeVar("VariableLengthUTF8")
         Group = TypeVar("Group")
-        BaseStore = TypeVar("BaseStore")
-        Synchronizer = TypeVar("Synchronizer")
     _zarr_available = False
 
 
 WARMUP_TAG = "warmup_"
+# Attribute used to tag arrays that store arbitrary python objects. Zarr v3 has
+# no object dtype, so such values are pickled and base64 encoded into
+# variable length utf8 strings. Readers must decode them with
+# ``decode_object_value``.
+OBJECT_CODEC_ATTR = "pymc_object_codec"
+
+
+def encode_object_value(value: Any) -> str:
+    """Encode an arbitrary python object as a base64-encoded pickle string."""
+    return base64.b64encode(pickle.dumps(value)).decode("ascii")
+
+
+def decode_object_value(value: Any) -> Any:
+    """Decode a value stored with :func:`encode_object_value`.
+
+    Empty strings (the fill value of object arrays) are decoded as ``None``.
+    """
+    if isinstance(value, np.ndarray) and value.ndim == 0:
+        value = value.item()
+    if not value:
+        return None
+    return pickle.loads(base64.b64decode(str(value)))
 
 
 class ZarrChain(_ZarrChainBase, BaseTrace):
@@ -69,7 +94,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
 
     Parameters
     ----------
-    store : zarr.storage.BaseStore | collections.abc.MutableMapping
+    store : zarr.abc.store.Store | collections.abc.MutableMapping
         The store object where the zarr groups and arrays will be stored and read from.
         This store must exist before creating a ``ZarrChain`` object. ``ZarrChain`` are
         only intended to be used as interfaces to the individual chains of
@@ -78,8 +103,6 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
     stats_bijection : pymc.step_methods.compound.StatsBijection
         An object that maps between a list of step method stats and a dictionary of
         said stats with the accompanying stepper index.
-    synchronizer : zarr.sync.Synchronizer | None
-        The synchronizer to use for the underlying zarr arrays.
     model : BaseModel
         If None, the model is taken from the `with` context.
     vars : Sequence[TensorVariable] | None
@@ -96,9 +119,8 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
 
     def __init__(
         self,
-        store: BaseStore | MutableMapping,
+        store: Store | MutableMapping,
         stats_bijection: StatsBijection,
-        synchronizer: Synchronizer | None = None,
         model: BaseModel | None = None,
         vars: Sequence[TensorVariable] | None = None,
         test_point: dict[str, np.ndarray] | None = None,
@@ -120,26 +142,20 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         self._buffered_draws = 0
         self.draws_per_chunk = int(draws_per_chunk)
         assert self.draws_per_chunk > 0
-        self._posterior = zarr.open_group(
-            store, synchronizer=synchronizer, path="posterior", mode="a"
-        )
+        self._posterior = zarr.open_group(store, path="posterior", mode="a")
         if self.unconstrained_variables:
             self._unconstrained_posterior = zarr.open_group(
-                store, synchronizer=synchronizer, path="unconstrained_posterior", mode="a"
+                store, path="unconstrained_posterior", mode="a"
             )
             self._buffers["unconstrained_posterior"] = {}
-        self._sample_stats = zarr.open_group(
-            store, synchronizer=synchronizer, path="sample_stats", mode="a"
-        )
-        self._sampling_state = zarr.open_group(
-            store, synchronizer=synchronizer, path="_sampling_state", mode="a"
-        )
+        self._sample_stats = zarr.open_group(store, path="sample_stats", mode="a")
+        self._sampling_state = zarr.open_group(store, path="_sampling_state", mode="a")
         self.stats_bijection = stats_bijection
 
     def link_stepper(self, step_method: BlockedStep | CompoundStep):
         """Provide a reference to the step method used during sampling.
 
-        This reference can be used to facilite writing the stepper's sampling state
+        This reference can be used to facilitate writing the stepper's sampling state
         each time the samples are flushed into the storage.
         """
         self._step_method = step_method
@@ -202,45 +218,55 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
     def record_sampling_state(self, step: BlockedStep | CompoundStep | None = None):
         """Record the sampling state information to the store's ``_sampling_state`` group.
 
-        The sampling state includes the number of draws taken so far (``draw_idx``) and
-        the step method's ``sampling_state``.
+        The number of draws taken so far (``draw_idx``) is stored as an integer array.
+        The step method's ``sampling_state`` is an arbitrary python object, which has
+        no zarr v3 dtype representation. It is pickled, base64 encoded and stored as a
+        variable length utf8 string. It can be read back with
+        :attr:`~ZarrChain.sampling_state`.
 
         Parameters
         ----------
         step : BlockedStep | CompoundStep | None
             The step method from which to take the ``sampling_state``. If ``None``,
             the ``step`` is taken to be the step method that was linked to the
-            ``ZarrChain`` when calling :meth:`~ZarrChain.link_stepper`. If this method was never
-            called, no step method ``sampling_state`` information is stored in the
-            chain.
+            ``ZarrChain`` when calling :meth:`~ZarrChain.link_stepper`. If this method
+            was never called, no step method ``sampling_state`` information is stored
+            in the chain.
         """
         if step is None:
             step = self._step_method
         if step is not None:
             self.store_sampling_state(step.sampling_state)
-        self._sampling_state.draw_idx.set_coordinate_selection(self.chain, self.draw_idx)
+        self._sampling_state["draw_idx"][self.chain] = self.draw_idx  # type: ignore[index]
 
     def store_sampling_state(self, sampling_state):
-        self._sampling_state.sampling_state.set_coordinate_selection(
-            self.chain, np.array([sampling_state], dtype="object")
-        )
+        self._sampling_state["sampling_state"][self.chain] = encode_object_value(sampling_state)
+
+    @property
+    def sampling_state(self):
+        """The last sampling state recorded for this chain (if any)."""
+        return decode_object_value(self._sampling_state["sampling_state"][self.chain])
 
     def flush(self):
         """Write the data stored in the internal buffer to the desired zarr store.
 
         After writing the draws and stats returned by each step of the step method,
-        the :meth:`~ZarrChain.record_sampling_state` is called, the internal buffer is cleared and
-        the number of steps until the next flush is determined.
+        the :meth:`~ZarrChain.record_sampling_state` is called, the internal buffer is
+        cleared and the number of steps until the next flush is determined.
         """
         chain = self.chain
         draw_slice = slice(self.draw_idx, self.draw_idx + self.draws_until_flush)
         for group_name, buffer in self._buffers.items():
             group = getattr(self, f"_{group_name}")
             for var_name, var_value in buffer.items():
-                group[var_name].set_orthogonal_selection(
-                    (chain, draw_slice),
-                    np.stack(var_value),
-                )
+                array = group[var_name]
+                if array.attrs.get(OBJECT_CODEC_ATTR):
+                    values: np.ndarray = np.array(
+                        [encode_object_value(value) for value in var_value], dtype=object
+                    )
+                else:
+                    values = np.stack(var_value)
+                array.set_orthogonal_selection((chain, draw_slice), values)
         self.draw_idx += self.draws_until_flush
         self.record_sampling_state()
         self.clear_buffers()
@@ -258,12 +284,23 @@ DEFAULT_FILL_VALUES: dict[Any, FILL_VALUE_TYPE] = {
 }
 
 
-def get_initial_fill_value_and_codec(
+def get_initial_fill_value_and_dtype(
     dtype: Any,
-) -> tuple[FILL_VALUE_TYPE, np.typing.DTypeLike, Codec | None]:
+) -> tuple[FILL_VALUE_TYPE, Any, bool]:
+    """Find the fill value and dtype used to initialize a zarr array.
+
+    Object dtypes have no zarr v3 representation. They are stored as variable length
+    utf8 strings, with the individual values pickled and base64 encoded by the caller
+    (see :func:`encode_object_value`).
+
+    Returns
+    -------
+    fill_value, dtype, is_object
+    """
+    if dtype is np.object_ or dtype == np.dtype("object"):
+        return None, VariableLengthUTF8(), True
     _dtype = np.dtype(dtype)
     fill_value: FILL_VALUE_TYPE = None
-    codec = None
     try:
         fill_value = DEFAULT_FILL_VALUES[_dtype]
     except KeyError:
@@ -271,13 +308,11 @@ def get_initial_fill_value_and_codec(
             if np.issubdtype(_dtype, key):
                 fill_value = DEFAULT_FILL_VALUES[key]
                 break
-        else:
-            codec = numcodecs.Pickle()
-    return fill_value, _dtype, codec
+    return fill_value, _dtype, False
 
 
 class ZarrTrace(_ZarrTraceBase):
-    """Object that stores and enables access to MCMC draws stored in a :class:`zarr.hierarchy.Group` objects.
+    """Object that stores and enables access to MCMC draws stored in zarr groups.
 
     This class creates a zarr hierarchy to represent the sampling information which is
     intended to mimic :class:`xarray.DataTree`. The hierarchy looks like this:
@@ -294,30 +329,33 @@ class ZarrTrace(_ZarrTraceBase):
     | |--> _sampling_state
 
     The root group is created when the ``ZarrTrace`` object is initialized. The rest of
-    the groups are created once :meth:`~ZarrChain.init_trace` is called with a few exceptions:
+    the groups are created once :meth:`~ZarrTrace.init_trace` is called with a few exceptions:
     unconstrained_posterior is only created if ``include_transformed = True``, and the
     groups prefixed with ``warmup_`` are created only after calling
     :meth:`~ZarrTrace.split_warmup_groups`.
 
     Since ``ZarrTrace`` objects are intended to be as close to
     :class:`xarray.DataTree` objects as possible, the groups store the dimension
-    and coordinate information following the `xarray zarr standard <https://xarray.pydata.org/en/v2023.11.0/internals/zarr-encoding-spec.html>`_.
+    and coordinate information following the `xarray zarr v3 encoding specification
+    <https://docs.xarray.dev/en/stable/internals/zarr-encoding-spec.html>`_.
+    Arrays store their dimensions in the zarr v3 ``dimension_names`` metadata field.
 
     Parameters
     ----------
-    store : zarr.storage.BaseStore | collections.abc.MutableMapping | None
+    store : zarr.abc.store.Store | collections.abc.MutableMapping | None
         The store object where the zarr groups and arrays will be stored and read from.
         Any zarr compatible storage object works. Keep in mind that if ``None`` is
         provided, a :class:`zarr.storage.MemoryStore` will be used, which means that
         information won't be visible to other processes and won't persist after the
         ``ZarrTrace`` life-cycle ends. If you want to have persistent storage, please
         use one of the multiple disk backed zarr storage options, e.g.
-        :class:`~zarr.storage.DirectoryStore` or :class:`~zarr.storage.ZipStore`.
-    synchronizer : zarr.sync.Synchronizer | None
-        The synchronizer to use for the underlying zarr arrays.
-    compressor : numcodec.abc.Codec | None | pymc.util.UNSET
-        The compressor to use for the underlying zarr arrays. If ``None``, no compressor
-        is used. If ``UNSET``, zarr's default compressor is used.
+        :class:`~zarr.storage.LocalStore` or :class:`~zarr.storage.ZipStore`.
+        Note that :class:`~zarr.storage.ZipStore` must be created with
+        ``mode="w"`` to be writable, and that its contents are only persisted
+        once ``.close()`` is called on it.
+    compressors : Sequence | None | pymc.util.UNSET
+        The compressors to use for the underlying zarr arrays. If ``None``, no
+        compressor is used. If ``UNSET``, a default zarr ``ZstdCodec`` is used.
     draws_per_chunk : int
         The number of draws that make up a chunk in the variable's posterior array.
         Each variable's array shape is set to ``(n_chains, n_draws, *rv_shape)``, but
@@ -333,9 +371,9 @@ class ZarrTrace(_ZarrTraceBase):
     Notes
     -----
     ``ZarrTrace`` objects represent the storage information. If the underlying store
-    persists on disk or over the network (e.g. with a :class:`zarr.storage.FSStore`)
-    multiple process will be able to concurrently access the same storage and read or
-    write to it.
+    persists on disk or over the network (e.g. with a :class:`zarr.storage.LocalStore`
+    pointing to a cloud bucket) multiple processes will be able to concurrently access
+    the same storage and read or write to it.
 
     The intended division of labour is for ``ZarrTrace`` to handle the creation and
     management of the zarr group and storage objects and arrays, and for individual
@@ -354,28 +392,28 @@ class ZarrTrace(_ZarrTraceBase):
 
     def __init__(
         self,
-        store: BaseStore | MutableMapping | None = None,
-        synchronizer: Synchronizer | None = None,
-        compressor: Codec | None | _UnsetType = UNSET,
+        store: Store | MutableMapping | None = None,
+        compressors: Sequence | None | _UnsetType = UNSET,
         draws_per_chunk: int = 1,
         include_transformed: bool = False,
     ):
         if not _zarr_available:
             raise RuntimeError("You must install zarr to be able to create ZarrTrace instances")
-        self.synchronizer = synchronizer
-        if compressor is UNSET:
-            compressor = default_compressor
-        self.compressor = compressor
-        self.root = zarr.group(
-            store=store,
-            overwrite=True,
-            synchronizer=synchronizer,
+        if compressors is UNSET:
+            compressors = [ZstdCodec()]
+        self.compressors = (
+            list(compressors) if compressors is not None else None  # type: ignore[arg-type]
         )
+        self.root = zarr.group(store=store, overwrite=True, zarr_format=3)
 
         self.draws_per_chunk = int(draws_per_chunk)
         assert self.draws_per_chunk >= 1
 
         self.include_transformed = include_transformed
+
+        # Sampler warnings collected during convergence checks. Zarr v3 has no
+        # object dtype, so these are only kept in memory.
+        self.global_warnings: list = []
 
         self._is_base_setup = False
 
@@ -384,27 +422,27 @@ class ZarrTrace(_ZarrTraceBase):
 
     @property
     def posterior(self) -> Group:
-        return self.root.posterior
+        return self.root["posterior"]  # type: ignore[return-value]
 
     @property
     def unconstrained_posterior(self) -> Group:
-        return self.root.unconstrained_posterior
+        return self.root["unconstrained_posterior"]  # type: ignore[return-value]
 
     @property
     def sample_stats(self) -> Group:
-        return self.root.sample_stats
+        return self.root["sample_stats"]  # type: ignore[return-value]
 
     @property
     def constant_data(self) -> Group:
-        return self.root.constant_data
+        return self.root["constant_data"]  # type: ignore[return-value]
 
     @property
     def observed_data(self) -> Group:
-        return self.root.observed_data
+        return self.root["observed_data"]  # type: ignore[return-value]
 
     @property
     def _sampling_state(self) -> Group:
-        return self.root._sampling_state
+        return self.root["_sampling_state"]  # type: ignore[return-value]
 
     def init_trace(
         self,
@@ -546,7 +584,6 @@ class ZarrTrace(_ZarrTraceBase):
         self.straces = [
             ZarrChain(
                 store=self.root.store,
-                synchronizer=self.synchronizer,
                 model=self.model,
                 vars=self.vars,
                 test_point=test_point,
@@ -582,8 +619,8 @@ class ZarrTrace(_ZarrTraceBase):
     @property
     def tuning_steps(self):
         try:
-            return int(self._sampling_state.tuning_steps.get_basic_selection())
-        except AttributeError:  # pragma: no cover
+            return int(self._sampling_state["tuning_steps"][()])
+        except KeyError:  # pragma: no cover
             raise ValueError(
                 "ZarrTrace has not been initialized and there is no tuning step information available"
             )
@@ -591,75 +628,62 @@ class ZarrTrace(_ZarrTraceBase):
     @property
     def sampling_time(self):
         try:
-            return float(self._sampling_state.sampling_time.get_basic_selection())
-        except AttributeError:  # pragma: no cover
+            return float(self._sampling_state["sampling_time"][()])
+        except KeyError:  # pragma: no cover
             raise ValueError(
                 "ZarrTrace has not been initialized and there is no sampling time information available"
             )
 
     @sampling_time.setter
     def sampling_time(self, value):
-        self._sampling_state.sampling_time.set_basic_selection((), float(value))
+        self._sampling_state["sampling_time"][()] = float(value)
 
     def init_sampling_state_group(self, tune: int, chains: int):
         state = self.root.create_group(name="_sampling_state", overwrite=True)
-        sampling_state = state.empty(
+        sampling_state = state.create_array(  # type: ignore[arg-type]
             name="sampling_state",
-            overwrite=True,
             shape=(chains,),
             chunks=(1,),
-            dtype="object",
-            object_codec=numcodecs.Pickle(),
-            compressor=self.compressor,
+            dtype=VariableLengthUTF8(),
+            fill_value="",
+            compressors=self.compressors,
+            dimension_names=["chain"],
         )
-        sampling_state.attrs.update({"_ARRAY_DIMENSIONS": ["chain"]})
-        draw_idx = state.array(
+        sampling_state.attrs.update({OBJECT_CODEC_ATTR: "pickle_base64"})
+
+        state.create_array(
             name="draw_idx",
-            overwrite=True,
             data=np.zeros(chains, dtype="int"),
             chunks=(1,),
-            dtype="int",
             fill_value=-1,
-            compressor=self.compressor,
+            compressors=self.compressors,
+            dimension_names=["chain"],
         )
-        draw_idx.attrs.update({"_ARRAY_DIMENSIONS": ["chain"]})
 
-        state.array(
+        state.create_array(
             name="tuning_steps",
-            data=tune,
-            overwrite=True,
-            dtype="int",
+            data=np.array(tune),
             fill_value=0,
-            compressor=self.compressor,
+            compressors=self.compressors,
         )
-        state.array(
+        state.create_array(
             name="sampling_time",
-            data=0.0,
-            dtype="float",
+            data=np.array(0.0),
             fill_value=0.0,
-            compressor=self.compressor,
+            compressors=self.compressors,
         )
-        state.array(
+        state.create_array(
             name="sampling_start_time",
-            data=0.0,
-            dtype="float",
+            data=np.array(0.0),
             fill_value=0.0,
-            compressor=self.compressor,
+            compressors=self.compressors,
         )
 
-        chain = state.array(
+        state.create_array(
             name="chain",
             data=np.arange(chains),
-            compressor=self.compressor,
-        )
-
-        chain.attrs.update({"_ARRAY_DIMENSIONS": ["chain"]})
-
-        state.empty(
-            name="global_warnings",
-            dtype="object",
-            object_codec=numcodecs.Pickle(),
-            shape=(0,),
+            dimension_names=["chain"],
+            compressors=self.compressors,
         )
 
     def init_group_with_empty(
@@ -672,40 +696,40 @@ class ZarrTrace(_ZarrTraceBase):
     ) -> Group:
         group_coords: dict[str, Any] = {"chain": range(chains), "draw": range(draws)}
         for name, (_dtype, shape) in var_dtype_and_shape.items():
-            fill_value, dtype, object_codec = get_initial_fill_value_and_codec(_dtype)
+            fill_value, dtype, is_object = get_initial_fill_value_and_dtype(_dtype)
             shape = shape or ()
-            array = group.full(
+            attributes = extra_var_attrs[name] if extra_var_attrs is not None else {}
+            if is_object:
+                attributes = {**attributes, OBJECT_CODEC_ATTR: "pickle_base64"}
+            try:
+                core_dims = self.vars_to_dims[name]
+                for dim in core_dims:
+                    group_coords[dim] = self.coords[dim]
+            except KeyError:
+                core_dims = []
+                for i, shape_i in enumerate(shape):
+                    dim = f"{name}_dim_{i}"
+                    core_dims.append(dim)
+                    assert shape_i is not None, f"{dim} shape is None"
+                    group_coords[dim] = np.arange(shape_i, dtype="int")
+            dims = ("chain", "draw", *core_dims)
+            array = group.create_array(  # type: ignore[arg-type]
                 name=name,
                 dtype=dtype,
                 fill_value=fill_value,
-                object_codec=object_codec,
                 shape=(chains, draws, *shape),
                 chunks=(1, self.draws_per_chunk, *shape),
-                compressor=self.compressor,
+                compressors=self.compressors,
+                dimension_names=dims,
+                attributes=attributes,
             )
-            try:
-                dims = self.vars_to_dims[name]
-                for dim in dims:
-                    group_coords[dim] = self.coords[dim]
-            except KeyError:
-                dims = []
-                for i, shape_i in enumerate(shape):
-                    dim = f"{name}_dim_{i}"
-                    dims.append(dim)
-                    assert shape_i is not None, f"{dim} shape is None"
-                    group_coords[dim] = np.arange(shape_i, dtype="int")
-            dims = ("chain", "draw", *dims)
-            attrs = extra_var_attrs[name] if extra_var_attrs is not None else {}
-            attrs.update({"_ARRAY_DIMENSIONS": dims})
-            array.attrs.update(attrs)
         for dim, coord in group_coords.items():
-            array = group.array(
+            group.create_array(
                 name=dim,
-                data=coord,
-                fill_value=None,
-                compressor=self.compressor,
+                data=np.asarray(coord),
+                dimension_names=[dim],
+                compressors=self.compressors,
             )
-            array.attrs.update({"_ARRAY_DIMENSIONS": [dim]})
         return group
 
     def create_group(self, name: str, data_dict: dict[str, np.ndarray]) -> Group | None:
@@ -714,15 +738,12 @@ class ZarrTrace(_ZarrTraceBase):
             group_coords = {}
             group = self.root.create_group(name=name, overwrite=True)
             for var_name, var_value in data_dict.items():
-                fill_value, dtype, object_codec = get_initial_fill_value_and_codec(var_value.dtype)
-                array = group.array(
-                    name=var_name,
-                    data=var_value,
-                    fill_value=fill_value,
-                    dtype=dtype,
-                    object_codec=object_codec,
-                    compressor=self.compressor,
-                )
+                _, _, is_object = get_initial_fill_value_and_dtype(var_value.dtype)
+                if is_object:
+                    var_value = np.array(
+                        [encode_object_value(value) for value in var_value.ravel()],
+                        dtype=object,
+                    ).reshape(var_value.shape)
                 try:
                     dims = self.vars_to_dims[var_name]
                     for dim in dims:
@@ -733,15 +754,19 @@ class ZarrTrace(_ZarrTraceBase):
                         dim = f"{var_name}_dim_{i}"
                         dims.append(dim)
                         group_coords[dim] = np.arange(var_value.shape[i], dtype="int")
-                array.attrs.update({"_ARRAY_DIMENSIONS": dims})
-            for dim, coord in group_coords.items():
-                array = group.array(
-                    name=dim,
-                    data=coord,
-                    fill_value=None,
-                    compressor=self.compressor,
+                group.create_array(  # type: ignore[arg-type,union-attr]
+                    name=var_name,
+                    data=var_value,
+                    compressors=self.compressors,
+                    dimension_names=dims,
                 )
-                array.attrs.update({"_ARRAY_DIMENSIONS": [dim]})
+            for dim, coord in group_coords.items():
+                group.create_array(  # type: ignore[arg-type,union-attr]
+                    name=dim,
+                    data=np.asarray(coord),
+                    dimension_names=[dim],
+                    compressors=self.compressors,
+                )
         return group
 
     def split_warmup(self, group_name: str, error_if_already_split: bool = True):
@@ -757,7 +782,7 @@ class ZarrTrace(_ZarrTraceBase):
             The name of the group that should be split.
         error_if_already_split : bool
             If ``True`` and if the ``f"warmup_{group_name}"`` group already exists in
-            the root hierarchy, a ``ValueError`` is raised. If this flag is ``False``
+            the root hierarchy, a ``RuntimeError`` is raised. If this flag is ``False``
             but the warmup group already exists, the contents of that group are
             overwritten.
         """
@@ -770,60 +795,54 @@ class ZarrTrace(_ZarrTraceBase):
         warmup_group = self.root.create_group(f"{WARMUP_TAG}{group_name}", overwrite=True)
         if tune == 0:
             try:
-                self.root.pop(f"{WARMUP_TAG}{group_name}")
+                del self.root[f"{WARMUP_TAG}{group_name}"]
             except KeyError:
                 pass
             return
-        for name, array in posterior_group.arrays():
+        for name, array in posterior_group.arrays():  # type: ignore[union-attr]
+            dims = array.metadata.dimension_names or ()  # type: ignore[union-attr]
             array_attrs = array.attrs.asdict()
             if name == "draw":
-                warmup_array = warmup_group.array(
+                warmup_group.create_array(
                     name="draw",
                     data=np.arange(tune),
-                    dtype="int",
-                    compressor=self.compressor,
+                    dimension_names=["draw"],
+                    compressors=self.compressors,
                 )
-                posterior_array = posterior_group.array(
+                posterior_group.create_array(
                     name=name,
-                    data=np.arange(len(array) - tune),
-                    dtype="int",
+                    data=np.arange(array.shape[0] - tune),
+                    dimension_names=["draw"],
                     overwrite=True,
-                    compressor=self.compressor,
+                    compressors=self.compressors,
                 )
-                posterior_array.attrs.update(array_attrs)
             else:
-                dims = array.attrs["_ARRAY_DIMENSIONS"]
-                warmup_idx: slice | tuple[slice, slice]
-                if len(dims) >= 2 and dims[:2] == ["chain", "draw"]:
-                    must_overwrite_posterior = True
-                    warmup_idx = (slice(None), slice(None, tune, None))
+                if len(dims) >= 2 and dims[:2] == ("chain", "draw"):
+                    warmup_idx: slice | tuple[slice, slice] = (
+                        slice(None),
+                        slice(None, tune, None),
+                    )
                     posterior_idx = (slice(None), slice(tune, None, None))
                 else:
-                    must_overwrite_posterior = False
                     warmup_idx = slice(None)
-                fill_value, dtype, object_codec = get_initial_fill_value_and_codec(array.dtype)
-                warmup_array = warmup_group.array(
+                warmup_group.create_array(  # type: ignore[union-attr]
                     name=name,
                     data=array[warmup_idx],
                     chunks=array.chunks,
-                    dtype=dtype,
-                    fill_value=fill_value,
-                    object_codec=object_codec,
-                    compressor=self.compressor,
+                    compressors=self.compressors,
+                    dimension_names=dims,
+                    attributes=array_attrs,
                 )
-                if must_overwrite_posterior:
-                    posterior_array = posterior_group.array(
+                if len(dims) >= 2 and dims[:2] == ("chain", "draw"):
+                    posterior_group.create_array(  # type: ignore[union-attr]
                         name=name,
                         data=array[posterior_idx],
                         chunks=array.chunks,
-                        dtype=dtype,
-                        fill_value=fill_value,
-                        object_codec=object_codec,
                         overwrite=True,
-                        compressor=self.compressor,
+                        compressors=self.compressors,
+                        dimension_names=dims,
+                        attributes=array_attrs,
                     )
-                    posterior_array.attrs.update(array_attrs)
-            warmup_array.attrs.update(array_attrs)
 
     def to_inferencedata(self, save_warmup: bool = False, eager: bool = False) -> DataTree:
         """Convert ``ZarrTrace`` to :class:`~.xarray.DataTree`.
@@ -844,31 +863,29 @@ class ZarrTrace(_ZarrTraceBase):
         Notes
         -----
         ``xarray`` and in turn ``arviz`` require the zarr groups to have consolidated
-        metadata. To achieve this, a new consolidated store is constructed by calling
-        :func:`zarr.consolidate_metadata` on the root's store. This means that the
-        returned ``DataTree`` object will operate on a different storage unit
-        than the calling ``ZarrTrace``, so future changes to the ``ZarrTrace`` won't be
-        automatically reflected in the returned ``DataTree`` object.
+        metadata. To achieve this, consolidated metadata is written by calling
+        :func:`zarr.consolidate_metadata` on the root's store. Note that consolidated
+        metadata is not (yet) part of the zarr v3 specification, which zarr will warn
+        about.
         """
         self.split_warmup_groups()
-        # Xarray complains if we try to open a zarr hierarchy that doesn't have consolidated metadata
-        consolidated_root = zarr.consolidate_metadata(self.root.store)
-        # The ConsolidatedMetadataStore looks like an empty store from xarray's point of view
-        # we need to actually grab the underlying store so that xarray doesn't produce completely
-        # empty arrays
-        store = consolidated_root.store.store
+        # Xarray complains if we try to open a zarr hierarchy that doesn't have
+        # consolidated metadata
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=zarr.errors.ZarrUserWarning)
+            zarr.consolidate_metadata(self.root.store)
         groups = {}
         try:
             global_attrs = {
                 "tuning_steps": self.tuning_steps,
                 "sampling_time": self.sampling_time,
             }
-        except AttributeError:
+        except (KeyError, ValueError):
             global_attrs = {}  # pragma: no cover
         for name, _ in self.root.groups():
             if name.startswith("_") or (not save_warmup and name.startswith(WARMUP_TAG)):
                 continue
-            data = xr.open_zarr(store, group=name, mask_and_scale=False)
+            data = xr.open_zarr(self.root.store, group=name, mask_and_scale=False)
             attrs = {**data.attrs, **global_attrs}
             data.attrs = make_attrs(attrs=attrs, inference_library=pymc)
             groups[f"/{name}"] = data.load() if eager else data

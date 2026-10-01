@@ -12,9 +12,9 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import itertools
+import tempfile
 
 from dataclasses import asdict
-from importlib.metadata import version
 
 import numpy as np
 import pytest
@@ -23,21 +23,30 @@ import zarr
 
 import pymc as pm
 
-from pymc.backends.zarr import ZarrTrace
+from pymc.backends.zarr import OBJECT_CODEC_ATTR, ZarrTrace, decode_object_value
 from pymc.stats.convergence import SamplerWarning
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
 from pymc.step_methods.state import equal_dataclass_values
 from tests.helpers import equal_sampling_states
 
-# PyMC's `ZarrTrace` still uses zarr 2 module-level APIs (`zarr.TempStore`,
-# `zarr.MemoryStore`) and the removed `synchronizer` kwarg. When a dependency
-# (e.g., installed nutpie) pulls in zarr>=3, the whole suite fails on import /
-# attribute access. xfail the module in that case until the port lands.
-pytestmark = pytest.mark.xfail(
-    int(version("zarr").split(".", 1)[0]) >= 3,
-    reason="PyMC's ZarrTrace is not yet ported to zarr 3",
-    strict=False,
-)
+
+def dims(array) -> list:
+    """Return the dimension names stored in the zarr v3 metadata of an array."""
+    return list(array.metadata.dimension_names)
+
+
+_temp_dirs: list[tempfile.TemporaryDirectory] = []
+
+
+def make_store():
+    """Create a temporary disk backed zarr store.
+
+    A disk backed store is required for parallel sampling, where worker
+    processes record their draws and sampling states to the shared store.
+    """
+    tmp = tempfile.TemporaryDirectory()
+    _temp_dirs.append(tmp)
+    return zarr.storage.LocalStore(tmp.name)
 
 
 @pytest.fixture(scope="module")
@@ -104,7 +113,7 @@ def model_step(request, model):
 
 
 def test_record(model, model_step, include_transformed, draws_per_chunk):
-    store = zarr.TempStore()
+    store = make_store()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -166,9 +175,9 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
 
     # Assert observed data is correct
     assert set(dict(trace.observed_data.arrays())) == {"obs", "dim_time", "dim_str"}
-    assert list(trace.observed_data.obs.attrs["_ARRAY_DIMENSIONS"]) == ["dim_time", "dim_str"]
-    np.testing.assert_array_equal(trace.observed_data.dim_time[:], model.coords["dim_time"])
-    np.testing.assert_array_equal(trace.observed_data.dim_str[:], model.coords["dim_str"])
+    assert list(dims(trace.observed_data["obs"])) == ["dim_time", "dim_str"]
+    np.testing.assert_array_equal(trace.observed_data["dim_time"][:], model.coords["dim_time"])
+    np.testing.assert_array_equal(trace.observed_data["dim_str"][:], model.coords["dim_str"])
 
     # Assert constant data is correct
     assert set(dict(trace.constant_data.arrays())) == {
@@ -179,11 +188,11 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         "dim_time",
         "dim_int",
     }
-    assert list(trace.constant_data.data1.attrs["_ARRAY_DIMENSIONS"]) == ["dim_int"]
-    assert list(trace.constant_data.data2.attrs["_ARRAY_DIMENSIONS"]) == ["data2_dim_0"]
-    assert list(trace.constant_data.time.attrs["_ARRAY_DIMENSIONS"]) == ["dim_time"]
-    np.testing.assert_array_equal(trace.constant_data.dim_time[:], model.coords["dim_time"])
-    np.testing.assert_array_equal(trace.constant_data.dim_int[:], model.coords["dim_int"])
+    assert list(dims(trace.constant_data["data1"])) == ["dim_int"]
+    assert list(dims(trace.constant_data["data2"])) == ["data2_dim_0"]
+    assert list(dims(trace.constant_data["time"])) == ["dim_time"]
+    np.testing.assert_array_equal(trace.constant_data["dim_time"][:], model.coords["dim_time"])
+    np.testing.assert_array_equal(trace.constant_data["dim_int"][:], model.coords["dim_int"])
 
     # Assert unconstrained posterior has correct shapes and kinds
     assert {rv.name for rv in model.free_RVs + model.deterministics} <= set(
@@ -193,16 +202,17 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         assert {"d_log__", "chain", "draw", "d_log___dim_0"} == set(
             dict(trace.unconstrained_posterior.arrays())
         )
-        assert list(trace.unconstrained_posterior.d_log__.attrs["_ARRAY_DIMENSIONS"]) == [
+        assert list(dims(trace.unconstrained_posterior["d_log__"])) == [
             "chain",
             "draw",
             "d_log___dim_0",
         ]
-        assert trace.unconstrained_posterior.d_log__.attrs["kind"] == "freeRV"
-        np.testing.assert_array_equal(trace.unconstrained_posterior.chain, np.arange(1))
-        np.testing.assert_array_equal(trace.unconstrained_posterior.draw, np.arange(draws))
+        assert trace.unconstrained_posterior["d_log__"].attrs["kind"] == "freeRV"
+        np.testing.assert_array_equal(trace.unconstrained_posterior["chain"], np.arange(1))
+        np.testing.assert_array_equal(trace.unconstrained_posterior["draw"], np.arange(draws))
         np.testing.assert_array_equal(
-            trace.unconstrained_posterior.d_log___dim_0, np.arange(len(model.coords["dim_time"]))
+            trace.unconstrained_posterior["d_log___dim_0"],
+            np.arange(len(model.coords["dim_time"])),
         )
 
     # Assert posterior has correct shapes and kinds
@@ -219,7 +229,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         else:
             expected_dims = model.named_vars_to_dims[rv_name]
         posterior_dims |= set(expected_dims)
-        assert list(trace.posterior[rv_name].attrs["_ARRAY_DIMENSIONS"]) == [
+        assert list(dims(trace.posterior[rv_name])) == [
             "chain",
             "draw",
             *expected_dims,
@@ -249,6 +259,8 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         for var, value in stat.items():
             sample_stats = trace.root["sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
+            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
+                stat_val = decode_object_value(stat_val)
             if not isinstance(stat_val, SamplerWarning):
                 unequal_stats = stat_val != value
             else:
@@ -273,6 +285,8 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         for var, value in stat.items():
             sample_stats = trace.root["warmup_sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
+            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
+                stat_val = decode_object_value(stat_val)
             if not isinstance(stat_val, SamplerWarning):
                 unequal_stats = stat_val != value
             else:
@@ -297,6 +311,8 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         for var, value in stat.items():
             sample_stats = trace.root["sample_stats"]
             stat_val = sample_stats[var][0, draw_idx]
+            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
+                stat_val = decode_object_value(stat_val)
             if not isinstance(stat_val, SamplerWarning):
                 unequal_stats = stat_val != value
             else:
@@ -305,9 +321,9 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
                 raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
 
     # Assert sampling_state is correct
-    assert list(trace._sampling_state.draw_idx[:]) == [draws + tune]
+    assert list(trace._sampling_state["draw_idx"][:]) == [draws + tune]
     assert equal_sampling_states(
-        trace._sampling_state.sampling_state[0],
+        trace.straces[0].sampling_state,
         model_step.sampling_state,
     )
 
@@ -340,32 +356,32 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
 
 @pytest.mark.parametrize("tune", [0, 5, 10])
 def test_split_warmup(tune, model, model_step, include_transformed):
-    store = zarr.MemoryStore()
+    store = make_store()
     trace = ZarrTrace(store=store, include_transformed=include_transformed)
     draws = 10 - tune
     trace.init_trace(chains=1, draws=draws, tune=tune, model=model, step=model_step)
 
     trace.split_warmup("posterior")
     trace.split_warmup("sample_stats")
-    assert len(trace.root.posterior.draw) == draws
-    assert len(trace.root.sample_stats.draw) == draws
+    assert trace.root["posterior"]["draw"].shape[0] == draws
+    assert trace.root["sample_stats"]["draw"].shape[0] == draws
     if tune == 0:
         with pytest.raises(KeyError):
             trace.root["warmup_posterior"]
     else:
-        assert len(trace.root["warmup_posterior"].draw) == tune
-        assert len(trace.root["warmup_sample_stats"].draw) == tune
+        assert trace.root["warmup_posterior"]["draw"].shape[0] == tune
+        assert trace.root["warmup_sample_stats"]["draw"].shape[0] == tune
 
         with pytest.raises(RuntimeError):
             trace.split_warmup("posterior")
 
         for var_name, posterior_array in trace.posterior.arrays():
-            dims = posterior_array.attrs["_ARRAY_DIMENSIONS"]
+            dims = posterior_array.metadata.dimension_names
             if len(dims) >= 2 and dims[1] == "draw":
                 assert posterior_array.shape[1] == draws
                 assert trace.root["warmup_posterior"][var_name].shape[1] == tune
         for var_name, sample_stats_array in trace.sample_stats.arrays():
-            dims = sample_stats_array.attrs["_ARRAY_DIMENSIONS"]
+            dims = sample_stats_array.metadata.dimension_names
             if len(dims) >= 2 and dims[1] == "draw":
                 assert sample_stats_array.shape[1] == draws
                 assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
@@ -415,7 +431,7 @@ def test_sample(
         pytest.skip(
             reason="log_likelihood is only computed if an inference data object is returned"
         )
-    store = zarr.TempStore()
+    store = make_store()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -490,7 +506,8 @@ def test_sample(
         )
 
     # Assert that the trace has valid sampling state stored for each chain
-    for step_method_state in trace._sampling_state.sampling_state[:]:
+    for strace in trace.straces:
+        step_method_state = strace.sampling_state
         # We have no access to the actual step method that was using by each chain in pymc.sample
         # The best way to see if the step method state is valid is by trying to set
         # the model_step sampling state to the one stored in the trace.
@@ -504,11 +521,11 @@ def test_sampling_consistency(
 ):
     # Test that pm.sample will generate the same posterior and sampling state
     # regardless of whether sampling was done in parallel or not.
-    store1 = zarr.TempStore()
+    store1 = make_store()
     parallel_trace = ZarrTrace(
         store=store1, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
-    store2 = zarr.TempStore()
+    store2 = make_store()
     sequential_trace = ZarrTrace(
         store=store2, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -547,7 +564,7 @@ def test_sampling_consistency(
         )
     for chain in range(chains):
         assert equal_sampling_states(
-            parallel_trace._sampling_state.sampling_state[chain],
-            sequential_trace._sampling_state.sampling_state[chain],
+            parallel_trace.straces[chain].sampling_state,
+            sequential_trace.straces[chain].sampling_state,
         )
     xr.testing.assert_equal(parallel_idata.posterior, sequential_idata.posterior)
