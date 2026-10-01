@@ -223,6 +223,70 @@ def test_measurable_join_interdependent(reverse):
     )
 
 
+@pytest.mark.parametrize("stack", [False, True])
+@pytest.mark.parametrize("shift", [0, 1])
+def test_stack_split_component(stack, shift):
+    x, y = pt.split(pt.random.normal(size=2), [1, 1], n_splits=2)
+    component = x.squeeze() if stack else x
+    if shift:
+        component = component + shift
+    dependent = pt.random.normal(component + 3)
+    joined = pt.stack([component, dependent]) if stack else pt.concatenate([component, dependent])
+    joined_value, y_value = joined.type(), y.type()
+
+    joined_logp, y_logp = conditional_logp({joined: joined_value, y: y_value}).values()
+    assert_no_rvs(joined_logp)
+    assert_no_rvs(y_logp)
+    fn = pytensor.function([joined_value, y_value], [joined_logp, y_logp])
+
+    joined_test = np.array([1.0, 2.0])
+    y_test = np.array([3.0])
+    joined_result, y_result = fn(joined_test, y_test)
+    np.testing.assert_allclose(
+        joined_result,
+        [
+            st.norm.logpdf(joined_test[0] - shift),
+            st.norm.logpdf(joined_test[1], joined_test[0] + 3),
+        ],
+    )
+    np.testing.assert_allclose(y_result, st.norm.logpdf(y_test))
+
+
+def test_nested_join_conditions_split_components():
+    mu = pt.random.normal(size=1)
+    x, y = pt.split(pt.random.normal(mu, size=4), [2, 2], n_splits=2)
+    joined = pt.concatenate([mu, pt.exp(pt.concatenate([x, y]))])
+    value = joined.type()
+
+    joined_logp = logp(joined, value)
+    assert_no_rvs(joined_logp)
+    fn = pytensor.function([value], joined_logp.sum())
+
+    test_value = np.array([0.5, 1.0, 2.0, 3.0, 4.0])
+    expected = (
+        st.norm.logpdf(test_value[0])
+        + st.norm.logpdf(np.log(test_value[1:]), test_value[0]).sum()
+        - np.log(test_value[1:]).sum()
+    )
+    np.testing.assert_allclose(fn(test_value), expected)
+
+
+def test_nested_split_queries_with_conditioning():
+    mu = pt.random.normal(size=1)
+    x, y = pt.split(pt.random.normal(mu, size=4), [2, 2], n_splits=2)
+    x1, x2 = pt.split(x, [1, 1], n_splits=2)
+    joined = pt.concatenate([mu, x1, x2, y])
+    value = joined.type()
+
+    joined_logp = logp(joined, value)
+    assert_no_rvs(joined_logp)
+    fn = pytensor.function([value], joined_logp.sum())
+
+    test_value = np.array([0.5, 1.0, 2.0, 3.0, 4.0])
+    expected = st.norm.logpdf(test_value[0]) + st.norm.logpdf(test_value[1:], test_value[0]).sum()
+    np.testing.assert_allclose(fn(test_value), expected)
+
+
 def test_measurable_join_with_constant_input():
     base1_rv = pt.random.normal(size=(2,), name="base1")
     base2_rv = pt.random.exponential(size=(3,), name="base2")
@@ -417,26 +481,16 @@ def test_measurable_dimshuffle(ds_order, multivariate):
     np.testing.assert_array_equal(ref_logp_fn(base_test_value), ds_logp_fn(ds_test_value))
 
 
-def test_unmeasurable_dimshuffles():
-    # Test that graphs with DimShuffles that cannot be lifted/merged fail
-
-    # Initial support axis is at axis=-1
-    x = pt.random.dirichlet(
-        np.ones((3,)),
-        size=(4, 2),
-    )
-    # Support axis is now at axis=-2
-    y = x.dimshuffle((0, 2, 1))
-    # Downstream dimshuffle will not be lifted through cumsum. If it ever is,
-    # we will need a different measurable Op example
-    z = pt.cumsum(y, axis=-2)
-    # Support axis is now at axis=-3
-    w = z.dimshuffle((1, 0, 2))
-
-    w_vv = w.clone()
-    # TODO: Check that logp is correct if this type of graphs is ever supported
-    with pytest.raises(RuntimeError, match="could not be derived"):
-        conditional_logp({w: w_vv})
+def test_cumsum_between_support_axis_dimshuffles():
+    x = pt.random.dirichlet(np.ones(3), size=(4, 2))
+    y = pt.cumsum(x.dimshuffle(0, 2, 1), axis=1).dimshuffle(1, 0, 2)
+    value = y.type()
+    term = conditional_logp({y: value})[value]
+    assert_no_rvs(term)
+    point = np.random.default_rng(42).dirichlet(np.ones(3), size=(4, 2))
+    transformed_point = point.transpose(0, 2, 1).cumsum(axis=1).transpose(1, 0, 2)
+    expected = st.dirichlet(np.ones(3)).logpdf(point.reshape(-1, 3).T).reshape(4, 2)
+    np.testing.assert_allclose(term.eval({value: transformed_point}), expected)
 
 
 class TestMeasurableSplit:
@@ -521,8 +575,6 @@ class TestMeasurableSplit:
         x_parts_vv = [x_part.clone() for x_part in x_parts]
         logp_parts = list(conditional_logp(dict(zip(x_parts, x_parts_vv))).values())
 
-        assert logp_parts[0].type.shape == (3,)
-        assert logp_parts[1].type.shape == (3,)
         logp_fn = pytensor.function(x_parts_vv, logp_parts)
 
         x_parts_test = pytensor.function([rng_pt], x_parts)(rng)
@@ -532,6 +584,47 @@ class TestMeasurableSplit:
         np.testing.assert_allclose(
             logp_total,
             scipy_dirichlet_logpdf(np.concatenate(x_parts_test, axis=1), alpha),
+        )
+
+    def test_values_reached_through_measurable_chains(self):
+        # Split logp must receive all values together to reconstruct the base variable.
+        rng = np.random.default_rng(521)
+        mu = np.arange(6)
+        x = pt.random.normal(mu, 1.0, name="x")
+        x_parts = pt.split(x, splits_size=[2, 4], n_splits=2, axis=0)
+        x_parts_vv = [x_part.clone() for x_part in x_parts]
+        x_parts_test = [rng.normal(size=x_part.type.shape) for x_part in x_parts_vv]
+
+        # One part valued behind a shift, the other directly on the split node
+        logp_parts = list(
+            conditional_logp({x_parts[0] + 1: x_parts_vv[0], x_parts[1]: x_parts_vv[1]}).values()
+        )
+        logp_fn = pytensor.function(x_parts_vv, logp_parts)
+        logp_x1_eval, logp_x2_eval = logp_fn(*x_parts_test)
+        np.testing.assert_allclose(
+            logp_x1_eval,
+            st.norm.logpdf(x_parts_test[0] - 1, mu[:2]),
+        )
+        np.testing.assert_allclose(
+            logp_x2_eval,
+            st.norm.logpdf(x_parts_test[1], mu[2:]),
+        )
+
+        # Both parts valued behind a chain, so no value is attached to the split node itself
+        logp_parts = list(
+            conditional_logp(
+                {x_parts[0] + 1: x_parts_vv[0], x_parts[1] * 2: x_parts_vv[1]}
+            ).values()
+        )
+        logp_fn = pytensor.function(x_parts_vv, logp_parts)
+        logp_x1_eval, logp_x2_eval = logp_fn(*x_parts_test)
+        np.testing.assert_allclose(
+            logp_x1_eval,
+            st.norm.logpdf(x_parts_test[0] - 1, mu[:2]),
+        )
+        np.testing.assert_allclose(
+            logp_x2_eval,
+            st.norm.logpdf(x_parts_test[1] / 2, mu[2:]) - np.log(2),
         )
 
     @pytest.mark.xfail(
@@ -559,19 +652,14 @@ class TestMeasurableSplit:
         )
 
     def test_not_all_splits_used_core_dim(self):
-        # TODO: We could support this for univariate/batch dimensions by rewriting as
-        # split(x, splits_size=[2, 2, 2], n_splits=3, axis=1)[:2] -> split(x[:-2], splits_size=[2, 2], n_splits=2, axis=1)
-        # And letting logp infer the probability of x[:-2]
+        # Missing parts of a joint event require marginalization.
         x = pt.random.dirichlet(alphas=pt.ones(6), name="x")
         x_parts = pt.split(x, splits_size=[2, 2, 2], n_splits=3, axis=0)[
             :2
         ]  # Only use first two splits
         x_parts_vv = [x_part.clone() for x_part in x_parts]
 
-        with pytest.raises(
-            ValueError,
-            match="Split logp requires the number of values to match the number of splits",
-        ):
+        with pytest.raises(NotImplementedError, match="Partial Split"):
             conditional_logp(dict(zip(x_parts, x_parts_vv)))
 
     @pytest.mark.xfail(reason="Rewrite from subtensor to split not implemented yet")
@@ -917,4 +1005,78 @@ class TestMeasurableJoinSplitDims:
         np.testing.assert_allclose(
             logp(y, y_vv).eval({y_vv: y_test}),
             st.dirichlet(np.ones(6)).logpdf(np.log(y_test).ravel()) - np.log(y_test).sum(),
+        )
+
+
+def test_symbolic_split_join():
+    lengths = pt.lvector("lengths", shape=(2,))
+    base = pt.random.normal(size=lengths.sum())
+    x, y = pt.split(base, lengths + 0, n_splits=2)
+    u = pt.random.normal(x + 3)
+    w = pt.concatenate([x, u])
+    w_value, y_value = pt.vector("w_value"), pt.vector("y_value")
+    terms = conditional_logp({w: w_value, y: y_value})
+    for term in terms.values():
+        assert_no_rvs(term)
+    fn = pytensor.function([lengths, w_value, y_value], list(terms.values()))
+    for sizes, wv, yv in [([1, 2], [1.0, 2.0], [3.0, 4.0]), ([2, 1], [1.0, 2.0, 4.0, 7.0], [3.0])]:
+        n = sizes[0]
+        actual_w, actual_y = fn(sizes, wv, yv)
+        np.testing.assert_allclose(
+            actual_w, np.r_[st.norm.logpdf(wv[:n]), st.norm.logpdf(wv[n:], np.asarray(wv[:n]) + 3)]
+        )
+        np.testing.assert_allclose(actual_y, st.norm.logpdf(yv))
+
+
+def test_transposed_multivariate_transform():
+    mean = pt.matrix("mean", shape=(None, 3))
+    base = pm.MvNormal.dist(mu=mean, cov=np.eye(3))
+    observed = pt.exp(base.T)
+    value = pt.matrix("value")
+    terms = conditional_logp({observed: value})
+    assert_no_rvs(terms[value])
+    fn = pytensor.function([mean, value], terms[value])
+    for n in [2, 4]:
+        point = np.exp(np.arange(n * 3).reshape((3, n)) / 10)
+        mu = np.zeros((n, 3))
+        expected = st.multivariate_normal.logpdf(np.log(point).T, cov=np.eye(3)) - np.log(
+            point
+        ).sum(axis=0)
+        np.testing.assert_allclose(fn(mu, point), expected)
+
+
+def test_concatenate_scalar_multivariate_densities():
+    mean = pt.vector("mean")
+    n = mean.shape[0]
+    x = pm.MvNormal.dist(mu=mean, cov=pt.eye(n))
+    y = pm.MvNormal.dist(mu=x + 2, cov=pt.eye(n))
+    observed = pt.concatenate([x, y])
+    value = pt.vector("value")
+    terms = conditional_logp({observed: value})
+    assert_no_rvs(terms[value])
+    assert terms[value].ndim == 1
+    fn = pytensor.function([mean, value], terms[value])
+    for size in [2, 3]:
+        x_value = np.arange(size) / 10
+        y_value = x_value + 3
+        actual = fn(np.zeros(size), np.r_[x_value, y_value])
+        expected = [
+            st.multivariate_normal.logpdf(x_value, cov=np.eye(size)),
+            st.multivariate_normal.logpdf(y_value, mean=x_value + 2, cov=np.eye(size)),
+        ]
+        np.testing.assert_allclose(actual, expected)
+
+
+@pytest.mark.parametrize("dtype", ["float32", "float64"])
+def test_density_dtype_contract(dtype):
+    with pytensor.config.change_flags(floatX=dtype):
+        x = pt.random.normal(size=2)
+        observed = pt.exp(x)
+        value = observed.type()
+        terms = conditional_logp({observed: value})
+        term = terms[value]
+        assert term.dtype == dtype
+        actual = pytensor.function([value], term)(np.array([1.0, 2.0], dtype=dtype))
+        np.testing.assert_allclose(
+            actual, st.norm.logpdf(np.log([1.0, 2.0])) - np.log([1.0, 2.0]), rtol=1e-6
         )

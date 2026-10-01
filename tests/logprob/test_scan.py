@@ -590,3 +590,52 @@ def test_generative_graph_unchanged():
 
     after = xs.dprint(file="str")
     assert before == after
+
+
+@pytest.mark.parametrize("transform", [pt.log, pt.exp])
+def test_scan_composes_with_value_transform(transform):
+    # Regression for #6351: the Scan becomes directly valued only after inversion.
+    x = pytensor.scan(fn=lambda: pt.random.normal(), n_steps=10, return_updates=False)
+    y = transform(x)
+    value = y.type()
+    term = conditional_logp({y: value})[value]
+    assert_no_rvs(term)
+    point = np.linspace(-2, 2, 10)
+    if transform is pt.log:
+        expected = stats.norm.logpdf(np.exp(point)) + point
+    else:
+        point = np.exp(point)
+        expected = stats.norm.logpdf(np.log(point)) - np.log(point)
+    np.testing.assert_allclose(term.eval({value: point}), expected)
+
+
+@pytest.mark.parametrize("return_auxiliary", [False, True])
+def test_scan_unvalued_stochastic_output(return_auxiliary):
+    # Regression for #6909: returning the innovations must not change the AR density.
+    import pymc as pm
+
+    from pymc.pytensorf import collect_default_updates
+
+    def ar_dist(rho, sigma, size):
+        def step(previous, rho, sigma):
+            innovation = pm.Normal.dist(sigma=sigma)
+            current = previous * rho + innovation
+            outputs = [current, innovation] if return_auxiliary else current
+            return outputs, collect_default_updates([current])
+
+        outputs, _ = pytensor.scan(
+            step,
+            outputs_info=[pt.zeros(())] + ([None] if return_auxiliary else []),
+            non_sequences=[rho, sigma],
+            n_steps=4,
+            strict=True,
+            return_updates=True,
+        )
+        return outputs[0] if return_auxiliary else outputs
+
+    with pm.Model() as model:
+        pm.CustomDist("ar", 0.1, 0.1, dist=ar_dist, observed=np.arange(4.0))
+    [term] = model.logp(sum=False)
+    assert_no_rvs(term)
+    [actual] = model.compile_logp(sum=False)({})
+    np.testing.assert_allclose(actual, stats.norm.logpdf(np.arange(4), [0, 0, 0.1, 0.2], 0.1))

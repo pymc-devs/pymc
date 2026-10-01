@@ -40,10 +40,11 @@ import pytensor.tensor as pt
 import pytest
 import scipy.stats as st
 
+from pytensor.graph.traversal import ancestors
+
 from pymc import draw, logp
-from pymc.logprob.abstract import MeasurableOp
+from pymc.logprob.abstract import MeasurableTensorOp
 from pymc.logprob.basic import conditional_logp
-from pymc.logprob.rewriting import construct_ir_fgraph
 from pymc.testing import assert_no_rvs
 
 
@@ -120,9 +121,8 @@ def test_nested_scalar_mixtures():
     assert np.isclose(logp_fn(0, 0, 1, 50), st.norm.logpdf(150) + np.log(0.5) * 3)
 
 
-@pytest.mark.xfail(reason="This is not currently enforced")
 @pytest.mark.parametrize("nested", (False, True))
-def test_unvalued_ir_reversion(nested):
+def test_unvalued_parameter_cleanup(nested):
     """Make sure that un-valued IR rewrites are reverted."""
     x_rv = pt.random.normal()
     y_rv = pt.clip(x_rv, 0, 1)
@@ -131,16 +131,13 @@ def test_unvalued_ir_reversion(nested):
     z_rv = pt.random.normal(y_rv, 1, name="z")
     z_vv = z_rv.clone()
 
-    # Only the `z_rv` is "valued", so `y_rv` doesn't need to be converted into
-    # measurable IR.
-    rv_values = {z_rv: z_vv}
-
-    z_fgraph = construct_ir_fgraph(rv_values)
-
-    # assert len(z_fgraph.preserve_rv_mappings.measurable_conversions) == 1
-    assert (
-        sum(isinstance(node.op, MeasurableOp) for node in z_fgraph.apply_nodes) == 2
-    )  # Just the 2 rvs
+    with pytest.warns(UserWarning, match="Random variables detected"):
+        term = conditional_logp({z_rv: z_vv})[z_vv]
+    assert not any(isinstance(var.owner_op, MeasurableTensorOp) for var in ancestors([term]))
+    # The unconditioned parameter retains its original sampling expression.
+    expected = logp(z_rv, z_vv, warn_rvs=False)
+    fn = pytensor.function([z_vv], [term, expected])
+    np.testing.assert_allclose(*fn(1.23))
 
 
 def test_shifted_cumsum():

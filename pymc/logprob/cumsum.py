@@ -37,70 +37,30 @@
 
 import pytensor.tensor as pt
 
-from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.tensor import TensorVariable
 from pytensor.tensor.extra_ops import CumOp
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import filter_measurable_variables
-
-
-class MeasurableCumsum(MeasurableOp, CumOp):
-    """A placeholder used to specify a log-likelihood for a cumsum sub-graph."""
-
-
-@_logprob.register(MeasurableCumsum)
-def logprob_cumsum(op, values, base_rv, **kwargs):
-    """Compute the log-likelihood graph for a `Cumsum`."""
-    (value,) = values
-
-    value_diff = pt.diff(value, axis=op.axis)
-    value_diff = pt.concatenate(
-        (
-            # Take first element of axis and add a broadcastable dimension so
-            # that it can be concatenated with the rest of value_diff
-            pt.shape_padaxis(
-                pt.take(value, 0, axis=op.axis),
-                axis=op.axis,
-            ),
-            value_diff,
-        ),
-        axis=op.axis,
-    )
-
-    cumsum_logp = _logprob_helper(base_rv, value_diff)
-
-    return cumsum_logp
-
-
-@node_rewriter([CumOp])
-def find_measurable_cumsums(fgraph, node) -> list[TensorVariable] | None:
-    r"""Find `Cumsums`\s for which a `logprob` can be computed."""
-    if not (isinstance(node.op, CumOp) and node.op.mode == "add"):
-        return None
-
-    if isinstance(node.op, MeasurableCumsum):
-        return None
-
-    base_rv = node.inputs[0]
-
-    # Check that cumsum does not mix dimensions
-    if base_rv.ndim > 1 and node.op.axis is None:
-        return None
-
-    if not filter_measurable_variables(node.inputs):
-        return None
-
-    new_op = MeasurableCumsum(axis=node.op.axis or 0, mode="add")
-    new_rv = new_op.make_node(base_rv).default_output()
-
-    return [new_rv]
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_cumsums",
-    find_measurable_cumsums,
-    "basic",
-    "cumsum",
+from pymc.logprob.abstract import logprob_query
+from pymc.logprob.query import (
+    bind_value,
+    infer_support_axes,
+    query_parts,
+    rewrite_logprob_query,
+    support_axes,
 )
+
+
+@infer_support_axes.register(CumOp)
+def measure_cumsum(op, var):
+    if op.mode != "add" or (op.axis is None and var.owner.inputs[0].ndim > 1):
+        raise NotImplementedError("Only cumulative sums along one axis are supported")
+    return support_axes(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(CumOp)
+def rewrite_cumsum_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    axis = op.axis or 0
+    backward = pt.concatenate(
+        [pt.take(value, [0], axis=axis), pt.diff(value, axis=axis)], axis=axis
+    )
+    return [logprob_query(bind_value(fgraph, rv.owner.inputs[0], backward))]

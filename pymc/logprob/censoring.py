@@ -47,53 +47,43 @@ from pytensor.scalar.basic import (
     Clip,
     Floor,
     Maximum,
+    Minimum,
     RoundHalfAwayFromZero,
     RoundHalfToEven,
     Trunc,
 )
-from pytensor.scalar.basic import clip as scalar_clip
 from pytensor.tensor import TensorVariable
-from pytensor.tensor.math import (
-    ceil,
-    clip,
-    floor,
-    maximum,
-    minimum,
-    round_half_away_from_zero,
-    round_half_to_even,
-    trunc,
-)
+from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.rewriting.basic import elemwise_of
 from pytensor.tensor.variable import TensorConstant
 
 from pymc.logprob.abstract import (
-    MeasurableElemwise,
     _icdf,
     _icdf_helper,
     _logccdf_helper,
     _logcdf,
     _logcdf_helper,
-    _logprob,
+    logprob_query,
+)
+from pymc.logprob.query import (
+    bind_value,
+    contains_random,
+    density_sources,
+    other_query_uses,
+    query_parts,
+    rewrite_logprob_query,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import (
     CheckParameterValue,
-    check_potential_measurability,
     filter_measurable_variables,
 )
 
-
-class MeasurableClip(MeasurableElemwise):
-    """A placeholder used to specify a log-likelihood for a clipped RV sub-graph.
-
-    A bound that is the clipped variable itself marks that side as unbounded, which is
-    what the logprob methods read it back as.
-    """
-
-    valid_scalar_types = (Clip,)
+ROUNDING_OPS = (RoundHalfToEven, RoundHalfAwayFromZero, Floor, Ceil, Trunc)
 
 
-@node_rewriter(tracks=[clip])
+@node_rewriter([elemwise_of(Clip)])
 def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     # TODO: Canonicalize x[x>ub] = ub -> clip(x, x, ub)
 
@@ -121,7 +111,7 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVari
     # either stays there when it lies inside the outer interval, or is re-pooled at
     # the outer bound, so the bounds combine with maximum/minimum (constant bounds
     # fold; crossed bounds are caught by the CheckParameterValue in the logprob)
-    if isinstance(base_var.owner.op, MeasurableClip):
+    if isinstance(base_var.owner_op, Elemwise) and isinstance(base_var.owner.op.scalar_op, Clip):
         inner_base, inner_lower, inner_upper = base_var.owner.inputs
         if inner_lower is not inner_base:
             lower_bound = (
@@ -140,9 +130,7 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVari
     if upper_bound is None:
         upper_bound = base_var
 
-    clipped_rv = (
-        MeasurableClip(scalar_clip).make_node(base_var, lower_bound, upper_bound).outputs[0]
-    )
+    clipped_rv = pt.clip(base_var, lower_bound, upper_bound)
     # Dropping an infinite bound also drops the upcast it forced on the original clip,
     # which must be restored for the replacement to be type-compatible.
     # The cast is left plain so that `find_measurable_casts` is the one to claim it:
@@ -150,6 +138,12 @@ def find_measurable_clips(fgraph: FunctionGraph, node: Apply) -> list[TensorVari
     out_dtype = node.outputs[0].type.dtype
     if clipped_rv.type.dtype != out_dtype:
         clipped_rv = pt.cast(clipped_rv, out_dtype)
+    if (
+        base_var is node.inputs[0]
+        and lower_bound is node.inputs[1]
+        and upper_bound is node.inputs[2]
+    ):
+        return None
     return [clipped_rv]
 
 
@@ -161,7 +155,7 @@ measurable_ir_rewrites_db.register(
 )
 
 
-@node_rewriter(tracks=[maximum, minimum])
+@node_rewriter([elemwise_of(Maximum), elemwise_of(Minimum)])
 def measurable_max_min_to_clip(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     """Convert one-sided censoring maximum(x, c) and minimum(x, c) to clip form.
 
@@ -177,10 +171,6 @@ def measurable_max_min_to_clip(fgraph: FunctionGraph, node: Apply) -> list[Tenso
     [measurable_input] = measurable_inputs
     [other_input] = [inp for inp in node.inputs if inp is not measurable_input]
 
-    # If both inputs are potentially measurable this is an order statistic, not censoring
-    if check_potential_measurability([other_input]):  # type: ignore[list-item]
-        return None
-
     if isinstance(node.op.scalar_op, Maximum):
         return [pt.clip(measurable_input, other_input, measurable_input)]
     else:
@@ -195,8 +185,8 @@ measurable_ir_rewrites_db.register(
 )
 
 
-@_logprob.register(MeasurableClip)
-def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
+@rewrite_logprob_query.register(Clip)
+def rewrite_clip_logprob(op, fgraph, query, **kwargs):
     r"""Logprob of a clipped censored distribution.
 
     The probability is given by
@@ -210,12 +200,20 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
         \end{cases}
 
     """
-    (value,) = values
+    rv, value = query_parts(query)
+    base_rv, lower_bound, upper_bound = rv.owner.inputs
+    if not contains_random(base_rv) or any(
+        bound is not base_rv and contains_random(bound) for bound in (lower_bound, upper_bound)
+    ):
+        return None
+
+    if other_query_uses(fgraph, density_sources(base_rv), {query}):
+        return None
 
     base_rv_op = base_rv.owner.op
     base_rv_inputs = base_rv.owner.inputs
 
-    logprob = _logprob(base_rv_op, (value,), *base_rv_inputs, **kwargs)
+    logprob = logprob_query(bind_value(fgraph, base_rv, value))
     logcdf = _logcdf(base_rv_op, value, *base_rv_inputs)
 
     if base_rv_op.name:
@@ -247,10 +245,10 @@ def clip_logprob(op, values, base_rv, lower_bound, upper_bound, **kwargs):
             logprob, pt.all(pt.le(lower_bound, upper_bound))
         )
 
-    return logprob
+    return [logprob]
 
 
-@_logcdf.register(MeasurableClip)
+@_logcdf.register(Clip)
 def clip_logcdf(op, value, base_rv, lower_bound, upper_bound):
     r"""Log-CDF of a clipped censored distribution.
 
@@ -276,7 +274,7 @@ def clip_logcdf(op, value, base_rv, lower_bound, upper_bound):
     return logcdf
 
 
-@_icdf.register(MeasurableClip)
+@_icdf.register(Clip)
 def clip_icdf(op, value, base_rv, lower_bound, upper_bound):
     # The point masses at the bounds absorb the respective tail quantiles
     icdf = _icdf_helper(base_rv, value)
@@ -294,20 +292,17 @@ def clip_icdf(op, value, base_rv, lower_bound, upper_bound):
     return icdf
 
 
-class MeasurableRound(MeasurableElemwise):
-    """A placeholder used to specify a log-likelihood for a rounded RV sub-graph."""
-
-    valid_scalar_types = (RoundHalfToEven, RoundHalfAwayFromZero, Floor, Ceil, Trunc)
-
-
-@node_rewriter(tracks=[ceil, floor, round_half_to_even, round_half_away_from_zero, trunc])
+@node_rewriter([elemwise_of(op) for op in ROUNDING_OPS])
 def find_measurable_roundings(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
     if not filter_measurable_variables(node.inputs):
         return None
 
     [base_var] = node.inputs
 
-    if np.dtype(base_var.type.dtype).kind != "f" or isinstance(base_var.owner.op, MeasurableRound):
+    if np.dtype(base_var.type.dtype).kind != "f" or (
+        isinstance(base_var.owner_op, Elemwise)
+        and isinstance(base_var.owner.op.scalar_op, ROUNDING_OPS)
+    ):
         # The base already sits on the integers, either because its dtype guarantees it
         # or because it is itself a rounding, so this one leaves it untouched save for
         # the upcast the Ops apply to a discrete input. Reducing the rounding to that
@@ -316,20 +311,7 @@ def find_measurable_roundings(fgraph: FunctionGraph, node: Apply) -> list[Tensor
         # already a float, as it is for a rounded base.
         return [pt.cast(base_var, node.outputs[0].type.dtype)]
 
-    # The reverse does not hold, so from here on the base must be shown to be continuous
-    # for the intervals below to be the right ones: an intermediate MeasurableVariable
-    # can be supported on the integers while carrying a float dtype, as `floor(x)` does.
-    # Only a RandomVariable states its own support, so anything else is declined rather
-    # than assumed continuous. Once MeasurableVariables carry the meta-information of
-    # the RV they encapsulate (https://github.com/pymc-devs/pymc/issues/6360), the
-    # support can be read off the base variable directly and this may be relaxed.
-    if not isinstance(base_var.owner.op, RandomVariable):
-        return None
-
-    rounded_op = MeasurableRound(node.op.scalar_op)
-    rounded_rv = rounded_op.make_node(base_var).default_output()
-    rounded_rv.name = node.outputs[0].name
-    return [rounded_rv]
+    return None
 
 
 measurable_ir_rewrites_db.register(
@@ -340,8 +322,12 @@ measurable_ir_rewrites_db.register(
 )
 
 
-@_logprob.register(MeasurableRound)
-def round_logprob(op, values, base_rv, **kwargs):
+@rewrite_logprob_query.register(RoundHalfToEven)
+@rewrite_logprob_query.register(RoundHalfAwayFromZero)
+@rewrite_logprob_query.register(Floor)
+@rewrite_logprob_query.register(Ceil)
+@rewrite_logprob_query.register(Trunc)
+def rewrite_round_logprob(op, fgraph, query, **kwargs):
     r"""Logprob of a rounded censored distribution.
 
     The probability of a distribution rounded to the nearest integer is given by
@@ -370,7 +356,12 @@ def round_logprob(op, values, base_rv, **kwargs):
     for negative values, with both intervals pooled at zero.
 
     """
-    (value,) = values
+    rv, value = query_parts(query)
+    (base_rv,) = rv.owner.inputs
+    if not isinstance(base_rv.owner_op, RandomVariable) or base_rv.dtype[0] != "f":
+        return None
+    if other_query_uses(fgraph, [base_rv], {query}):
+        return None
 
     if not value.type.dtype.startswith("float"):
         # The Ops below snap the value onto the cell whose mass it asks for, and only
@@ -379,21 +370,21 @@ def round_logprob(op, values, base_rv, **kwargs):
         # followed by a cast to int).
         value = pt.cast(value, pytensor.config.floatX)
 
-    if isinstance(op.scalar_op, RoundHalfToEven | RoundHalfAwayFromZero):
+    if isinstance(op, RoundHalfToEven | RoundHalfAwayFromZero):
         # The tie-breaking rule only matters on a measure-zero set of the
         # continuous base variable, so both variants share the same intervals
         value = pt.round(value)
         value_upper = value + 0.5
         value_lower = value - 0.5
-    elif isinstance(op.scalar_op, Floor):
+    elif isinstance(op, Floor):
         value = pt.floor(value)
         value_upper = value + 1.0
         value_lower = value
-    elif isinstance(op.scalar_op, Ceil):
+    elif isinstance(op, Ceil):
         value = pt.ceil(value)
         value_upper = value
         value_lower = value - 1.0
-    elif isinstance(op.scalar_op, Trunc):
+    elif isinstance(op, Trunc):
         # Truncation rounds towards zero: [x, x+1) for x >= 0, (x-1, x] for x < 0,
         # and (-1, 1) for x == 0 (open/closed bounds are equivalent for the
         # continuous base variables this rewrite applies to)
@@ -401,7 +392,7 @@ def round_logprob(op, values, base_rv, **kwargs):
         value_upper = value + (value >= 0)
         value_lower = value - (value <= 0)
     else:
-        raise TypeError(f"Unsupported scalar_op {op.scalar_op}")  # pragma: no cover
+        raise TypeError(f"Unsupported scalar_op {op}")  # pragma: no cover
 
     base_rv_op = base_rv.owner.op
     base_rv_inputs = base_rv.owner.inputs
@@ -416,4 +407,4 @@ def round_logprob(op, values, base_rv, **kwargs):
     # TODO: Figure out better solution to avoid this circular import
     from pymc.math import logdiffexp
 
-    return logdiffexp(logcdf_upper, logcdf_lower)
+    return [logdiffexp(logcdf_upper, logcdf_lower)]
