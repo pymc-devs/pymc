@@ -2637,3 +2637,28 @@ def test_precision_mv_normal_optimization():
         y_logp_fn(y=y_test, Q=Q_test),
         st.multivariate_normal.logpdf(y_test, mu_test, cov=Sigma_test),
     )
+
+
+def test_car_batch_support():
+    """
+    Tests that CAR distribution supports batch size > 1 with vector alpha and tau.
+    """
+    npr.seed(1)
+    W = np.array(
+        [[0.0, 1.0, 1.0, 0.0], [1.0, 0.0, 0.0, 1.0], [1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 1.0, 0.0]]
+    )
+    # Batch size = 3 (vector alpha and tau)
+    tau = np.array([1.5, 2.0, 2.5])
+    alpha = np.array([0.2, 0.4, 0.6])
+    mu = np.zeros((3, 4))  # (batch_size, number of sites)
+    xs = npr.randn(3, 4)
+
+    W_tensor = pytensor.tensor.as_tensor_variable(W)
+    car_dist = pm.CAR.dist(mu=mu, W=W_tensor, alpha=alpha, tau=tau)
+
+    # Evaluate logp for batch size > 1
+    car_logp = logp(car_dist, xs).eval()
+
+    # Check that logp shape matches batch size shape (3,)
+    assert car_logp.shape == (3,)
+    assert not np.any(np.isnan(car_logp))
