@@ -1825,8 +1825,7 @@ def init_nuts(
     jitter_max_retries : int
         Maximum number of repeated attempts (per chain) at creating an initial matrix with uniform jitter
         that yields a finite probability. This applies to ``jitter+adapt_diag``, ``jitter+adapt_full``
-        and ``jitter+map``
-        init methods.
+        and ``jitter+map`` init methods.
     **kwargs : keyword arguments
         Extra keyword arguments are forwarded to pymc.NUTS.
 
@@ -1887,6 +1886,8 @@ def init_nuts(
     )
 
     apoints = [DictToArrayBijection.map(point) for point in initial_points]
+    # MAP-based inits run a single search, from the first chain's initvals if given per chain
+    map_initvals = initvals if initvals is None or isinstance(initvals, dict) else initvals[0]
     apoints_data = [apoint.data for apoint in apoints]
     potential: quadpotential.QuadPotential
 
@@ -1968,6 +1969,8 @@ def init_nuts(
     elif init == "advi_map":
         start = _find_MAP_point(
             model=model,
+            initvals=map_initvals,
+            jitter=False,
             random_seed=random_seed_list[0],
             progressbar=progressbar and not quiet,
             compile_kwargs=compile_kwargs,
@@ -1994,6 +1997,7 @@ def init_nuts(
     elif init in ("map", "jitter+map"):
         start = _find_MAP_point(
             model=model,
+            initvals=map_initvals,
             jitter=init == "jitter+map",
             jitter_max_retries=jitter_max_retries,
             random_seed=random_seed_list[0],

@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-import logging
+import warnings
 
 from collections.abc import Callable
 from importlib.util import find_spec
@@ -36,35 +36,40 @@ from pymc.pytensorf import compile, floatX, join_nonshared_inputs, rewrite_pregr
 GradientBackend = Literal["pytensor", "jax"]
 VALID_BACKENDS = get_args(GradientBackend)
 
-_log = logging.getLogger(__name__)
-
 
 def set_optimizer_function_defaults(
     method: str, use_grad: bool | None, use_hess: bool | None, use_hessp: bool | None
 ) -> tuple[bool, bool, bool]:
-    """Resolve ``None`` gradient/hessian flags from what ``method`` can use, preferring hessp over hess."""
+    """Resolve each ``None`` flag from what ``method`` uses; explicit values are respected.
+
+    Methods that accept both a Hessian and a Hessian-vector product get only one, preferring the
+    explicitly requested one and otherwise ``hessp``, which is cheaper.
+    """
     from better_optimize.constants import MINIMIZE_MODE_KWARGS
 
-    method_info = MINIMIZE_MODE_KWARGS[method]
-
+    info = MINIMIZE_MODE_KWARGS[method]
+    for flag, value, key in (
+        ("use_grad", use_grad, "uses_grad"),
+        ("use_hess", use_hess, "uses_hess"),
+        ("use_hessp", use_hessp, "uses_hessp"),
+    ):
+        if value and not info[key]:
+            warnings.warn(
+                f"Method {method!r} does not use `{flag}`; it will be ignored.", UserWarning
+            )
+    hess_was_none, hessp_was_none = use_hess is None, use_hessp is None
+    use_grad = info["uses_grad"] and (info["uses_grad"] if use_grad is None else use_grad)
+    use_hess = info["uses_hess"] and (info["uses_hess"] if hess_was_none else use_hess)
+    use_hessp = info["uses_hessp"] and (info["uses_hessp"] if hessp_was_none else use_hessp)
     if use_hess and use_hessp:
-        _log.warning(
-            'Both "use_hess" and "use_hessp" are set to True, but scipy.optimize.minimize never uses both at the '
-            'same time. When possible "use_hessp" is preferred because it is computationally more efficient. '
-            'Setting "use_hess" to False.'
-        )
-        use_hess = False
-
-    use_grad = use_grad if use_grad is not None else method_info["uses_grad"]
-
-    if use_hessp is not None and use_hess is None:
-        use_hess = not use_hessp
-    elif use_hess is not None and use_hessp is None:
-        use_hessp = not use_hess
-    elif use_hessp is None and use_hess is None:
-        use_hessp = method_info["uses_hessp"]
-        use_hess = method_info["uses_hess"] and not use_hessp
-
+        if not (hess_was_none or hessp_was_none):
+            warnings.warn(
+                "Only one of `use_hess` and `use_hessp` is used; using `use_hessp`.", UserWarning
+            )
+        if hessp_was_none and not hess_was_none:
+            use_hessp = False
+        else:
+            use_hess = False
     return bool(use_grad), bool(use_hess), bool(use_hessp)
 
 
@@ -233,24 +238,18 @@ def scipy_optimize_funcs_from_loss(
     return f_fused, f_hessp
 
 
-def get_nearest_psd(A: np.ndarray) -> np.ndarray:
-    """Nearest (in Frobenius norm) positive semi-definite matrix to ``A``."""
-    C = (A + A.T) / 2
-    eigval, eigvec = np.linalg.eigh(C)
-    eigval[eigval < 0] = 0
-    return eigvec @ np.diag(eigval) @ eigvec.T
-
-
 def _compute_inverse_hessian(
     optimal_point: np.ndarray,
     f_fused: Callable | None = None,
     f_hessp: Callable | None = None,
     use_hess: bool = False,
 ) -> np.ndarray:
-    """Exact inverse Hessian of the loss at ``optimal_point``, inverted after PSD projection.
+    """Exact inverse Hessian of the loss at ``optimal_point``, projected to be positive definite.
 
     Uses the fused dense Hessian when ``use_hess``, otherwise ``n`` Hessian-vector products. The
     optimizers' own ``hess_inv`` (BFGS, L-BFGS-B) are approximations and are deliberately not used.
+    Eigenvalues below a relative tolerance are clipped to it, so numerical noise does not discard the
+    estimate; clearly negative ones mean the point is not a minimum and raise a warning.
     """
     x_star = floatX(np.asarray(optimal_point))
     if use_hess and f_fused is not None:
@@ -260,4 +259,18 @@ def _compute_inverse_hessian(
         H = np.stack([np.asarray(f_hessp(x_star, e)) for e in basis], axis=-1)
     else:
         raise ValueError("Either `f_hessp` or a fused hessian (`use_hess=True`) is required.")
-    return np.linalg.inv(get_nearest_psd(np.asarray(H, dtype="float64")))
+    H = np.asarray(H, dtype="float64")
+    eigval, eigvec = np.linalg.eigh((H + H.T) / 2)
+    # Same relative tolerance as np.linalg.matrix_rank, at the precision H was computed in
+    tol = max(
+        np.abs(eigval).max() * len(eigval) * np.finfo(pytensor.config.floatX).eps,
+        np.finfo("float64").tiny,
+    )
+    if eigval.min() < -tol:
+        warnings.warn(
+            f"The Hessian at the optimum is not positive definite (smallest eigenvalue {eigval.min():.3g}), "
+            "so the point may be a saddle point rather than a minimum. Its eigenvalues were clipped to "
+            "compute `fit.covariance_matrix`.",
+            UserWarning,
+        )
+    return (eigvec / np.maximum(eigval, tol)) @ eigvec.T

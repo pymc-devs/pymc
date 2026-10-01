@@ -229,8 +229,10 @@ def find_MAP(
     include_transformed : bool, default False
         Whether to also return the values of transformed (unconstrained) variables, e.g. ``sigma_log__``.
     compute_hessian : bool, default False
-        Compute the inverse hessian at the optimum and store it as ``fit.covariance_matrix``.
-        Needed for a Laplace approximation, but expensive for large models.
+        Store the inverse Hessian of the negative ``model.logp(jacobian=False)`` at the optimum,
+        taken over the optimized (unconstrained) value variables, as ``fit.covariance_matrix``.
+        This needs ``n`` Hessian-vector products and an ``n x n`` matrix, so it is expensive for
+        large models.
     return_inferencedata : bool, default True
         Return an :class:`arviz.InferenceData` with the MAP point as a single-draw ``posterior``
         (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data`` groups).
@@ -262,8 +264,11 @@ def find_MAP(
     """
     if isinstance(method, dict):
         optimizer_kwargs["start"], method = method, "L-BFGS-B"
+    explicit = {"initvals": initvals, "random_seed": random_seed}
     for old, new in _LEGACY_KWARGS.items():
         if old in optimizer_kwargs:
+            if new in optimizer_kwargs or explicit.get(new) is not None:
+                raise ValueError(f"Cannot pass both `{old}` and `{new}`; `{old}` is deprecated.")
             warnings.warn(
                 f"`{old}` is deprecated, use `{new}` instead.", FutureWarning, stacklevel=2
             )
@@ -362,6 +367,8 @@ def _fit_MAP(
         else set(_value_var_names(vars, model))
     )
     var_names = [str(var.name) for var in model.value_vars if var.name in names]
+    # Variable keys would not match the frozen model's variables, so key by name
+    initvals = initvals and {getattr(k, "name", k): v for k, v in initvals.items()}
     if freeze_model:
         model = freeze_dims_and_data(model)
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
@@ -456,6 +463,9 @@ def _fit_MAP(
             method=method,
             **optimizer_kwargs,
         )
+
+    if not res.get("success", True):
+        warnings.warn(f"The optimizer did not converge: {res.get('message', '')}", UserWarning)
 
     H_inv = None
     if compute_hessian:

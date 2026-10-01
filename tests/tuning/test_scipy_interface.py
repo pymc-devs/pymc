@@ -18,7 +18,6 @@ from pytensor import tensor as pt
 
 from pymc.tuning import scipy_interface
 from pymc.tuning.scipy_interface import (
-    get_nearest_psd,
     scipy_optimize_funcs_from_loss,
     set_optimizer_function_defaults,
 )
@@ -30,33 +29,42 @@ def simple_loss_and_inputs():
     return pt.sum(x**2), [x]
 
 
-def test_get_nearest_psd_returns_psd():
-    psd = get_nearest_psd(np.array([[2, -3], [-3, 2]]))
-    np.testing.assert_allclose(psd, psd.T)
-    assert np.all(np.linalg.eigvalsh(psd) >= -1e-12)
+def test_set_optimizer_function_defaults_warns_and_prefers_hessp():
+    with pytest.warns(UserWarning, match="Only one of `use_hess` and `use_hessp`"):
+        flags = set_optimizer_function_defaults("trust-ncg", True, True, True)
+    assert flags == (True, False, True)
 
 
-def test_get_nearest_psd_given_psd_input():
-    L = np.random.default_rng(0).normal(size=(2, 2))
-    A = L @ L.T
-    np.testing.assert_allclose(get_nearest_psd(A), A)
+@pytest.mark.parametrize(
+    "method, use_hess, use_hessp, expected",
+    [
+        ("trust-ncg", None, None, (True, False, True)),
+        ("trust-ncg", None, True, (True, False, True)),
+        ("trust-ncg", True, None, (True, True, False)),
+        ("trust-ncg", False, None, (True, False, True)),
+        ("L-BFGS-B", None, None, (True, False, False)),
+        # setting one flag must not flip the other on for a method that cannot use it
+        ("L-BFGS-B", None, False, (True, False, False)),
+        ("L-BFGS-B", False, None, (True, False, False)),
+        ("trust-exact", None, False, (True, True, False)),
+        ("powell", None, None, (False, False, False)),
+    ],
+)
+def test_set_optimizer_function_defaults(method, use_hess, use_hessp, expected):
+    assert set_optimizer_function_defaults(method, None, use_hess, use_hessp) == expected
 
 
-def test_set_optimizer_function_defaults_warns_and_prefers_hessp(caplog):
-    with caplog.at_level("WARNING"):
-        use_grad, use_hess, use_hessp = set_optimizer_function_defaults(
-            "trust-ncg", True, True, True
-        )
-    assert caplog.messages[0].startswith('Both "use_hess" and "use_hessp" are set to True')
-    assert (use_grad, use_hess, use_hessp) == (True, False, True)
-
-
-def test_set_optimizer_function_defaults_infers_hess_and_hessp():
-    assert set_optimizer_function_defaults("trust-ncg", None, None, True) == (True, False, True)
-    assert set_optimizer_function_defaults("trust-ncg", None, True, None) == (True, True, False)
-    assert set_optimizer_function_defaults("trust-ncg", None, None, None) == (True, False, True)
-    assert set_optimizer_function_defaults("L-BFGS-B", None, None, None) == (True, False, False)
-    assert set_optimizer_function_defaults("powell", None, None, None) == (False, False, False)
+@pytest.mark.parametrize(
+    "method, flags, expected",
+    [
+        ("trust-exact", (None, None, True), (True, True, False)),  # keeps the Hessian it needs
+        ("L-BFGS-B", (None, True, None), (True, False, False)),
+        ("powell", (True, None, None), (False, False, False)),
+    ],
+)
+def test_set_optimizer_function_defaults_ignores_unused_flags(method, flags, expected):
+    with pytest.warns(UserWarning, match=f"Method '{method}' does not use"):
+        assert set_optimizer_function_defaults(method, *flags) == expected
 
 
 @pytest.mark.parametrize(
@@ -142,6 +150,23 @@ def test_compute_inverse_hessian_is_exact(use_hess):
     )
     H_inv = scipy_interface._compute_inverse_hessian(np.ones(2), f_fused, f_hessp, use_hess)
     np.testing.assert_allclose(H_inv, np.linalg.inv(A))
+
+
+def test_compute_inverse_hessian_indefinite():
+    x = pt.vector("x", shape=(2,))
+    A = np.array([[1.0, 0.0], [0.0, -1.0]])  # saddle point: not a minimum
+    _, f_hessp = scipy_optimize_funcs_from_loss(
+        loss=0.5 * x @ A @ x,
+        inputs=[x],
+        initial_point_dict={"x": np.zeros(2)},
+        use_grad=True,
+        use_hessp=True,
+    )
+    with pytest.warns(UserWarning, match="not positive definite"):
+        H_inv = scipy_interface._compute_inverse_hessian(np.zeros(2), f_hessp=f_hessp)
+    assert np.all(np.isfinite(H_inv))
+    np.testing.assert_allclose(H_inv[0, 0], 1.0)  # the well-defined direction is untouched
+    assert np.all(np.linalg.eigvalsh(H_inv) > 0)
 
 
 def test_compute_inverse_hessian_requires_second_order():
