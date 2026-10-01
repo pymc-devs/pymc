@@ -68,63 +68,39 @@ def test_set_optimizer_function_defaults_ignores_unused_flags(method, flags, exp
 
 
 @pytest.mark.parametrize(
-    "compute_grad, compute_hess, compute_hessp",
+    "use_grad, use_hess, use_hessp",
     [(False, False, False), (True, False, False), (True, True, False), (True, False, True)],
 )
-def test_compile_functions_for_scipy_optimize(
-    simple_loss_and_inputs, compute_grad, compute_hess, compute_hessp
-):
+def test_scipy_optimize_funcs_from_loss(simple_loss_and_inputs, use_grad, use_hess, use_hessp):
     loss, inputs = simple_loss_and_inputs
-    funcs = scipy_interface._compile_functions_for_scipy_optimize(
+    f_fused, f_hessp = scipy_optimize_funcs_from_loss(
         loss,
         inputs,
-        compute_grad=compute_grad,
-        compute_hess=compute_hess,
-        compute_hessp=compute_hessp,
+        use_grad=use_grad,
+        use_hess=use_hess,
+        use_hessp=use_hessp,
+        inputs_are_flat=True,
     )
     x = np.array([1.0, 2.0])
-    if not compute_grad:
-        [f_loss] = funcs
-        assert np.isclose(f_loss(x), 5.0)
+    if not use_grad:
+        assert np.isclose(f_fused(x), 5.0)
         return
-
-    f_fused, f_hessp = funcs
     loss_val, grad_val, *rest = f_fused(x)
     assert np.isclose(loss_val, 5.0)
     np.testing.assert_allclose(grad_val, 2 * x)
-    if compute_hess:
+    if use_hess:
         np.testing.assert_allclose(rest[0], 2 * np.eye(2))
-    if compute_hessp:
+    if use_hessp:
         np.testing.assert_allclose(f_hessp(x, np.array([1.0, 0.0])), [2.0, 0.0])
     else:
         assert f_hessp is None
 
 
-def test_scipy_optimize_funcs_from_loss_invalid_args(simple_loss_and_inputs):
+def test_scipy_optimize_funcs_from_loss_hess_without_grad(simple_loss_and_inputs):
     loss, inputs = simple_loss_and_inputs
-    point = {"x": np.array([1.0, 2.0])}
-    with pytest.raises(ValueError, match="Invalid gradient backend"):
-        scipy_optimize_funcs_from_loss(loss, inputs, point, use_grad=True, gradient_backend="foo")
     with pytest.raises(ValueError, match="Cannot compute hessian without"):
-        scipy_optimize_funcs_from_loss(loss, inputs, point, use_grad=False, use_hess=True)
-    pytest.importorskip("jax")
-    with pytest.raises(ValueError, match="jax gradients can only be used"):
         scipy_optimize_funcs_from_loss(
-            loss,
-            inputs,
-            point,
-            use_grad=True,
-            gradient_backend="jax",
-            compile_kwargs={"mode": "NUMBA"},
-        )
-
-
-def test_scipy_optimize_funcs_from_loss_jax_missing(simple_loss_and_inputs, monkeypatch):
-    monkeypatch.setattr(scipy_interface, "find_spec", lambda name: None)
-    loss, inputs = simple_loss_and_inputs
-    with pytest.raises(ImportError, match="JAX must be installed"):
-        scipy_optimize_funcs_from_loss(
-            loss, inputs, {"x": np.zeros(2)}, use_grad=True, gradient_backend="jax"
+            loss, inputs, {"x": np.zeros(2)}, use_grad=False, use_hess=True
         )
 
 
@@ -174,8 +150,7 @@ def test_compute_inverse_hessian_requires_second_order():
         scipy_interface._compute_inverse_hessian(np.zeros(2))
 
 
-@pytest.mark.parametrize("gradient_backend", ["pytensor", "jax"])
-def test_scipy_optimize_funcs_from_loss_jax(gradient_backend):
+def test_scipy_optimize_funcs_from_loss_jax_mode():
     pytest.importorskip("jax")
     x = pt.tensor("x", shape=(2,))
     loss = (x[0] ** 2 + 2) + (x[0] * x[1] + 3)
@@ -186,7 +161,6 @@ def test_scipy_optimize_funcs_from_loss_jax(gradient_backend):
         use_grad=True,
         use_hess=True,
         use_hessp=True,
-        gradient_backend=gradient_backend,
         compile_kwargs={"mode": "JAX"},
     )
     x_val = np.array([1.0, 2.0])

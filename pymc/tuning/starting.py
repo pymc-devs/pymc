@@ -28,6 +28,7 @@ import pytensor.tensor as pt
 import xarray as xr
 
 from pytensor.compile import Function
+from pytensor.graph.basic import Variable
 from pytensor.graph.replace import graph_replace
 from pytensor.tensor import TensorVariable
 from xarray import DataTree
@@ -38,8 +39,6 @@ from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
 from pymc.initial_point import StartDict
 from pymc.model import Model, modelcontext
-from pymc.model.core import FrozenModel
-from pymc.model.transform.optimization import freeze_dims_and_data
 from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
 from pymc.tuning.scipy_interface import (
     _compute_inverse_hessian,
@@ -73,7 +72,7 @@ def _canonical_method(method: str) -> str:
         raise ValueError(f"Unknown method {method!r}. Valid methods are {list(methods.values())}")
 
 
-def _value_var_names(vars: Sequence[TensorVariable], model: Model) -> list[str]:
+def _value_vars(vars: Sequence[TensorVariable], model: Model) -> list[Variable]:
     try:
         value_vars = get_value_vars_from_user_vars(vars, model)
     except ValueError as exc:
@@ -86,7 +85,7 @@ def _value_var_names(vars: Sequence[TensorVariable], model: Model) -> list[str]:
             "find_MAP will optimize the underlying free_RVs instead.",
             UserWarning,
         )
-    return [str(var.name) for var in value_vars]
+    return value_vars
 
 
 def _unpacked_names(point_map_info, model: Model) -> list[str]:
@@ -185,7 +184,6 @@ def find_MAP(
     compute_hessian: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: dict[str, Any] | None = None,
-    freeze_model: bool = True,
     model: Model | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
@@ -240,17 +238,14 @@ def find_MAP(
             values, will be removed in a future release.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`.
-    freeze_model : bool, default True
-        Freeze data and dimension lengths before compiling, which allows constant folding and
-        is required by some backends (JAX). A model from :func:`pymc.model.transform.freeze_model`
-        is used as is, keeping its cached compiled functions.
     model : Model (optional if in ``with`` context)
+        Pass a model from :func:`pymc.model.transform.freeze_model` for constant folding and
+        compiled functions cached across calls.
     backend : str, optional
         Computational backend, one of "numba", "c" or "jax". Defaults to the PyTensor default mode.
     compile_kwargs : dict, optional
         Keyword arguments for the compiled functions. ``compile_kwargs["mode"]`` cannot be combined
-        with ``backend``. ``compile_kwargs["gradient_backend"]="jax"`` takes derivatives with
-        JAX autodiff instead of PyTensor (requires the JAX backend).
+        with ``backend``.
     **optimizer_kwargs
         Passed on to ``scipy.optimize.minimize`` (e.g. ``maxiter``, ``tol``), or
         ``scipy.optimize.basinhopping`` when ``method="basinhopping"``, in which case
@@ -305,7 +300,6 @@ def find_MAP(
         random_seed=random_seed,
         progressbar=progressbar,
         compute_hessian=compute_hessian,
-        freeze_model=freeze_model,
         model=model,
         backend=backend,
         compile_kwargs=compile_kwargs,
@@ -347,7 +341,6 @@ def _fit_MAP(
     random_seed: RandomState = None,
     progressbar: bool = True,
     compute_hessian: bool = False,
-    freeze_model: bool = True,
     model: Model | None = None,
     backend: str | None = None,
     compile_kwargs: dict | None = None,
@@ -359,22 +352,10 @@ def _fit_MAP(
     from pymc.sampling.mcmc import _init_jitter  # avoids a circular import
 
     model = cast(Model, modelcontext(model))
-    # Resolve which value variables to optimize, in model order, before freezing reorders the graph
-    names = (
-        {var.name for var in model.continuous_value_vars}
-        if vars is None
-        else set(_value_var_names(vars, model))
-    )
-    var_names = [str(var.name) for var in model.value_vars if var.name in names]
-    # Variable keys would not match the frozen model's variables, so key by name
-    initvals = initvals and {getattr(k, "name", k): v for k, v in initvals.items()}
-    if freeze_model and not isinstance(model, FrozenModel):
-        model = freeze_dims_and_data(model)
+    selected = set(model.continuous_value_vars if vars is None else _value_vars(vars, model))
+    vars = [var for var in model.value_vars if var in selected]  # model order
     compile_kwargs = resolve_backend_compile_kwargs(backend, compile_kwargs)
-    gradient_backend = compile_kwargs.pop("gradient_backend", "pytensor")
 
-    value_vars = {var.name: var for var in model.value_vars}
-    vars = [value_vars[name] for name in var_names]
     if not vars:
         raise ValueError("Model has no unobserved continuous variables.")
     discrete = typefilter(vars, discrete_types)
@@ -419,7 +400,7 @@ def _fit_MAP(
     loss = -cast(TensorVariable, model.logp(jacobian=False))
     if fixed := [var for var in model.value_vars if var not in vars]:
         loss = graph_replace(loss, {var: pt.constant(start[var.name], var.name) for var in fixed})
-    x0 = DictToArrayBijection.map({name: start[name] for name in var_names})
+    x0 = DictToArrayBijection.map({str(v.name): start[str(v.name)] for v in vars})
 
     def compile_funcs(use_grad, use_hess, use_hessp):
         return scipy_optimize_funcs_from_loss(
@@ -429,7 +410,6 @@ def _fit_MAP(
             use_grad=use_grad,
             use_hess=use_hess,
             use_hessp=use_hessp,
-            gradient_backend=gradient_backend,
             compile_kwargs=compile_kwargs,
         )
 
@@ -476,7 +456,7 @@ def _fit_MAP(
     H_inv = None
     if compute_hessian:
         if not (use_hess or f_hessp):  # optimizer did not need 2nd-order info; compile hessp for it
-            _, f_hessp = compile_funcs(True, False, True)  # grad on, so jax autodiff is honoured
+            _, f_hessp = compile_funcs(False, False, True)
         H_inv = _compute_inverse_hessian(res.x, f_fused, f_hessp, use_hess)
     x_star = RaveledVars(np.asarray(res.x), x0.point_map_info)
     point = DictToArrayBijection.rmap(x_star, start)
