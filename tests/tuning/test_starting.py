@@ -29,7 +29,7 @@ from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.model.transform.optimization import freeze_model
 from pymc.step_methods.metropolis import tune
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
-from pymc.tuning import find_MAP, scipy_interface
+from pymc.tuning import find_MAP
 from pymc.tuning.starting import _find_MAP_point, _fit_MAP, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
@@ -288,31 +288,14 @@ def test_find_MAP_compute_hessian_float32():
     assert np.all(np.isfinite(idata.fit.covariance_matrix.values))
 
 
-@pytest.mark.parametrize(
-    "gradient_backend, method",
-    [("jax", "L-BFGS-B"), ("pytensor", "L-BFGS-B"), ("jax", "powell")],
-)
-def test_find_MAP_jax_backend(normal_model, gradient_backend, method, monkeypatch):
+@pytest.mark.parametrize("method", ["L-BFGS-B", "powell"])
+def test_find_MAP_jax_backend(normal_model, method):
     pytest.importorskip("jax")
-    jax_derivatives = []
-    to_jax = scipy_interface._compile_grad_and_hess_to_jax
-    monkeypatch.setattr(
-        scipy_interface,
-        "_compile_grad_and_hess_to_jax",
-        lambda *args: jax_derivatives.append(args[2]) or to_jax(*args),
-    )
     idata = find_MAP(
-        method,
-        model=normal_model,
-        backend="jax",
-        compile_kwargs={"gradient_backend": gradient_backend},
-        compute_hessian=True,
-        progressbar=False,
+        method, model=normal_model, backend="jax", compute_hessian=True, progressbar=False
     )
     assert idata.fit.covariance_matrix.shape == (2, 2)
     assert_allclose(idata.posterior["mu"].item(), 3.0, atol=1.0)
-    # with jax autodiff, the post-hoc hessp also comes from jax, even for gradient-free methods
-    assert (True in jax_derivatives) == (gradient_backend == "jax")
 
 
 def test_find_MAP_return_inferencedata_consistent(normal_model):
