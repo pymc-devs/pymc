@@ -114,7 +114,8 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
     draws_per_chunk : int
         The number of draws that make up a chunk in the variable's posterior array.
         The interface only writes the samples to the store once a chunk is completely
-        filled.
+        filled. The default of 100 amortizes the cost of zarr writes; setting it to
+        ``1`` gives the highest crash resilience, at the cost of a large slowdown.
     """
 
     def __init__(
@@ -124,7 +125,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         model: BaseModel | None = None,
         vars: Sequence[TensorVariable] | None = None,
         test_point: dict[str, np.ndarray] | None = None,
-        draws_per_chunk: int = 1,
+        draws_per_chunk: int = 100,
         fn: Callable | None = None,
     ):
         if not _zarr_available:
@@ -363,7 +364,9 @@ class ZarrTrace(_ZarrTraceBase):
         chain will have it's own chunk to read or write to, allowing for concurrent
         write operations of different chains not to interfere with each other, and that
         multiple draws can belong to the same chunk. The variable's core dimension
-        however, will never be split across different chunks.
+        however, will never be split across different chunks. The default of 100
+        amortizes the cost of zarr writes; setting it to ``1`` gives the highest crash
+        resilience, at the cost of a large slowdown.
     include_transformed : bool
         If ``True``, the transformed, unconstrained value variables are included in the
         storage group.
@@ -394,7 +397,7 @@ class ZarrTrace(_ZarrTraceBase):
         self,
         store: Store | MutableMapping | None = None,
         compressors: Sequence | None | _UnsetType = UNSET,
-        draws_per_chunk: int = 1,
+        draws_per_chunk: int = 100,
         include_transformed: bool = False,
     ):
         if not _zarr_available:
