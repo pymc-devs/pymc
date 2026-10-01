@@ -43,6 +43,7 @@ from pymc.distributions.distribution import (
     support_point,
 )
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.exceptions import ShapeError
 from pymc.logprob.basic import conditional_logp, logp
 from pymc.pytensorf import compile, normalize_rng_param
 from pymc.testing import (
@@ -586,3 +587,10 @@ class TestPartialObservedRV:
         assert np.all(draws_obs_rv[0] != draws_obs_rv[1])
         assert np.all(draws_unobs_rv[0] != draws_unobs_rv[1])
         assert np.all(draws_joined_rv[0] != draws_joined_rv[1])
+
+
+def test_observed_shape_mismatch_raises():
+    # regression test for gh-6406
+    with pm.Model():
+        with pytest.raises(ShapeError):
+            pm.Normal("x", mu=0, sigma=1, shape=3, observed=[2, 3, 4, 5])
