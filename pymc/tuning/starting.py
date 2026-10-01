@@ -39,6 +39,7 @@ from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
 from pymc.initial_point import StartDict
 from pymc.model import Model, modelcontext
+from pymc.progress_bar import ProgressBarOptions
 from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
 from pymc.tuning.scipy_interface import (
     _compute_inverse_hessian,
@@ -179,8 +180,7 @@ def find_MAP(
     jitter: bool = True,
     jitter_max_retries: int = 10,
     random_seed: RandomState = None,
-    progressbar: bool = True,
-    include_transformed: bool = False,
+    progressbar: bool | ProgressBarOptions = True,
     compute_hessian: bool = False,
     return_inferencedata: bool = True,
     idata_kwargs: dict[str, Any] | None = None,
@@ -220,10 +220,9 @@ def find_MAP(
     random_seed : int, array-like of int, or Generator, optional
         Seed for jitter and stochastic optimizers (basinhopping). With a fixed seed the result is
         fully reproducible.
-    progressbar : bool, default True
-        Whether to display a progress bar.
-    include_transformed : bool, default False
-        Whether to also return the values of transformed (unconstrained) variables, e.g. ``sigma_log__``.
+    progressbar : bool or ProgressBarOptions, default True
+        Whether to display the optimizer's progress bar. The string options of
+        :func:`pymc.sample` are accepted and simply enable it.
     compute_hessian : bool, default False
         Store the inverse Hessian of the negative ``model.logp(jacobian=False)`` at the optimum,
         taken over the optimized (unconstrained) value variables, as ``fit.covariance_matrix``.
@@ -237,7 +236,8 @@ def find_MAP(
             ``return_inferencedata=False``, which returns a ``dict`` mapping variable names to
             values, will be removed in a future release.
     idata_kwargs : dict, optional
-        Keyword arguments for :func:`pymc.to_inference_data`.
+        Keyword arguments for :func:`pymc.to_inference_data`, e.g. ``include_transformed=True`` to
+        also return transformed (unconstrained) values such as ``sigma_log__``.
     model : Model (optional if in ``with`` context)
         Pass a model from :func:`pymc.model.transform.freeze_model` for constant folding and
         compiled functions cached across calls.
@@ -279,6 +279,16 @@ def find_MAP(
         )
     if optimizer_kwargs.pop("progressbar_theme", None) is not None:
         warnings.warn("`progressbar_theme` is ignored by find_MAP.", FutureWarning, stacklevel=2)
+    idata_kwargs = {} if idata_kwargs is None else dict(idata_kwargs)
+    if "include_transformed" in optimizer_kwargs:
+        if "include_transformed" in idata_kwargs:
+            raise ValueError("Pass `include_transformed` only via `idata_kwargs`.")
+        warnings.warn(
+            "`include_transformed` is deprecated, pass it via `idata_kwargs` as in `pymc.sample`.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        idata_kwargs["include_transformed"] = optimizer_kwargs.pop("include_transformed")
 
     if not return_inferencedata:
         warnings.warn(
@@ -298,7 +308,7 @@ def find_MAP(
         jitter=jitter,
         jitter_max_retries=jitter_max_retries,
         random_seed=random_seed,
-        progressbar=progressbar,
+        progressbar=bool(progressbar),
         compute_hessian=compute_hessian,
         model=model,
         backend=backend,
@@ -306,9 +316,9 @@ def find_MAP(
         **optimizer_kwargs,
     )
     out = (
-        _map_to_inference_data(fit, include_transformed, idata_kwargs or {})
+        _map_to_inference_data(fit, idata_kwargs)
         if return_inferencedata
-        else fit.as_point(include_transformed)
+        else fit.as_point(idata_kwargs.get("include_transformed", False))
     )
     return (out, fit.res) if return_raw else out  # type: ignore[return-value]
 
@@ -329,24 +339,24 @@ class _MAPFit(NamedTuple):
 
 
 def _fit_MAP(
-    method: minimize_method | Literal["basinhopping"] = "L-BFGS-B",
+    method: str,
     *,
-    vars: Sequence[TensorVariable] | None = None,
-    use_grad: bool | None = None,
-    use_hess: bool | None = None,
-    use_hessp: bool | None = None,
-    initvals: StartDict | None = None,
-    jitter: bool = True,
-    jitter_max_retries: int = 10,
-    random_seed: RandomState = None,
-    progressbar: bool = True,
-    compute_hessian: bool = False,
-    model: Model | None = None,
-    backend: str | None = None,
-    compile_kwargs: dict | None = None,
+    vars: Sequence[TensorVariable] | None,
+    use_grad: bool | None,
+    use_hess: bool | None,
+    use_hessp: bool | None,
+    initvals: StartDict | None,
+    jitter: bool,
+    jitter_max_retries: int,
+    random_seed: RandomState,
+    progressbar: bool,
+    compute_hessian: bool,
+    model: Model | None,
+    backend: str | None,
+    compile_kwargs: dict | None,
     **optimizer_kwargs,
 ) -> _MAPFit:
-    """Run the optimization behind :func:`find_MAP`; see there for the arguments."""
+    """Run the optimization behind :func:`find_MAP`; no defaults, so they live only there."""
     from better_optimize import basinhopping, minimize
 
     from pymc.sampling.mcmc import _init_jitter  # avoids a circular import
@@ -413,8 +423,10 @@ def _fit_MAP(
             compile_kwargs=compile_kwargs,
         )
 
+    # Compile the hessp compute_hessian needs alongside the loss, rather than recompiling the loss later
+    need_hessp = compute_hessian and not use_hess
     try:
-        f_fused, f_hessp = compile_funcs(use_grad, use_hess, use_hessp)
+        f_fused, f_hessp = compile_funcs(use_grad, use_hess, use_hessp or need_hessp)
     except (NotImplementedError, tg.NullTypeGradError) as exc:
         if not (auto_grad and use_grad):
             raise
@@ -424,14 +436,15 @@ def _fit_MAP(
             UserWarning,
         )
         method, use_grad, use_hess, use_hessp = "powell", False, False, False
-        f_fused, f_hessp = compile_funcs(use_grad, use_hess, use_hessp)
+        f_fused, f_hessp = compile_funcs(use_grad, use_hess, need_hessp)
 
     out = f_fused(x0.data)
     if not np.isfinite(out[0] if isinstance(out, tuple | list) else out):
         model.check_start_vals(start)
 
+    optimizer_hessp = f_hessp if use_hessp else None
     if do_basinhopping:
-        minimizer_kwargs = {"method": method, "hessp": f_hessp, **minimizer_kwargs}
+        minimizer_kwargs = {"method": method, "hessp": optimizer_hessp, **minimizer_kwargs}
         optimizer_kwargs.setdefault("rng", rng)
         res = basinhopping(
             func=f_fused,
@@ -444,7 +457,7 @@ def _fit_MAP(
         res = minimize(
             f=f_fused,
             x0=x0.data,
-            hessp=f_hessp,
+            hessp=optimizer_hessp,
             progressbar=progressbar,
             method=method,
             **optimizer_kwargs,
@@ -453,11 +466,7 @@ def _fit_MAP(
     if not res.get("success", True):
         warnings.warn(f"The optimizer did not converge: {res.get('message', '')}", UserWarning)
 
-    H_inv = None
-    if compute_hessian:
-        if not (use_hess or f_hessp):  # optimizer did not need 2nd-order info; compile hessp for it
-            _, f_hessp = compile_funcs(False, False, True)
-        H_inv = _compute_inverse_hessian(res.x, f_fused, f_hessp, use_hess)
+    H_inv = _compute_inverse_hessian(res.x, f_fused, f_hessp, use_hess) if compute_hessian else None
     x_star = RaveledVars(np.asarray(res.x), x0.point_map_info)
     point = DictToArrayBijection.rmap(x_star, start)
 
@@ -477,14 +486,37 @@ def _fit_MAP(
     )
 
 
-def _find_MAP_point(include_transformed: bool = True, **kwargs) -> PointType:
-    """MAP point as a ``{name: value}`` dict; the internal route for callers like ``init="jitter+map"``."""
-    return _fit_MAP(**kwargs).as_point(include_transformed)
+def _find_MAP_point(
+    *,
+    model: Model,
+    initvals: StartDict | None,
+    jitter: bool,
+    jitter_max_retries: int,
+    random_seed: RandomState,
+    progressbar: bool,
+    compile_kwargs: dict | None,
+) -> PointType:
+    """MAP point, transformed values included, for internal callers like ``init="jitter+map"``."""
+    fit = _fit_MAP(
+        "L-BFGS-B",
+        vars=None,
+        use_grad=None,
+        use_hess=None,
+        use_hessp=None,
+        initvals=initvals,
+        jitter=jitter,
+        jitter_max_retries=jitter_max_retries,
+        random_seed=random_seed,
+        progressbar=progressbar,
+        compute_hessian=False,
+        model=model,
+        backend=None,
+        compile_kwargs=compile_kwargs,
+    )
+    return fit.as_point(include_transformed=True)
 
 
-def _map_to_inference_data(
-    fit: _MAPFit, include_transformed: bool, idata_kwargs: dict[str, Any]
-) -> DataTree:
+def _map_to_inference_data(fit: _MAPFit, idata_kwargs: dict[str, Any]) -> DataTree:
     model, values = fit.model, fit.values
     trace = NDArray(
         model=model,
@@ -495,18 +527,7 @@ def _map_to_inference_data(
     trace.setup(draws=1, chain=0)
     trace.record(fit.point, in_warmup=False)
     trace.close()
-    # Label transformed values (e.g. ``sigma_log__``) with their RV's dims when the shapes match
-    dims = {
-        str(value.name): list(model.named_vars_to_dims[rv.name])
-        for value, rv in model.values_to_rvs.items()
-        if rv.name in model.named_vars_to_dims
-        and value.name in values
-        and values[value.name].shape == values[rv.name].shape
-    }
-    idata_kwargs = {**idata_kwargs, "dims": dims | idata_kwargs.get("dims", {})}
-    idata = to_inference_data(
-        MultiTrace([trace]), model=model, include_transformed=include_transformed, **idata_kwargs
-    )
+    idata = to_inference_data(MultiTrace([trace]), model=model, **idata_kwargs)
     if not idata["sample_stats"].data_vars:  # a single optimum has no sampler stats
         del idata["sample_stats"]
     labels = _unpacked_names(fit.x_star.point_map_info, model)

@@ -30,7 +30,7 @@ from pymc.model.transform.optimization import freeze_model
 from pymc.step_methods.metropolis import tune
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
 from pymc.tuning import find_MAP
-from pymc.tuning.starting import _find_MAP_point, _fit_MAP, _optimizer_result_to_dataset
+from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
 
@@ -190,7 +190,7 @@ def test_find_MAP_issue_4488():
         with pytest.warns(ImputationWarning):
             x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
         y = pm.Deterministic("y", x + 1)
-        map_estimate = map_point(include_transformed=True)
+        map_estimate = map_point(idata_kwargs={"include_transformed": True})
 
     assert not set.difference({"x_unobserved", "x_unobserved_log__", "y"}, set(map_estimate.keys()))
     assert_allclose(map_estimate["x_unobserved"], 0.2, rtol=1e-4, atol=1e-4)
@@ -210,9 +210,11 @@ def test_find_MAP_warning_non_free_RVs():
         assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
 
 
-def test_find_MAP_keeps_frozen_model(normal_model):
-    frozen = freeze_model(normal_model)
-    assert _fit_MAP(model=frozen, progressbar=False).model is frozen
+def test_find_MAP_frozen_model(normal_model):
+    kwargs = {"progressbar": False, "random_seed": 1}
+    frozen = find_MAP(model=freeze_model(normal_model), **kwargs).posterior["mu"]
+    # constant folding differs, so the optimizers stop at slightly different points
+    assert_allclose(frozen, find_MAP(model=normal_model, **kwargs).posterior["mu"], rtol=1e-4)
 
 
 def test_find_MAP_vars_subset_holds_others_fixed(normal_model):
@@ -246,7 +248,7 @@ def test_find_MAP_inferencedata(
         use_hess=use_hess,
         use_hessp=use_hessp,
         progressbar=False,
-        include_transformed=include_transformed,
+        idata_kwargs={"include_transformed": include_transformed},
         compute_hessian=compute_hessian,
     )
     assert set(idata.children) == {"posterior", "fit", "optimizer_result", "observed_data"}
@@ -299,17 +301,16 @@ def test_find_MAP_jax_backend(normal_model, method):
 
 
 def test_find_MAP_return_inferencedata_consistent(normal_model):
-    kwargs = {
-        "model": normal_model,
-        "include_transformed": True,
-        "progressbar": False,
-        "random_seed": 1,
-    }
-    idata = find_MAP(**kwargs)
+    kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
+    idata_kwargs = {"include_transformed": True}
+    idata = find_MAP(idata_kwargs=idata_kwargs, **kwargs)
     with pytest.warns(FutureWarning, match="`return_inferencedata=False` is deprecated"):
-        point = find_MAP(return_inferencedata=False, **kwargs)
+        point = find_MAP(return_inferencedata=False, idata_kwargs=idata_kwargs, **kwargs)
     assert set(point) == {"mu", "sigma", "sigma_log__"}
-    assert_allclose(_find_MAP_point(**kwargs)["sigma_log__"], point["sigma_log__"])
+    internal = _find_MAP_point(
+        initvals=None, jitter=True, jitter_max_retries=10, compile_kwargs=None, **kwargs
+    )
+    assert_allclose(internal["sigma_log__"], point["sigma_log__"])
     for name, value in point.items():
         assert_allclose(idata.posterior[name].values.squeeze(), value)
 
@@ -361,11 +362,11 @@ def test_find_MAP_with_coords():
         sigma = pm.HalfNormal("sigma", 1, dims=["group"])
         pm.Normal("obs", mu=mu, sigma=sigma, observed=np.random.normal(size=(10, 5)))
 
-    idata = find_MAP(model=m, progressbar=False, include_transformed=True)
+    idata = find_MAP(model=m, progressbar=False, idata_kwargs={"include_transformed": True})
     posterior = idata.posterior.dataset.squeeze(["chain", "draw"])
     assert posterior["mu"].dims == ("group",)
     assert posterior["sigma"].shape == (5,)
-    assert posterior["sigma_log__"].dims == ("group",)
+    assert posterior["sigma_log__"].shape == (5,)
     assert idata.fit.rows.values.tolist() == [
         "mu_loc",
         "mu_scale_log__",
@@ -466,6 +467,13 @@ def test_find_MAP_legacy_kwargs(normal_model):
         idata, res = find_MAP(return_raw=True, **kwargs)
     with pytest.warns(FutureWarning, match="`progressbar_theme` is ignored"):
         find_MAP(progressbar_theme="default", **kwargs)
+    with pytest.warns(FutureWarning, match="`include_transformed` is deprecated"):
+        legacy = find_MAP(include_transformed=True, **kwargs)
+    assert "sigma_log__" in legacy.posterior
+    with pytest.raises(ValueError, match="only via `idata_kwargs`"):
+        find_MAP(include_transformed=True, idata_kwargs={"include_transformed": False}, **kwargs)
+    # pm.sample's string progress bar options are accepted
+    find_MAP(**{**kwargs, "progressbar": "split+stats"})
     assert isinstance(res, OptimizeResult)
     assert set(idata.posterior) == {"mu", "sigma"}
 

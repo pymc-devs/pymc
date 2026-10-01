@@ -1972,6 +1972,7 @@ def init_nuts(
             model=model,
             initvals=map_initvals,
             jitter=False,
+            jitter_max_retries=jitter_max_retries,
             random_seed=random_seed_list[0],
             progressbar=progressbar and not quiet,
             compile_kwargs=compile_kwargs,
