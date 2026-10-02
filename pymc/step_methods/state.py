@@ -21,10 +21,68 @@ from pymc.util import RandomGeneratorState, get_state_from_generator, random_gen
 
 dataclass_state = dataclass(kw_only=True)
 
+# Size in bytes of the fixed buffer that holds pickled values in state struct
+# dtypes. Encoders must raise when a pickled value does not fit, so that data is
+# never silently truncated.
+PICKLE_BUFFER_SIZE = 1024
+# Size in bytes of the fixed string buffer that holds the base64 SHA-256 hash
+# of pickled values (44 characters for a SHA-256 digest).
+HASH_STRING_SIZE = 64
+
 
 @dataclass_state
 class DataClassState:
     __dataclass_fields__: ClassVar[dict[str, Field[Any]]] = {}
+
+    def struct_dtype(self) -> np.dtype:
+        """Return the numpy structured dtype that describes this state.
+
+        Scalar fields are typed natively (bool, int, float). Nested
+        :class:`DataClassState` fields recurse into nested dtypes. Random
+        generators are described by their bit generator name, their pickled
+        state (in a fixed size bytes buffer, see ``PICKLE_BUFFER_SIZE``), and a
+        base64 SHA-256 hash of the state bytes. Any other field (str, list,
+        dict, ...) is pickled into a fixed size bytes buffer with an adjacent
+        hash field.
+        """
+        return np.dtype(
+            [
+                field_spec
+                for field in fields(self)  # type: ignore[arg-type]
+                for field_spec in _field_dtype_specs(field.name, getattr(self, field.name))
+            ]
+        )
+
+
+def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
+    """Return the (name, dtype[, shape]) spec(s) that describe a state field."""
+    if isinstance(value, bool):
+        return [(name, "?")]
+    if isinstance(value, int):
+        return [(name, "i8")]
+    if isinstance(value, float):
+        return [(name, "f8")]
+    if isinstance(value, np.random.Generator):
+        return [
+            (
+                name,
+                np.dtype(
+                    [
+                        ("bit_generator_name", "U8"),
+                        ("state", f"S{PICKLE_BUFFER_SIZE}"),
+                        ("state_hash", f"U{HASH_STRING_SIZE}"),
+                    ]
+                ),
+            )
+        ]
+    if isinstance(value, DataClassState):
+        return [(name, value.struct_dtype())]
+    if isinstance(value, WithSamplingState):
+        return [(name, value.sampling_state.struct_dtype())]
+    if isinstance(value, np.ndarray):
+        return [(name, value.dtype, value.shape)]
+    # Everything else (str, list, dict, ...) is pickled
+    return [(name, f"S{PICKLE_BUFFER_SIZE}"), (f"{name}_hash", f"U{HASH_STRING_SIZE}")]
 
 
 def equal_dataclass_values(v1, v2):
@@ -61,6 +119,10 @@ class WithSamplingState:
     """
 
     _state_class: type[DataClassState] = DataClassState
+
+    def struct_dtype(self) -> np.dtype:
+        """Return the numpy structured dtype that describes this object's state."""
+        return self.sampling_state.struct_dtype()
 
     @property
     def sampling_state(self) -> DataClassState:
