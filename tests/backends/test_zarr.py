@@ -22,6 +22,8 @@ import pytest
 import xarray as xr
 import zarr
 
+from zarr.dtype import Struct
+
 import pymc as pm
 
 from pymc.backends.zarr import (
@@ -182,6 +184,34 @@ def test_to_datatree(model, model_step):
     dt = trace.to_datatree(save_warmup=True)
     assert "warmup_posterior" in dt.children
     assert dt["warmup_posterior"]["draw"].shape[0] == tune
+
+
+def test_sampling_state_stored_as_struct():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        ip = model.initial_point()
+        rng = np.random.default_rng(1)
+        step = NUTS(vars=[a], rng=rng)
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=1)
+        trace.init_trace(chains=1, draws=2, tune=0, model=model, step=step)
+        chain = trace.straces[0]
+        chain.link_stepper(step)
+
+        point = ip
+        for _ in range(2):
+            point, stats = step.step(point)
+            chain.record(point, stats, in_warmup=False)
+        chain.record_sampling_state(step)
+
+    state_array = trace.root["_sampling_state"]["sampling_state"]
+    # Not a pickled utf8 array, but a native zarr struct array
+    assert not state_array.attrs.get(OBJECT_CODEC_ATTR)
+    assert isinstance(state_array.metadata.data_type, Struct)
+
+    # And the state roundtrips losslessly
+    # (generator resume behavior is covered in tests/step_methods/test_state.py)
+    assert equal_sampling_states(chain.sampling_state, step.sampling_state)
 
 
 def test_pickle_protocol_stored_in_root_attrs():

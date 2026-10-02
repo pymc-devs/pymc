@@ -16,7 +16,17 @@ from dataclasses import field
 import numpy as np
 import pytest
 
-from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+import pymc as pm
+
+from pymc.step_methods import Metropolis
+from pymc.step_methods.compound import CompoundStep, CompoundStepState
+from pymc.step_methods.state import (
+    HASH_STRING_SIZE,
+    PICKLE_BUFFER_SIZE,
+    DataClassState,
+    WithSamplingState,
+    dataclass_state,
+)
 from tests.helpers import equal_sampling_states
 
 
@@ -37,6 +47,11 @@ class State2(DataClassState):
     extra_info1: np.ndarray = field(metadata={"frozen": True})
     extra_info2: list = field(metadata={"frozen": True})
     extra_info3: dict = field(metadata={"frozen": True})
+
+
+@dataclass_state
+class RngState(DataClassState):
+    rng: np.random.Generator
 
 
 class A(WithSamplingState):
@@ -86,14 +101,74 @@ class B(WithSamplingState):
         self.extra_info3 = extra_info3
 
 
-@dataclass_state
-class RngState(DataClassState):
-    rng: np.random.Generator
+def test_compound_state_row_roundtrip():
+    """CompoundStep states store one struct field per member step."""
+    from pymc.step_methods.state import (
+        row_to_state,
+        state_class_map,
+        state_to_row,
+    )
+
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        b = pm.Normal("b", a)
+        step = CompoundStep(
+            [
+                Metropolis(vars=[a], model=model, rng=np.random.default_rng(1)),
+                Metropolis(vars=[b], model=model, rng=np.random.default_rng(2)),
+            ]
+        )
+
+    state = step.sampling_state
+    dtype = state.struct_dtype()
+    assert dtype.names == ("methods_0", "methods_1")
+    assert dtype.fields["methods_0"][0].names is not None
+
+    row = state_to_row(state)
+    classes = state_class_map(state)
+    assert classes["methods_0"] == "pymc.step_methods.metropolis.MetropolisState"
+    restored = row_to_state(row, CompoundStepState, classes=classes)
+    assert equal_sampling_states(restored, state)
+    # And members resume: the second member's stream continues from the snapshot
+    restored_b = np.random.default_rng()
+    restored_b.bit_generator.state = restored.methods[1].rng.bit_generator_state
+    expected_stream = [step.methods[1].rng.random() for _ in range(2)]
+    assert [restored_b.random() for _ in range(2)] == expected_stream
+
+
+def test_state_row_roundtrip():
+    from pymc.step_methods.state import row_to_state, state_to_row
+
+    s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
+    row = state_to_row(s)
+    assert row.dtype == s.struct_dtype()
+    assert equal_sampling_states(row_to_state(row, State1), s)
+
+    # None fields roundtrip as None
+    s = State1(a=1, b=2.0, c=None, d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
+    restored = row_to_state(state_to_row(s), State1)
+    assert restored.c is None
+    assert equal_sampling_states(restored, s)
+
+    # Nested states (and frozen fields) roundtrip
+    b = B(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
+    restored = row_to_state(state_to_row(b.sampling_state), State2)
+    assert equal_sampling_states(restored, b.sampling_state)
+
+    # Generators (stored as RandomGeneratorState) roundtrip and resume:
+    # the restored generator must produce the same stream as the original
+    # generator produced after the state was captured
+    step = Step(np.random.default_rng(42))
+    snapshot = step.sampling_state
+    expected_stream = [step.rng.random() for _ in range(3)]
+    restored = row_to_state(state_to_row(snapshot), RngState)
+    assert equal_sampling_states(restored, snapshot)
+    rng = np.random.default_rng()
+    rng.bit_generator.state = restored.rng.bit_generator_state
+    assert [rng.random() for _ in range(3)] == expected_stream
 
 
 def test_struct_dtype():
-    from pymc.step_methods.state import PICKLE_BUFFER_SIZE
-
     s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
     dtype = s.struct_dtype()
     assert dtype == np.dtype(
@@ -101,12 +176,12 @@ def test_struct_dtype():
             ("a", "i8"),
             ("b", "f8"),
             ("c", f"S{PICKLE_BUFFER_SIZE}"),
-            ("c_hash", "U64"),
+            ("c_hash", f"S{HASH_STRING_SIZE}"),
             ("d", "i8", (2,)),
             ("e", f"S{PICKLE_BUFFER_SIZE}"),
-            ("e_hash", "U64"),
+            ("e_hash", f"S{HASH_STRING_SIZE}"),
             ("f", f"S{PICKLE_BUFFER_SIZE}"),
-            ("f_hash", "U64"),
+            ("f_hash", f"S{HASH_STRING_SIZE}"),
         ]
     )
 

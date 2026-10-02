@@ -11,13 +11,22 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import base64
+import hashlib
+import importlib
+import pickle
+
 from copy import deepcopy
 from dataclasses import MISSING, Field, dataclass, fields
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast, get_type_hints
 
 import numpy as np
 
-from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
+from pymc.util import (
+    RandomGeneratorState,
+    get_state_from_generator,
+    random_generator_from_state,
+)
 
 dataclass_state = dataclass(kw_only=True)
 
@@ -28,6 +37,9 @@ PICKLE_BUFFER_SIZE = 1024
 # Size in bytes of the fixed string buffer that holds the base64 SHA-256 hash
 # of pickled values (44 characters for a SHA-256 digest).
 HASH_STRING_SIZE = 64
+# Size in bytes of the fixed buffer that holds bit generator names
+# ("PCG64", "PCG64DXSM", "Philox", "SFC64", "MT19937")
+BIT_GENERATOR_NAME_SIZE = 16
 
 
 @dataclass_state
@@ -54,23 +66,41 @@ class DataClassState:
         )
 
 
+def _is_state_list(value: Any) -> bool:
+    return (
+        isinstance(value, list)
+        and bool(value)
+        and all(isinstance(v, DataClassState | WithSamplingState) for v in value)
+    )
+
+
+def _member_state(value: Any) -> DataClassState:
+    if isinstance(value, WithSamplingState):
+        return value.sampling_state
+    return value
+
+
 def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
     """Return the (name, dtype[, shape]) spec(s) that describe a state field."""
+    if _is_state_list(value):
+        return [
+            (f"{name}_{i}", _member_state(member).struct_dtype()) for i, member in enumerate(value)
+        ]
     if isinstance(value, bool):
         return [(name, "?")]
     if isinstance(value, int):
         return [(name, "i8")]
     if isinstance(value, float):
         return [(name, "f8")]
-    if isinstance(value, np.random.Generator):
+    if isinstance(value, np.random.Generator | RandomGeneratorState):
         return [
             (
                 name,
                 np.dtype(
                     [
-                        ("bit_generator_name", "U8"),
+                        ("bit_generator_name", f"S{BIT_GENERATOR_NAME_SIZE}"),
                         ("state", f"S{PICKLE_BUFFER_SIZE}"),
-                        ("state_hash", f"U{HASH_STRING_SIZE}"),
+                        ("state_hash", f"S{HASH_STRING_SIZE}"),
                     ]
                 ),
             )
@@ -82,10 +112,255 @@ def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
     if isinstance(value, np.ndarray):
         return [(name, value.dtype, value.shape)]
     # Everything else (str, list, dict, ...) is pickled
-    return [(name, f"S{PICKLE_BUFFER_SIZE}"), (f"{name}_hash", f"U{HASH_STRING_SIZE}")]
+    return [(name, f"S{PICKLE_BUFFER_SIZE}"), (f"{name}_hash", f"S{HASH_STRING_SIZE}")]
+
+
+def _generator_row(rng: np.random.Generator | RandomGeneratorState, dtype: np.dtype) -> np.void:
+    """Encode a generator (or its state) as the generator struct row."""
+    if isinstance(rng, np.random.Generator):
+        rng = get_state_from_generator(rng)
+    name = rng.bit_generator_state["bit_generator"]
+    payload = pickle.dumps(rng)
+    if len(payload) > PICKLE_BUFFER_SIZE:
+        raise ValueError(
+            f"Pickled generator state is {len(payload)} bytes, which does not fit "
+            f"the {PICKLE_BUFFER_SIZE} bytes buffer."
+        )
+    return cast(
+        "np.void",
+        np.array(
+            (
+                name.encode("ascii"),
+                payload,
+                _base64_hash(payload).encode("ascii"),
+            ),
+            dtype=dtype,
+        )[()],
+    )
+
+
+def _state_row(state: DataClassState, dtype: np.dtype) -> np.ndarray:
+    """Encode a state as the row described by ``dtype``."""
+    fields_map = dtype.fields if dtype.fields is not None else {}
+    row = np.empty((), dtype=dtype)
+    for field in fields(state):
+        name = field.name
+        value = getattr(state, name)
+        if _is_state_list(value):  # one struct field per member state
+            for i, member in enumerate(value):
+                member_field = f"{name}_{i}"
+                row[member_field] = _state_row(_member_state(member), fields_map[member_field][0])
+            continue
+        field_dtype = fields_map[name][0]
+        if field_dtype.names is not None:  # structured sub-dtype
+            if field_dtype.names == ("bit_generator_name", "state", "state_hash"):
+                row[name] = _generator_row(value, field_dtype)
+            else:
+                row[name] = _state_row(value, field_dtype)
+        elif field_dtype.shape != ():  # array field
+            row[name] = value
+        elif field_dtype.kind == "S":  # fixed pickled buffer
+            if value is None:
+                row[name] = b""
+                continue
+            payload = pickle.dumps(value)
+            if len(payload) > PICKLE_BUFFER_SIZE:
+                raise ValueError(
+                    f"Pickled value of field {name!r} is {len(payload)} bytes, which "
+                    f"does not fit the {PICKLE_BUFFER_SIZE} bytes buffer."
+                )
+            row[name] = payload
+            row[f"{name}_hash"] = _base64_hash(payload)
+        else:
+            row[name] = value
+    return row
+
+
+def state_to_row(state: DataClassState, dtype: np.dtype | None = None) -> np.ndarray:
+    """Encode a sampling state as a single structured numpy row.
+
+    See :meth:`DataClassState.struct_dtype` for the dtype layout. Values that do
+    not fit their fixed buffers raise ``ValueError`` so that data is never
+    silently truncated.
+    """
+    return _state_row(state, dtype if dtype is not None else state.struct_dtype())
+
+
+def state_class_map(state: DataClassState, prefix: str = "") -> dict[str, str]:
+    """Return the fully qualified class name of every nested state field.
+
+    Runtime subclasses are not recoverable from a struct dtype alone (the dtype
+    is built from the declared field annotations), so the map is stored as
+    metadata and used to reconstruct states with their original classes.
+    """
+    class_map = {}
+    for field in fields(state):
+        value = getattr(state, field.name)
+        if isinstance(value, DataClassState):
+            path = f"{prefix}{field.name}"
+            cls = type(value)
+            class_map[path] = f"{cls.__module__}.{cls.__qualname__}"
+            class_map.update(state_class_map(value, prefix=f"{path}."))
+        elif _is_state_list(value):
+            for i, member in enumerate(value):
+                member_state = _member_state(member)
+                path = f"{prefix}{field.name}_{i}"
+                cls = type(member_state)
+                class_map[path] = f"{cls.__module__}.{cls.__qualname__}"
+                class_map.update(state_class_map(member_state, prefix=f"{path}."))
+    return class_map
+
+
+def state_array_spec_map(state: DataClassState, prefix: str = "") -> dict[str, list]:
+    """Return the dtype and shape of every ndarray field in the state.
+
+    zarr's struct dtype stores ndarray fields as raw bytes, losing their dtype
+    and shape, so the specs are stored as metadata and used to reconstruct the
+    arrays on read.
+    """
+    specs = {}
+    for field in fields(state):
+        value = getattr(state, field.name)
+        if isinstance(value, DataClassState):
+            path = f"{prefix}{field.name}"
+            specs.update(state_array_spec_map(value, prefix=f"{path}."))
+        elif _is_state_list(value):
+            for i, member in enumerate(value):
+                path = f"{prefix}{field.name}_{i}"
+                specs.update(state_array_spec_map(_member_state(member), prefix=f"{path}."))
+        elif isinstance(value, np.ndarray) and value.dtype.names is None:
+            path = f"{prefix}{field.name}"
+            specs[path] = [value.dtype.str, list(value.shape)]
+    return specs
+
+
+def row_to_state(
+    row: np.void,
+    state_cls: type[DataClassState],
+    classes: dict[str, str] | None = None,
+    specs: dict[str, list] | None = None,
+    prefix: str = "",
+) -> DataClassState:
+    """Decode a structured row produced by :func:`state_to_row`.
+
+    Pickled fields (and generator states) are verified against their stored
+    base64 SHA-256 hash before unpickling; empty buffers decode as ``None``.
+    Nested fields are decoded with their runtime classes when available (from
+    ``classes``, see :func:`state_class_map`), falling back to the declared
+    field annotations.
+    """
+    classes = classes or {}
+    specs = specs or {}
+    hints = get_type_hints(state_cls)
+    fields_map = row.dtype.fields if row.dtype.fields is not None else {}
+    kwargs: dict[str, Any] = {}
+    for field in fields(state_cls):
+        name = field.name
+        field_spec = fields_map.get(name)
+        if field_spec is None:
+            # List fields are stored as one struct field per member
+            member_fields = []
+            i = 0
+            while f"{name}_{i}" in fields_map:
+                member_fields.append(f"{name}_{i}")
+                i += 1
+            member_hint = hints[name]
+            if hasattr(member_hint, "__args__") and member_hint.__args__:
+                default_member_cls = member_hint.__args__[0]
+            else:
+                default_member_cls = None
+            members = []
+            for i, member_field in enumerate(member_fields):
+                path = f"{prefix}{member_field}"
+                member_cls_name = classes.get(path)
+                if member_cls_name is not None:
+                    module_name, _, class_name = member_cls_name.rpartition(".")
+                    member_cls = getattr(importlib.import_module(module_name), class_name)
+                else:
+                    member_cls = default_member_cls
+                members.append(
+                    row_to_state(
+                        row[member_field],
+                        member_cls,
+                        classes=classes,
+                        specs=specs,
+                        prefix=f"{path}.",
+                    )
+                )
+            kwargs[name] = members
+            continue
+        field_dtype = field_spec[0]
+        value = row[name]
+        if field_dtype.names is not None:  # structured sub-dtype
+            if field_dtype.names == ("bit_generator_name", "state", "state_hash"):
+                kwargs[name] = _generator_from_row(value)
+            else:
+                path = f"{prefix}{name}"
+                nested_cls_name = classes.get(path)
+                if nested_cls_name is not None:
+                    module_name, _, class_name = nested_cls_name.rpartition(".")
+                    nested_cls = getattr(importlib.import_module(module_name), class_name)
+                else:
+                    nested_cls = hints[name]
+                kwargs[name] = row_to_state(
+                    value, nested_cls, classes=classes, specs=specs, prefix=f"{path}."
+                )
+        elif field_dtype.kind == "V":  # array field
+            # Subarray fields become raw bytes through zarr struct roundtrips;
+            # the dtype and shape are recovered from the stored specs
+            path = f"{prefix}{name}"
+            if path in specs:
+                dtype_str, shape = specs[path]
+                kwargs[name] = np.frombuffer(bytes(value), dtype=np.dtype(dtype_str)).reshape(shape)
+            else:
+                kwargs[name] = value
+        elif field_dtype.kind == "S":  # fixed pickled buffer
+            kwargs[name] = _unpickle_with_hash(
+                bytes(value).rstrip(b"\x00"), row[f"{name}_hash"], name
+            )
+        elif hints.get(name) is np.ndarray:  # 0-d array field
+            kwargs[name] = np.asarray(value, dtype=field_dtype)
+        else:
+            kwargs[name] = value.item()
+    return state_cls(**kwargs)
+
+
+def _generator_from_row(row: np.void) -> RandomGeneratorState | None:
+    payload = bytes(row["state"]).rstrip(b"\x00")
+    if payload:
+        _check_hash(payload, row["state_hash"], "rng state")
+    return pickle.loads(payload) if payload else None
+
+
+def _unpickle_with_hash(payload: bytes, stored_hash: bytes, name: str) -> Any:
+    if not payload:
+        return None
+    _check_hash(payload, stored_hash, name)
+    return pickle.loads(payload)
+
+
+def _check_hash(payload: bytes, stored_hash: bytes, name: str) -> None:
+    if _base64_hash(payload).encode("ascii") != stored_hash:
+        raise ValueError(
+            f"Stored value of field {name!r} does not match its recorded hash. "
+            "The stored data may be corrupted."
+        )
+
+
+def _base64_hash(payload: bytes) -> str:
+    return base64.b64encode(hashlib.sha256(payload).digest()).decode("ascii")
 
 
 def equal_dataclass_values(v1, v2):
+    if isinstance(v1, bool | int | float | np.generic | np.ndarray) and isinstance(
+        v2, bool | int | float | np.generic | np.ndarray
+    ):
+        # Numeric values are compared by value, regardless of their
+        # representation (python scalars, numpy scalars, or arrays)
+        arr1, arr2 = np.asarray(v1), np.asarray(v2)
+        if arr1.dtype.kind in "fc" and arr2.dtype.kind in "fc":
+            return bool(np.array_equal(arr1, arr2, equal_nan=True))
+        return bool(np.array_equal(arr1, arr2))
     if v1.__class__ != v2.__class__:
         return False
     if isinstance(v1, (list, tuple)):  # noqa: UP038
@@ -97,6 +372,9 @@ def equal_dataclass_values(v1, v2):
             return False
         return all(equal_dataclass_values(v1[k], v2[k]) for k in v1)
     elif isinstance(v1, np.ndarray):
+        return bool(np.array_equal(v1, v2, equal_nan=True))
+    elif isinstance(v1, np.generic) and isinstance(v2, np.ndarray | np.generic):
+        # Scalar and 0-d array representations of the same value are equal
         return bool(np.array_equal(v1, v2, equal_nan=True))
     elif isinstance(v1, np.random.Generator):
         return equal_dataclass_values(v1.bit_generator.state, v2.bit_generator.state)
