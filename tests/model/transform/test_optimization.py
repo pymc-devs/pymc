@@ -321,7 +321,8 @@ class TestModelToFloat32:
         with Model() as m:
             beta = Normal("beta", shape=(5, 1))
             A_data, A_const = Data("A", A), pytensor.sparse.as_sparse_variable(A)
-            Deterministic("det", pytensor.sparse.structured_dot(A_data + A_const, beta))
+            A_int = Data("A_int", A.astype("int64")).astype("float64")
+            Deterministic("det", pytensor.sparse.structured_dot(A_data + A_const + A_int, beta))
         m32 = model_to_float32(m)
         assert m32["A"].type == m["A"].type.clone(dtype="float32")
         assert m32["det"].type.dtype == "float32"

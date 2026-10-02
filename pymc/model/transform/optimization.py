@@ -28,6 +28,7 @@ from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import ancestors, io_toposort
 from pytensor.scalar import Cast, discrete_dtypes
 from pytensor.scan.op import Scan
+from pytensor.sparse.basic import Cast as SparseCast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.type import TensorType
 
@@ -384,9 +385,9 @@ def _cast_graph_floats(
             isinstance(op, Elemwise)
             and isinstance(op.scalar_op, Cast)
             and op.scalar_op.o_type.dtype == from_dtype
-        ):
+        ) or (isinstance(op, SparseCast) and op.out_type == from_dtype):
             # Redirect explicit casts (e.g. `x.astype("float64")`)
-            new_outputs = [pt.cast(new_inputs[0], to_dtype)]
+            new_outputs = [new_inputs[0].astype(to_dtype)]
         else:
             if op not in ops:
                 ops[op] = _cast_op(op, from_dtype, to_dtype)
