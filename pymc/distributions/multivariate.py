@@ -2793,8 +2793,10 @@ def zerosumnormal_logp(op, values, rng, size, sigma, support_shape, **kwargs):
     _full_size = pt.prod(shape).astype("floatX")
     _degrees_of_freedom = pt.prod(_deg_free_support_shape).astype("floatX")
 
+    # float32 values cannot meet the float64 tolerance
+    atol = 1e-9 if value.dtype == "float64" else 1e-4
     zerosums = [
-        pt.all(pt.isclose(pt.mean(value, axis=-axis - 1), 0, atol=1e-9))
+        pt.all(pt.isclose(pt.mean(value, axis=-axis - 1), 0, atol=atol))
         for axis in range(n_zerosum_axes)
     ]
 
