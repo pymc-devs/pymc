@@ -36,6 +36,7 @@ dependencies:
 - sphinx-notfound-page
 - sphinx>=1.5
 - sphinxext-rediraffe
+- sphinxext-opengraph
 - watermark
 - sphinx-remove-toctrees
 - mypy=1.19.1
