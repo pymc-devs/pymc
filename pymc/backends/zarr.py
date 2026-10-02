@@ -69,6 +69,12 @@ WARMUP_TAG = "warmup_"
 
 if TYPE_CHECKING:
     from pymc.stats.convergence import SamplerWarning
+
+# Pickle protocol used to serialize arbitrary python objects. It is recorded in
+# the root group attributes (``pymc_pickle_protocol``) so that readers know how
+# the pickled values were encoded.
+PICKLE_PROTOCOL: int = pickle.HIGHEST_PROTOCOL
+
 # Attribute used to tag arrays that store arbitrary python objects. Zarr v3 has
 # no object dtype, so such values are pickled and base64 encoded into
 # variable length utf8 strings. Readers must decode them with
@@ -78,18 +84,24 @@ OBJECT_CODEC_ATTR = "pymc_object_codec"
 
 def encode_object_value(value: Any) -> str:
     """Encode an arbitrary python object as a base64-encoded pickle string."""
-    return base64.b64encode(pickle.dumps(value)).decode("ascii")
+    return base64.b64encode(pickle.dumps(value, protocol=PICKLE_PROTOCOL)).decode("ascii")
 
 
-def decode_object_value(value: Any) -> Any:
+def decode_object_value(value: Any, protocol: int | None = None) -> Any:
     """Decode a value stored with :func:`encode_object_value`.
 
     Empty strings (the fill value of object arrays) are decoded as ``None``.
+
+    The ``protocol`` argument is advisory metadata (``pickle.loads`` infers the
+    protocol from the serialized stream); it defaults to
+    :data:`PICKLE_PROTOCOL`.
     """
     if isinstance(value, np.ndarray) and value.ndim == 0:
         value = value.item()
     if not value:
         return None
+    if protocol is None:
+        protocol = PICKLE_PROTOCOL
     return pickle.loads(base64.b64decode(str(value)))
 
 
@@ -437,6 +449,7 @@ class ZarrTrace(_ZarrTraceBase):
             list(compressors) if compressors is not None else None  # type: ignore[arg-type]
         )
         self.root = zarr.group(store=store, overwrite=True, zarr_format=3)
+        self.root.attrs.update({"pymc_pickle_protocol": PICKLE_PROTOCOL})
 
         self.draws_per_chunk = int(draws_per_chunk)
         assert self.draws_per_chunk >= 1

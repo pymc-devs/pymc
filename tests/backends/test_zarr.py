@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import itertools
+import pickle
 import tempfile
 
 from dataclasses import asdict
@@ -23,7 +24,12 @@ import zarr
 
 import pymc as pm
 
-from pymc.backends.zarr import OBJECT_CODEC_ATTR, ZarrTrace, decode_object_value
+from pymc.backends.zarr import (
+    OBJECT_CODEC_ATTR,
+    ZarrTrace,
+    decode_object_value,
+    encode_object_value,
+)
 from pymc.pytensorf import make_shared_replacements
 from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
@@ -176,6 +182,18 @@ def test_to_datatree(model, model_step):
     dt = trace.to_datatree(save_warmup=True)
     assert "warmup_posterior" in dt.children
     assert dt["warmup_posterior"]["draw"].shape[0] == tune
+
+
+def test_pickle_protocol_stored_in_root_attrs():
+    trace = ZarrTrace(store=make_store())
+    # The root group records the pickle protocol used for object encoding
+    assert trace.root.attrs["pymc_pickle_protocol"] == pickle.HIGHEST_PROTOCOL
+
+    # decode_object_value honors an explicit protocol, defaulting to the
+    # module-level one
+    encoded = encode_object_value("some object")
+    assert decode_object_value(encoded, protocol=pickle.HIGHEST_PROTOCOL) == "some object"
+    assert decode_object_value(encoded) == "some object"
 
 
 @pytest.fixture(scope="module")
