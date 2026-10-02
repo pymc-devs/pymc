@@ -91,6 +91,46 @@ class RngState(DataClassState):
     rng: np.random.Generator
 
 
+def test_struct_dtype():
+    from pymc.step_methods.state import PICKLE_BUFFER_SIZE
+
+    s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
+    dtype = s.struct_dtype()
+    assert dtype == np.dtype(
+        [
+            ("a", "i8"),
+            ("b", "f8"),
+            ("c", f"S{PICKLE_BUFFER_SIZE}"),
+            ("c_hash", "U64"),
+            ("d", "i8", (2,)),
+            ("e", f"S{PICKLE_BUFFER_SIZE}"),
+            ("e_hash", "U64"),
+            ("f", f"S{PICKLE_BUFFER_SIZE}"),
+            ("f_hash", "U64"),
+        ]
+    )
+
+    # Nested states recurse into nested dtypes
+    b = B(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
+    nested = b.struct_dtype()
+    assert nested.names == (
+        "mutable_field",
+        "state1",
+        "extra_info1",
+        "extra_info2",
+        "extra_info2_hash",
+        "extra_info3",
+        "extra_info3_hash",
+    )
+    assert nested.fields["state1"][0] == dtype
+    assert nested.fields["extra_info1"][0] == np.dtype(("i8", (3,)))
+
+    # Generators become name + pickled state bytes + verified hash
+    rng_state = RngState(rng=np.random.default_rng(42)).struct_dtype()
+    rng_dtype = rng_state.fields["rng"][0]
+    assert rng_dtype.names == ("bit_generator_name", "state", "state_hash")
+
+
 class Step(WithSamplingState):
     _state_class = RngState
 
