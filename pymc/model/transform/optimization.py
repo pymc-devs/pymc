@@ -28,7 +28,6 @@ from pytensor.graph.replace import clone_replace
 from pytensor.graph.traversal import ancestors, io_toposort
 from pytensor.scalar import Cast, discrete_dtypes
 from pytensor.scan.op import Scan
-from pytensor.sparse.basic import Cast as SparseCast
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.type import TensorType
 
@@ -368,6 +367,9 @@ def _cast_graph_floats(
 
     The `frozen` variables are kept as they are, and the graph above them is not visited.
     """
+    # pytensor.sparse is heavy to import, so it is deferred to first use
+    from pytensor.sparse.basic import Cast as SparseCast
+
     memo: dict[Variable, Variable] = {var: var for var in frozen}
     ops: dict[Op, Op] = {}
 
