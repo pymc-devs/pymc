@@ -27,7 +27,7 @@ The preferred workflow for contributing to PyMC is to fork the [GitHub repositor
    Always use a ``feature`` branch. It's good practice to never routinely work on the ``main`` branch of any repository.
    :::
 
-1. Project requirements are in ``requirements.txt``, and libraries used for development are in ``requirements-dev.txt``.
+1. Project requirements are in ``pyproject.toml``, and libraries used for development are in ``requirements-dev.txt``.
    The easiest (and recommended) way to set up a development environment is via [miniconda](https://docs.conda.io/en/latest/miniconda.html):
 
    ::::{tab-set}
