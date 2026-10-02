@@ -17,6 +17,7 @@ import pickle
 import warnings
 
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
+from contextlib import contextmanager
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
@@ -45,6 +46,9 @@ from pymc.step_methods.compound import (
 )
 from pymc.step_methods.state import (
     DataClassState,
+    decode_pickled_field,
+    encode_pickled_field,
+    pickle_field_map,
     row_to_state,
     state_array_spec_map,
     state_class_map,
@@ -76,6 +80,23 @@ except ImportError:
 
 WARMUP_TAG = "warmup_"
 
+
+@contextmanager
+def _quiet_unstable_dtypes():
+    """Suppress zarr's UnstableSpecificationWarning while we create arrays.
+
+    zarr warns for dtype layouts that have no stable v3 specification, which
+    includes our struct rows (whose array fields are stored as raw bytes) and the
+    fixed-length string coordinate arrays. Those layouts are intentional here:
+    each array is self described (dimensions in ``dimension_names``, and for
+    sampling states the classes, array specs and pickled value hashes in the
+    array attributes), so the warning is noise for users of the trace.
+    """
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=zarr.errors.UnstableSpecificationWarning)
+        yield
+
+
 if TYPE_CHECKING:
     from pymc.stats.convergence import SamplerWarning
 
@@ -89,6 +110,18 @@ PICKLE_PROTOCOL: int = pickle.HIGHEST_PROTOCOL
 # variable length utf8 strings. Readers must decode them with
 # ``decode_object_value``.
 OBJECT_CODEC_ATTR = "pymc_object_codec"
+
+
+def _set_attributes(array, attributes):
+    """Update array attributes without zarr's unstable dtype warnings."""
+    with _quiet_unstable_dtypes():
+        array.attrs.update(attributes)
+
+
+def _create_array(group, **kwargs):
+    """Create an array in ``group`` without zarr's unstable dtype warnings."""
+    with _quiet_unstable_dtypes():
+        return group.create_array(**kwargs)
 
 
 def encode_object_value(value: Any) -> str:
@@ -182,6 +215,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         # set later, in init_trace, via setup_state_dtype
         self._state_dtype: np.dtype | None = None
         self._state_class: type[DataClassState] | None = None
+        self._pickle_field_names: list[tuple[str, str, str]] = []
         # Flat stat names whose object dtype values are stored as typed columns
         self.warning_columns: dict[str, list[str]] = warning_columns or {}
 
@@ -272,26 +306,39 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
             self.store_sampling_state(step.sampling_state)
         self._sampling_state["draw_idx"][self.chain] = self.draw_idx  # type: ignore[index]
 
-    def setup_state_dtype(self, state_dtype: np.dtype, state_cls: type[DataClassState]):
-        """Provide the struct dtype and state class used to encode sampling states."""
+    def setup_state_dtype(
+        self,
+        state_dtype: np.dtype,
+        state_cls: type[DataClassState],
+        pickle_field_names: list[tuple[str, str, str]] | None = None,
+    ):
+        """Provide the struct dtype, state class and pickled field names."""
         self._state_dtype = state_dtype
         self._state_class = state_cls
+        self._pickle_field_names = pickle_field_names or []
 
     def store_sampling_state(self, sampling_state):
         state_array = self._sampling_state["sampling_state"]
-        state_array.attrs.update(
+        _set_attributes(
+            state_array,
             {
                 "pymc_state_class": f"{type(sampling_state).__module__}.{type(sampling_state).__qualname__}"
-            }
+            },
         )
         if self._state_dtype is not None and self._state_dtype.names:
-            state_array.attrs.update({"pymc_state_classes": state_class_map(sampling_state)})
-            state_array.attrs.update({"pymc_state_specs": state_array_spec_map(sampling_state)})
+            _set_attributes(state_array, {"pymc_state_classes": state_class_map(sampling_state)})
+            _set_attributes(state_array, {"pymc_state_specs": state_array_spec_map(sampling_state)})
             row = state_to_row(sampling_state, self._state_dtype)
             # The zarr struct array stores array fields as raw bytes; the row buffer
             # is converted through its bytes so that the values are preserved
             native_row = np.frombuffer(row.tobytes(), dtype=state_array.dtype)[()]
             state_array[self.chain] = native_row
+            for path, value_name, hash_name in self._pickle_field_names:
+                payload, payload_hash = encode_pickled_field(
+                    pickle_field_map(sampling_state).get(path)
+                )
+                self._sampling_state[value_name][self.chain] = payload
+                self._sampling_state[hash_name][self.chain] = payload_hash
         else:  # stateless step: pickled utf8 array
             state_array[self.chain] = encode_object_value(sampling_state)
 
@@ -305,11 +352,19 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
             module_name, _, class_name = state_class_name.rpartition(".")
             state_class = getattr(importlib.import_module(module_name), class_name)
         if self._state_dtype is not None and self._state_dtype.names:
+            pickled = {}
+            for path, value_name, hash_name in self._pickle_field_names:
+                pickled[path] = decode_pickled_field(
+                    str(self._sampling_state[value_name][self.chain]),
+                    str(self._sampling_state[hash_name][self.chain]),
+                    path,
+                )
             return row_to_state(
                 state_array[self.chain],
                 state_class,
                 classes=state_array.attrs.get("pymc_state_classes"),
                 specs=state_array.attrs.get("pymc_state_specs"),
+                pickled=pickled,
             )
         return decode_object_value(state_array[self.chain])
 
@@ -495,7 +550,7 @@ class ZarrTrace(_ZarrTraceBase):
             list(compressors) if compressors is not None else None  # type: ignore[arg-type]
         )
         self.root = zarr.group(store=store, overwrite=True, zarr_format=3)
-        self.root.attrs.update({"pymc_pickle_protocol": PICKLE_PROTOCOL})
+        _set_attributes(self.root, {"pymc_pickle_protocol": PICKLE_PROTOCOL})
 
         self.draws_per_chunk = int(draws_per_chunk)
         assert self.draws_per_chunk >= 1
@@ -698,8 +753,13 @@ class ZarrTrace(_ZarrTraceBase):
 
         state_dtype = step.sampling_state.struct_dtype()
         state_cls = type(step.sampling_state)
+        pickle_paths = list(pickle_field_map(step.sampling_state))
         self.init_sampling_state_group(
-            tune=tune, chains=chains, state_dtype=state_dtype, state_cls=state_cls
+            tune=tune,
+            chains=chains,
+            state_dtype=state_dtype,
+            state_cls=state_cls,
+            pickle_paths=pickle_paths,
         )
 
         self.straces = [
@@ -717,7 +777,9 @@ class ZarrTrace(_ZarrTraceBase):
         ]
         for chain, strace in enumerate(self.straces):
             strace.setup(draws=tune + draws, chain=chain, sampler_vars=None)
-            strace.setup_state_dtype(state_dtype, state_cls)  # type: ignore[attr-defined]
+            strace.setup_state_dtype(  # type: ignore[attr-defined]
+                state_dtype, state_cls, self.pickle_field_names
+            )
 
     def split_warmup_groups(self):
         """Split the warmup and standard groups.
@@ -762,11 +824,17 @@ class ZarrTrace(_ZarrTraceBase):
         self._sampling_state["sampling_time"][()] = float(value)
 
     def init_sampling_state_group(
-        self, tune: int, chains: int, state_dtype: np.dtype, state_cls: type[DataClassState]
+        self,
+        tune: int,
+        chains: int,
+        state_dtype: np.dtype,
+        state_cls: type[DataClassState],
+        pickle_paths: list[str] | None = None,
     ):
         state = self.root.create_group(name="_sampling_state", overwrite=True)
         if state_dtype.names:
-            sampling_state = state.create_array(  # type: ignore[arg-type]
+            sampling_state = _create_array(
+                state,  # type: ignore[arg-type]
                 name="sampling_state",
                 shape=(chains,),
                 chunks=(1,),
@@ -778,7 +846,8 @@ class ZarrTrace(_ZarrTraceBase):
         else:
             # Steps without a sampling state (empty DataClassState) have no
             # struct representation; the state is stored as a pickled utf8 array
-            sampling_state = state.create_array(
+            sampling_state = _create_array(
+                state,
                 name="sampling_state",
                 shape=(chains,),
                 chunks=(1,),
@@ -787,12 +856,33 @@ class ZarrTrace(_ZarrTraceBase):
                 compressors=self.compressors,
                 dimension_names=["chain"],
             )
-            sampling_state.attrs.update({OBJECT_CODEC_ATTR: "pickle_base64"})
-        sampling_state.attrs.update(
-            {"pymc_state_class": f"{state_cls.__module__}.{state_cls.__qualname__}"}
+            _set_attributes(sampling_state, {OBJECT_CODEC_ATTR: "pickle_base64"})
+        _set_attributes(
+            sampling_state, {"pymc_state_class": f"{state_cls.__module__}.{state_cls.__qualname__}"}
         )
 
-        state.create_array(
+        # Fields without a fixed-size representation are stored in their own
+        # variable length arrays, one pair (value, hash) per field
+        self.pickle_field_names: list[tuple[str, str, str]] = []
+        if state_dtype.names:
+            for path in pickle_paths or []:
+                base = "state__" + path.replace(".", "__")
+                for suffix, attr in (("", "payload"), ("_hash", "hash")):
+                    array = _create_array(
+                        state,
+                        name=f"{base}{suffix}",
+                        shape=(chains,),
+                        chunks=(1,),
+                        dtype=VariableLengthUTF8(),  # type: ignore[arg-type]
+                        fill_value="",
+                        compressors=self.compressors,
+                        dimension_names=["chain"],
+                    )
+                    _set_attributes(array, {OBJECT_CODEC_ATTR: attr})
+                self.pickle_field_names.append((path, base, base + "_hash"))
+
+        _create_array(
+            state,
             name="draw_idx",
             data=np.zeros(chains, dtype="int"),
             chunks=(1,),
@@ -801,26 +891,30 @@ class ZarrTrace(_ZarrTraceBase):
             dimension_names=["chain"],
         )
 
-        state.create_array(
+        _create_array(
+            state,
             name="tuning_steps",
             data=np.array(tune),
             fill_value=0,
             compressors=self.compressors,
         )
-        state.create_array(
+        _create_array(
+            state,
             name="sampling_time",
             data=np.array(0.0),
             fill_value=0.0,
             compressors=self.compressors,
         )
-        state.create_array(
+        _create_array(
+            state,
             name="sampling_start_time",
             data=np.array(0.0),
             fill_value=0.0,
             compressors=self.compressors,
         )
 
-        state.create_array(
+        _create_array(
+            state,
             name="chain",
             data=np.arange(chains),
             dimension_names=["chain"],
@@ -854,7 +948,8 @@ class ZarrTrace(_ZarrTraceBase):
                     assert shape_i is not None, f"{dim} shape is None"
                     group_coords[dim] = np.arange(shape_i, dtype="int")
             dims = ("chain", "draw", *core_dims)
-            array = group.create_array(  # type: ignore[arg-type]
+            array = _create_array(
+                group,  # type: ignore[arg-type]
                 name=name,
                 dtype=dtype,
                 fill_value=fill_value,
@@ -865,7 +960,8 @@ class ZarrTrace(_ZarrTraceBase):
                 attributes=attributes,
             )
         for dim, coord in group_coords.items():
-            group.create_array(
+            _create_array(
+                group,
                 name=dim,
                 data=np.asarray(coord),
                 dimension_names=[dim],
@@ -895,14 +991,16 @@ class ZarrTrace(_ZarrTraceBase):
                         dim = f"{var_name}_dim_{i}"
                         dims.append(dim)
                         group_coords[dim] = np.arange(var_value.shape[i], dtype="int")
-                group.create_array(  # type: ignore[arg-type,union-attr]
+                _create_array(
+                    group,  # type: ignore[arg-type,union-attr]
                     name=var_name,
                     data=var_value,
                     compressors=self.compressors,
                     dimension_names=dims,
                 )
             for dim, coord in group_coords.items():
-                group.create_array(  # type: ignore[arg-type,union-attr]
+                _create_array(
+                    group,  # type: ignore[arg-type,union-attr]
                     name=dim,
                     data=np.asarray(coord),
                     dimension_names=[dim],
@@ -944,13 +1042,15 @@ class ZarrTrace(_ZarrTraceBase):
             dims = array.metadata.dimension_names or ()  # type: ignore[union-attr]
             array_attrs = array.attrs.asdict()
             if name == "draw":
-                warmup_group.create_array(
+                _create_array(
+                    warmup_group,
                     name="draw",
                     data=np.arange(tune),
                     dimension_names=["draw"],
                     compressors=self.compressors,
                 )
-                posterior_group.create_array(  # type: ignore[union-attr]
+                _create_array(
+                    posterior_group,  # type: ignore[union-attr]
                     name=name,
                     data=np.arange(array.shape[0] - tune),
                     dimension_names=["draw"],
@@ -966,7 +1066,8 @@ class ZarrTrace(_ZarrTraceBase):
                     posterior_idx = (slice(None), slice(tune, None, None))
                 else:
                     warmup_idx = slice(None)
-                warmup_group.create_array(  # type: ignore[union-attr]
+                _create_array(
+                    warmup_group,  # type: ignore[union-attr]
                     name=name,
                     data=array[warmup_idx],  # type: ignore[arg-type]
                     chunks=array.chunks,
@@ -975,7 +1076,8 @@ class ZarrTrace(_ZarrTraceBase):
                     attributes=array_attrs,
                 )
                 if len(dims) >= 2 and dims[:2] == ("chain", "draw"):
-                    posterior_group.create_array(  # type: ignore[union-attr]
+                    _create_array(
+                        posterior_group,  # type: ignore[union-attr]
                         name=name,
                         data=array[posterior_idx],  # type: ignore[arg-type]
                         chunks=array.chunks,
@@ -1051,6 +1153,7 @@ class ZarrTrace(_ZarrTraceBase):
         # consolidated metadata
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore", category=zarr.errors.ZarrUserWarning)
+            warnings.filterwarnings("ignore", category=zarr.errors.UnstableSpecificationWarning)
             zarr.consolidate_metadata(self.root.store)
         try:
             global_attrs = {
@@ -1064,7 +1167,7 @@ class ZarrTrace(_ZarrTraceBase):
             if name.startswith("_") or (not save_warmup and name.startswith(WARMUP_TAG)):
                 del tree[name]
                 continue
-            node.attrs.update(global_attrs)
+            _set_attributes(node, global_attrs)
         return tree.load() if eager else tree
 
     def to_inferencedata(self, save_warmup: bool = False, eager: bool = False) -> DataTree:

@@ -14,6 +14,7 @@
 import itertools
 import pickle
 import tempfile
+import warnings
 
 from dataclasses import asdict
 
@@ -22,7 +23,8 @@ import pytest
 import xarray as xr
 import zarr
 
-from zarr.dtype import Struct
+from zarr.dtype import Struct, VariableLengthUTF8
+from zarr.errors import UnstableSpecificationWarning
 
 import pymc as pm
 
@@ -184,6 +186,71 @@ def test_to_datatree(model, model_step):
     dt = trace.to_datatree(save_warmup=True)
     assert "warmup_posterior" in dt.children
     assert dt["warmup_posterior"]["draw"].shape[0] == tune
+
+
+def test_sampling_state_with_growing_fields():
+    """Fields that grow with the number of draws must not be stored in the struct.
+
+    ``_tuned_stats`` collects one entry per post-tuning draw, so its pickled
+    representation outgrows any fixed buffer; it is stored in its own
+    variable length array instead.
+    """
+    draws, tune = 300, 0
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        step = NUTS(vars=[a], rng=np.random.default_rng(1))
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=50)
+        trace.init_trace(chains=1, draws=draws, tune=tune, model=model, step=step)
+        chain = trace.straces[0]
+        chain.link_stepper(step)
+
+        point = model.initial_point()
+        step.stop_tuning()
+        for _ in range(draws):
+            point, stats = step.step(point)
+            chain.record(point, stats, in_warmup=False)
+        chain.record_sampling_state(step)
+
+    # The growing field is stored outside the struct row
+    group = trace.root["_sampling_state"]
+    struct_fields = [f[0] for f in group["sampling_state"].metadata.data_type.fields]
+    assert "_tuned_stats" not in struct_fields
+    tuned_array = group["state__step_adapt___tuned_stats"]
+    assert tuned_array.metadata.data_type == VariableLengthUTF8()
+    # ... and the stored payload really is larger than a fixed buffer would allow
+    assert len(str(np.asarray(tuned_array[0]).item())) > 1024
+
+    # The state still roundtrips losslessly
+    assert equal_sampling_states(chain.sampling_state, step.sampling_state)
+    assert len(chain.sampling_state.step_adapt._tuned_stats) == draws
+
+
+def test_no_unstable_dtype_warnings():
+    """Our arrays must not spam UnstableSpecificationWarnings at users.
+
+    zarr warns for dtype layouts that have no stable v3 spec, which includes the
+    struct rows and the fixed-length string coordinate arrays we create.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pm.Model(coords={"group": ["a", "b"]}) as model:
+            a = pm.Normal("a", dims="group")
+            step = NUTS(vars=[a], rng=np.random.default_rng(1))
+            trace = ZarrTrace(store=make_store(), draws_per_chunk=5)
+            trace.init_trace(chains=1, draws=5, tune=0, model=model, step=step)
+            chain = trace.straces[0]
+            chain.link_stepper(step)
+            point = model.initial_point()
+            for _ in range(5):
+                point, stats = step.step(point)
+                chain.record(point, stats, in_warmup=False)
+            chain.record_sampling_state(step)
+            chain.sampling_state  # reading must not warn either
+            trace.to_datatree()
+
+    unstable = [w for w in caught if issubclass(w.category, UnstableSpecificationWarning)]
+    assert not unstable, f"got {len(unstable)} UnstableSpecificationWarnings"
 
 
 def test_sampling_state_stored_as_struct():

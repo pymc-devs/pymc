@@ -21,8 +21,6 @@ import pymc as pm
 from pymc.step_methods import Metropolis
 from pymc.step_methods.compound import CompoundStep, CompoundStepState
 from pymc.step_methods.state import (
-    HASH_STRING_SIZE,
-    PICKLE_BUFFER_SIZE,
     DataClassState,
     WithSamplingState,
     dataclass_state,
@@ -104,6 +102,7 @@ class B(WithSamplingState):
 def test_compound_state_row_roundtrip():
     """CompoundStep states store one struct field per member step."""
     from pymc.step_methods.state import (
+        pickle_field_map,
         row_to_state,
         state_class_map,
         state_to_row,
@@ -127,7 +126,9 @@ def test_compound_state_row_roundtrip():
     row = state_to_row(state)
     classes = state_class_map(state)
     assert classes["methods_0"] == "pymc.step_methods.metropolis.MetropolisState"
-    restored = row_to_state(row, CompoundStepState, classes=classes)
+    restored = row_to_state(
+        row, CompoundStepState, classes=classes, pickled=pickle_field_map(state)
+    )
     assert equal_sampling_states(restored, state)
     # And members resume: the second member's stream continues from the snapshot
     restored_b = np.random.default_rng()
@@ -137,23 +138,34 @@ def test_compound_state_row_roundtrip():
 
 
 def test_state_row_roundtrip():
-    from pymc.step_methods.state import row_to_state, state_to_row
+    from pymc.step_methods.state import pickle_field_map, row_to_state, state_to_row
 
     s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
     row = state_to_row(s)
     assert row.dtype == s.struct_dtype()
-    assert equal_sampling_states(row_to_state(row, State1), s)
+    pickled = pickle_field_map(s)
+    assert pickled == {"c": "c", "e": [1, 2, 3], "f": {"a": 1}}
+    assert equal_sampling_states(row_to_state(row, State1, pickled=pickled), s)
 
-    # None fields roundtrip as None
+    # Pickled values roundtrip losslessly no matter their size
+    s = State1(a=1, b=2.0, c="c" * 10_000, d=np.array([1, 2]), e=list(range(10_000)), f={"a": 1})
+    pickled = pickle_field_map(s)
+    assert equal_sampling_states(row_to_state(state_to_row(s), State1, pickled=pickled), s)
+
+    # None pickled fields roundtrip as None
     s = State1(a=1, b=2.0, c=None, d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
-    restored = row_to_state(state_to_row(s), State1)
+    restored = row_to_state(state_to_row(s), State1, pickled=pickle_field_map(s))
     assert restored.c is None
     assert equal_sampling_states(restored, s)
 
     # Nested states (and frozen fields) roundtrip
     b = B(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
-    restored = row_to_state(state_to_row(b.sampling_state), State2)
-    assert equal_sampling_states(restored, b.sampling_state)
+    state = b.sampling_state
+    pickled = pickle_field_map(state)
+    assert "state1.c" in pickled
+    assert "extra_info2" in pickled
+    restored = row_to_state(state_to_row(state), State2, pickled=pickled)
+    assert equal_sampling_states(restored, state)
 
     # Generators (stored as RandomGeneratorState) roundtrip and resume:
     # the restored generator must produce the same stream as the original
@@ -161,7 +173,7 @@ def test_state_row_roundtrip():
     step = Step(np.random.default_rng(42))
     snapshot = step.sampling_state
     expected_stream = [step.rng.random() for _ in range(3)]
-    restored = row_to_state(state_to_row(snapshot), RngState)
+    restored = row_to_state(state_to_row(snapshot), RngState, pickled=pickle_field_map(snapshot))
     assert equal_sampling_states(restored, snapshot)
     rng = np.random.default_rng()
     rng.bit_generator.state = restored.rng.bit_generator_state
@@ -171,19 +183,9 @@ def test_state_row_roundtrip():
 def test_struct_dtype():
     s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
     dtype = s.struct_dtype()
-    assert dtype == np.dtype(
-        [
-            ("a", "i8"),
-            ("b", "f8"),
-            ("c", f"S{PICKLE_BUFFER_SIZE}"),
-            ("c_hash", f"S{HASH_STRING_SIZE}"),
-            ("d", "i8", (2,)),
-            ("e", f"S{PICKLE_BUFFER_SIZE}"),
-            ("e_hash", f"S{HASH_STRING_SIZE}"),
-            ("f", f"S{PICKLE_BUFFER_SIZE}"),
-            ("f_hash", f"S{HASH_STRING_SIZE}"),
-        ]
-    )
+    # Only fixed-size fields live in the struct row; pickled fields are stored
+    # separately (they have no fixed size)
+    assert dtype == np.dtype([("a", "i8"), ("b", "f8"), ("d", "i8", (2,))])
 
     # Nested states recurse into nested dtypes
     b = B(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
@@ -192,10 +194,6 @@ def test_struct_dtype():
         "mutable_field",
         "state1",
         "extra_info1",
-        "extra_info2",
-        "extra_info2_hash",
-        "extra_info3",
-        "extra_info3_hash",
     )
     assert nested.fields["state1"][0] == dtype
     assert nested.fields["extra_info1"][0] == np.dtype(("i8", (3,)))

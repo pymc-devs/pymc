@@ -30,10 +30,10 @@ from pymc.util import (
 
 dataclass_state = dataclass(kw_only=True)
 
-# Size in bytes of the fixed buffer that holds pickled values in state struct
-# dtypes. Encoders must raise when a pickled value does not fit, so that data is
-# never silently truncated.
-PICKLE_BUFFER_SIZE = 1024
+# Size in bytes of the fixed buffer that holds a pickled generator state inside
+# the struct row. The largest standard bit generator (MT19937) needs about 3 KB;
+# encoders raise when a state does not fit, so data is never silently truncated.
+GENERATOR_STATE_SIZE = 4096
 # Size in bytes of the fixed string buffer that holds the base64 SHA-256 hash
 # of pickled values (44 characters for a SHA-256 digest).
 HASH_STRING_SIZE = 64
@@ -49,13 +49,16 @@ class DataClassState:
     def struct_dtype(self) -> np.dtype:
         """Return the numpy structured dtype that describes this state.
 
-        Scalar fields are typed natively (bool, int, float). Nested
-        :class:`DataClassState` fields recurse into nested dtypes. Random
+        Scalar fields are typed natively (bool, int, float). Array fields keep
+        their dtype and shape. Nested :class:`DataClassState` fields recurse into
+        nested dtypes, and lists of states get one field per member. Random
         generators are described by their bit generator name, their pickled
-        state (in a fixed size bytes buffer, see ``PICKLE_BUFFER_SIZE``), and a
-        base64 SHA-256 hash of the state bytes. Any other field (str, list,
-        dict, ...) is pickled into a fixed size bytes buffer with an adjacent
-        hash field.
+        state (in a fixed size bytes buffer, see ``GENERATOR_STATE_SIZE``), and
+        a base64 SHA-256 hash of the state bytes.
+
+        Fields that have no fixed-size representation (str, list, dict, ...)
+        are not part of the struct row. They are pickled separately, see
+        :func:`pickle_field_map`.
         """
         return np.dtype(
             [
@@ -99,7 +102,7 @@ def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
                 np.dtype(
                     [
                         ("bit_generator_name", f"S{BIT_GENERATOR_NAME_SIZE}"),
-                        ("state", f"S{PICKLE_BUFFER_SIZE}"),
+                        ("state", f"S{GENERATOR_STATE_SIZE}"),
                         ("state_hash", f"S{HASH_STRING_SIZE}"),
                     ]
                 ),
@@ -111,8 +114,9 @@ def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
         return [(name, value.sampling_state.struct_dtype())]
     if isinstance(value, np.ndarray):
         return [(name, value.dtype, value.shape)]
-    # Everything else (str, list, dict, ...) is pickled
-    return [(name, f"S{PICKLE_BUFFER_SIZE}"), (f"{name}_hash", f"S{HASH_STRING_SIZE}")]
+    # Fields without a fixed-size representation (str, list, dict, ...) are
+    # pickled separately instead of taking part in the struct row
+    return []
 
 
 def _generator_row(rng: np.random.Generator | RandomGeneratorState, dtype: np.dtype) -> np.void:
@@ -121,10 +125,10 @@ def _generator_row(rng: np.random.Generator | RandomGeneratorState, dtype: np.dt
         rng = get_state_from_generator(rng)
     name = rng.bit_generator_state["bit_generator"]
     payload = pickle.dumps(rng)
-    if len(payload) > PICKLE_BUFFER_SIZE:
+    if len(payload) > GENERATOR_STATE_SIZE:
         raise ValueError(
             f"Pickled generator state is {len(payload)} bytes, which does not fit "
-            f"the {PICKLE_BUFFER_SIZE} bytes buffer."
+            f"the {GENERATOR_STATE_SIZE} bytes buffer."
         )
     return cast(
         "np.void",
@@ -151,7 +155,11 @@ def _state_row(state: DataClassState, dtype: np.dtype) -> np.ndarray:
                 member_field = f"{name}_{i}"
                 row[member_field] = _state_row(_member_state(member), fields_map[member_field][0])
             continue
-        field_dtype = fields_map[name][0]
+        field_spec = fields_map.get(name)
+        if field_spec is None:
+            # Not part of the struct row: the value is pickled separately
+            continue
+        field_dtype = field_spec[0]
         if field_dtype.names is not None:  # structured sub-dtype
             if field_dtype.names == ("bit_generator_name", "state", "state_hash"):
                 row[name] = _generator_row(value, field_dtype)
@@ -159,18 +167,6 @@ def _state_row(state: DataClassState, dtype: np.dtype) -> np.ndarray:
                 row[name] = _state_row(value, field_dtype)
         elif field_dtype.shape != ():  # array field
             row[name] = value
-        elif field_dtype.kind == "S":  # fixed pickled buffer
-            if value is None:
-                row[name] = b""
-                continue
-            payload = pickle.dumps(value)
-            if len(payload) > PICKLE_BUFFER_SIZE:
-                raise ValueError(
-                    f"Pickled value of field {name!r} is {len(payload)} bytes, which "
-                    f"does not fit the {PICKLE_BUFFER_SIZE} bytes buffer."
-                )
-            row[name] = payload
-            row[f"{name}_hash"] = _base64_hash(payload)
         else:
             row[name] = value
     return row
@@ -184,6 +180,49 @@ def state_to_row(state: DataClassState, dtype: np.dtype | None = None) -> np.nda
     silently truncated.
     """
     return _state_row(state, dtype if dtype is not None else state.struct_dtype())
+
+
+def pickle_field_map(state: DataClassState, prefix: str = "") -> dict[str, Any]:
+    """Return the state fields that cannot be stored in the struct row.
+
+    Fields without a fixed-size representation (str, list, dict, ...) are
+    collected here, keyed by their field path, so that they can be pickled and
+    stored without a size limit.
+    """
+    pickled = {}
+    for field in fields(state):
+        value = getattr(state, field.name)
+        path = f"{prefix}{field.name}"
+        if isinstance(value, DataClassState):
+            pickled.update(pickle_field_map(value, prefix=f"{path}."))
+        elif _is_state_list(value):
+            for i, member in enumerate(value):
+                pickled.update(pickle_field_map(_member_state(member), prefix=f"{path}_{i}."))
+        elif not _field_dtype_specs(field.name, value):
+            pickled[path] = value
+    return pickled
+
+
+def encode_pickled_field(value: Any) -> tuple[str, str]:
+    """Return the base64 pickle of a value and the base64 hash of its payload."""
+    payload = pickle.dumps(value)
+    return base64.b64encode(payload).decode("ascii"), _base64_hash(payload)
+
+
+def decode_pickled_field(payload: str, stored_hash: str, name: str) -> Any:
+    """Decode a value encoded by :func:`encode_pickled_field`.
+
+    The hash is verified before unpickling; empty payloads decode as ``None``.
+    """
+    if not payload:
+        return None
+    raw = base64.b64decode(payload)
+    if _base64_hash(raw) != stored_hash:
+        raise ValueError(
+            f"Stored value of field {name!r} does not match its recorded hash. "
+            "The stored data may be corrupted."
+        )
+    return pickle.loads(raw)
 
 
 def state_class_map(state: DataClassState, prefix: str = "") -> dict[str, str]:
@@ -239,24 +278,31 @@ def row_to_state(
     state_cls: type[DataClassState],
     classes: dict[str, str] | None = None,
     specs: dict[str, list] | None = None,
+    pickled: dict[str, Any] | None = None,
     prefix: str = "",
 ) -> DataClassState:
     """Decode a structured row produced by :func:`state_to_row`.
 
-    Pickled fields (and generator states) are verified against their stored
-    base64 SHA-256 hash before unpickling; empty buffers decode as ``None``.
+    Generator states are verified against their stored base64 SHA-256 hash
+    before unpickling. Fields that are not part of the struct row are taken from
+    ``pickled`` (see :func:`pickle_field_map`), where they are stored encoded.
     Nested fields are decoded with their runtime classes when available (from
     ``classes``, see :func:`state_class_map`), falling back to the declared
     field annotations.
     """
     classes = classes or {}
     specs = specs or {}
+    pickled = pickled or {}
     hints = get_type_hints(state_cls)
     fields_map = row.dtype.fields if row.dtype.fields is not None else {}
     kwargs: dict[str, Any] = {}
     for field in fields(state_cls):
         name = field.name
         field_spec = fields_map.get(name)
+        if field_spec is None and f"{name}_0" not in fields_map:
+            # Not part of the struct row: the value is pickled separately
+            kwargs[name] = pickled.get(f"{prefix}{name}")
+            continue
         if field_spec is None:
             # List fields are stored as one struct field per member
             member_fields = []
@@ -284,6 +330,7 @@ def row_to_state(
                         member_cls,
                         classes=classes,
                         specs=specs,
+                        pickled=pickled,
                         prefix=f"{path}.",
                     )
                 )
@@ -303,7 +350,12 @@ def row_to_state(
                 else:
                     nested_cls = hints[name]
                 kwargs[name] = row_to_state(
-                    value, nested_cls, classes=classes, specs=specs, prefix=f"{path}."
+                    value,
+                    nested_cls,
+                    classes=classes,
+                    specs=specs,
+                    pickled=pickled,
+                    prefix=f"{path}.",
                 )
         elif field_dtype.kind == "V":  # array field
             # Subarray fields become raw bytes through zarr struct roundtrips;
@@ -314,10 +366,6 @@ def row_to_state(
                 kwargs[name] = np.frombuffer(bytes(value), dtype=np.dtype(dtype_str)).reshape(shape)
             else:
                 kwargs[name] = value
-        elif field_dtype.kind == "S":  # fixed pickled buffer
-            kwargs[name] = _unpickle_with_hash(
-                bytes(value).rstrip(b"\x00"), row[f"{name}_hash"], name
-            )
         elif hints.get(name) is np.ndarray:  # 0-d array field
             kwargs[name] = np.asarray(value, dtype=field_dtype)
         else:
