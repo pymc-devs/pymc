@@ -11,6 +11,9 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import base64
+import importlib
+import pickle
 import warnings
 
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
@@ -41,6 +44,13 @@ from pymc.step_methods.compound import (
     StatsBijection,
     get_stats_dtypes_shapes_from_steps,
 )
+from pymc.step_methods.state import (
+    DataClassState,
+    row_to_state,
+    state_array_spec_map,
+    state_class_map,
+    state_to_row,
+)
 from pymc.util import UNSET, _UnsetType, get_default_varnames, is_transformed_name
 
 try:
@@ -49,7 +59,7 @@ try:
     from zarr import Group
     from zarr.abc.store import Store
     from zarr.codecs import ZstdCodec
-    from zarr.dtype import VariableLengthUTF8, ZDType
+    from zarr.dtype import Struct, VariableLengthUTF8, ZDType
 
     _zarr_available = True
 except ImportError:
@@ -60,11 +70,35 @@ except ImportError:
         ZstdCodec = TypeVar("ZstdCodec")
         VariableLengthUTF8 = TypeVar("VariableLengthUTF8")
         ZDType = TypeVar("ZDType")
+        Struct = TypeVar("Struct")
         Group = TypeVar("Group")
     _zarr_available = False
 
 
 WARMUP_TAG = "warmup_"
+
+# Attribute used to tag arrays that store arbitrary python objects. Zarr v3 has
+# no object dtype, so such values are pickled and base64 encoded into
+# variable length utf8 strings. Readers must decode them with
+# ``decode_object_value``.
+OBJECT_CODEC_ATTR = "pymc_object_codec"
+
+
+def encode_object_value(value: Any) -> str:
+    """Encode an arbitrary python object as a base64-encoded pickle string."""
+    return base64.b64encode(pickle.dumps(value)).decode("ascii")
+
+
+def decode_object_value(value: Any) -> Any:
+    """Decode a value stored with :func:`encode_object_value`.
+
+    Empty strings (the fill value of object arrays) are decoded as ``None``.
+    """
+    if isinstance(value, np.ndarray) and value.ndim == 0:
+        value = value.item()
+    if not value:
+        return None
+    return pickle.loads(base64.b64decode(str(value)))
 
 
 class ZarrChain(_ZarrChainBase, BaseTrace):
@@ -110,6 +144,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         if not _zarr_available:
             raise RuntimeError("You must install zarr to be able to create ZarrChain instances")
         super().__init__(name="zarr", model=model, vars=vars, test_point=test_point, fn=fn)
+        self._step_method: BlockedStep | CompoundStep | None = None
         self.unconstrained_variables = {
             var.name for var in self.vars if is_transformed_name(var.name)
         }
@@ -130,8 +165,20 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         self._sample_stats = zarr.open_group(store, path="sample_stats", mode="a")
         self._sampling_state = zarr.open_group(store, path="_sampling_state", mode="a")
         self.stats_bijection = stats_bijection
+        # Struct dtype and state class used to encode the chain's sampling state;
+        # set later, in init_trace, via setup_state_dtype
+        self._state_dtype: np.dtype | None = None
+        self._state_class: type[DataClassState] | None = None
         # Flat stat names whose object dtype values are stored as typed columns
         self.warning_columns: dict[str, list[str]] = warning_columns or {}
+
+    def link_stepper(self, step_method: BlockedStep | CompoundStep):
+        """Provide a reference to the step method used during sampling.
+
+        This reference can be used to facilitate writing the stepper's sampling state
+        each time the samples are flushed into the storage.
+        """
+        self._step_method = step_method
 
     def setup(self, draws: int, chain: int, sampler_vars: Sequence[dict] | None):  # type: ignore[override]
         self.chain = chain
@@ -188,13 +235,77 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
             return True
         return None
 
+    def record_sampling_state(self, step: BlockedStep | CompoundStep | None = None):
+        """Record the sampling state information to the store's ``_sampling_state`` group.
+
+        The number of draws taken so far (``draw_idx``) is stored as an integer array.
+        The step method's ``sampling_state`` is an arbitrary python object, which has
+        no zarr v3 dtype representation. It is pickled, base64 encoded and stored as a
+        variable length utf8 string. It can be read back with
+        :attr:`~ZarrChain.sampling_state`.
+
+        Parameters
+        ----------
+        step : BlockedStep | CompoundStep | None
+            The step method from which to take the ``sampling_state``. If ``None``,
+            the ``step`` is taken to be the step method that was linked to the
+            ``ZarrChain`` when calling :meth:`~ZarrChain.link_stepper`. If this method
+            was never called, no step method ``sampling_state`` information is stored
+            in the chain.
+        """
+        if step is None:
+            step = self._step_method
+        if step is not None:
+            self.store_sampling_state(step.sampling_state)
+        self._sampling_state["draw_idx"][self.chain] = self.draw_idx  # type: ignore[index]
+
+    def setup_state_dtype(self, state_dtype: np.dtype, state_cls: type[DataClassState]):
+        """Provide the struct dtype and state class used to encode sampling states."""
+        self._state_dtype = state_dtype
+        self._state_class = state_cls
+
+    def store_sampling_state(self, sampling_state):
+        state_array = self._sampling_state["sampling_state"]
+        state_array.attrs.update(
+            {
+                "pymc_state_class": f"{type(sampling_state).__module__}.{type(sampling_state).__qualname__}"
+            }
+        )
+        if self._state_dtype is not None and self._state_dtype.names:
+            state_array.attrs.update({"pymc_state_classes": state_class_map(sampling_state)})
+            state_array.attrs.update({"pymc_state_specs": state_array_spec_map(sampling_state)})
+            row = state_to_row(sampling_state, self._state_dtype)
+            # The zarr struct array stores array fields as raw bytes; the row buffer
+            # is converted through its bytes so that the values are preserved
+            native_row = np.frombuffer(row.tobytes(), dtype=state_array.dtype)[()]
+            state_array[self.chain] = native_row
+        else:  # stateless step: pickled utf8 array
+            state_array[self.chain] = encode_object_value(sampling_state)
+
+    @property
+    def sampling_state(self):
+        """The last sampling state recorded for this chain (if any)."""
+        state_array = self._sampling_state["sampling_state"]
+        state_class = self._state_class
+        if state_class is None:
+            state_class_name = state_array.attrs["pymc_state_class"]
+            module_name, _, class_name = state_class_name.rpartition(".")
+            state_class = getattr(importlib.import_module(module_name), class_name)
+        if self._state_dtype is not None and self._state_dtype.names:
+            return row_to_state(
+                state_array[self.chain],
+                state_class,
+                classes=state_array.attrs.get("pymc_state_classes"),
+                specs=state_array.attrs.get("pymc_state_specs"),
+            )
+        return decode_object_value(state_array[self.chain])
+
     def flush(self):
         """Write the data stored in the internal buffer to the desired zarr store.
 
         After writing the draws and stats returned by each step of the step method,
-        the number of draws taken so far is stored in ``_sampling_state/draw_idx``, the
-        internal buffer is cleared and the number of steps until the next flush is
-        determined.
+        the :meth:`~ZarrChain.record_sampling_state` is called, the internal buffer is
+        cleared and the number of steps until the next flush is determined.
         """
         chain = self.chain
         draw_slice = slice(self.draw_idx, self.draw_idx + self.draws_until_flush)
@@ -223,7 +334,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
                     continue
                 group[var_name].set_orthogonal_selection((chain, draw_slice), np.stack(var_value))
         self.draw_idx += self.draws_until_flush
-        self._sampling_state["draw_idx"][chain] = self.draw_idx  # type: ignore[index]
+        self.record_sampling_state()
         self.clear_buffers()
         self.draws_until_flush = min([self.draws_per_chunk, self.total_draws - self.draw_idx])
 
@@ -554,7 +665,11 @@ class ZarrTrace(_ZarrTraceBase):
             draws=tune + draws,
         )
 
-        self.init_sampling_state_group(tune=tune, chains=chains)
+        state_dtype = step.sampling_state.struct_dtype()
+        state_cls = type(step.sampling_state)
+        self.init_sampling_state_group(
+            tune=tune, chains=chains, state_dtype=state_dtype, state_cls=state_cls
+        )
 
         self.straces = [
             ZarrChain(
@@ -571,6 +686,7 @@ class ZarrTrace(_ZarrTraceBase):
         ]
         for chain, strace in enumerate(self.straces):
             strace.setup(draws=tune + draws, chain=chain, sampler_vars=None)
+            strace.setup_state_dtype(state_dtype, state_cls)  # type: ignore[attr-defined]
 
     def split_warmup_groups(self):
         """Split the warmup and standard groups.
@@ -614,8 +730,37 @@ class ZarrTrace(_ZarrTraceBase):
     def sampling_time(self, value):
         self._sampling_state["sampling_time"][()] = float(value)
 
-    def init_sampling_state_group(self, tune: int, chains: int):
+    def init_sampling_state_group(
+        self, tune: int, chains: int, state_dtype: np.dtype, state_cls: type[DataClassState]
+    ):
         state = self.root.create_group(name="_sampling_state", overwrite=True)
+        if state_dtype.names:
+            sampling_state = state.create_array(  # type: ignore[arg-type]
+                name="sampling_state",
+                shape=(chains,),
+                chunks=(1,),
+                dtype=Struct.from_native_dtype(state_dtype),
+                fill_value=np.zeros((), dtype=state_dtype)[()],
+                compressors=self.compressors,
+                dimension_names=["chain"],
+            )
+        else:
+            # Steps without a sampling state (empty DataClassState) have no
+            # struct representation; the state is stored as a pickled utf8 array
+            sampling_state = state.create_array(
+                name="sampling_state",
+                shape=(chains,),
+                chunks=(1,),
+                dtype=VariableLengthUTF8(),  # type: ignore[arg-type]
+                fill_value="",
+                compressors=self.compressors,
+                dimension_names=["chain"],
+            )
+            sampling_state.attrs.update({OBJECT_CODEC_ATTR: "pickle_base64"})
+        sampling_state.attrs.update(
+            {"pymc_state_class": f"{state_cls.__module__}.{state_cls.__qualname__}"}
+        )
+
         state.create_array(
             name="draw_idx",
             data=np.zeros(chains, dtype="int"),
