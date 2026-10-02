@@ -16,7 +16,7 @@ import pickle
 import warnings
 
 from collections.abc import Callable, Mapping, MutableMapping, Sequence
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import xarray as xr
@@ -50,7 +50,7 @@ try:
     from zarr import Group
     from zarr.abc.store import Store
     from zarr.codecs import ZstdCodec
-    from zarr.dtype import VariableLengthUTF8
+    from zarr.dtype import VariableLengthUTF8, ZDType
 
     _zarr_available = True
 except ImportError:
@@ -60,11 +60,15 @@ except ImportError:
         Store = TypeVar("Store")
         ZstdCodec = TypeVar("ZstdCodec")
         VariableLengthUTF8 = TypeVar("VariableLengthUTF8")
+        ZDType = TypeVar("ZDType")
         Group = TypeVar("Group")
     _zarr_available = False
 
 
 WARMUP_TAG = "warmup_"
+
+if TYPE_CHECKING:
+    from pymc.stats.convergence import SamplerWarning
 # Attribute used to tag arrays that store arbitrary python objects. Zarr v3 has
 # no object dtype, so such values are pickled and base64 encoded into
 # variable length utf8 strings. Readers must decode them with
@@ -127,6 +131,7 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         test_point: dict[str, np.ndarray] | None = None,
         draws_per_chunk: int = 100,
         fn: Callable | None = None,
+        warning_columns: dict[str, list[str]] | None = None,
     ):
         if not _zarr_available:
             raise RuntimeError("You must install zarr to be able to create ZarrChain instances")
@@ -152,6 +157,8 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         self._sample_stats = zarr.open_group(store, path="sample_stats", mode="a")
         self._sampling_state = zarr.open_group(store, path="_sampling_state", mode="a")
         self.stats_bijection = stats_bijection
+        # Flat stat names whose object dtype values are stored as typed columns
+        self.warning_columns: dict[str, list[str]] = warning_columns or {}
 
     def link_stepper(self, step_method: BlockedStep | CompoundStep):
         """Provide a reference to the step method used during sampling.
@@ -260,6 +267,26 @@ class ZarrChain(_ZarrChainBase, BaseTrace):
         for group_name, buffer in self._buffers.items():
             group = getattr(self, f"_{group_name}")
             for var_name, var_value in buffer.items():
+                columns = self.warning_columns.get(var_name)
+                if columns is not None:
+                    for column, attr in zip(columns, ("kind", "message", "level", "step")):
+                        if attr == "kind":
+                            values = np.array(
+                                [0 if v is None else v.kind.value for v in var_value],
+                                dtype="int64",
+                            )
+                        elif attr == "step":
+                            values = np.array(
+                                [-1 if v is None or v.step is None else v.step for v in var_value],
+                                dtype="int64",
+                            )
+                        else:
+                            values = np.array(
+                                ["" if v is None else getattr(v, attr) for v in var_value],
+                                dtype=object,
+                            )
+                        group[column].set_orthogonal_selection((chain, draw_slice), values)
+                    continue
                 array = group[var_name]
                 if array.attrs.get(OBJECT_CODEC_ATTR):
                     values = np.array(
@@ -300,6 +327,8 @@ def get_initial_fill_value_and_dtype(
     """
     if dtype is np.object_ or dtype == np.dtype("object"):
         return None, VariableLengthUTF8(), True
+    if isinstance(dtype, ZDType):
+        return dtype.default_scalar(), dtype, False
     _dtype = np.dtype(dtype)
     fill_value: FILL_VALUE_TYPE = None
     try:
@@ -575,9 +604,35 @@ class ZarrTrace(_ZarrTraceBase):
             [step] if isinstance(step, BlockedStep) else step.methods
         )
         stats_dtypes_shapes = {"in_warmup": (bool, [])} | stats_dtypes_shapes
+        # Object dtype stats (SamplerWarning warnings) are not stored as pickled
+        # objects, but as typed columns derived from the warning objects
+        expanded_stats: dict[str, tuple[Any, Any]] = {}
+        self.warning_stat_names: tuple[str, ...] = ()
+        warning_columns: dict[str, list[str]] = {}
+        for stat_name, (dtype, shape) in stats_dtypes_shapes.items():
+            if np.dtype(dtype) == np.dtype(object) and stat_name.endswith("warning"):
+                self.warning_stat_names += (stat_name,)
+                warning_columns[stat_name] = [
+                    f"{stat_name}_type",
+                    f"{stat_name}_message",
+                    f"{stat_name}_level",
+                    f"{stat_name}_step",
+                ]
+                expanded_stats.update(
+                    {
+                        # 0 is the "no warning" sentinel; WarningType values start at 1
+                        f"{stat_name}_type": (np.int64, []),
+                        f"{stat_name}_message": (VariableLengthUTF8(), []),
+                        f"{stat_name}_level": (VariableLengthUTF8(), []),
+                        # -1 is the "no step" sentinel for SamplerWarning.step
+                        f"{stat_name}_step": (np.int64, []),
+                    }
+                )
+            else:
+                expanded_stats[stat_name] = (dtype, shape)
         self.init_group_with_empty(
             group=self.root.create_group(name="sample_stats", overwrite=True),
-            var_dtype_and_shape=stats_dtypes_shapes,
+            var_dtype_and_shape=expanded_stats,
             chains=chains,
             draws=tune + draws,
         )
@@ -593,6 +648,7 @@ class ZarrTrace(_ZarrTraceBase):
                 stats_bijection=StatsBijection(step.stats_dtypes),
                 draws_per_chunk=self.draws_per_chunk,
                 fn=self.fn,
+                warning_columns=warning_columns,
             )
             for _ in range(chains)
         ]
@@ -846,6 +902,41 @@ class ZarrTrace(_ZarrTraceBase):
                         dimension_names=dims,
                         attributes=array_attrs,
                     )
+
+    @property
+    def warnings(self) -> "list[list[SamplerWarning]]":
+        """The non-empty :class:`~pymc.stats.convergence.SamplerWarning` objects.
+
+        reconstructed from the typed warning columns of the ``sample_stats`` group,
+        in draw order, as one list per chain. Warning payloads that cannot be typed
+        (``extra``, divergence points) are not reconstructed; the warning's
+        interpolated ``message`` retains the human-readable content.
+        """
+        from pymc.stats.convergence import SamplerWarning, WarningType
+
+        warnings_per_chain: list[list[SamplerWarning]] = []
+        for chain in range(len(self.straces)):
+            chain_warnings: list[SamplerWarning] = []
+            for stat_name in self.warning_stat_names:
+                type_array = self.sample_stats[f"{stat_name}_type"]
+                message_array = self.sample_stats[f"{stat_name}_message"]
+                level_array = self.sample_stats[f"{stat_name}_level"]
+                step_array = self.sample_stats[f"{stat_name}_step"]
+                for draw in range(type_array.shape[1]):  # type: ignore[union-attr]
+                    kind_code = int(type_array[chain, draw])  # type: ignore[arg-type,index]
+                    if kind_code == 0:
+                        continue
+                    step_code = int(step_array[chain, draw])  # type: ignore[arg-type,index]
+                    chain_warnings.append(
+                        SamplerWarning(
+                            WarningType(kind_code),
+                            str(message_array[chain, draw]),  # type: ignore[index]
+                            str(level_array[chain, draw]),  # type: ignore[index]
+                            None if step_code < 0 else step_code,
+                        )
+                    )
+            warnings_per_chain.append(chain_warnings)
+        return warnings_per_chain
 
     def to_inferencedata(self, save_warmup: bool = False, eager: bool = False) -> DataTree:
         """Convert ``ZarrTrace`` to :class:`~.xarray.DataTree`.

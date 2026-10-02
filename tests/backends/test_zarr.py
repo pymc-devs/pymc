@@ -24,8 +24,10 @@ import zarr
 import pymc as pm
 
 from pymc.backends.zarr import OBJECT_CODEC_ATTR, ZarrTrace, decode_object_value
-from pymc.stats.convergence import SamplerWarning
+from pymc.pytensorf import make_shared_replacements
+from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
+from pymc.step_methods.arraystep import ArrayStepShared
 from pymc.step_methods.state import equal_dataclass_values
 from tests.helpers import equal_sampling_states
 
@@ -33,6 +35,36 @@ from tests.helpers import equal_sampling_states
 def dims(array) -> list:
     """Return the dimension names stored in the zarr v3 metadata of an array."""
     return list(array.metadata.dimension_names)
+
+
+def assert_stat_value_matches(sample_stats, var, draw_idx, value):
+    """Assert that a recorded stat matches its stored value.
+
+    Warning stats are stored as typed columns derived from the warning objects
+    (kind, message, level, step); the reconstruction is compared field-wise, so
+    untypeable payloads (``extra``, divergence points) are not compared.
+    """
+    if f"{var}_type" in sample_stats:
+        kind_code = int(sample_stats[f"{var}_type"][0, draw_idx])
+        if value is None:
+            assert kind_code == 0
+            return
+        step_code = int(sample_stats[f"{var}_step"][0, draw_idx])
+        assert kind_code == value.kind.value
+        assert str(sample_stats[f"{var}_message"][0, draw_idx]) == value.message
+        assert str(sample_stats[f"{var}_level"][0, draw_idx]) == value.level
+        expected_step = -1 if value.step is None else value.step
+        assert step_code == expected_step
+        return
+    stat_val = sample_stats[var][0, draw_idx]
+    if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
+        stat_val = decode_object_value(stat_val)
+    if not isinstance(stat_val, SamplerWarning):
+        unequal_stats = stat_val != value
+    else:
+        unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
+    if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
+        raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
 
 
 _temp_dirs: list[tempfile.TemporaryDirectory] = []
@@ -47,6 +79,70 @@ def make_store():
     tmp = tempfile.TemporaryDirectory()
     _temp_dirs.append(tmp)
     return zarr.storage.LocalStore(tmp.name)
+
+
+class WarnStepper(ArrayStepShared):
+    """Step method that passes points through and always emits a fixed warning."""
+
+    name = "warn_stepper"
+    stats_dtypes_shapes = {
+        "accepted": (bool, []),
+        "warning": (SamplerWarning, None),
+    }
+
+    def __init__(self, vars, warning, shared, **kwargs):
+        super().__init__(vars, shared=shared, **kwargs)
+        self._warning = warning
+
+    def astep(self, apoint, *args):
+        return apoint, [{"accepted": True, "warning": self._warning}]
+
+
+def test_warning_stat_stored_as_typed_columns():
+    warning = SamplerWarning(
+        WarningType.BAD_ACCEPTANCE,
+        "The acceptance probability does not match the target.",
+        "warn",
+        step=3,
+    )
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        ip = model.initial_point()
+        shared = make_shared_replacements(ip, [a], model)
+        step = WarnStepper([a], warning, shared)
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=1)
+        trace.init_trace(chains=1, draws=3, tune=0, model=model, step=step)
+
+        point = ip
+        for _ in range(3):
+            point, stats = step.step(point)
+            trace.straces[0].record(point, stats, in_warmup=False)
+        trace.straces[0].record_sampling_state(step)
+
+    # The warning stat is stored as typed columns, not as a pickled object
+    sample_stats = trace.root["sample_stats"]
+    expected_arrays = {
+        "chain",
+        "draw",
+        "sampler_0__accepted",
+        "in_warmup",
+        "sampler_0__warning_type",
+        "sampler_0__warning_message",
+        "sampler_0__warning_level",
+        "sampler_0__warning_step",
+    }
+    assert set(dict(sample_stats.arrays())) == expected_arrays
+    for name in expected_arrays:
+        assert not sample_stats[name].attrs.get(OBJECT_CODEC_ATTR)
+    np.testing.assert_array_equal(
+        sample_stats["sampler_0__warning_type"][:][0],
+        [int(WarningType.BAD_ACCEPTANCE.value)] * 3,
+    )
+    np.testing.assert_array_equal(sample_stats["sampler_0__warning_step"][:][0], [3] * 3)
+
+    # The trace reconstructs the original warnings from the typed columns
+    assert trace.warnings == [[warning, warning, warning]]
 
 
 @pytest.fixture(scope="module")
@@ -257,16 +353,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in trace.posterior.arrays():
                 assert np.array_equal(trace.posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
-                stat_val = decode_object_value(stat_val)
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["sample_stats"], var, draw_idx, value)
 
     # Assert manually collected warmup samples match
     for draw_idx, (draw, stat) in enumerate(
@@ -283,16 +370,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in posterior.arrays():
                 assert np.array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["warmup_sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
-                stat_val = decode_object_value(stat_val)
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["warmup_sample_stats"], var, draw_idx, value)
 
     # Assert manually collected posterior samples match
     for draw_idx, (draw, stat) in enumerate(
@@ -309,16 +387,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in posterior.arrays():
                 assert np.array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
-                stat_val = decode_object_value(stat_val)
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["sample_stats"], var, draw_idx, value)
 
     # Assert sampling_state is correct
     assert list(trace._sampling_state["draw_idx"][:]) == [draws + tune]
@@ -486,6 +555,7 @@ def test_sample(
         warning_stat = (
             "sampler_1__warning" if isinstance(model_step, CompoundStep) else "sampler_0__warning"
         )
+        warning_stat = f"{warning_stat}_type"
         if keep_warning_stat:
             assert warning_stat in out_trace.sample_stats
         else:
