@@ -80,13 +80,13 @@ def _fgraph_and_initial_values(model: Model):
 
 
 def _model_fgraph_like(
-    fg: FunctionGraph, outputs: Sequence[Variable], replacements: dict
+    fg: FunctionGraph, outputs: Sequence[Variable], replacements: dict | None = None
 ) -> FunctionGraph:
     """Build a model fgraph from `outputs`, with the coords and (replaced) dim lengths of `fg`."""
     new_fg = FunctionGraph(outputs=outputs, clone=False)
     new_fg._coords = fg._coords  # type: ignore[attr-defined]
     new_fg._dim_lengths = {  # type: ignore[attr-defined]
-        dim: replacements.get(dim_length, dim_length)
+        dim: (replacements or {}).get(dim_length, dim_length)
         for dim, dim_length in fg._dim_lengths.items()  # type: ignore[attr-defined]
     }
     return new_fg
@@ -256,13 +256,8 @@ def freeze_model(model: Model) -> FrozenModel:
 
 
 def _is_dtype(dtype, ref_dtype: str) -> bool:
-    """Whether `dtype` (a dtype-like or alias such as "float" or "floatX") is `ref_dtype`."""
-    if dtype == "floatX":
-        dtype = pytensor.config.floatX
-    try:
-        return dtype is not None and np.dtype(dtype).name == ref_dtype
-    except TypeError:
-        return False
+    """Whether `dtype` (a dtype-like or alias such as "float") is `ref_dtype` or follows floatX."""
+    return dtype is not None and (dtype == "floatX" or np.dtype(dtype).name == ref_dtype)
 
 
 def _cast_root(var: Variable, from_dtype: str, to_dtype: str) -> Variable:
@@ -287,12 +282,8 @@ def _restore_static_shape(new: Variable, old: Variable) -> Variable:
 
 def _cast_op(op: Op, from_dtype: str, to_dtype: str) -> Op:
     """Return `op` with the `from_dtype` baked into its attributes or inner graph cast."""
-    # Fixed output dtypes (RandomVariables, reductions, ARange, ...), constants and core ops
-    changes: dict = {
-        attr: to_dtype
-        for attr in ("dtype", "acc_dtype")
-        if _is_dtype(getattr(op, attr, None), from_dtype)
-    }
+    # Fixed output dtype (RandomVariables, reductions, ARange, ...)
+    changes: dict = {"dtype": to_dtype} if _is_dtype(getattr(op, "dtype", None), from_dtype) else {}
     for attr, value in vars(op).items():
         new_value: Variable | Op
         if isinstance(value, Constant):
@@ -307,13 +298,14 @@ def _cast_op(op: Op, from_dtype: str, to_dtype: str) -> Op:
     if isinstance(op, HasInnerGraph) and any(
         getattr(var.type, "dtype", None) == from_dtype for var in op.fgraph.variables
     ):
-        inner_outs, memo = _cast_graph_floats(op.inner_outputs, from_dtype, to_dtype)
+        n_outs = len(op.inner_outputs)
+        inner = _cast_graph_floats([*op.inner_outputs, *op.inner_inputs], from_dtype, to_dtype)
         # Static shapes frozen in the inner graph cannot be re-inferred from the inner inputs
         inner_outs = [
             _restore_static_shape(new, old)
-            for new, old in zip(inner_outs, op.inner_outputs, strict=True)
+            for new, old in zip(inner[:n_outs], op.inner_outputs, strict=True)
         ]
-        inner_ins = [memo.get(i, _cast_root(i, from_dtype, to_dtype)) for i in op.inner_inputs]
+        inner_ins = inner[n_outs:]
         if isinstance(op, Scan):
             kwargs = ("mode", "truncate_gradient", "name", "profile", "allow_gc", "strict")
             op = Scan(inner_ins, inner_outs, op.info, **{k: getattr(op, k) for k in kwargs})
@@ -336,12 +328,12 @@ class _CastedTransform(Transform):
         self.transform = transform
         self.from_dtype = from_dtype
         self.to_dtype = to_dtype
-        # Keep the name: value variable names derive from it
-        self.name = transform.name  # type: ignore[attr-defined]
+        # Value variable names derive from the name
+        self.name, self.ndim_supp = transform.name, transform.ndim_supp  # type: ignore[attr-defined]
 
     def _converted(self, method: str, value, *inputs):
         out = getattr(self.transform, method)(value, *inputs)
-        (out,), _ = _cast_graph_floats([out], self.from_dtype, self.to_dtype, (value, *inputs))
+        (out,) = _cast_graph_floats([out], self.from_dtype, self.to_dtype, (value, *inputs))
         return out
 
     def forward(self, value, *inputs):
@@ -355,18 +347,13 @@ class _CastedTransform(Transform):
 
 
 def _transform_keeps_dtype(transform: Transform, rv: Variable, value: Variable, dtype: str) -> bool:
-    """Whether the transform's graphs on `rv`/`value` stay in `dtype`.
-
-    Probed under ``floatX=dtype``, the setting the converted model is meant to be
-    compiled under, so only transforms that embed foreign-dtype constants get wrapped.
-    """
+    """Whether the transform's graphs on `rv`/`value` stay in `dtype`."""
     inputs = rv.owner.inputs  # type: ignore[union-attr]
-    with pytensor.config.change_flags(floatX=dtype):
-        outs = (
-            transform.forward(rv, *inputs),  # type: ignore[arg-type]
-            transform.backward(value, *inputs),  # type: ignore[arg-type]
-            transform.log_jac_det(value, *inputs),  # type: ignore[arg-type]
-        )
+    outs = (
+        transform.forward(rv, *inputs),  # type: ignore[arg-type]
+        transform.backward(value, *inputs),  # type: ignore[arg-type]
+        transform.log_jac_det(value, *inputs),  # type: ignore[arg-type]
+    )
     return all(out.type.dtype == dtype for out in outs)  # type: ignore[union-attr]
 
 
@@ -375,13 +362,13 @@ def _cast_graph_floats(
     from_dtype: str,
     to_dtype: str,
     frozen: Sequence[Variable] = (),
-) -> tuple[list[Variable], dict[Variable, Variable]]:
+) -> list[Variable]:
     """Clone the graph of `outputs`, casting every `from_dtype` variable to `to_dtype`.
 
     The `frozen` variables are kept as they are, and the graph above them is not visited.
-    Returns the converted outputs and a memo mapping old to new variables.
     """
     memo: dict[Variable, Variable] = {var: var for var in frozen}
+    ops: dict[Op, Op] = {}
 
     def mapped(var):
         if var not in memo:
@@ -401,14 +388,20 @@ def _cast_graph_floats(
             # Redirect explicit casts (e.g. `x.astype("float64")`)
             new_outputs = [pt.cast(new_inputs[0], to_dtype)]
         else:
-            op = _cast_op(op, from_dtype, to_dtype)
+            if op not in ops:
+                ops[op] = _cast_op(op, from_dtype, to_dtype)
+            op = ops[op]
             if isinstance(op, ModelValuedVar) and (transform := op.transform) is not None:
-                # Transform objects travel with the op and may embed constants of the old
-                # dtype in the value-space graphs (logp, initial point); wrap them if so.
+                # Transforms may embed constants of the old dtype in the value-space graphs
+                # (logp, initial point). Wrap those that do, keeping the others as they are.
                 rv, value = new_inputs
+                if isinstance(transform, _CastedTransform):
+                    transform = transform.transform
                 if not _transform_keeps_dtype(transform, rv, value, to_dtype):
+                    transform = _CastedTransform(transform, from_dtype, to_dtype)
+                if transform is not op.transform:
                     op = copy.copy(op)
-                    op.transform = _CastedTransform(transform, from_dtype, to_dtype)
+                    op.transform = transform
             new_outputs = op.make_node(*new_inputs).outputs
             if stale(new_outputs):
                 # Discrete inputs upcast `to_dtype` back to `from_dtype` (e.g. int32 * float32)
@@ -418,23 +411,25 @@ def _cast_graph_floats(
                 ]
                 new_outputs = op.make_node(*new_inputs).outputs
         if stale(new_outputs):
-            name = next(out.name for out in outputs if node.outputs[0] in ancestors([out]))
+            out = next(out for out in outputs if node.outputs[0] in ancestors([out]))
             raise NotImplementedError(
-                f"Cannot convert {node.outputs[0]} (in the graph of {name}) to {to_dtype}: "
-                f"{op} outputs {from_dtype} regardless of its inputs."
+                f"Cannot convert {node.outputs[0]} (in the graph of {out}) to {to_dtype}: "
+                f"{op} outputs {from_dtype} regardless of its inputs. "
+                "Replace it by an operation that follows the dtype of its inputs."
             )
         for old, new in zip(node.outputs, new_outputs, strict=True):
             new.name = old.name
             memo[old] = new
 
-    return [mapped(out) for out in outputs], memo
+    return [mapped(out) for out in outputs]
 
 
 def _cast_model_floats(model: Model, from_dtype: str, to_dtype: str) -> Model:
     fg, _, initial_values = _fgraph_and_initial_values(model)
-    new_outputs, _ = _cast_graph_floats(fg.outputs, from_dtype, to_dtype)
-    # Dim lengths are integers, so there is nothing to replace
-    new_model = model_from_fgraph(_model_fgraph_like(fg, new_outputs, {}), mutate_fgraph=True)
+    # Dtype aliases and transform graphs follow floatX
+    with pytensor.config.change_flags(floatX=to_dtype):
+        new_outputs = _cast_graph_floats(fg.outputs, from_dtype, to_dtype)
+    new_model = model_from_fgraph(_model_fgraph_like(fg, new_outputs), mutate_fgraph=True)
     for name, initval in initial_values.items():
         if isinstance(initval, np.ndarray) and initval.dtype.kind == "f":
             initval = initval.astype(to_dtype)
@@ -455,8 +450,8 @@ def model_to_float32(model: Model) -> Model:
     compute-bound models; on CPU backends gains depend on how memory- and
     BLAS-bound the model's logp is.
 
-    The new model must be compiled and sampled under ``floatX="float32"``. Under the
-    default ``floatX`` initial points are float64 and `pm.sample` raises:
+    The new model must be compiled and sampled under ``floatX="float32"``, otherwise
+    initial points are float64 and `pm.sample` raises.
 
     .. code-block:: python
 
@@ -477,7 +472,8 @@ def model_to_float32(model: Model) -> Model:
     Raises
     ------
     NotImplementedError
-        If an operation outputs float64 regardless of the dtype of its inputs.
+        If an operation outputs float64 regardless of the dtype of its inputs, or a
+        variable has a symbolic initial value.
 
     Notes
     -----

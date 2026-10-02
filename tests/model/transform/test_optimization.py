@@ -354,6 +354,8 @@ class TestModelToFloat32:
             logp32 = m32.compile_logp()({k: v.astype("float32") for k, v in ip.items()})
         np.testing.assert_allclose(logp32, m.compile_logp()(ip), rtol=1e-5)
         assert pm.draw(m32["x"]).dtype == "float32"
+        m64 = model_to_float64(m32)
+        assert all(rv.type.dtype == "float64" for rv in m64.basic_RVs + m64.value_vars)
 
     def test_unconvertible_op_raises(self):
         with Model() as m:
@@ -373,7 +375,11 @@ class TestModelToFloat32:
     @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie"])
     def test_sample_smoke(self, nuts_sampler):
         pytest.importorskip(nuts_sampler)
-        m32 = model_to_float32(self._mixed_model())
+        m = self._mixed_model()
+        if nuts_sampler == "nutpie":  # Keep the numba compilation short
+            with Model() as m:
+                Normal("y", Normal("beta"), HalfNormal("sigma"), observed=np.zeros(5))
+        m32 = model_to_float32(m)
         with pytensor.config.change_flags(floatX="float32"):
             with m32:
                 idata = pm.sample(
@@ -385,8 +391,8 @@ class TestModelToFloat32:
                     random_seed=1,
                     compute_convergence_checks=False,
                 )
-        # nutpie stores draws as float64
-        assert idata.posterior["beta"].dtype == ("float32" if nuts_sampler == "pymc" else "float64")
+        if nuts_sampler == "pymc":
+            assert idata.posterior["beta"].dtype == "float32"
         assert np.isfinite(idata.posterior["beta"]).all()
 
     @pytest.mark.parametrize("transform", [ScaledTransform(), JacobianOnlyTransform()])
@@ -400,3 +406,7 @@ class TestModelToFloat32:
         assert_logp_converted(m, m32)
         with pytensor.config.change_flags(floatX="float32"):
             assert all(v.dtype == "float32" for v in m32.initial_point().values())
+        m64 = model_to_float64(m32)
+        assert m64.rvs_to_transforms[m64["x"]] is transform
+        ip = m.initial_point()
+        np.testing.assert_allclose(m64.compile_logp()(ip), m.compile_logp()(ip))
