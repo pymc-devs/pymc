@@ -145,6 +145,39 @@ def test_warning_stat_stored_as_typed_columns():
     assert trace.warnings == [[warning, warning, warning]]
 
 
+def test_to_datatree(model, model_step):
+    trace = ZarrTrace(store=make_store())
+    draws, tune, chains = 4, 2, 1
+    trace.init_trace(chains=chains, draws=draws, tune=tune, model=model, step=model_step)
+
+    point = model.initial_point()
+    for draw in range(tune + draws):
+        tuning = draw < tune
+        if not tuning:
+            model_step.stop_tuning()
+        point, stats = model_step.step(point)
+        trace.straces[0].record(point, stats, in_warmup=tuning)
+    trace.straces[0].record_sampling_state(model_step)
+    trace.sampling_time = 12.0
+
+    dt = trace.to_datatree()
+    assert isinstance(dt, xr.DataTree)
+    # The tree mirrors the zarr group hierarchy, minus internal groups
+    assert set(dt.children) == {"posterior", "sample_stats", "constant_data", "observed_data"}
+    # Global sampling metadata is attached to each group
+    for node in dt.children.values():
+        assert node.attrs["tuning_steps"] == tune
+        assert node.attrs["sampling_time"] == 12.0
+    # Data is readable
+    for var_name, var in dt["posterior"].data_vars.items():
+        assert var.shape[:2] == (chains, draws)
+    # And warmup groups are only attached if requested
+    assert "warmup_posterior" not in dt.children
+    dt = trace.to_datatree(save_warmup=True)
+    assert "warmup_posterior" in dt.children
+    assert dt["warmup_posterior"]["draw"].shape[0] == tune
+
+
 @pytest.fixture(scope="module")
 def model():
     time_int = np.array([np.timedelta64(np.timedelta64(i, "h"), "ns") for i in range(25)])

@@ -938,12 +938,59 @@ class ZarrTrace(_ZarrTraceBase):
             warnings_per_chain.append(chain_warnings)
         return warnings_per_chain
 
+    def to_datatree(self, save_warmup: bool = False, eager: bool = False) -> DataTree:
+        """Convert ``ZarrTrace`` to :class:`~xarray.DataTree`.
+
+        The zarr group hierarchy naturally translates into a ``DataTree``, so this
+        conversion opens the whole hierarchy with :func:`xarray.open_datatree`. The
+        ``_sampling_state`` group is excluded, and the warmup groups are only
+        included if ``save_warmup`` is ``True``. Each group's attributes are
+        extended with the global ``tuning_steps`` and ``sampling_time`` metadata.
+
+        Parameters
+        ----------
+        save_warmup : bool
+            If ``True``, all of the warmup groups are stored in the data tree.
+        eager : bool
+            If ``True``, all of the data is loaded into memory. If ``False``, the
+            data is lazily loaded when accessed.
+
+        Notes
+        -----
+        ``xarray`` requires the zarr groups to have consolidated metadata, which is
+        written by calling :func:`zarr.consolidate_metadata` on the root's store.
+        Consolidated metadata is not (yet) part of the zarr v3 specification, so
+        zarr will warn about it. The returned ``DataTree`` operates on freshly
+        opened datasets, so future changes to the ``ZarrTrace`` are not reflected
+        in it.
+        """
+        self.split_warmup_groups()
+        # Xarray complains if we try to open a zarr hierarchy that doesn't have
+        # consolidated metadata
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", category=zarr.errors.ZarrUserWarning)
+            zarr.consolidate_metadata(self.root.store)
+        try:
+            global_attrs = {
+                "tuning_steps": self.tuning_steps,
+                "sampling_time": self.sampling_time,
+            }
+        except (KeyError, ValueError):
+            global_attrs = {}  # pragma: no cover
+        tree = xr.open_datatree(self.root.store, engine="zarr", mask_and_scale=False)  # type: ignore[arg-type]
+        for name, node in list(tree.children.items()):
+            if name.startswith("_") or (not save_warmup and name.startswith(WARMUP_TAG)):
+                del tree[name]
+                continue
+            node.attrs.update(global_attrs)
+        return tree.load() if eager else tree
+
     def to_inferencedata(self, save_warmup: bool = False, eager: bool = False) -> DataTree:
-        """Convert ``ZarrTrace`` to :class:`~.xarray.DataTree`.
+        """Convert ``ZarrTrace`` to :class:`~.xarray.DataTree` with arviz attributes.
 
         This converts all the groups in the ``ZarrTrace.root`` hierarchy into an
-        ``DataTree`` object. The only exception is that ``_sampling_state`` is
-        excluded.
+        ``DataTree`` object with the arviz inference library attributes applied.
+        The only exception is that ``_sampling_state`` is excluded.
 
         Parameters
         ----------
@@ -957,30 +1004,9 @@ class ZarrTrace(_ZarrTraceBase):
         Notes
         -----
         ``xarray`` and in turn ``arviz`` require the zarr groups to have consolidated
-        metadata. To achieve this, consolidated metadata is written by calling
-        :func:`zarr.consolidate_metadata` on the root's store. Note that consolidated
-        metadata is not (yet) part of the zarr v3 specification, which zarr will warn
-        about.
+        metadata. See :meth:`~ZarrTrace.to_datatree` for more details.
         """
-        self.split_warmup_groups()
-        # Xarray complains if we try to open a zarr hierarchy that doesn't have
-        # consolidated metadata
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", category=zarr.errors.ZarrUserWarning)
-            zarr.consolidate_metadata(self.root.store)
-        groups = {}
-        try:
-            global_attrs = {
-                "tuning_steps": self.tuning_steps,
-                "sampling_time": self.sampling_time,
-            }
-        except (KeyError, ValueError):
-            global_attrs = {}  # pragma: no cover
-        for name, _ in self.root.groups():
-            if name.startswith("_") or (not save_warmup and name.startswith(WARMUP_TAG)):
-                continue
-            data = xr.open_zarr(self.root.store, group=name, mask_and_scale=False)
-            attrs = {**data.attrs, **global_attrs}
-            data.attrs = make_attrs(attrs=attrs, inference_library=pymc)
-            groups[f"/{name}"] = data.load() if eager else data
-        return DataTree.from_dict(groups)
+        tree = self.to_datatree(save_warmup=save_warmup, eager=eager)
+        for node in tree.children.values():
+            node.attrs = make_attrs(attrs={**node.attrs}, inference_library=pymc)
+        return tree
