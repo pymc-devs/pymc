@@ -610,7 +610,7 @@ class Marginal(Base):
         R"""
         Return mean and covariance of the conditional distribution given a `point`.
 
-        The `point` might be the MAP estimate or a sample from a trace.
+        The `point` is a ``{name: value}`` dict, e.g. one draw of ``pm.find_MAP()`` or ``pm.sample()``.
 
         Parameters
         ----------
@@ -1270,7 +1270,7 @@ class MarginalKron(Base):
         R"""
         Return mean and covariance of the conditional distribution given a `point`.
 
-        The `point` might be the MAP estimate or a sample from a trace.
+        The `point` is a ``{name: value}`` dict, e.g. one draw of ``pm.find_MAP()`` or ``pm.sample()``.
 
         Parameters
         ----------

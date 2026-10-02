@@ -12,20 +12,50 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import re
+import warnings
 
 import numpy as np
+import pytensor
+import pytensor.tensor as pt
 import pytest
+import xarray as xr
 
 from numpy.testing import assert_allclose
+from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
 
 import pymc as pm
 
-from pymc.exceptions import ImputationWarning
+from pymc.exceptions import ImputationWarning, SamplingError
+from pymc.model.transform.optimization import freeze_model
 from pymc.step_methods.metropolis import tune
-from pymc.testing import select_by_precision
+from pymc.testing import fast_unstable_sampling_mode, select_by_precision
 from pymc.tuning import find_MAP
+from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
+
+
+@pytest.fixture(autouse=True)
+def fast_compile_mode():
+    """Cheap compilation; the default backend is covered by the init="map", GP and JAX tests."""
+    with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
+        yield
+
+
+def map_point(*args, **kwargs):
+    """MAP point read from the returned InferenceData's single-draw posterior."""
+    posterior = find_MAP(*args, **{"progressbar": False, **kwargs}).posterior
+    return {name: da.values[0, 0] for name, da in posterior.items()}
+
+
+@pytest.fixture
+def normal_model():
+    rng = np.random.default_rng(sum(map(ord, "find_MAP")))
+    with pm.Model() as m:
+        mu = pm.Normal("mu")
+        sigma = pm.Exponential("sigma", 1)
+        pm.Normal("y_hat", mu=mu, sigma=sigma, observed=rng.normal(loc=3, scale=1.5, size=10))
+    return m
 
 
 @pytest.mark.parametrize("bounded", [False, True])
@@ -34,9 +64,8 @@ def test_mle_jacobian(bounded):
     truth = 10.0  # Simple normal model should give mu=10.0
     rtol = 1e-4  # this rtol should work on both floatX precisions
 
-    start, model, _ = models.simple_normal(bounded_prior=bounded)
-    with model:
-        map_estimate = find_MAP(method="BFGS", model=model)
+    _, model, _ = models.simple_normal(bounded_prior=bounded)
+    map_estimate = map_point(method="BFGS", model=model)
     assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
 
 
@@ -50,7 +79,7 @@ def test_tune_not_inplace():
 def test_accuracy_normal():
     _, model, (mu, _) = simple_model()
     with model:
-        newstart = find_MAP(pm.Point(x=[-10.5, 100.5]))
+        newstart = map_point(initvals=pm.Point(x=[-10.5, 100.5]))
         assert_allclose(
             newstart["x"], [mu, mu], atol=select_by_precision(float64=1e-5, float32=1e-4)
         )
@@ -59,7 +88,7 @@ def test_accuracy_normal():
 def test_accuracy_non_normal():
     _, model, (mu, _) = non_normal(4)
     with model:
-        newstart = find_MAP(pm.Point(x=[0.5, 0.01, 0.95, 0.99]))
+        newstart = map_point(initvals=pm.Point(x=[0.5, 0.01, 0.95, 0.99]), jitter=False)
         assert_allclose(newstart["x"], mu, atol=select_by_precision(float64=1e-5, float32=1e-4))
 
 
@@ -76,19 +105,33 @@ def test_find_MAP_discrete():
         pm.Binomial("ss", n=n, p=p)
         pm.Binomial("s", n=n, p=p, observed=yes)
 
-        map_est1 = find_MAP()
-        map_est2 = find_MAP(vars=model.value_vars)
+        map_est1 = map_point(random_seed=1)
+        # Joint discrete + continuous powell search: reference values are from the unjittered start
+        with pytest.warns(UserWarning, match="Discrete variables are being optimized"):
+            map_est2 = map_point(vars=model.value_vars, jitter=False)
 
-    assert_allclose(map_est1["p"], 0.6086956533498806, atol=tol1, rtol=0)
+    # ss is held fixed at its (jittered-p dependent) initial value; conjugate MAP given ss
+    ss0 = map_est1["ss"]
+    assert_allclose(
+        map_est1["p"], (alpha + yes + ss0 - 1) / (alpha + beta + 2 * n - 2), atol=tol1, rtol=0
+    )
 
     assert_allclose(map_est2["p"], 0.695642178810167, atol=tol2, rtol=0)
     assert map_est2["ss"] == 14
 
+    # Gradient-free methods handle discrete variables themselves, so no fallback to powell
+    with model, warnings.catch_warnings():
+        warnings.simplefilter("error", UserWarning)
+        idata = find_MAP("nelder-mead", vars=model.value_vars, progressbar=False, random_seed=1)
+    assert idata.optimizer_result["method"].item() == "nelder-mead"
+
 
 def test_find_MAP_no_gradient():
     _, model = simple_arbitrary_det()
-    with model:
-        find_MAP()
+    with pytest.warns(UserWarning, match="Gradient not available"):
+        find_MAP(model=model, progressbar=False)
+    with pytest.raises(NotImplementedError):
+        find_MAP(model=model, use_grad=True, progressbar=False)
 
 
 def test_find_MAP():
@@ -104,9 +147,9 @@ def test_find_MAP():
         pm.Normal("y", mu=mu, tau=sigma**-2, observed=data)
 
         # Test gradient minimization
-        map_est1 = find_MAP(progressbar=False)
-        # Test non-gradient minimization
-        map_est2 = find_MAP(progressbar=False, method="Powell")
+        map_est1 = map_point()
+        # Test non-gradient minimization, with case-insensitive method name
+        map_est2 = map_point(method="Powell")
 
     assert_allclose(map_est1["mu"], 0, atol=tol)
     assert_allclose(map_est1["sigma"], 1, atol=tol)
@@ -131,8 +174,8 @@ def test_find_MAP_issue_5923():
         pm.Normal("y", mu=mu, tau=sigma**-2, observed=data)
 
         start = {"mu": -0.5, "sigma": 1.25}
-        map_est1 = find_MAP(progressbar=False, vars=[mu, sigma], start=start)
-        map_est2 = find_MAP(progressbar=False, vars=[sigma, mu], start=start)
+        map_est1 = map_point(vars=[mu, sigma], initvals=start)
+        map_est2 = map_point(vars=[sigma, mu], initvals=start)
 
     assert_allclose(map_est1["mu"], 0, atol=tol)
     assert_allclose(map_est1["sigma"], 1, atol=tol)
@@ -147,7 +190,7 @@ def test_find_MAP_issue_4488():
         with pytest.warns(ImputationWarning):
             x = pm.Gamma("x", alpha=3, beta=10, observed=np.array([1, np.nan]))
         y = pm.Deterministic("y", x + 1)
-        map_estimate = find_MAP()
+        map_estimate = map_point(idata_kwargs={"include_transformed": True})
 
     assert not set.difference({"x_unobserved", "x_unobserved_log__", "y"}, set(map_estimate.keys()))
     assert_allclose(map_estimate["x_unobserved"], 0.2, rtol=1e-4, atol=1e-4)
@@ -163,5 +206,332 @@ def test_find_MAP_warning_non_free_RVs():
 
         msg = "Intermediate variables (such as Deterministic or Potential) were passed"
         with pytest.warns(UserWarning, match=re.escape(msg)):
-            r = pm.find_MAP(vars=[det])
+            r = map_point(vars=[det], jitter=False)
         assert_allclose([r["x"], r["y"], r["det"]], [50, 50, 100])
+
+
+def test_find_MAP_frozen_model(normal_model):
+    kwargs = {"progressbar": False, "random_seed": 1}
+    frozen = find_MAP(model=freeze_model(normal_model), **kwargs).posterior["mu"]
+    # constant folding differs, so the optimizers stop at slightly different points
+    assert_allclose(frozen, find_MAP(model=normal_model, **kwargs).posterior["mu"], rtol=1e-4)
+
+
+def test_find_MAP_vars_subset_holds_others_fixed(normal_model):
+    with normal_model:
+        r = map_point(vars=[normal_model["mu"]], initvals={"sigma": 2.0})
+    assert_allclose(r["sigma"], 2.0)
+
+
+@pytest.mark.parametrize(
+    "method, use_grad, use_hess, use_hessp, compute_hessian",
+    [
+        # compute_hessian once per Hessian route: fused, hessp, and compiled after optimizing
+        ("Newton-CG", True, True, False, True),
+        ("Newton-CG", True, False, True, True),
+        ("L-BFGS-B", True, False, False, True),
+        ("powell", False, False, False, True),
+        ("BFGS", True, False, False, False),
+        ("trust-exact", True, True, False, False),
+        ("trust-constr", True, False, True, False),
+        ("nelder-mead", False, False, False, False),
+    ],
+)
+def test_find_MAP_inferencedata(
+    normal_model, method, use_grad, use_hess, use_hessp, compute_hessian
+):
+    include_transformed = compute_hessian
+    idata = find_MAP(
+        method=method,
+        model=normal_model,
+        use_grad=use_grad,
+        use_hess=use_hess,
+        use_hessp=use_hessp,
+        progressbar=False,
+        idata_kwargs={"include_transformed": include_transformed},
+        compute_hessian=compute_hessian,
+    )
+    assert set(idata.children) == {"posterior", "fit", "optimizer_result", "observed_data"}
+
+    posterior = idata.posterior.dataset.squeeze(["chain", "draw"])
+    assert posterior["mu"].shape == () and posterior["sigma"].shape == ()
+    assert ("sigma_log__" in posterior) == include_transformed
+    assert ("covariance_matrix" in idata.fit) == compute_hessian
+    assert idata.fit.rows.values.tolist() == ["mu", "sigma_log__"]
+    assert idata.optimizer_result["method"].item() == method
+    assert ("hess_inv" in idata.optimizer_result) == (method == "BFGS")
+    assert ("hess_inv_sk" in idata.optimizer_result) == (method == "L-BFGS-B")
+    for key in ("hess", "hess_inv"):
+        if key in idata.optimizer_result:
+            assert idata.optimizer_result[key].dims == ("variables", "variables_aux")
+    if compute_hessian:
+        # Exact inverse Hessian of the loss at the optimum, never an optimizer's approximation
+        mean = idata.fit.mean_vector.values
+        d2loss = normal_model.compile_d2logp(jacobian=False, negate_output=True)
+        H = d2loss({"mu": mean[0], "sigma_log__": mean[1]})
+        assert_allclose(idata.fit.covariance_matrix.values, np.linalg.inv(H), rtol=1e-6)
+
+
+def test_find_MAP_compute_hessian_discrete_raises():
+    with pm.Model() as m:
+        p = pm.Beta("p", 2, 2)
+        pm.Binomial("k", n=10, p=p)
+    with pytest.raises(ValueError, match=r"undefined for discrete variables \['k'\]"):
+        find_MAP(model=m, vars=m.value_vars, compute_hessian=True, progressbar=False)
+
+
+def test_find_MAP_compute_hessian_float32():
+    with pytensor.config.change_flags(floatX="float32"):
+        with pm.Model() as m:
+            mu = pm.Normal("mu")
+            sigma = pm.Exponential("sigma", 1)
+            pm.Normal("y", mu, sigma, observed=np.linspace(1, 5, 10))
+        idata = find_MAP(model=m, compute_hessian=True, progressbar=False, random_seed=1)
+    assert np.all(np.isfinite(idata.fit.covariance_matrix.values))
+
+
+@pytest.mark.parametrize("method", ["L-BFGS-B", "powell"])
+def test_find_MAP_jax_backend(normal_model, method):
+    pytest.importorskip("jax")
+    idata = find_MAP(
+        method, model=normal_model, backend="jax", compute_hessian=True, progressbar=False
+    )
+    assert idata.fit.covariance_matrix.shape == (2, 2)
+    assert_allclose(idata.posterior["mu"].item(), 3.0, atol=1.0)
+
+
+def test_find_MAP_return_inferencedata_consistent(normal_model):
+    kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
+    idata_kwargs = {"include_transformed": True}
+    idata = find_MAP(idata_kwargs=idata_kwargs, **kwargs)
+    with pytest.warns(FutureWarning, match="`return_inferencedata=False` is deprecated"):
+        point = find_MAP(return_inferencedata=False, idata_kwargs=idata_kwargs, **kwargs)
+    assert set(point) == {"mu", "sigma", "sigma_log__"}
+    internal = _find_MAP_point(
+        initvals=None, jitter=True, jitter_max_retries=10, compile_kwargs=None, **kwargs
+    )
+    assert_allclose(internal["sigma_log__"], point["sigma_log__"])
+    for name, value in point.items():
+        assert_allclose(idata.posterior[name].values.squeeze(), value)
+
+
+def test_find_MAP_idata_kwargs(normal_model):
+    idata = find_MAP(model=normal_model, idata_kwargs={"log_likelihood": True}, progressbar=False)
+    assert "log_likelihood" in idata.children
+    assert idata.log_likelihood["y_hat"].shape == (1, 1, 10)
+
+
+def test_find_MAP_shared_variables():
+    x_val = np.linspace(-1, 1, 20)
+    with pm.Model() as m:
+        x = pm.Data("x", x_val)
+        beta = pm.Normal("beta")
+        sigma = pm.Exponential("sigma", 1)
+        pm.Normal(
+            "y", beta * x, sigma, observed=2 * x_val + np.random.default_rng(0).normal(0, 0.1, 20)
+        )
+
+    idata = find_MAP(model=m, progressbar=False)
+    assert "x" in idata.constant_data
+    assert "y" in idata.observed_data
+    assert_allclose(idata.posterior["beta"].item(), 2.0, atol=0.1)
+
+
+@pytest.mark.parametrize("use_hess, use_hessp", [(True, False), (False, True)])
+def test_find_MAP_basinhopping(normal_model, use_hess, use_hessp):
+    idata = find_MAP(
+        method="basinhopping",
+        model=normal_model,
+        use_hess=use_hess,
+        use_hessp=use_hessp,
+        progressbar=False,
+        random_seed=1,
+        minimizer_kwargs={"method": "Newton-CG"},
+        niter=3,
+    )
+    assert idata.posterior["mu"].shape == (1, 1)
+    assert idata.optimizer_result["method"].item() == "basinhopping"
+    assert idata.optimizer_result["nit"].item() == 3  # basinhopping's totals, not one inner run's
+
+
+def test_find_MAP_with_coords():
+    with pm.Model(coords={"group": [1, 2, 3, 4, 5]}) as m:
+        mu_loc = pm.Normal("mu_loc", 0, 1)
+        mu_scale = pm.HalfNormal("mu_scale", 1)
+        mu = pm.Normal("mu", mu_loc, mu_scale, dims=["group"])
+        sigma = pm.HalfNormal("sigma", 1, dims=["group"])
+        pm.Normal("obs", mu=mu, sigma=sigma, observed=np.random.normal(size=(10, 5)))
+
+    idata = find_MAP(model=m, progressbar=False, idata_kwargs={"include_transformed": True})
+    posterior = idata.posterior.dataset.squeeze(["chain", "draw"])
+    assert posterior["mu"].dims == ("group",)
+    assert posterior["sigma"].shape == (5,)
+    assert posterior["sigma_log__"].shape == (5,)
+    assert idata.fit.rows.values.tolist() == [
+        "mu_loc",
+        "mu_scale_log__",
+        *[f"mu[{i}]" for i in range(1, 6)],
+        *[f"sigma_log__[{i}]" for i in range(1, 6)],
+    ]
+
+
+def test_find_MAP_nonscalar_rv_without_dims():
+    with pm.Model(coords={"test": ["A", "B", "C"]}) as model:
+        x_loc = pm.Normal("x_loc", mu=0, sigma=1, dims=["test"])
+        x = pm.Normal("x", mu=x_loc, sigma=1, shape=(2, 3))
+        pm.Normal("y", mu=x, sigma=1, observed=np.random.randn(10, 2, 3))
+
+    idata = find_MAP(model=model, progressbar=False)
+    assert idata.posterior["x"].shape == (1, 1, 2, 3)
+    assert idata.fit.rows.values.tolist() == [
+        "x_loc[A]",
+        "x_loc[B]",
+        "x_loc[C]",
+        *[f"x[{i},{j}]" for i in range(2) for j in range(3)],
+    ]
+
+
+def test_find_MAP_jitter_escapes_saddle():
+    # https://github.com/pymc-devs/pymc-extras/issues/687
+    with pm.Model() as m:
+        w = pm.Normal("w")
+        z = pm.Normal("z")
+        pm.Normal("y", mu=w * z, sigma=0.1, observed=1.0)
+
+    stuck = map_point(model=m, jitter=False)
+    assert_allclose([stuck["w"], stuck["z"]], 0.0)
+    r1 = map_point(model=m, random_seed=11)
+    r2 = map_point(model=m, random_seed=11)
+    assert_allclose(r1["w"] * r1["z"], 1.0, atol=0.05)
+    assert_allclose(r1["w"], r2["w"])
+
+
+@pytest.mark.parametrize("jitter", [True, False])
+def test_find_MAP_invalid_start_raises(jitter):
+    with pm.Model() as m:
+        pm.Uniform("x", 0, 1, default_transform=None)
+    with pytest.raises(SamplingError, match="Initial evaluation of model at starting point failed"):
+        find_MAP(model=m, initvals={"x": 2.0}, jitter=jitter, progressbar=False)
+
+
+def test_find_MAP_invalid_vars():
+    with pm.Model() as m:
+        pm.Poisson("k", 3)
+    with pytest.raises(ValueError, match="no unobserved continuous variables"):
+        find_MAP(model=m, progressbar=False)
+    with pytest.raises(ValueError):
+        find_MAP(model=m, vars=[pt.constant(1.0)], progressbar=False)
+
+
+def test_find_MAP_unknown_method(normal_model):
+    with pytest.raises(ValueError, match="Unknown method"):
+        find_MAP(method="gradient-descent", model=normal_model, progressbar=False)
+
+
+def test_find_MAP_initvals_variable_keys(normal_model):
+    # Variable keys must survive model freezing; maxiter=1 keeps the result near the start
+    kwargs = {"model": normal_model, "jitter": False, "maxiter": 1, "progressbar": False}
+    with pytest.warns(UserWarning, match="did not converge"):
+        by_var = find_MAP(initvals={normal_model["mu"]: -50.0}, **kwargs)
+    with pytest.warns(UserWarning, match="did not converge"):
+        by_name = find_MAP(initvals={"mu": -50.0}, **kwargs)
+    assert_allclose(by_var.posterior["mu"], by_name.posterior["mu"])
+    assert by_var.posterior["mu"].item() < -10
+
+
+@pytest.mark.parametrize(
+    "legacy, new",
+    [
+        ({"start": {"mu": 1.0}}, {"initvals": {"mu": 2.0}}),
+        ({"seed": 1}, {"random_seed": 2}),
+        ({"maxeval": 10}, {"maxiter": 20}),
+    ],
+)
+def test_find_MAP_legacy_and_new_kwargs_conflict(normal_model, legacy, new):
+    with pytest.raises(ValueError, match="Cannot pass both"):
+        find_MAP(model=normal_model, progressbar=False, **legacy, **new)
+
+
+def test_find_MAP_legacy_kwargs(normal_model):
+    kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
+    with pytest.warns(FutureWarning, match="`start` is deprecated"):
+        r1 = map_point({"mu": 1.0}, **kwargs)
+    with pytest.warns(FutureWarning, match="`start` is deprecated"):
+        r2 = map_point(start={"mu": 1.0}, **kwargs)
+    assert_allclose(r1["mu"], r2["mu"])
+    with pytest.warns(FutureWarning, match="`seed` is deprecated"):
+        find_MAP(seed=1, model=normal_model, progressbar=False)
+    with pytest.warns(FutureWarning, match="`maxeval` is deprecated"):
+        find_MAP(maxeval=10, **kwargs)
+    with pytest.warns(FutureWarning, match="`return_raw` is deprecated"):
+        idata, res = find_MAP(return_raw=True, **kwargs)
+    with pytest.warns(FutureWarning, match="`progressbar_theme` is ignored"):
+        find_MAP(progressbar_theme="default", **kwargs)
+    with pytest.warns(FutureWarning, match="`include_transformed` is deprecated"):
+        legacy = find_MAP(include_transformed=True, **kwargs)
+    assert "sigma_log__" in legacy.posterior
+    with pytest.raises(ValueError, match="only via `idata_kwargs`"):
+        find_MAP(include_transformed=True, idata_kwargs={"include_transformed": False}, **kwargs)
+    # pm.sample's string progress bar options are accepted
+    find_MAP(**{**kwargs, "progressbar": "split+stats"})
+    assert isinstance(res, OptimizeResult)
+    assert set(idata.posterior) == {"mu", "sigma"}
+
+
+class TestOptimizerResultToDataset:
+    names = ["mu", "sigma_log__"]
+
+    def test_basic(self):
+        result = OptimizeResult(
+            x=np.array([1.0, 2.0]),
+            fun=0.5,
+            success=True,
+            message="done",
+            jac=np.array([0.1, 0.2]),
+            nit=5,
+            custom_stat=np.array([42, 43, 44]),
+            status=None,
+        )
+        ds = _optimizer_result_to_dataset(result, "BFGS", self.names)
+        assert isinstance(ds, xr.Dataset)
+        assert ds["x"].coords["variables"].values.tolist() == self.names
+        assert ds["jac"].dims == ("variables",)
+        assert ds["message"].item() == "done" and ds["method"].item() == "BFGS"
+        assert ds["custom_stat"].dims == ("custom_stat_dim_0",)
+        assert "variables_aux" not in ds.coords
+
+    def test_lbfgs_hess_inv_kept_low_rank(self):
+        rng = np.random.default_rng(0)
+        n, m = 2, 3
+        sk, yk = rng.normal(size=(m, n)), rng.normal(size=(m, n))
+        yk = yk + np.sign(np.sum(sk * yk, axis=1))[:, None] * sk  # keep s.y > 0
+        result = OptimizeResult(x=np.ones(n), hess_inv=LbfgsInvHessProduct(sk, yk))
+        ds = _optimizer_result_to_dataset(result, "L-BFGS-B", self.names)
+        assert "hess_inv" not in ds
+        for key, pairs in (("hess_inv_sk", sk), ("hess_inv_yk", yk)):
+            assert ds[key].dims == ("lbfgs_corrections", "variables")
+            assert ds[key].coords["variables"].values.tolist() == self.names
+            assert_allclose(ds[key].values, pairs)
+
+    def test_basinhopping_nested_result(self):
+        result = OptimizeResult(
+            x=np.ones(2),
+            lowest_optimization_result=OptimizeResult(x=np.zeros(2), hess_inv=3 * np.eye(2)),
+        )
+        ds = _optimizer_result_to_dataset(result, "basinhopping", self.names)
+        assert_allclose(ds["hess_inv"].values, 3 * np.eye(2))
+        assert_allclose(ds["x"].values, 1.0)
+        assert "lowest_optimization_result" not in ds
+
+    def test_ragged_and_mismatched_fields(self):
+        result = OptimizeResult(
+            x=np.ones(2),
+            method="tr_interior_point",  # trust-constr's sub-method must not overwrite ours
+            jac=[],  # trust-constr's (empty) constraint Jacobians are not per-parameter
+            final_simplex=(np.zeros((3, 2)), np.zeros(3)),  # nelder-mead
+        )
+        ds = _optimizer_result_to_dataset(result, "trust-constr", self.names)
+        assert ds["method"].item() == "trust-constr"
+        assert ds["jac"].dims == ("jac_dim_0",)
+        assert ds["final_simplex_0"].dims == ("final_simplex_0_dim_0", "variables")
+        assert ds["final_simplex_1"].dims == ("final_simplex_1_dim_0",)
