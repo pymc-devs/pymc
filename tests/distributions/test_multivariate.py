@@ -1604,6 +1604,15 @@ class TestZeroSumNormal:
             self.assert_zerosum_axes(samples, n_zerosum_axes)
             self.assert_zerosum_axes(samples, nonzero_axes, check_zerosum_axes=False)
 
+    def test_logp_float32(self):
+        with pytensor.config.change_flags(floatX="float32"):
+            dist = pm.ZeroSumNormal.dist(sigma=10, shape=(1000, 5))
+            draws = pm.draw(dist, random_seed=1)
+            assert draws.dtype == "float32"
+            assert np.isfinite(pm.logp(dist, draws).eval()).all()
+            with pytest.raises(ParameterValueError):
+                pm.logp(dist, draws + np.float32(1e-2)).eval()
+
     @pytest.mark.parametrize(
         "error, match, shape, support_shape, n_zerosum_axes",
         [
