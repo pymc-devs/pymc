@@ -43,6 +43,9 @@ pytestmark = pytest.mark.filterwarnings(
     "error",
     "ignore:There are not enough devices to run parallel chains:UserWarning",
     "ignore:os.fork\\(\\) was called:RuntimeWarning",
+    # This module exercises the deprecated nuts_sampler/init arguments on purpose
+    "ignore:The `nuts_sampler` argument is deprecated:DeprecationWarning",
+    "ignore:The NUTS-specific `init`:DeprecationWarning",
 )
 
 

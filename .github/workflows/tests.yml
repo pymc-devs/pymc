@@ -313,6 +313,7 @@ jobs:
             tests/distributions/test_random_alternative_backends.py
             tests/sampling/test_jax.py
             tests/sampling/test_mcmc_external.py
+            tests/sampling/test_samplers.py
 
       fail-fast: false
     runs-on: ubuntu-latest
