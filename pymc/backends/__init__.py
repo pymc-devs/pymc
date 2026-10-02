@@ -90,8 +90,14 @@ class _ZarrChainBase:
 
     Importing the real class pulls the optional ``zarr`` dependency. Callers that
     only need an ``isinstance`` check (e.g. dispatch in ``pymc.sampling``) can
-    import this base instead and skip the zarr import.
+    import this base instead and skip the zarr import. The method stubs mirror
+    the subset of ``ZarrChain`` invoked through this base so type checkers can
+    validate calls guarded by ``isinstance(_, _ZarrChainBase)``.
     """
+
+    def link_stepper(self, step_method) -> None: ...
+    def record_sampling_state(self, step=None) -> None: ...
+    def store_sampling_state(self, sampling_state) -> None: ...
 
 
 class _ZarrTraceBase:
