@@ -286,6 +286,29 @@ def test_pandas_to_array_pandas_index():
     np.testing.assert_array_equal(result, expected)
 
 
+@pytest.mark.parametrize(
+    "dtype, expected",
+    [("int32", "intX"), ("int64", "intX"), ("uint8", "uint8"), ("bool", "bool")],
+)
+def test_convert_data_int_bool_dataframe(dtype, expected):
+    if expected == "intX":
+        expected = pm.pytensorf._conversion_map[pytensor.config.floatX]
+    df = pd.DataFrame({"a": [0, 1, 0], "b": [1, 0, 1]}, dtype=dtype)
+    assert convert_data(df).dtype == expected
+
+
+@pytest.mark.parametrize(
+    "df",
+    [
+        pd.DataFrame({"a": [0, 1, 2], "b": [True, False, True]}),
+        pd.DataFrame({"t": pd.to_datetime(["2020-01-01", "2020-01-02"])}),
+    ],
+    ids=["mixed", "datetime"],
+)
+def test_convert_data_other_dataframe_to_floatX(df):
+    assert convert_data(df).dtype == pytensor.config.floatX
+
+
 class TestCompile:
     def test_check_bounds_flag(self):
         """Test that CheckParameterValue Ops are replaced or removed when using compile_pymc"""
