@@ -476,7 +476,6 @@ class Distribution(metaclass=DistributionMeta):
         cls,
         name: str,
         *args,
-        rng=None,
         dims: Dims | None = None,
         initval=None,
         observed=None,
