@@ -132,7 +132,8 @@ def test_observe_dims():
         x = pm.Normal("x", dims="test_dim")
 
     m_new = observe(m_old, {x: np.arange(5, dtype=config.floatX)})
-    assert m_new.named_vars_to_dims["x"] == ["test_dim"]
+    assert m_new.named_vars_to_dims["x"] == ("test_dim",)
+    assert m_new.named_vars_to_dims == m_old.named_vars_to_dims
 
 
 def test_do():
@@ -229,13 +230,15 @@ def test_do_dims():
         m,
         {"x": np.zeros(10, dtype=config.floatX)},
     )
-    assert do_m.named_vars_to_dims["x"] == ["test_dim"]
+    assert do_m.named_vars_to_dims["x"] == ("test_dim",)
+    assert do_m.named_vars_to_dims == m.named_vars_to_dims
 
     do_m = do(
         m,
         {"y": np.zeros(10, dtype=config.floatX)},
     )
-    assert do_m.named_vars_to_dims["y"] == ["test_dim"]
+    assert do_m.named_vars_to_dims["y"] == ("test_dim",)
+    assert do_m.named_vars_to_dims == m.named_vars_to_dims
 
 
 @pytest.mark.parametrize("prune", (False, True))
