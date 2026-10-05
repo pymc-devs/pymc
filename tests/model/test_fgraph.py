@@ -61,7 +61,8 @@ def test_basic():
 
     assert m_new.coords == {"test_dim": tuple(range(3))}
     assert m_new._dim_lengths["test_dim"].eval() == 3
-    assert m_new.named_vars_to_dims == {"z": ["test_dim"]}
+    assert m_new.named_vars_to_dims == {"z": ("test_dim",)}
+    assert m_new.named_vars_to_dims == m_old.named_vars_to_dims
 
     named_vars = {"x", "y", "w", "z", "pot"}
     assert set(m_new.named_vars) == named_vars
@@ -353,9 +354,9 @@ def test_fgraph_rewrite(non_centered_rewrite):
 
     m_new = model_from_fgraph(fg)
     assert m_new.named_vars_to_dims == {
-        "subject_mean": ["subject"],
-        "subject_mean_raw_": ["subject"],
-        "obs": ["subject"],
+        "subject_mean": ("subject",),
+        "subject_mean_raw_": ("subject",),
+        "obs": ("subject",),
     }
     assert set(m_new.named_vars) == {
         "group_mean",
