@@ -17,6 +17,7 @@ import io
 from os import path
 
 import numpy as np
+import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -424,6 +425,115 @@ class TestData:
             )
         assert data.container.strict is strict_value
         assert data.container.allow_downcast is allow_downcast_value
+
+    @pytest.mark.parametrize(
+        ("value", "dtype"),
+        [
+            ([True, False], bool),
+            ([1, 2], "int8"),
+            (np.array([1, 2]), np.dtype("uint16")),
+            (pd.Series([1, 2]), np.int64),
+            (pd.DataFrame({"x": [1.5, 2.5]}), "float32"),
+            (np.array([1.5, 2.5]), "float64"),
+        ],
+    )
+    def test_data_explicit_dtype(self, value, dtype):
+        with pm.Model():
+            data = pm.Data("data", value, dtype=dtype)
+
+        assert data.dtype == np.dtype(dtype).name
+        np.testing.assert_array_equal(data.get_value(), np.asarray(value, dtype=dtype))
+
+    def test_data_dtype_with_shared_kwargs_and_dims(self):
+        with pm.Model() as model:
+            data = pm.Data(
+                "data",
+                [1, 2],
+                dtype="int16",
+                dims="obs",
+                coords={"obs": ["a", "b"]},
+                strict=True,
+                allow_downcast=False,
+            )
+
+        assert data.dtype == "int16"
+        assert data.container.strict is True
+        assert data.container.allow_downcast is False
+        assert model.coords["obs"] == ("a", "b")
+
+    @pytest.mark.parametrize("dtype", ["not-a-dtype", "floatX"])
+    def test_data_invalid_dtype(self, dtype):
+        with pm.Model(), pytest.raises(TypeError):
+            pm.Data("data", [1, 2], dtype=dtype)
+
+    def test_data_explicit_dtype_preserves_masked_array_error(self):
+        with (
+            pm.Model(),
+            pytest.raises(
+                NotImplementedError,
+                match="Masked arrays or arrays with `nan` entries are not supported.",
+            ),
+        ):
+            pm.Data("data", [1.0, np.nan], dtype="float32")
+
+    @pytest.mark.parametrize(
+        ("initial", "updated"),
+        [
+            (np.array([True, False], dtype=bool), np.array([False, True], dtype=bool)),
+            (np.array([1, 2], dtype="int8"), np.array([3, 4], dtype="int8")),
+            (np.array([1, 2], dtype="int64"), [2**40, 2**40 + 1]),
+            (
+                np.array([1, 2], dtype="int64"),
+                pd.Series([2**40, 2**40 + 1], dtype="int64"),
+            ),
+            (np.array([1.0, 2.0], dtype="float32"), np.array([3.0, 4.0], dtype="float32")),
+        ],
+    )
+    def test_set_data_preserves_matching_container_dtype(self, initial, updated):
+        with pm.Model() as model:
+            data = pm.Data("data", initial, dtype=initial.dtype)
+
+        model.set_data("data", updated)
+
+        assert data.get_value().dtype == initial.dtype
+        np.testing.assert_array_equal(data.get_value(), updated)
+
+    def test_set_data_matching_dtype_allows_shape_change(self):
+        with pm.Model() as model:
+            data = pm.Data("data", np.array([1], dtype="int64"), dtype="int64")
+
+        model.set_data("data", np.array([2**40, 2**40 + 1], dtype="int64"))
+
+        np.testing.assert_array_equal(data.get_value(), [2**40, 2**40 + 1])
+
+    @pytest.mark.parametrize(
+        "updated",
+        [
+            pd.Series([3, 4], dtype="Int64"),
+            pd.Series([3, 4], dtype="category"),
+        ],
+    )
+    def test_set_data_preserves_pandas_extension_dtype_support(self, updated):
+        with pm.Model() as model:
+            data = pm.Data("data", [1, 2])
+
+        model.set_data("data", updated)
+
+        np.testing.assert_array_equal(data.get_value(), [3, 4])
+
+    @pytest.mark.parametrize(
+        ("initial", "updated"),
+        [
+            (np.array([1, 2], dtype="int64"), np.array([1.5, 2.5], dtype="float64")),
+            (np.array([True, False], dtype=bool), np.array([1, 0], dtype="int64")),
+        ],
+    )
+    def test_set_data_still_rejects_cross_dtype_update(self, initial, updated):
+        with pm.Model() as model:
+            pm.Data("data", initial, dtype=initial.dtype)
+
+        with pytest.raises(TypeError):
+            model.set_data("data", updated)
 
     def test_masked_array_error(self):
         with pm.Model():

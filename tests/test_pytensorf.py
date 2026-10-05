@@ -279,6 +279,51 @@ def test_convert_data(input_dtype):
         assert pytensor_output.dtype == intX
 
 
+@pytest.mark.parametrize(
+    ("data", "dtype"),
+    [
+        ([1, 2], "int8"),
+        (np.array([1, 2]), np.dtype("uint16")),
+        (pd.Series([1, 2]), np.int64),
+        (sps.csr_matrix(np.eye(2)), "float32"),
+        (pt.as_tensor_variable([1, 2]), "int16"),
+        (np.array([1.5, 2.5]), "float64"),
+    ],
+)
+def test_convert_data_explicit_dtype(data, dtype):
+    result = convert_data(data, dtype=dtype)
+
+    assert result.dtype == np.dtype(dtype).name
+
+
+def test_convert_data_explicit_dtype_preserves_mask():
+    data = ma.array([1.0, 2.0], mask=[False, True])
+
+    result = convert_data(data, dtype="float32")
+
+    assert isinstance(result, ma.MaskedArray)
+    assert result.dtype == np.dtype("float32")
+    npt.assert_array_equal(result.mask, data.mask)
+
+
+def test_convert_data_same_variable_dtype_preserves_identity():
+    data = pt.as_tensor_variable([1.0, 2.0], dtype="float32")
+
+    result = convert_data(data, dtype="float32")
+
+    assert result is data
+
+
+def test_convert_data_dtype_none_is_unchanged():
+    data = np.array([1.0, 2.0], dtype="float32")
+
+    result = convert_data(data, dtype=None)
+    expected = convert_data(data)
+
+    npt.assert_array_equal(result, expected)
+    assert result.dtype == expected.dtype
+
+
 def test_pandas_to_array_pandas_index():
     data = pd.Index([1, 2, 3])
     result = convert_data(data)
