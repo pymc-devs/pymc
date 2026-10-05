@@ -370,7 +370,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       TEST_SUBSET: ${{ matrix.test-subset }}
-      PYTENSOR_FLAGS: floatX=float32
+      PYTENSOR_FLAGS: floatX=float32,linker=${{ matrix.linker }}
       # See the ubuntu job for why the numba codegen target is pinned.
       NUMBA_CPU_NAME: generic
       NUMBA_CPU_FEATURES: ""
