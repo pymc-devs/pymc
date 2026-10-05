@@ -519,9 +519,14 @@ def _sample_external_nuts(
             "postprocessing_vectorize",
             "postprocessing_chunks",
         )
-        jax_top_level_kwargs = {
-            key: jax_nuts_kwargs.pop(key) for key in jax_top_level_params if key in jax_nuts_kwargs
-        }
+        jax_top_level_kwargs = {}
+        for key in jax_top_level_params:
+            if key in kwargs and key in jax_nuts_kwargs:
+                raise ValueError(f"Specify `{key}` either directly or in `nuts`, not both.")
+            if key in kwargs:
+                jax_top_level_kwargs[key] = kwargs.pop(key)
+            elif key in jax_nuts_kwargs:
+                jax_top_level_kwargs[key] = jax_nuts_kwargs.pop(key)
         # Don't forward tune=None: let `sample_jax_nuts`'s own default kick in.
         tune_kwarg = {"tune": tune} if tune is not None else {}
         idata = pymc_jax.sample_jax_nuts(
@@ -796,6 +801,10 @@ def sample(
     ``nuts``, ``hmc``, ``metropolis``, ``binary_metropolis``,
     ``binary_gibbs_metropolis``, ``categorical_gibbs_metropolis``,
     ``DEMetropolis``, ``DEMetropolisZ``, ``slice``
+
+    When using ``nuts_sampler="numpyro"`` or ``"blackjax"``, options accepted by
+    ``sample_jax_nuts`` (such as ``chain_method``) can be passed directly to ``sample`` or
+    inside ``nuts={...}``.
 
     The NUTS step method has several options including:
 

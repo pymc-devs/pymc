@@ -101,19 +101,27 @@ def test_step_args():
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
 
-def test_jax_sampler_kwargs_routing():
-    pytest.importorskip("numpyro")
+@pytest.mark.parametrize(
+    "sampler_kwargs",
+    [
+        pytest.param({"chain_method": "vectorized", "nuts": {"max_tree_depth": 7}}, id="direct"),
+        pytest.param(
+            {"nuts": {"chain_method": "vectorized", "max_tree_depth": 7}},
+            id="inside-nuts",
+        ),
+    ],
+)
+def test_jax_sampler_kwargs_routing(sampler_kwargs):
+    pytest.importorskip("jax")
 
-    # `chain_method` and `max_tree_depth` share the single `nuts` dict but belong to
-    # different layers: the former is a `sample_jax_nuts` argument, the latter a
-    # NUTS-kernel one. Their effects are not observable in the returned trace, so the
-    # dispatch is checked at the call `_sample_external_nuts` makes to the sampler.
+    # `chain_method` is a `sample_jax_nuts` argument, while `max_tree_depth` is a
+    # NUTS-kernel argument. Check that both reach the correct layer.
     with mock.patch("pymc.sampling.jax.sample_jax_nuts") as mock_sampler:
         with Model():
             Normal("a")
             sample(
                 nuts_sampler="numpyro",
-                nuts={"chain_method": "vectorized", "max_tree_depth": 7},
+                **sampler_kwargs,
                 random_seed=1411,
                 progressbar=False,
             )
@@ -121,6 +129,21 @@ def test_jax_sampler_kwargs_routing():
     call_kwargs = mock_sampler.call_args.kwargs
     assert call_kwargs["chain_method"] == "vectorized"
     assert call_kwargs["nuts_kwargs"] == {"max_tree_depth": 7}
+
+
+def test_jax_sampler_kwargs_reject_duplicates():
+    pytest.importorskip("jax")
+
+    with Model():
+        Normal("a")
+        with pytest.raises(ValueError, match="either directly or in `nuts`, not both"):
+            sample(
+                nuts_sampler="numpyro",
+                chain_method="vectorized",
+                nuts={"chain_method": "parallel"},
+                random_seed=1411,
+                progressbar=False,
+            )
 
 
 @pytest.mark.parametrize("nuts_sampler", ["pymc", "nutpie", "blackjax", "numpyro"])
