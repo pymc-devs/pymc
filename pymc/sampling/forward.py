@@ -36,6 +36,8 @@ from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.traversal import ancestors, general_toposort, walk
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
+from pytensor.xtensor.type import XTensorType, XTensorVariable, xtensor_constant
+from pytensor.xtensor.vectorization import vectorize_graph as xvectorize_graph
 from rich.theme import Theme
 from xarray import Dataset, DataTree
 
@@ -1383,9 +1385,15 @@ def vectorize_over_posterior(
     batch_shape = tuple([len(posterior.coords[dim]) for dim in sample_dims])
     replace_dict: dict[Variable, Variable] = {}
     for rv in needed_rvs:
-        posterior_samples = posterior[rv.name].data
-
-        replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)  # type: ignore[attr-defined]
+        if isinstance(rv, XTensorVariable):
+            dims = (*sample_dims, *rv.type.dims)
+            posterior_samples = posterior[rv.name].transpose(*dims).data
+            replace_dict[rv] = xtensor_constant(
+                posterior_samples.astype(rv.type.dtype), name=rv.name, dims=dims
+            )
+        else:
+            posterior_samples = posterior[rv.name].data
+            replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)  # type: ignore[attr-defined]
 
     # Replace the rvs that remain in the graph with resized versions
     all_rvs = rvs_in_graph(outputs)
@@ -1409,10 +1417,29 @@ def vectorize_over_posterior(
         if not (set(blockers) & set(rv_ancestors)):
             independent_rvs.append(rv)
     for rv in independent_rvs:
-        replace_dict[rv] = change_dist_size(rv, new_size=batch_shape, expand=True)
+        if isinstance(rv, XTensorVariable):
+            from pymc.dims.distributions.core import expand_dist_dims
+
+            replace_dict[rv] = expand_dist_dims(rv, dict(zip(sample_dims, batch_shape)))
+        else:
+            replace_dict[rv] = change_dist_size(rv, new_size=batch_shape, expand=True)
 
     # Vectorize across samples
-    vectorized_outputs = list(vectorize_graph(outputs, replace=replace_dict))
+    if any(isinstance(var.type, XTensorType) for var in ancestors(outputs)):
+        # Graphs with dims need the dims-aware vectorization. Plain tensor replacements
+        # carry the sample dims positionally on the left, so they must be labeled.
+        has_tensor_replacements = any(
+            not isinstance(new.type, XTensorType) for new in replace_dict.values()
+        )
+        vectorized_outputs = list(
+            xvectorize_graph(
+                outputs,
+                replace=replace_dict,
+                new_tensor_dims=sample_dims if has_tensor_replacements else (),
+            )
+        )
+    else:
+        vectorized_outputs = list(vectorize_graph(outputs, replace=replace_dict))
     for vectorized_output, output in zip(vectorized_outputs, outputs):
         vectorized_output.name = output.name
 
