@@ -111,11 +111,15 @@ def scipy_optimize_funcs_from_loss(
         loss = cast(TensorVariable, outputs[0])
     loss = rewrite_pregrad(loss)
 
+    def trusted(fn):  # scipy hands over float64; cast here so PyTensor can skip its input checks
+        fn.trust_input = True
+        return lambda *args: fn(*(np.asarray(arg, dtype=flat_input.dtype) for arg in args))
+
     f_hessp = None
     if use_hessp:
-        p = pt.tensor("p", shape=flat_input.type.shape)
+        p = pt.tensor("p", shape=flat_input.type.shape, dtype=flat_input.dtype)
         hessp = pytensor.gradient.hessian_vector_product(loss, [flat_input], p)
-        f_hessp = compile([flat_input, p], hessp[0], **compile_kwargs)
+        f_hessp = trusted(compile([flat_input, p], hessp[0], **compile_kwargs))
 
     outputs = [loss]
     if use_grad:
@@ -123,7 +127,9 @@ def scipy_optimize_funcs_from_loss(
         outputs.append(grad)
     if use_hess:
         outputs.append(pytensor.gradient.jacobian(grad, [flat_input])[0])
-    f_fused = compile([flat_input], outputs if len(outputs) > 1 else loss, **compile_kwargs)
+    f_fused = trusted(
+        compile([flat_input], outputs if len(outputs) > 1 else loss, **compile_kwargs)
+    )
     return f_fused, f_hessp
 
 

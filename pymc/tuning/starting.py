@@ -23,8 +23,8 @@ from itertools import product
 from typing import TYPE_CHECKING, Any, Literal, NamedTuple, cast
 
 import numpy as np
+import pytensor
 import pytensor.gradient as tg
-import pytensor.tensor as pt
 import xarray as xr
 
 from pytensor.compile import Function
@@ -37,7 +37,7 @@ from pymc.backends.arviz import to_inference_data
 from pymc.backends.base import MultiTrace
 from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
-from pymc.initial_point import StartDict
+from pymc.initial_point import StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
 from pymc.progress_bar import ProgressBarOptions
 from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
@@ -359,8 +359,6 @@ def _fit_MAP(
     """Run the optimization behind :func:`find_MAP`; no defaults, so they live only there."""
     from better_optimize import basinhopping, minimize
 
-    from pymc.sampling.mcmc import _init_jitter  # avoids a circular import
-
     model = cast(Model, modelcontext(model))
     selected = set(model.continuous_value_vars if vars is None else _value_vars(vars, model))
     vars = [var for var in model.value_vars if var in selected]  # model order
@@ -376,16 +374,13 @@ def _fit_MAP(
         )
 
     rng = get_random_generator(random_seed)
-    [start] = _init_jitter(
-        model,
-        initvals,
-        [int(rng.integers(2**30))],
-        jitter,
-        jitter_max_retries,
-        jitter_rvs=[model.values_to_rvs[var] for var in vars if var not in discrete],
-        # Only checks a few jittered starts for finiteness; a full backend compile is wasted here
-        logp_fn=model.compile_logp(mode="FAST_COMPILE") if jitter else None,
+    [ipfn] = make_initial_point_fns_per_chain(
+        model=model,
+        overrides=initvals,
+        jitter_rvs={model.values_to_rvs[v] for v in vars if v not in discrete} if jitter else set(),
+        chains=1,
     )
+    start = ipfn(int(rng.integers(2**30)))
 
     method = _canonical_method(method)
     do_basinhopping = method == "basinhopping"
@@ -407,16 +402,21 @@ def _fit_MAP(
         method, use_grad, use_hess, use_hessp
     )
 
+    # Held-fixed variables are shared inputs, so one compiled loss serves every candidate start
+    fixed = {
+        v: pytensor.shared(start[v.name], v.name, shape=v.type.shape)
+        for v in model.value_vars
+        if v not in vars
+    }
     loss = -cast(TensorVariable, model.logp(jacobian=False))
-    if fixed := [var for var in model.value_vars if var not in vars]:
-        loss = graph_replace(loss, {var: pt.constant(start[var.name], var.name) for var in fixed})
-    x0 = DictToArrayBijection.map({str(v.name): start[str(v.name)] for v in vars})
+    if fixed:
+        loss = graph_replace(loss, fixed)
 
     def compile_funcs(use_grad, use_hess, use_hessp):
         return scipy_optimize_funcs_from_loss(
             loss=loss,
             inputs=vars,
-            initial_point_dict=DictToArrayBijection.rmap(x0),
+            initial_point_dict=start,
             use_grad=use_grad,
             use_hess=use_hess,
             use_hessp=use_hessp,
@@ -438,9 +438,24 @@ def _fit_MAP(
         method, use_grad, use_hess, use_hessp = "powell", False, False, False
         f_fused, f_hessp = compile_funcs(use_grad, use_hess, need_hessp)
 
-    out = f_fused(x0.data)
-    if not np.isfinite(out[0] if isinstance(out, tuple | list) else out):
-        model.check_start_vals(start)
+    def ravel(point):
+        return DictToArrayBijection.map({str(v.name): point[str(v.name)] for v in vars})
+
+    def loss_at(point):
+        for var, shared in fixed.items():
+            shared.set_value(point[var.name])
+        out = f_fused(ravel(point).data)
+        return out[0] if isinstance(out, tuple | list) else out
+
+    # As in pm.sample, redraw a jittered start until the objective is finite there
+    for _ in range(jitter_max_retries if jitter else 0):
+        if np.isfinite(loss_at(start)):
+            break
+        start = ipfn(int(rng.integers(2**30)))
+    else:
+        if not np.isfinite(loss_at(start)):
+            model.check_start_vals(start)
+    x0 = ravel(start)
 
     optimizer_hessp = f_hessp if use_hessp else None
     if do_basinhopping:

@@ -24,7 +24,7 @@ import sys
 import time
 import warnings
 
-from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
     Any,
@@ -40,7 +40,6 @@ from pytensor.compile.mode import get_mode
 from pytensor.graph.basic import Variable
 from pytensor.link.jax.linker import JAXLinker
 from pytensor.link.numba.linker import NumbaLinker
-from pytensor.tensor import TensorVariable
 from rich.theme import Theme
 from threadpoolctl import threadpool_limits
 from typing_extensions import Protocol
@@ -1701,7 +1700,6 @@ def _init_jitter(
     jitter: bool,
     jitter_max_retries: int,
     logp_fn: Callable[[PointType], np.ndarray] | None = None,
-    jitter_rvs: Iterable[TensorVariable] | None = None,
 ) -> list[PointType]:
     """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
 
@@ -1719,8 +1717,6 @@ def _init_jitter(
     logp_fn: Callable[[dict[str, np.ndarray]], np.ndarray | jax.Array] | None
         logp function that takes the output of initial point functions as input.
         If None, will use the results of model.compile_logp().
-    jitter_rvs: iterable of random variables, optional
-        Variables to jitter. Defaults to all free variables.
 
     Returns
     -------
@@ -1730,7 +1726,7 @@ def _init_jitter(
     ipfns = make_initial_point_fns_per_chain(
         model=model,
         overrides=initvals,
-        jitter_rvs=set(model.free_RVs if jitter_rvs is None else jitter_rvs) if jitter else set(),
+        jitter_rvs=set(model.free_RVs) if jitter else set(),
         chains=len(seeds),
     )
 
@@ -1802,10 +1798,10 @@ def init_nuts(
           sample variance of the tuning samples.
         * advi: Run ADVI to estimate posterior mean and diagonal mass matrix.
         * advi_map: Initialize ADVI with MAP and use MAP as starting point.
-        * map: Use the MAP, searched for from the test value, as starting point. This is
-          discouraged.
-        * jitter+map: Same as ``map``, but search from the test value plus a uniform jitter in
-          [-1, 1].
+        * map: Use the MAP, searched for from the model's initial point, as starting point.
+          This is discouraged.
+        * jitter+map: Same as ``map``, but search from the initial point plus a uniform jitter
+          in [-1, 1].
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
           test value (usually the prior mean) as starting point.
         * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
