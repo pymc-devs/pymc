@@ -1396,7 +1396,10 @@ def vectorize_over_posterior(
             replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)  # type: ignore[attr-defined]
 
     # Replace the rvs that remain in the graph with resized versions
-    all_rvs = rvs_in_graph(outputs)
+    # RVs that are only reachable through the replaced needed_rvs drop out of the graph,
+    # so they must not be resized either.
+    reachable = set(ancestors(outputs, blockers=needed_rvs))
+    all_rvs = {rv for rv in rvs_in_graph(outputs) if rv in reachable}
 
     # Once we give values for the needed_rvs (setting them to their posterior samples),
     # we need to identify the rvs that only depend on these conditioned values, and
@@ -1439,6 +1442,8 @@ def vectorize_over_posterior(
             )
         )
     else:
+        # TODO: use the dims-aware vectorize_graph for all graphs once
+        # https://github.com/pymc-devs/pytensor/issues/2456 is fixed
         vectorized_outputs = list(vectorize_graph(outputs, replace=replace_dict))
     for vectorized_output, output in zip(vectorized_outputs, outputs):
         vectorized_output.name = output.name
