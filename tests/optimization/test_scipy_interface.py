@@ -16,8 +16,8 @@ import pytest
 
 from pytensor import tensor as pt
 
-from pymc.tuning import scipy_interface
-from pymc.tuning.scipy_interface import (
+from pymc.optimization import scipy_interface
+from pymc.optimization.scipy_interface import (
     scipy_optimize_funcs_from_loss,
     set_optimizer_function_defaults,
 )

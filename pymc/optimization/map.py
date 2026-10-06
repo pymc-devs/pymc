@@ -39,13 +39,13 @@ from pymc.backends.ndarray import NDArray
 from pymc.blocking import DictToArrayBijection, PointType, RaveledVars
 from pymc.initial_point import StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
-from pymc.progress_bar import ProgressBarOptions
-from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
-from pymc.tuning.scipy_interface import (
+from pymc.optimization.scipy_interface import (
     _compute_inverse_hessian,
     scipy_optimize_funcs_from_loss,
     set_optimizer_function_defaults,
 )
+from pymc.progress_bar import ProgressBarOptions
+from pymc.pytensorf import inputvars, resolve_backend_compile_kwargs
 from pymc.util import (
     RandomState,
     get_default_varnames,

@@ -13,6 +13,7 @@ API
    api/samplers
    api/vi
    api/smc
+   api/optimization
    api/data
    api/ode
    api/logprob
