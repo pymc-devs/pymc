@@ -29,8 +29,9 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.model.transform.optimization import freeze_model
-from pymc.optimization.map import _find_MAP_point, _optimizer_result_to_dataset
+from pymc.step_methods.metropolis import tune
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
+from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
 
@@ -70,6 +71,13 @@ def test_mle_jacobian(bounded):
     _, model, _ = models.simple_normal(bounded_prior=bounded)
     map_estimate = map_point(method="BFGS", model=model)
     assert_allclose(map_estimate["mu_i"], truth, rtol=rtol)
+
+
+def test_tune_not_inplace():
+    orig_scaling = np.array([0.001, 0.1])
+    returned_scaling = tune(orig_scaling, acc_rate=0.6)
+    assert returned_scaling is not orig_scaling
+    assert np.all(orig_scaling == np.array([0.001, 0.1]))
 
 
 def test_accuracy_normal():

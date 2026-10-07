@@ -14,7 +14,7 @@
 
 """Tuning phase."""
 
-from pymc.optimization.map import find_MAP  # kept importable from here
 from pymc.tuning.scaling import find_hessian, guess_scaling, trace_cov
+from pymc.tuning.starting import find_MAP
 
-__all__ = ("find_hessian",)
+__all__ = ("find_MAP", "find_hessian")

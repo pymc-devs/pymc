@@ -7,3 +7,4 @@ Tuning
    :toctree: generated/
 
    find_hessian
+   find_MAP

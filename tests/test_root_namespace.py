@@ -26,7 +26,6 @@ _REEXPORTED_SUBMODULES = (
     "distributions",
     "logprob",
     "model.core",
-    "optimization",
     "sampling",
     "smc",
     "step_methods",

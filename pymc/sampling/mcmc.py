@@ -60,7 +60,6 @@ from pymc.blocking import DictToArrayBijection
 from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType, StartDict, make_initial_point_fns_per_chain
 from pymc.model import Model, modelcontext
-from pymc.optimization.map import _find_MAP_point
 from pymc.progress_bar import (
     MCMCProgressBarManager,
     NutpieProgressBarManager,
@@ -79,6 +78,7 @@ from pymc.step_methods import NUTS, STEP_METHODS, CompoundStep
 from pymc.step_methods.arraystep import BlockedStep, PopulationArrayStepShared
 from pymc.step_methods.compound import flatten_steps
 from pymc.step_methods.hmc import quadpotential
+from pymc.tuning.starting import _find_MAP_point
 from pymc.util import (
     RandomSeed,
     RandomState,

@@ -33,7 +33,6 @@ from pymc.step_methods.metropolis import (
     Metropolis,
     MultivariateNormalProposal,
     NormalProposal,
-    tune,
 )
 from pymc.step_methods.state import equal_dataclass_values
 from pymc.testing import fast_unstable_sampling_mode
@@ -48,13 +47,6 @@ from tests.models import (
 )
 
 SEED = sum(ord(c) for c in "test_metropolis")
-
-
-def test_tune_not_inplace():
-    orig_scaling = np.array([0.001, 0.1])
-    returned_scaling = tune(orig_scaling, acc_rate=0.6)
-    assert returned_scaling is not orig_scaling
-    assert np.all(orig_scaling == np.array([0.001, 0.1]))
 
 
 class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
