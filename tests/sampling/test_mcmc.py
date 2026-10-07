@@ -64,7 +64,7 @@ class TestSample:
     def setup_method(self):
         self.model, self.start, self.step, _ = simple_init()
 
-    @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "map"))
+    @pytest.mark.parametrize("init", ("jitter+adapt_diag", "advi", "jitter+map"))
     @pytest.mark.parametrize("cores", (1, 2))
     @pytest.mark.parametrize(
         "chains, seeds",
@@ -160,6 +160,7 @@ class TestSample:
             "advi",
             "advi_map",
             "map",
+            "jitter+map",
             "adapt_diag",
             "jitter+adapt_diag",
             "jitter+adapt_diag_grad",
@@ -586,7 +587,7 @@ def test_sample_find_MAP_does_not_modify_start():
 
         # make sure find_Map does not modify the start dict
         start = {"untransformed": 2}
-        pm.find_MAP(start=start)
+        pm.find_MAP(initvals=start, jitter=False, return_inferencedata=True, progressbar=False)
         assert start == {"untransformed": 2}
 
         # make sure sample does not modify the start dict
@@ -703,6 +704,7 @@ def check_exec_nuts_init(method):
         "jitter+adapt_diag",
         "adapt_diag",
         "map",
+        "jitter+map",
         "adapt_full",
         "jitter+adapt_full",
     ],
@@ -713,6 +715,26 @@ def test_exec_nuts_init(method):
             check_exec_nuts_init(method)
     else:
         check_exec_nuts_init(method)
+
+
+def test_init_map_jitter_and_initvals(monkeypatch):
+    calls = []
+    find_map_point = pm.sampling.mcmc._find_MAP_point
+    monkeypatch.setattr(
+        pm.sampling.mcmc,
+        "_find_MAP_point",
+        lambda **kwargs: calls.append(kwargs) or find_map_point(**kwargs),
+    )
+    for init in ("map", "jitter+map", "advi_map"):
+        check_exec_nuts_init(init)
+    assert [c["jitter"] for c in calls] == [False, False, True, True, False, False]
+
+    calls.clear()
+    with pm.Model():
+        pm.Normal("a")
+        pm.init_nuts(init="map", initvals={"a": 2.0}, random_seed=[1])
+        pm.init_nuts(init="map", initvals=[{"a": 3.0}, {"a": 4.0}], chains=2, random_seed=[1, 2])
+    assert [c["initvals"] for c in calls] == [{"a": 2.0}, {"a": 3.0}]
 
 
 @pytest.mark.skip(reason="Test requires monkey patching of RandomGenerator")

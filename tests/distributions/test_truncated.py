@@ -434,9 +434,13 @@ def test_truncated_inference():
             observed=obs,
         )
 
-        map = find_MAP(progressbar=False)
+        lam_map = (
+            find_MAP(progressbar=False, jitter=False, return_inferencedata=True)
+            .posterior["lam"]
+            .item()
+        )
 
-    assert np.isclose(map["lam"], lam_true, atol=0.1)
+    assert np.isclose(lam_map, lam_true, atol=0.1)
 
 
 def test_truncated_gamma():
