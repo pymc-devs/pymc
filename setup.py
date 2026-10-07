@@ -55,6 +55,7 @@ test_reqs = ["pytest", "pytest-cov"]
 
 extras_require = {
     "nutpie": ["nutpie>=0.16.10,<1"],
+    "zarr": ["zarr>=3.2.0,<4"],
 }
 
 if __name__ == "__main__":

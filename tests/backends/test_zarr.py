@@ -12,32 +12,285 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import itertools
+import pickle
+import tempfile
+import warnings
 
 from dataclasses import asdict
-from importlib.metadata import version
 
 import numpy as np
 import pytest
 import xarray as xr
 import zarr
 
+from zarr.dtype import Struct, VariableLengthUTF8
+from zarr.errors import UnstableSpecificationWarning
+
 import pymc as pm
 
-from pymc.backends.zarr import ZarrTrace
-from pymc.stats.convergence import SamplerWarning
+from pymc.backends.zarr import (
+    OBJECT_CODEC_ATTR,
+    ZarrTrace,
+    decode_object_value,
+    encode_object_value,
+)
+from pymc.pytensorf import make_shared_replacements
+from pymc.stats.convergence import SamplerWarning, WarningType
 from pymc.step_methods import NUTS, CompoundStep, Metropolis
+from pymc.step_methods.arraystep import ArrayStepShared
 from pymc.step_methods.state import equal_dataclass_values
 from tests.helpers import equal_sampling_states
 
-# PyMC's `ZarrTrace` still uses zarr 2 module-level APIs (`zarr.TempStore`,
-# `zarr.MemoryStore`) and the removed `synchronizer` kwarg. When a dependency
-# (e.g., installed nutpie) pulls in zarr>=3, the whole suite fails on import /
-# attribute access. xfail the module in that case until the port lands.
-pytestmark = pytest.mark.xfail(
-    int(version("zarr").split(".", 1)[0]) >= 3,
-    reason="PyMC's ZarrTrace is not yet ported to zarr 3",
-    strict=False,
-)
+
+def dims(array) -> list:
+    """Return the dimension names stored in the zarr v3 metadata of an array."""
+    return list(array.metadata.dimension_names)
+
+
+def assert_stat_value_matches(sample_stats, var, draw_idx, value):
+    """Assert that a recorded stat matches its stored value.
+
+    Warning stats are stored as typed columns derived from the warning objects
+    (kind, message, level, step); the reconstruction is compared field-wise, so
+    untypeable payloads (``extra``, divergence points) are not compared.
+    """
+    if f"{var}_type" in sample_stats:
+        kind_code = int(sample_stats[f"{var}_type"][0, draw_idx])
+        if value is None:
+            assert kind_code == 0
+            return
+        step_code = int(sample_stats[f"{var}_step"][0, draw_idx])
+        assert kind_code == value.kind.value
+        assert str(sample_stats[f"{var}_message"][0, draw_idx]) == value.message
+        assert str(sample_stats[f"{var}_level"][0, draw_idx]) == value.level
+        expected_step = -1 if value.step is None else value.step
+        assert step_code == expected_step
+        return
+    stat_val = sample_stats[var][0, draw_idx]
+    if sample_stats[var].attrs.get(OBJECT_CODEC_ATTR):
+        stat_val = decode_object_value(stat_val)
+    if not isinstance(stat_val, SamplerWarning):
+        unequal_stats = stat_val != value
+    else:
+        unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
+    if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
+        raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+
+
+_temp_dirs: list[tempfile.TemporaryDirectory] = []
+
+
+def make_store():
+    """Create a temporary disk backed zarr store.
+
+    A disk backed store is required for parallel sampling, where worker
+    processes record their draws and sampling states to the shared store.
+    """
+    tmp = tempfile.TemporaryDirectory()
+    _temp_dirs.append(tmp)
+    return zarr.storage.LocalStore(tmp.name)
+
+
+class WarnStepper(ArrayStepShared):
+    """Step method that passes points through and always emits a fixed warning."""
+
+    name = "warn_stepper"
+    stats_dtypes_shapes = {
+        "accepted": (bool, []),
+        "warning": (SamplerWarning, None),
+    }
+
+    def __init__(self, vars, warning, shared, **kwargs):
+        super().__init__(vars, shared=shared, **kwargs)
+        self._warning = warning
+
+    def astep(self, apoint, *args):
+        return apoint, [{"accepted": True, "warning": self._warning}]
+
+
+def test_warning_stat_stored_as_typed_columns():
+    warning = SamplerWarning(
+        WarningType.BAD_ACCEPTANCE,
+        "The acceptance probability does not match the target.",
+        "warn",
+        step=3,
+    )
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        ip = model.initial_point()
+        shared = make_shared_replacements(ip, [a], model)
+        step = WarnStepper([a], warning, shared)
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=1)
+        trace.init_trace(chains=1, draws=3, tune=0, model=model, step=step)
+
+        point = ip
+        for _ in range(3):
+            point, stats = step.step(point)
+            trace.straces[0].record(point, stats, in_warmup=False)
+        trace.straces[0].record_sampling_state(step)
+
+    # The warning stat is stored as typed columns, not as a pickled object
+    sample_stats = trace.root["sample_stats"]
+    expected_arrays = {
+        "chain",
+        "draw",
+        "sampler_0__accepted",
+        "in_warmup",
+        "sampler_0__warning_type",
+        "sampler_0__warning_message",
+        "sampler_0__warning_level",
+        "sampler_0__warning_step",
+    }
+    assert set(dict(sample_stats.arrays())) == expected_arrays
+    for name in expected_arrays:
+        assert not sample_stats[name].attrs.get(OBJECT_CODEC_ATTR)
+    np.testing.assert_array_equal(
+        sample_stats["sampler_0__warning_type"][:][0],
+        [int(WarningType.BAD_ACCEPTANCE.value)] * 3,
+    )
+    np.testing.assert_array_equal(sample_stats["sampler_0__warning_step"][:][0], [3] * 3)
+
+    # The trace reconstructs the original warnings from the typed columns
+    assert trace.warnings == [[warning, warning, warning]]
+
+
+def test_to_datatree(model, model_step):
+    trace = ZarrTrace(store=make_store())
+    draws, tune, chains = 4, 2, 1
+    trace.init_trace(chains=chains, draws=draws, tune=tune, model=model, step=model_step)
+
+    point = model.initial_point()
+    for draw in range(tune + draws):
+        tuning = draw < tune
+        if not tuning:
+            model_step.stop_tuning()
+        point, stats = model_step.step(point)
+        trace.straces[0].record(point, stats, in_warmup=tuning)
+    trace.straces[0].record_sampling_state(model_step)
+    trace.sampling_time = 12.0
+
+    dt = trace.to_datatree()
+    assert isinstance(dt, xr.DataTree)
+    # The tree mirrors the zarr group hierarchy, minus internal groups
+    assert set(dt.children) == {"posterior", "sample_stats", "constant_data", "observed_data"}
+    # Global sampling metadata is attached to each group
+    for node in dt.children.values():
+        assert node.attrs["tuning_steps"] == tune
+        assert node.attrs["sampling_time"] == 12.0
+    # Data is readable
+    for var_name, var in dt["posterior"].data_vars.items():
+        assert var.shape[:2] == (chains, draws)
+    # And warmup groups are only attached if requested
+    assert "warmup_posterior" not in dt.children
+    dt = trace.to_datatree(save_warmup=True)
+    assert "warmup_posterior" in dt.children
+    assert dt["warmup_posterior"]["draw"].shape[0] == tune
+
+
+def test_sampling_state_with_growing_fields():
+    """Fields that grow with the number of draws must not be stored in the struct.
+
+    ``_tuned_stats`` collects one entry per post-tuning draw, so its pickled
+    representation outgrows any fixed buffer; it is stored in its own
+    variable length array instead.
+    """
+    draws, tune = 300, 0
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        step = NUTS(vars=[a], rng=np.random.default_rng(1))
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=50)
+        trace.init_trace(chains=1, draws=draws, tune=tune, model=model, step=step)
+        chain = trace.straces[0]
+        chain.link_stepper(step)
+
+        point = model.initial_point()
+        step.stop_tuning()
+        for _ in range(draws):
+            point, stats = step.step(point)
+            chain.record(point, stats, in_warmup=False)
+        chain.record_sampling_state(step)
+
+    # The growing field is stored outside the struct row
+    group = trace.root["_sampling_state"]
+    struct_fields = [f[0] for f in group["sampling_state"].metadata.data_type.fields]
+    assert "_tuned_stats" not in struct_fields
+    tuned_array = group["state__step_adapt___tuned_stats"]
+    assert tuned_array.metadata.data_type == VariableLengthUTF8()
+    # ... and the stored payload really is larger than a fixed buffer would allow
+    assert len(str(np.asarray(tuned_array[0]).item())) > 1024
+
+    # The state still roundtrips losslessly
+    assert equal_sampling_states(chain.sampling_state, step.sampling_state)
+    assert len(chain.sampling_state.step_adapt._tuned_stats) == draws
+
+
+def test_no_unstable_dtype_warnings():
+    """Our arrays must not spam UnstableSpecificationWarnings at users.
+
+    zarr warns for dtype layouts that have no stable v3 spec, which includes the
+    struct rows and the fixed-length string coordinate arrays we create.
+    """
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        with pm.Model(coords={"group": ["a", "b"]}) as model:
+            a = pm.Normal("a", dims="group")
+            step = NUTS(vars=[a], rng=np.random.default_rng(1))
+            trace = ZarrTrace(store=make_store(), draws_per_chunk=5)
+            trace.init_trace(chains=1, draws=5, tune=0, model=model, step=step)
+            chain = trace.straces[0]
+            chain.link_stepper(step)
+            point = model.initial_point()
+            for _ in range(5):
+                point, stats = step.step(point)
+                chain.record(point, stats, in_warmup=False)
+            chain.record_sampling_state(step)
+            chain.sampling_state  # reading must not warn either
+            trace.to_datatree()
+
+    unstable = [w for w in caught if issubclass(w.category, UnstableSpecificationWarning)]
+    assert not unstable, f"got {len(unstable)} UnstableSpecificationWarnings"
+
+
+def test_sampling_state_stored_as_struct():
+    with pm.Model() as model:
+        a = pm.Normal("a")
+        ip = model.initial_point()
+        rng = np.random.default_rng(1)
+        step = NUTS(vars=[a], rng=rng)
+
+        trace = ZarrTrace(store=make_store(), draws_per_chunk=1)
+        trace.init_trace(chains=1, draws=2, tune=0, model=model, step=step)
+        chain = trace.straces[0]
+        chain.link_stepper(step)
+
+        point = ip
+        for _ in range(2):
+            point, stats = step.step(point)
+            chain.record(point, stats, in_warmup=False)
+        chain.record_sampling_state(step)
+
+    state_array = trace.root["_sampling_state"]["sampling_state"]
+    # Not a pickled utf8 array, but a native zarr struct array
+    assert not state_array.attrs.get(OBJECT_CODEC_ATTR)
+    assert isinstance(state_array.metadata.data_type, Struct)
+
+    # And the state roundtrips losslessly
+    # (generator resume behavior is covered in tests/step_methods/test_state.py)
+    assert equal_sampling_states(chain.sampling_state, step.sampling_state)
+
+
+def test_pickle_protocol_stored_in_root_attrs():
+    trace = ZarrTrace(store=make_store())
+    # The root group records the pickle protocol used for object encoding
+    assert trace.root.attrs["pymc_pickle_protocol"] == pickle.HIGHEST_PROTOCOL
+
+    # decode_object_value honors an explicit protocol, defaulting to the
+    # module-level one
+    encoded = encode_object_value("some object")
+    assert decode_object_value(encoded, protocol=pickle.HIGHEST_PROTOCOL) == "some object"
+    assert decode_object_value(encoded) == "some object"
 
 
 @pytest.fixture(scope="module")
@@ -104,7 +357,7 @@ def model_step(request, model):
 
 
 def test_record(model, model_step, include_transformed, draws_per_chunk):
-    store = zarr.TempStore()
+    store = make_store()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -166,9 +419,9 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
 
     # Assert observed data is correct
     assert set(dict(trace.observed_data.arrays())) == {"obs", "dim_time", "dim_str"}
-    assert list(trace.observed_data.obs.attrs["_ARRAY_DIMENSIONS"]) == ["dim_time", "dim_str"]
-    np.testing.assert_array_equal(trace.observed_data.dim_time[:], model.coords["dim_time"])
-    np.testing.assert_array_equal(trace.observed_data.dim_str[:], model.coords["dim_str"])
+    assert list(dims(trace.observed_data["obs"])) == ["dim_time", "dim_str"]
+    np.testing.assert_array_equal(trace.observed_data["dim_time"][:], model.coords["dim_time"])
+    np.testing.assert_array_equal(trace.observed_data["dim_str"][:], model.coords["dim_str"])
 
     # Assert constant data is correct
     assert set(dict(trace.constant_data.arrays())) == {
@@ -179,11 +432,11 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         "dim_time",
         "dim_int",
     }
-    assert list(trace.constant_data.data1.attrs["_ARRAY_DIMENSIONS"]) == ["dim_int"]
-    assert list(trace.constant_data.data2.attrs["_ARRAY_DIMENSIONS"]) == ["data2_dim_0"]
-    assert list(trace.constant_data.time.attrs["_ARRAY_DIMENSIONS"]) == ["dim_time"]
-    np.testing.assert_array_equal(trace.constant_data.dim_time[:], model.coords["dim_time"])
-    np.testing.assert_array_equal(trace.constant_data.dim_int[:], model.coords["dim_int"])
+    assert list(dims(trace.constant_data["data1"])) == ["dim_int"]
+    assert list(dims(trace.constant_data["data2"])) == ["data2_dim_0"]
+    assert list(dims(trace.constant_data["time"])) == ["dim_time"]
+    np.testing.assert_array_equal(trace.constant_data["dim_time"][:], model.coords["dim_time"])
+    np.testing.assert_array_equal(trace.constant_data["dim_int"][:], model.coords["dim_int"])
 
     # Assert unconstrained posterior has correct shapes and kinds
     assert {rv.name for rv in model.free_RVs + model.deterministics} <= set(
@@ -193,16 +446,17 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         assert {"d_log__", "chain", "draw", "d_log___dim_0"} == set(
             dict(trace.unconstrained_posterior.arrays())
         )
-        assert list(trace.unconstrained_posterior.d_log__.attrs["_ARRAY_DIMENSIONS"]) == [
+        assert list(dims(trace.unconstrained_posterior["d_log__"])) == [
             "chain",
             "draw",
             "d_log___dim_0",
         ]
-        assert trace.unconstrained_posterior.d_log__.attrs["kind"] == "freeRV"
-        np.testing.assert_array_equal(trace.unconstrained_posterior.chain, np.arange(1))
-        np.testing.assert_array_equal(trace.unconstrained_posterior.draw, np.arange(draws))
+        assert trace.unconstrained_posterior["d_log__"].attrs["kind"] == "freeRV"
+        np.testing.assert_array_equal(trace.unconstrained_posterior["chain"], np.arange(1))
+        np.testing.assert_array_equal(trace.unconstrained_posterior["draw"], np.arange(draws))
         np.testing.assert_array_equal(
-            trace.unconstrained_posterior.d_log___dim_0, np.arange(len(model.coords["dim_time"]))
+            trace.unconstrained_posterior["d_log___dim_0"],
+            np.arange(len(model.coords["dim_time"])),
         )
 
     # Assert posterior has correct shapes and kinds
@@ -219,7 +473,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
         else:
             expected_dims = model.named_vars_to_dims[rv_name]
         posterior_dims |= set(expected_dims)
-        assert list(trace.posterior[rv_name].attrs["_ARRAY_DIMENSIONS"]) == [
+        assert list(dims(trace.posterior[rv_name])) == [
             "chain",
             "draw",
             *expected_dims,
@@ -247,14 +501,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in trace.posterior.arrays():
                 assert np.array_equal(trace.posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["sample_stats"], var, draw_idx, value)
 
     # Assert manually collected warmup samples match
     for draw_idx, (draw, stat) in enumerate(
@@ -271,14 +518,7 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in posterior.arrays():
                 assert np.array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["warmup_sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["warmup_sample_stats"], var, draw_idx, value)
 
     # Assert manually collected posterior samples match
     for draw_idx, (draw, stat) in enumerate(
@@ -295,19 +535,12 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
             if var in posterior.arrays():
                 assert np.array_equal(posterior[var][0, draw_idx], value)
         for var, value in stat.items():
-            sample_stats = trace.root["sample_stats"]
-            stat_val = sample_stats[var][0, draw_idx]
-            if not isinstance(stat_val, SamplerWarning):
-                unequal_stats = stat_val != value
-            else:
-                unequal_stats = not equal_dataclass_values(asdict(stat_val), asdict(value))
-            if unequal_stats and not (np.isnan(stat_val) and np.isnan(value)):
-                raise AssertionError(f"{var} value does not match: {stat_val} != {value}")
+            assert_stat_value_matches(trace.root["sample_stats"], var, draw_idx, value)
 
     # Assert sampling_state is correct
-    assert list(trace._sampling_state.draw_idx[:]) == [draws + tune]
+    assert list(trace._sampling_state["draw_idx"][:]) == [draws + tune]
     assert equal_sampling_states(
-        trace._sampling_state.sampling_state[0],
+        trace.straces[0].sampling_state,
         model_step.sampling_state,
     )
 
@@ -340,32 +573,32 @@ def test_record(model, model_step, include_transformed, draws_per_chunk):
 
 @pytest.mark.parametrize("tune", [0, 5, 10])
 def test_split_warmup(tune, model, model_step, include_transformed):
-    store = zarr.MemoryStore()
+    store = make_store()
     trace = ZarrTrace(store=store, include_transformed=include_transformed)
     draws = 10 - tune
     trace.init_trace(chains=1, draws=draws, tune=tune, model=model, step=model_step)
 
     trace.split_warmup("posterior")
     trace.split_warmup("sample_stats")
-    assert len(trace.root.posterior.draw) == draws
-    assert len(trace.root.sample_stats.draw) == draws
+    assert trace.root["posterior"]["draw"].shape[0] == draws
+    assert trace.root["sample_stats"]["draw"].shape[0] == draws
     if tune == 0:
         with pytest.raises(KeyError):
             trace.root["warmup_posterior"]
     else:
-        assert len(trace.root["warmup_posterior"].draw) == tune
-        assert len(trace.root["warmup_sample_stats"].draw) == tune
+        assert trace.root["warmup_posterior"]["draw"].shape[0] == tune
+        assert trace.root["warmup_sample_stats"]["draw"].shape[0] == tune
 
         with pytest.raises(RuntimeError):
             trace.split_warmup("posterior")
 
         for var_name, posterior_array in trace.posterior.arrays():
-            dims = posterior_array.attrs["_ARRAY_DIMENSIONS"]
+            dims = posterior_array.metadata.dimension_names
             if len(dims) >= 2 and dims[1] == "draw":
                 assert posterior_array.shape[1] == draws
                 assert trace.root["warmup_posterior"][var_name].shape[1] == tune
         for var_name, sample_stats_array in trace.sample_stats.arrays():
-            dims = sample_stats_array.attrs["_ARRAY_DIMENSIONS"]
+            dims = sample_stats_array.metadata.dimension_names
             if len(dims) >= 2 and dims[1] == "draw":
                 assert sample_stats_array.shape[1] == draws
                 assert trace.root["warmup_sample_stats"][var_name].shape[1] == tune
@@ -415,7 +648,7 @@ def test_sample(
         pytest.skip(
             reason="log_likelihood is only computed if an inference data object is returned"
         )
-    store = zarr.TempStore()
+    store = make_store()
     trace = ZarrTrace(
         store=store, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -470,6 +703,7 @@ def test_sample(
         warning_stat = (
             "sampler_1__warning" if isinstance(model_step, CompoundStep) else "sampler_0__warning"
         )
+        warning_stat = f"{warning_stat}_type"
         if keep_warning_stat:
             assert warning_stat in out_trace.sample_stats
         else:
@@ -490,7 +724,8 @@ def test_sample(
         )
 
     # Assert that the trace has valid sampling state stored for each chain
-    for step_method_state in trace._sampling_state.sampling_state[:]:
+    for strace in trace.straces:
+        step_method_state = strace.sampling_state
         # We have no access to the actual step method that was using by each chain in pymc.sample
         # The best way to see if the step method state is valid is by trying to set
         # the model_step sampling state to the one stored in the trace.
@@ -509,11 +744,11 @@ def test_sampling_consistency(
 ):
     # Test that pm.sample will generate the same posterior and sampling state
     # regardless of whether sampling was done in parallel or not.
-    store1 = zarr.TempStore()
+    store1 = make_store()
     parallel_trace = ZarrTrace(
         store=store1, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
-    store2 = zarr.TempStore()
+    store2 = make_store()
     sequential_trace = ZarrTrace(
         store=store2, include_transformed=include_transformed, draws_per_chunk=draws_per_chunk
     )
@@ -552,7 +787,7 @@ def test_sampling_consistency(
         )
     for chain in range(chains):
         assert equal_sampling_states(
-            parallel_trace._sampling_state.sampling_state[chain],
-            sequential_trace._sampling_state.sampling_state[chain],
+            parallel_trace.straces[chain].sampling_state,
+            sequential_trace.straces[chain].sampling_state,
         )
     xr.testing.assert_equal(parallel_idata.posterior, sequential_idata.posterior)
