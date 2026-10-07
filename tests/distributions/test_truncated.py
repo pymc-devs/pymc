@@ -434,7 +434,11 @@ def test_truncated_inference():
             observed=obs,
         )
 
-        lam_map = find_MAP(progressbar=False).posterior["lam"].item()
+        lam_map = (
+            find_MAP(progressbar=False, jitter=False, return_inferencedata=True)
+            .posterior["lam"]
+            .item()
+        )
 
     assert np.isclose(lam_map, lam_true, atol=0.1)
 

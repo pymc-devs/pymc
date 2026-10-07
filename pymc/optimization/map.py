@@ -64,6 +64,11 @@ _LEGACY_KWARGS = {"start": "initvals", "seed": "random_seed", "maxeval": "maxite
 
 
 def _canonical_method(method: str) -> str:
+    if callable(method):
+        raise TypeError(
+            "A callable `method` is no longer supported. Pass the name of a "
+            '`scipy.optimize.minimize` method or "basinhopping".'
+        )
     from better_optimize.constants import MINIMIZE_MODE_KWARGS
 
     methods = {k.lower(): k for k in MINIMIZE_MODE_KWARGS} | {"basinhopping": "basinhopping"}
@@ -177,12 +182,12 @@ def find_MAP(
     use_hess: bool | None = None,
     use_hessp: bool | None = None,
     initvals: StartDict | None = None,
-    jitter: bool = True,
+    jitter: bool | None = None,
     jitter_max_retries: int = 10,
     random_seed: RandomState = None,
     progressbar: bool | ProgressBarOptions = True,
     compute_hessian: bool = False,
-    return_inferencedata: bool = True,
+    return_inferencedata: bool = False,
     idata_kwargs: dict[str, Any] | None = None,
     model: Model | None = None,
     backend: str | None = None,
@@ -211,10 +216,12 @@ def find_MAP(
     initvals : dict, optional
         Initial values for (transformed) variables, overriding the model defaults. Partial
         initialization is permitted, as in :func:`pymc.sample`.
-    jitter : bool, default True
+    jitter : bool, optional
         Add U(-1, 1) jitter to the initial point of the optimized variables, as ``pymc.sample``
         does. This avoids getting stuck at saddle points of the default initial point (e.g.
         products of zero-centered variables). Set ``random_seed`` for reproducible results.
+        Not jittering is the current default, with a ``FutureWarning``; a future release will
+        jitter by default.
     jitter_max_retries : int
         Maximum number of attempts at drawing a jittered initial point with finite log-probability.
     random_seed : int, array-like of int, or Generator, optional
@@ -228,13 +235,15 @@ def find_MAP(
         taken over the optimized (unconstrained) value variables, as ``fit.covariance_matrix``.
         This needs ``n`` Hessian-vector products and an ``n x n`` matrix, so it is expensive for
         large models.
-    return_inferencedata : bool, default True
-        Return an :class:`arviz.InferenceData` with the MAP point as a single-draw ``posterior``
-        (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data`` groups).
+    return_inferencedata : bool, default False
+        If True, return an :class:`arviz.InferenceData` with the MAP point as a single-draw
+        ``posterior`` (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data``
+        groups). If False, return a ``dict`` mapping variable names to values, transformed ones
+        included.
 
         .. deprecated::
-            ``return_inferencedata=False``, which returns a ``dict`` mapping variable names to
-            values, will be removed in a future release.
+            The ``dict`` return is deprecated: a future release will default to True, and
+            later remove the option.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`, e.g. ``include_transformed=True`` to
         also return transformed (unconstrained) values such as ``sigma_log__``.
@@ -292,12 +301,19 @@ def find_MAP(
 
     if not return_inferencedata:
         warnings.warn(
-            "`return_inferencedata=False` is deprecated and will be removed in a future release. "
-            "Use the default `return_inferencedata=True` and work with the returned "
-            "`InferenceData` object.",
+            "`find_MAP` will return an `InferenceData` instead of a dict in a future release. "
+            "Pass `return_inferencedata=True` to adopt the new behavior now.",
             FutureWarning,
             stacklevel=2,
         )
+    if jitter is None:
+        warnings.warn(
+            "`find_MAP` will jitter its initial point by default in a future release. Pass "
+            "`jitter=True` to adopt that now, or `jitter=False` to keep the current behavior.",
+            FutureWarning,
+            stacklevel=2,
+        )
+        jitter = False
     fit = _fit_MAP(
         method,
         vars=vars,
@@ -318,7 +334,7 @@ def find_MAP(
     out = (
         _map_to_inference_data(fit, idata_kwargs)
         if return_inferencedata
-        else fit.as_point(idata_kwargs.get("include_transformed", False))
+        else fit.as_point(idata_kwargs.get("include_transformed", True))
     )
     return (out, fit.res) if return_raw else out  # type: ignore[return-value]
 

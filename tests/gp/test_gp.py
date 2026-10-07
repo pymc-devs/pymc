@@ -42,7 +42,9 @@ class TestMarginalVsMarginalApprox:
             sigma = pm.HalfNormal("sigma", sigma=100)
             self.gp.marginal_likelihood("lik", self.x[:, None], self.y, sigma)
             # bfgs seems to work much better than lbfgsb
-            posterior = pm.find_MAP(method="bfgs").posterior.isel(chain=0, draw=0)
+            posterior = pm.find_MAP(
+                method="bfgs", jitter=False, return_inferencedata=True
+            ).posterior.isel(chain=0, draw=0)
             self.map_full = {name: da.values for name, da in posterior.items()}
 
         self.x_new = np.linspace(-6, 6, 20)
@@ -73,7 +75,9 @@ class TestMarginalVsMarginalApprox:
             gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             sigma = pm.HalfNormal("sigma", sigma=100, initval=50.0)
             gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, sigma)
-            posterior = pm.find_MAP(method="bfgs").posterior.isel(chain=0, draw=0)
+            posterior = pm.find_MAP(
+                method="bfgs", jitter=False, return_inferencedata=True
+            ).posterior.isel(chain=0, draw=0)
             map_approx = {name: da.values for name, da in posterior.items()}
 
         # Check MAP gets approximately correct result

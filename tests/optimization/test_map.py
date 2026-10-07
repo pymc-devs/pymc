@@ -14,6 +14,8 @@
 import re
 import warnings
 
+from functools import partial
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -27,11 +29,13 @@ import pymc as pm
 
 from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.model.transform.optimization import freeze_model
-from pymc.optimization import find_MAP
 from pymc.optimization.map import _find_MAP_point, _optimizer_result_to_dataset
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
+
+# The future defaults; the current, deprecated ones are tested through `pm.find_MAP`
+find_MAP = partial(pm.find_MAP, return_inferencedata=True, jitter=True)
 
 
 @pytest.fixture(autouse=True)
@@ -296,7 +300,7 @@ def test_find_MAP_return_inferencedata_consistent(normal_model):
     kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
     idata_kwargs = {"include_transformed": True}
     idata = find_MAP(idata_kwargs=idata_kwargs, **kwargs)
-    with pytest.warns(FutureWarning, match="`return_inferencedata=False` is deprecated"):
+    with pytest.warns(FutureWarning, match="will return an `InferenceData`"):
         point = find_MAP(return_inferencedata=False, idata_kwargs=idata_kwargs, **kwargs)
     assert set(point) == {"mu", "sigma", "sigma_log__"}
     internal = _find_MAP_point(
@@ -392,6 +396,9 @@ def test_find_MAP_jitter_escapes_saddle():
 
     stuck = map_point(model=m, jitter=False)
     assert_allclose([stuck["w"], stuck["z"]], 0.0)
+    with pytest.warns(FutureWarning, match="will jitter its initial point"):
+        default = pm.find_MAP(model=m, return_inferencedata=True, progressbar=False).posterior
+    assert_allclose([default["w"], default["z"]], 0.0)  # no jitter by default, for now
     r1 = map_point(model=m, random_seed=11)
     r2 = map_point(model=m, random_seed=11)
     assert_allclose(r1["w"] * r1["z"], 1.0, atol=0.05)
@@ -418,6 +425,18 @@ def test_find_MAP_invalid_vars():
 def test_find_MAP_unknown_method(normal_model):
     with pytest.raises(ValueError, match="Unknown method"):
         find_MAP(method="gradient-descent", model=normal_model, progressbar=False)
+    with pytest.raises(TypeError, match="callable `method` is no longer supported"):
+        find_MAP(method=lambda *args, **kwargs: None, model=normal_model, progressbar=False)
+
+
+def test_find_MAP_deprecated_defaults(normal_model):
+    with (
+        pytest.warns(FutureWarning, match="will return an `InferenceData`"),
+        pytest.warns(FutureWarning, match="will jitter its initial point"),
+    ):
+        point = pm.find_MAP(model=normal_model, progressbar=False)
+    # the old behavior: a dict, transformed values included
+    assert set(point) == {"mu", "sigma", "sigma_log__"}
 
 
 def test_find_MAP_initvals_variable_keys(normal_model):

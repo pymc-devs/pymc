@@ -1701,7 +1701,7 @@ def _init_jitter(
     jitter_max_retries: int,
     logp_fn: Callable[[PointType], np.ndarray] | None = None,
 ) -> list[PointType]:
-    """Apply a uniform jitter in [-1, 1] to the test value as starting point in each chain.
+    """Apply a uniform jitter in [-1, 1] to the initial point as starting point in each chain.
 
     ``model.check_start_vals`` is used to test whether the jittered starting
     values produce a finite log probability. Invalid values are resampled
@@ -1787,10 +1787,10 @@ def init_nuts(
           Currently, this is ``jitter+adapt_diag``, but this can change in the future. If you
           depend on the exact behaviour, choose an initialization method explicitly.
         * adapt_diag: Start with a identity mass matrix and then adapt a diagonal based on the
-          variance of the tuning samples. All chains use the test value (usually the prior mean)
+          variance of the tuning samples. All chains use the initial point (usually the prior mean)
           as starting point.
-        * jitter+adapt_diag: Same as ``adapt_diag``, but use test value plus a uniform jitter in
-          [-1, 1] as starting point in each chain.
+        * jitter+adapt_diag: Same as ``adapt_diag``, but use the initial point plus a uniform
+          jitter in [-1, 1] as starting point in each chain.
         * jitter+adapt_diag_grad:
           An experimental initialization method that uses information from gradients and samples
           during tuning.
@@ -1803,9 +1803,9 @@ def init_nuts(
         * jitter+map: Same as ``map``, but search from the initial point plus a uniform jitter
           in [-1, 1].
         * adapt_full: Adapt a dense mass matrix using the sample covariances. All chains use the
-          test value (usually the prior mean) as starting point.
-        * jitter+adapt_full: Same as ``adapt_full``, but use test value plus a uniform jitter in
-          [-1, 1] as starting point in each chain.
+          initial point (usually the prior mean) as starting point.
+        * jitter+adapt_full: Same as ``adapt_full``, but use the initial point plus a uniform
+          jitter in [-1, 1] as starting point in each chain.
 
     chains : int
         Number of jobs to start.

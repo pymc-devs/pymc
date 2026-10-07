@@ -111,15 +111,17 @@ def scipy_optimize_funcs_from_loss(
         loss = cast(TensorVariable, outputs[0])
     loss = rewrite_pregrad(loss)
 
-    def trusted(fn):  # scipy hands over float64; cast here so PyTensor can skip its input checks
-        fn.trust_input = True
-        return lambda *args: fn(*(np.asarray(arg, dtype=flat_input.dtype) for arg in args))
+    # scipy hands over float64, so cast to the input dtype and let PyTensor skip its input checks
+    dtype = flat_input.dtype
 
     f_hessp = None
     if use_hessp:
         p = pt.tensor("p", shape=flat_input.type.shape, dtype=flat_input.dtype)
         hessp = pytensor.gradient.hessian_vector_product(loss, [flat_input], p)
-        f_hessp = trusted(compile([flat_input, p], hessp[0], **compile_kwargs))
+        fn_hessp = compile([flat_input, p], hessp[0], trust_input=True, **compile_kwargs)
+
+        def f_hessp(x, p):
+            return fn_hessp(np.asarray(x, dtype=dtype), np.asarray(p, dtype=dtype))
 
     outputs = [loss]
     if use_grad:
@@ -127,10 +129,10 @@ def scipy_optimize_funcs_from_loss(
         outputs.append(grad)
     if use_hess:
         outputs.append(pytensor.gradient.jacobian(grad, [flat_input])[0])
-    f_fused = trusted(
-        compile([flat_input], outputs if len(outputs) > 1 else loss, **compile_kwargs)
+    fn = compile(
+        [flat_input], outputs if len(outputs) > 1 else loss, trust_input=True, **compile_kwargs
     )
-    return f_fused, f_hessp
+    return (lambda x: fn(np.asarray(x, dtype=dtype))), f_hessp
 
 
 def _compute_inverse_hessian(

@@ -587,7 +587,7 @@ def test_sample_find_MAP_does_not_modify_start():
 
         # make sure find_Map does not modify the start dict
         start = {"untransformed": 2}
-        pm.find_MAP(initvals=start, progressbar=False)
+        pm.find_MAP(initvals=start, jitter=False, return_inferencedata=True, progressbar=False)
         assert start == {"untransformed": 2}
 
         # make sure sample does not modify the start dict
