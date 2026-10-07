@@ -79,14 +79,14 @@ __all__ = [
 ]
 
 
-def convert_observed_data(data) -> np.ndarray | Variable:
+def convert_observed_data(data, *, dtype=None) -> np.ndarray | Variable:
     """Convert user provided dataset to accepted formats."""
     if isgenerator(data):
         raise TypeError("Data passed to `observed` cannot be a generator.")
-    return convert_data(data)
+    return convert_data(data, dtype=dtype)
 
 
-def convert_data(data) -> np.ndarray | Variable:
+def convert_data(data, *, dtype=None) -> np.ndarray | Variable:
     ret: np.ndarray | Variable
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
@@ -125,6 +125,9 @@ def convert_data(data) -> np.ndarray | Variable:
         ret = data
     else:
         ret = np.asarray(data)
+
+    if dtype is not None:
+        return ret.astype(np.dtype(dtype).name)
 
     # Data without dtype info is converted to float arrays by default.
     # This is the most common case for simple examples.

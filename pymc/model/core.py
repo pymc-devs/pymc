@@ -1016,7 +1016,8 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
 
         if isinstance(values, list):
             values = np.array(values)
-        values = convert_observed_data(values)
+        same_dtype = getattr(values, "dtype", None) == shared_object.dtype
+        values = convert_observed_data(values, dtype=shared_object.dtype if same_dtype else None)
         dims = self.named_vars_to_dims.get(name, None) or ()
         coords = coords or {}
 

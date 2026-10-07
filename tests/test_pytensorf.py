@@ -279,6 +279,19 @@ def test_convert_data(input_dtype):
         assert pytensor_output.dtype == intX
 
 
+@pytest.mark.parametrize(
+    ("data", "dtype"),
+    [
+        (sps.csr_matrix(np.eye(2)), "float32"),
+        (pt.as_tensor_variable([1, 2]), "int16"),
+    ],
+)
+def test_convert_data_explicit_dtype(data, dtype):
+    result = convert_data(data, dtype=dtype)
+
+    assert result.dtype == np.dtype(dtype).name
+
+
 def test_pandas_to_array_pandas_index():
     data = pd.Index([1, 2, 3])
     result = convert_data(data)
