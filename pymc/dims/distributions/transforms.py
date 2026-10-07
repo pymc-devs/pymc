@@ -12,11 +12,13 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import numpy as np
+import pytensor
 import pytensor.tensor as pt
 import pytensor.xtensor as ptx
 
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.type import XTensorConstant
+from pytensor.xtensor.type import XTensorConstant, XTensorVariable
 
 from pymc.logprob.transforms import Transform
 
@@ -165,6 +167,49 @@ class SimplexTransform(DimTransform):
         logsumexp_value_expanded = ptx.math.logsumexp(value_sum_expanded, dim=self.core_dim)
         res = ptx.math.log(N) + (N * sum_value) - (N * logsumexp_value_expanded)
         return res
+
+
+class WeightedZeroSumTransform(DimTransform):
+    """Constrains samples to satisfy ``(weights * value).sum(dim) = 0``.
+
+    Restriction of the Householder reflection sending ``u = w / |w|`` to
+    ``-e_n`` along ``dim``; an isometry, so the log Jacobian determinant is
+    zero. With equal weights it reproduces ``ZeroSumTransform`` on a single
+    dim exactly.
+    """
+
+    name = "weighted_zerosum"
+
+    def __init__(self, dim: str, weights):
+        self.dim = dim
+        if not isinstance(weights, XTensorVariable):
+            weights = np.asarray(weights)
+            if weights.ndim != 1:
+                raise ValueError("weights must be a 1-d vector")
+            if np.any(weights <= 0):
+                raise ValueError("weights must be strictly positive")
+            weights = as_xtensor(weights.astype(pytensor.config.floatX), dims=(dim,))
+        elif weights.type.dims != (dim,):
+            raise ValueError(f"weights must have dims ({dim!r},), got {weights.type.dims}")
+        self.weights = weights
+
+    def _weight_direction(self):
+        u = self.weights / (self.weights**2).sum(self.dim) ** 0.5
+        return u.isel({self.dim: slice(None, -1)}), u.isel({self.dim: -1})
+
+    def forward(self, value, *rv_inputs):
+        u_head, u_last = self._weight_direction()
+        coef = value.isel({self.dim: -1}) / (1 + u_last)
+        return value.isel({self.dim: slice(None, -1)}) - coef * u_head
+
+    def backward(self, value, *rv_inputs):
+        u_head, u_last = self._weight_direction()
+        sum_vals = (value * u_head).sum(self.dim)
+        head = value - sum_vals / (1 + u_last) * u_head
+        return ptx.concat([head, -sum_vals], dim=self.dim)
+
+    def log_jac_det(self, value, *rv_inputs):
+        return as_xtensor(0.0).broadcast_like(value, exclude=(self.dim,))
 
 
 class ZeroSumTransform(DimTransform):
