@@ -289,7 +289,7 @@ def find_invalid_scalar_params(
 
     Returns
     -------
-    Invalid paramemeter values:
+    Invalid parameter values:
         Dictionary mapping each parameter, to a lower and upper invalid values (out of domain).
         If no lower or upper invalid values exist, None is returned for that entry.
     """

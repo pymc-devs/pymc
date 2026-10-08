@@ -1693,7 +1693,7 @@ class Model(BaseModel):
     coords : dict
         Xarray-like coordinate keys and values. These coordinates can be used
         to specify the shape of random variables and to label (but not specify)
-        the shape of Determinsitic, Potential and Data objects.
+        the shape of Deterministic, Potential and Data objects.
         Other than specifying the shape of random variables, coordinates have no
         effect on the model. They can't be used for label-based broadcasting or indexing.
         You must use numpy-like operations for those behaviors.
@@ -1767,21 +1767,21 @@ class Model(BaseModel):
         import pymc as pm
 
         with pm.Model(name="root") as root:
-            x = pm.Normal("x")  # Variable wil be named "root::x"
+            x = pm.Normal("x")  # Variable will be named "root::x"
 
             with pm.Model(name="first") as first:
                 # Variable will belong to root and first
-                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+                y = pm.Normal("y", mu=x)  # Variable will be named "root::first::y"
 
             # Can pass parent model explicitly
             with pm.Model(name="second", model=root) as second:
                 # Variable will belong to root and second
-                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+                z = pm.Normal("z", mu=y)  # Variable will be named "root::second::z"
 
             # Set None for standalone model
             with pm.Model(name="third", model=None) as third:
                 # Variable will belong to third only
-                w = pm.Normal("w")  # Variable wil be named "third::w"
+                w = pm.Normal("w")  # Variable will be named "third::w"
 
 
     Set `check_bounds` to False for models with only continuous variables and default transformers
