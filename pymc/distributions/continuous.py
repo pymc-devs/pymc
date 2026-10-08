@@ -1499,7 +1499,8 @@ class Exponential(PositiveContinuous):
         )
 
     def icdf(value, mu):
-        res = -mu * pt.log(1 - value)
+        # `1 - value` rounds to exactly 1 for value < eps, making the result -0.
+        res = -mu * pt.log1p(-value)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -2301,7 +2302,23 @@ class Cauchy(Continuous):
         )
 
     def icdf(value, alpha, beta):
-        res = alpha + beta * pt.tan(np.pi * (value - 0.5))
+        # `value - 0.5` loses `value` entirely once |value| falls below ~5.5e-17, and
+        # the surviving argument lands exactly on tan's pole, so the result saturates
+        # at a constant. In the tails use the exact identities
+        # `tan(pi * (v - 1/2)) == -1 / tan(pi * v)` for v < 1/2 and
+        # `== 1 / tan(pi * (1 - v))` for v > 1/2, neither of which cancels or evaluates
+        # tan near its pole. The original form is kept on [0.25, 0.75], where it cannot
+        # cancel and is exact at the median.
+        tan_term = pt.switch(
+            value < 0.25,
+            -1.0 / pt.tan(np.pi * value),
+            pt.switch(
+                value > 0.75,
+                1.0 / pt.tan(np.pi * (1.0 - value)),
+                pt.tan(np.pi * (value - 0.5)),
+            ),
+        )
+        res = alpha + beta * tan_term
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -2831,7 +2848,8 @@ class Weibull(PositiveContinuous):
         )
 
     def icdf(value, alpha, beta):
-        res = beta * (-pt.log(1 - value)) ** (1 / alpha)
+        # `1 - value` rounds to exactly 1 for value < eps, making the result -0.
+        res = beta * (-pt.log1p(-value)) ** (1 / alpha)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
