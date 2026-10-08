@@ -1955,7 +1955,17 @@ class StudentT(Continuous):
 
         t = (value - mu) / sigma
         sqrt_t2_nu = pt.sqrt(t**2 + nu)
-        x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
+        # For t << 0, ``t + sqrt(t**2 + nu)`` is a difference of two nearly
+        # equal numbers. It cancels catastrophically and eventually underflows
+        # to zero, sending logcdf to -inf even though the true value is finite.
+        # Because ``(t + s) * (s - t) == nu``, we can write ``t + s == nu / (s - t)``,
+        # which has no cancellation for t < 0. The original form is kept for
+        # t >= 0, where ``s - t`` would be the cancelling quantity instead.
+        x = pt.switch(
+            t < 0,
+            nu / (2.0 * sqrt_t2_nu * (sqrt_t2_nu - t)),
+            (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu),
+        )
 
         res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
 
@@ -2293,7 +2303,19 @@ class Cauchy(Continuous):
         )
 
     def logcdf(value, alpha, beta):
-        res = pt.log(0.5 + pt.arctan((value - alpha) / beta) / np.pi)
+        z = (value - alpha) / beta
+        # For z << 0, ``0.5 + arctan(z) / pi`` cancels catastrophically as
+        # arctan(z) approaches -pi/2, and eventually underflows to zero, sending
+        # logcdf to -inf even though the true value is finite. For z <= -1 the
+        # identity ``0.5 + arctan(z) / pi == arctan(-1 / z) / pi`` is exact and
+        # free of cancellation. The cut is at -1 rather than 0 because ``-1 / z``
+        # would overflow for tiny |z|, which would in turn break the gradient,
+        # and because no cancellation is possible on -1 < z < 0 anyway.
+        res = pt.switch(
+            z < -1,
+            pt.log(pt.arctan(-1.0 / z)) - np.log(np.pi),
+            pt.log(0.5 + pt.arctan(z) / np.pi),
+        )
         return check_parameters(
             res,
             beta > 0,
