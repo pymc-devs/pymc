@@ -956,6 +956,16 @@ class TestMatchesScipy:
         if pytensor.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
+    def test_moyal_logcdf_lower_tail(self):
+        rv = pm.Moyal.dist(mu=0.0, sigma=1.0)
+        xs = np.array([-10.0, -20.0, -50.0])
+        res = pm.logcdf(rv, xs).eval()
+        # F(x) = 2 * Phi(-exp(-x / 2)); avoid taking log of an underflowed CDF.
+        expected = np.log(2.0) + sp.log_ndtr(-np.exp(-xs / 2.0))
+        assert np.isfinite(expected).all()
+        assert np.isfinite(res).all()
+        np.testing.assert_allclose(res, expected, rtol=1e-5)
+
     def test_moyal_icdf(self):
         check_icdf(
             pm.Moyal,
