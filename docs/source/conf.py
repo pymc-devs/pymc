@@ -342,15 +342,18 @@ def setup(app):
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = "pymc_sphinx_theme"
-# The canonical URL of every page points at the stable build, no matter which
-# version is being built: old and development versions of a page then transfer
-# their search ranking to the stable one instead of competing with it.
-html_baseurl = "https://www.pymc.io/projects/docs/en/stable/"
+# Read the Docs supplies the canonical domain, language and version path.
+# Keep development-only pages on their own version rather than pointing at
+# a stable page that may not exist. Local builds use the stable public URL.
+html_baseurl = os.environ.get(
+    "READTHEDOCS_CANONICAL_URL",
+    f"https://www.pymc.io/projects/docs/en/{rtd_version if on_readthedocs else 'stable'}/",
+)
 sitemap_url_scheme = "{link}"
 
 # Open Graph tags plus a <meta name="description"> generated from page content
 # (search engines use it as the result snippet).
-ogp_site_url = "https://www.pymc.io/projects/docs/en/stable/"
+ogp_site_url = html_baseurl
 ogp_image = "https://www.pymc.io/_static/PyMC.jpg"
 ogp_use_first_image = True
 ogp_enable_meta_description = True
