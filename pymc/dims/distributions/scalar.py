@@ -355,7 +355,7 @@ class DiracDelta(DimDistribution):
     def xrv_op(self, c, core_dims=None, extra_dims=None, rng=None, return_next_rng=False, **kwargs):
         # DiracDeltaRV has no rng, so it can't be wrapped by the XRV machinery like the
         # other scalar distributions. We build the regular RV and wrap it in an xtensor,
-        # relying on MeasurableXTensorFromTensor (see core.py) for the logp.
+        # relying on XTensorFromTensor query rule (see core.py) for the logp.
         c = as_xtensor(c)
         extra_dims = extra_dims or {}
         out_dims = (*extra_dims.keys(), *c.dims)

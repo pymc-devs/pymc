@@ -24,6 +24,11 @@ from pymc.logprob.transforms import Transform
 class DimTransform(Transform):
     """Base class for transforms that are applied to dim distriubtions."""
 
+    core_dims: tuple[str, ...] = ()
+
+    def support_axes(self, value):
+        return tuple(value.dims.index(dim) for dim in self.core_dims)
+
 
 class LogTransform(DimTransform):
     name = "log"
@@ -144,6 +149,7 @@ class SimplexTransform(DimTransform):
 
     def __init__(self, dim: str):
         self.core_dim = dim
+        self.core_dims = (dim,)
 
     def forward(self, value, *inputs):
         log_value = ptx.math.log(value)
@@ -172,6 +178,7 @@ class ZeroSumTransform(DimTransform):
 
     def __init__(self, dims: tuple[str, ...]):
         self.dims = dims
+        self.core_dims = dims
 
     @staticmethod
     def extend_dim(array, dim):

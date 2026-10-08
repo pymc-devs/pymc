@@ -125,7 +125,7 @@ def test_discrete_rv_comparison_bitwise(inputs, comparison_op, exp_logp_true, ex
 
 def test_potentially_measurable_operand():
     x_rv = pt.random.normal(2)
-    z_rv = pt.random.normal(x_rv)
+    z_rv = pt.random.normal()
     y_rv = pt.lt(x_rv, z_rv)
 
     y_vv = y_rv.clone()
@@ -149,6 +149,14 @@ def test_potentially_measurable_operand():
         logp(y_rv, y_vv).eval({y_vv: y_vv_test})
 
 
+def test_comparison_with_latent_parameter_requires_marginalization():
+    x = pt.random.normal(2)
+    z = pt.random.normal(x)
+    comparison = pt.lt(x, z)
+    with pytest.raises(NotImplementedError, match="requires marginalization"):
+        conditional_logp({z: z.type(), comparison: comparison.type()})
+
+
 def test_comparison_invalid_broadcast():
     x_rv = pt.random.normal(0.5, 1, size=(3,))
 
@@ -159,3 +167,17 @@ def test_comparison_invalid_broadcast():
 
     with pytest.raises(NotImplementedError, match="Logprob method not implemented for"):
         logp(y_rv_invalid, y_vv_invalid)
+
+
+@pytest.mark.parametrize("comparison", [pt.lt, pt.le, pt.gt, pt.ge])
+def test_discrete_comparison_fractional_threshold(comparison):
+    threshold = pt.scalar("threshold")
+    rv = comparison(pt.random.poisson(2), threshold)
+    value = pt.scalar("value", dtype="bool")
+    fn = function([threshold, value], logp(rv, value))
+    for point in (1.7, 2.0, 2.3):
+        cutoff = np.ceil(point) - 1 if comparison in (pt.lt, pt.ge) else point
+        expected = [st.poisson(2).logcdf(cutoff), st.poisson(2).logsf(cutoff)]
+        if comparison in (pt.gt, pt.ge):
+            expected.reverse()
+        np.testing.assert_allclose([fn(point, True), fn(point, False)], expected)

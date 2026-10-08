@@ -34,18 +34,14 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
-import re
 
 import numpy as np
 import pytensor.tensor as pt
-import pytest
 import scipy.stats.distributions as sp
-
-from pytensor.scalar import Exp, exp
 
 import pymc as pm
 
-from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logcdf_helper
+from pymc.logprob.abstract import _logcdf_helper
 from pymc.logprob.basic import logccdf, logcdf
 
 
@@ -54,19 +50,6 @@ def assert_equal_hash(classA, classB):
     assert hash(classB) == hash(classB.id_obj)
     assert classA == classB
     assert hash(classA) == hash(classB)
-
-
-def test_measurable_elemwise():
-    # Default does not accept any scalar_op
-    with pytest.raises(TypeError, match=re.escape("scalar_op exp is not valid")):
-        MeasurableElemwise(exp)
-
-    class TestMeasurableElemwise(MeasurableElemwise):
-        valid_scalar_types = (Exp,)
-
-    measurable_exp_op = TestMeasurableElemwise(scalar_op=exp)
-    measurable_exp = measurable_exp_op(0.0)
-    assert isinstance(measurable_exp.owner.op, MeasurableOp)
 
 
 def test_logcdf_helper():

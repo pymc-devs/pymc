@@ -33,15 +33,12 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-from typing import cast
 
 import numpy as np
 import pytensor.tensor as pt
 
 from numpy.lib.array_utils import normalize_axis_tuple
 from pytensor.graph import ancestors
-from pytensor.graph.basic import Apply
-from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.scalar import Add, Mul
 from pytensor.tensor import get_underlying_scalar_constant_value
@@ -51,15 +48,19 @@ from pytensor.tensor.math import Argmax, Max, variadic_add, variadic_mul
 from pytensor.tensor.random.basic import ExponentialRV, GumbelRV
 from pytensor.tensor.rewriting.basic import broadcasted_by
 from pytensor.tensor.type_other import NoneTypeT
-from pytensor.tensor.variable import TensorVariable
 
 from pymc.distributions.continuous import WeibullBetaRV
 from pymc.logprob.abstract import (
-    MeasurableElemwise,
-    MeasurableOp,
     _logcdf_helper,
-    _logprob,
-    _logprob_helper,
+    logprob_query,
+)
+from pymc.logprob.query import (
+    bind_value,
+    density_sources,
+    infer_support_axes,
+    other_query_uses,
+    query_parts,
+    rewrite_logprob_query,
 )
 from pymc.logprob.rewriting import measurable_ir_rewrites_db
 from pymc.logprob.utils import filter_measurable_variables
@@ -67,92 +68,17 @@ from pymc.math import logdiffexp
 from pymc.pytensorf import constant_fold
 
 
-class MeasurableMax(MeasurableOp, Max):
-    """A placeholder used to specify a log-likelihood for a max sub-graph."""
-
-
-class MeasurableMaxDiscrete(MeasurableOp, Max):
-    """A placeholder used to specify a log-likelihood for sub-graphs of maxima of discrete variables."""
-
-
-@node_rewriter([Max])
-def find_measurable_max(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] | None:
-    if isinstance(node.op, MeasurableMax | MeasurableMaxDiscrete):
-        return None
-
-    [base_var] = node.inputs
-
-    if base_var.owner is None:
-        return None
-
-    if not filter_measurable_variables(node.inputs):
-        return None
-
-    # We allow Max of RandomVariables or Elemwise of univariate RandomVariables
-    if isinstance(base_var.owner.op, MeasurableElemwise):
-        latent_base_vars = [
-            var
-            for var in base_var.owner.inputs
-            if (var.owner and isinstance(var.owner.op, MeasurableOp))
-        ]
-        if len(latent_base_vars) != 1:
-            return None
-        [latent_base_var] = latent_base_vars
-    else:
-        latent_base_var = base_var
-
-    latent_op = latent_base_var.owner.op
-    if not (hasattr(latent_op, "dist_params") and getattr(latent_op, "ndim_supp") == 0):
-        return None
-
-    # univariate i.i.d. test which also rules out other distributions
-    if not all(
-        all(params.type.broadcastable) for params in latent_op.dist_params(latent_base_var.owner)
-    ):
-        return None
-
-    base_var = cast(TensorVariable, base_var)
-
-    if node.op.axis is None:
-        axis = tuple(range(base_var.ndim))
-    else:
-        # Check whether axis covers all dimensions
-        axis = tuple(sorted(node.op.axis))
-        if axis != tuple(range(base_var.ndim)):
-            return None
-
-    # distinguish measurable discrete and continuous (because logprob is different)
-    measurable_max_class = (
-        MeasurableMaxDiscrete if latent_base_var.type.dtype.startswith("int") else MeasurableMax
-    )
-    max_rv = cast(TensorVariable, measurable_max_class(axis)(base_var))
-    return [max_rv]
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_max",
-    find_measurable_max,
-    "basic",
-    "order",
-    "max",
-)
-
-
-@_logprob.register(MeasurableMax)
-def max_logprob(op, values, base_rv, **kwargs):
+def max_logprob(fgraph, value, base_rv):
     r"""Compute the log-likelihood graph for the `Max` operation."""
-    (value,) = values
-
     base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
     bcast_value = pt.broadcast_to(value, base_rv_shape)
-    logprob = _logprob_helper(base_rv, bcast_value)[0]
-    logcdf = _logcdf_helper(base_rv, bcast_value)[0]
+    logprob = logprob_query(bind_value(fgraph, base_rv, bcast_value))[(0,) * base_rv.ndim]
+    logcdf = _logcdf_helper(base_rv, bcast_value)[(0,) * base_rv.ndim]
 
     n = pt.prod(base_rv_shape)
     return (n - 1) * logcdf + logprob + pt.math.log(n)
 
 
-@_logprob.register(MeasurableMaxDiscrete)
 def max_logprob_discrete(op, values, base_rv, **kwargs):
     r"""Compute the log-likelihood graph for the `Max` operation.
 
@@ -165,8 +91,8 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
 
     base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
     bcast_value = pt.broadcast_to(value, base_rv_shape)
-    logcdf = _logcdf_helper(base_rv, bcast_value)[0]
-    logcdf_prev = _logcdf_helper(base_rv, bcast_value - 1)[0]
+    logcdf = _logcdf_helper(base_rv, bcast_value)[(0,) * base_rv.ndim]
+    logcdf_prev = _logcdf_helper(base_rv, bcast_value - 1)[(0,) * base_rv.ndim]
 
     n = pt.prod(base_rv_shape)
     return logdiffexp(n * logcdf, n * logcdf_prev)
@@ -343,3 +269,34 @@ measurable_ir_rewrites_db.register(
     "order",
     "argmax",
 )
+
+
+@infer_support_axes.register(Max)
+def measure_max(op, var):
+    return ()
+
+
+@rewrite_logprob_query.register(Max)
+def rewrite_max_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    [base] = rv.owner.inputs
+    if not filter_measurable_variables([base]):
+        return None
+    if other_query_uses(fgraph, density_sources(base), {query}):
+        return None
+    latent = base
+    while isinstance(latent.owner_op, Elemwise):
+        candidates = filter_measurable_variables(latent.owner.inputs)
+        if len(candidates) != 1:
+            return None
+        [latent] = candidates
+    latent_op = latent.owner_op
+    if not (hasattr(latent_op, "dist_params") and getattr(latent_op, "ndim_supp", None) == 0):
+        return None
+    if not all(all(p.type.broadcastable) for p in latent_op.dist_params(latent.owner)):
+        return None
+    if op.axis is not None and tuple(sorted(op.axis)) != tuple(range(base.ndim)):
+        return None
+    if latent.dtype.startswith("int"):
+        return [max_logprob_discrete(op, [value], base, **kwargs)]
+    return [max_logprob(fgraph, value, base)]

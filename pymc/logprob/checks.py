@@ -33,90 +33,41 @@
 #   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
-from typing import cast
 
 import pytensor.tensor as pt
 
-from pytensor.graph.rewriting.basic import node_rewriter
 from pytensor.raise_op import CheckAndRaise
-from pytensor.tensor import TensorVariable
 from pytensor.tensor.shape import SpecifyShape
 
-from pymc.logprob.abstract import MeasurableOp, _logprob, _logprob_helper
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.utils import filter_measurable_variables, replace_rvs_by_values
-
-
-class MeasurableSpecifyShape(MeasurableOp, SpecifyShape):
-    """A placeholder used to specify a log-likelihood for a specify-shape sub-graph."""
-
-
-@_logprob.register(MeasurableSpecifyShape)
-def logprob_specify_shape(op, values, inner_rv, *shapes, **kwargs):
-    (value,) = values
-    # transfer specify_shape from rv to value
-    value = pt.specify_shape(value, shapes)
-    return _logprob_helper(inner_rv, value)
-
-
-@node_rewriter([SpecifyShape])
-def find_measurable_specify_shapes(fgraph, node) -> list[TensorVariable] | None:
-    r"""Find `SpecifyShapeOp`\s for which a `logprob` can be computed."""
-    if isinstance(node.op, MeasurableSpecifyShape):
-        return None  # pragma: no cover
-
-    base_rv, *shape = node.inputs
-
-    if not filter_measurable_variables([base_rv]):
-        return None
-
-    new_rv = cast(TensorVariable, MeasurableSpecifyShape()(base_rv, *shape))
-
-    return [new_rv]
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_specify_shapes",
-    find_measurable_specify_shapes,
-    "basic",
-    "specify_shape",
+from pymc.logprob.abstract import logprob_query
+from pymc.logprob.query import (
+    bind_value,
+    infer_support_axes,
+    query_parts,
+    rewrite_logprob_query,
+    support_axes,
 )
+from pymc.logprob.utils import replace_rvs_by_values
 
 
-class MeasurableCheckAndRaise(MeasurableOp, CheckAndRaise):
-    """A placeholder used to specify a log-likelihood for an assert sub-graph."""
+@infer_support_axes.register(SpecifyShape)
+@infer_support_axes.register(CheckAndRaise)
+def measure_check(op, var):
+    return support_axes(var.owner.inputs[0])
 
 
-@_logprob.register(MeasurableCheckAndRaise)
-def logprob_check_and_raise(op, values, inner_rv, *assertions, **kwargs):
-    (value,) = values
-    # transfer assertion from rv to value
-    assertions = replace_rvs_by_values(assertions, rvs_to_values={inner_rv: value})
-    value = op(value, *assertions)
-    return _logprob_helper(inner_rv, value)
+@rewrite_logprob_query.register(SpecifyShape)
+def rewrite_specify_shape_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base, *shape = rv.owner.inputs
+    return [logprob_query(bind_value(fgraph, base, pt.specify_shape(value, shape)))]
 
 
-@node_rewriter([CheckAndRaise])
-def find_measurable_check_and_raise(fgraph, node) -> list[TensorVariable] | None:
-    r"""Find `AssertOp`\s for which a `logprob` can be computed."""
-    if isinstance(node.op, MeasurableCheckAndRaise):
-        return None  # pragma: no cover
-
-    base_rv, *conds = node.inputs
-
-    if not filter_measurable_variables([base_rv]):
-        return None
-
-    op = node.op
-    new_op = MeasurableCheckAndRaise(exc_type=op.exc_type, msg=op.msg)
-    new_rv = new_op.make_node(base_rv, *conds).default_output()
-
-    return [new_rv]
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_check_and_raise",
-    find_measurable_check_and_raise,
-    "basic",
-    "assert",
-)
+@rewrite_logprob_query.register(CheckAndRaise)
+def rewrite_check_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base, *checks = rv.owner.inputs
+    checks = replace_rvs_by_values(checks, rvs_to_values={base: value})
+    return [
+        logprob_query(bind_value(fgraph, base, CheckAndRaise(op.exc_type, op.msg)(value, *checks)))
+    ]

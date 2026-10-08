@@ -846,3 +846,10 @@ def test_invalid_broadcasted_transform_rv_fails():
     # This logp derivation should fail or count only once the values that are broadcasted
     logprob = logp(y_rv, y_vv)
     assert logprob.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
+
+
+def test_continuous_transform_does_not_hide_discrete_cast():
+    x = pt.random.poisson(2, size=2)
+    rv = pt.exp(pt.cumsum(x.astype("float64")))
+    with pytest.raises(NotImplementedError):
+        logp(rv, rv.type())
