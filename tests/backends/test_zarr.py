@@ -497,11 +497,6 @@ def test_sample(
         model_step.sampling_state = step_method_state
 
 
-@pytest.mark.xfail(
-    reason="Parallel and sequential ZarrTrace sampling differ on the ubuntu/numba/Python 3.14 CI "
-    "job, see https://github.com/pymc-devs/pymc/issues/8461",
-    strict=False,
-)
 def test_sampling_consistency(
     model,
     model_step,
@@ -523,6 +518,27 @@ def test_sampling_consistency(
     random_seed = 12345
     initial_step_state = model_step.sampling_state
     with model:
+        # The step method compiles its functions lazily, so on a cold compile cache the
+        # first parallel run compiles them in the workers. With the numba backend, freshly
+        # compiled code can give results that differ in the last bits from the cached code
+        # that later runs load (https://github.com/pymc-devs/pytensor/issues/2457), so run
+        # once to fill the cache first.
+        pm.sample(
+            draws=1,
+            tune=1,
+            chains=chains,
+            cores=chains,
+            trace=ZarrTrace(
+                store=zarr.TempStore(),
+                include_transformed=include_transformed,
+                draws_per_chunk=draws_per_chunk,
+            ),
+            step=model_step,
+            return_inferencedata=False,
+            compute_convergence_checks=False,
+            random_seed=random_seed,
+        )
+        model_step.sampling_state = initial_step_state
         parallel_idata = pm.sample(
             draws=draws,
             tune=tune,
