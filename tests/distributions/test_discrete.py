@@ -228,6 +228,17 @@ class TestMatchesScipy:
             Nat,
             {"mu": Rplus, "alpha": Rplus},
         )
+        check_icdf(
+            pm.NegativeBinomial,
+            {"p": Unit, "n": Rplus},
+            lambda q, p, n: st.nbinom.ppf(q, n, p),
+        )
+        # Large mean, where the icdf search relies on the mean-seeded bracket
+        q = np.array([0.001, 0.5, 0.999])
+        np.testing.assert_array_equal(
+            icdf(pm.NegativeBinomial.dist(n=10, p=1e-3), q).eval(),
+            st.nbinom.ppf(q, 10, 1e-3),
+        )
 
     @pytest.mark.parametrize(
         "mu, p, alpha, n, expected",
@@ -266,6 +277,11 @@ class TestMatchesScipy:
             pm.Binomial,
             Nat,
             {"n": NatSmall, "p": Unit},
+        )
+        check_icdf(
+            pm.Binomial,
+            {"n": NatSmall, "p": Unit},
+            lambda q, n, p: st.binom.ppf(q, n, p),
         )
 
     def test_beta_binomial(self):
@@ -368,6 +384,40 @@ class TestMatchesScipy:
             pm.Poisson,
             Nat,
             {"mu": Rplus},
+        )
+        check_icdf(
+            pm.Poisson,
+            {"mu": Rplus},
+            st.poisson.ppf,
+        )
+        # Large mu, where the icdf search relies on the mean-seeded bracket.
+        # mu is kept at 1e4 because the C implementation of gammaincc (used by
+        # logcdf inside the search) loses precision for larger arguments.
+        q = np.array([0.001, 0.5, 0.999])
+        np.testing.assert_array_equal(
+            icdf(pm.Poisson.dist(mu=1e4), q).eval(),
+            st.poisson.ppf(q, 1e4),
+        )
+
+    def test_discrete_icdf_batched_params(self):
+        # The search state must be broadcast against the distribution
+        # parameters, not just the quantile, or scan fails / misbroadcasts
+        mu = np.array([2.0, 5.0, 20.0])
+        np.testing.assert_array_equal(
+            icdf(pm.Poisson.dist(mu=mu), 0.5).eval(),
+            st.poisson.ppf(0.5, mu),
+        )
+
+        q = np.array([[0.1], [0.5], [0.9]])
+        n = np.array([10, 40])
+        p = np.array([0.3, 0.6])  # broadcasts with q to shape (3, 2)
+        np.testing.assert_array_equal(
+            icdf(pm.Binomial.dist(n=n, p=p), q).eval(),
+            st.binom.ppf(q, n, p),
+        )
+        np.testing.assert_array_equal(
+            icdf(pm.NegativeBinomial.dist(n=n, p=p), q).eval(),
+            st.nbinom.ppf(q, n, p),
         )
 
     @pytest.mark.parametrize("n", [2, 3, 4])
