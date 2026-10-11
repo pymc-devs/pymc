@@ -93,8 +93,8 @@ class MeanFieldGroup(Group):
         rho = rho1
 
         return {
-            "mu": pytensor.shared(floatX(start), "mu"),
-            "rho": pytensor.shared(floatX(rho), "rho"),
+            "mu": pytensor.shared(floatX(start), "mu", shape=(self.ddim,)),
+            "rho": pytensor.shared(floatX(rho), "rho", shape=(self.ddim,)),
         }
 
     @node_property
@@ -138,7 +138,10 @@ class FullRankGroup(Group):
         start = self._prepare_start(start)
         n = self.ddim
         L_tril = np.eye(n)[np.tril_indices(n)].astype(pytensor.config.floatX)
-        return {"mu": pytensor.shared(start, "mu"), "L_tril": pytensor.shared(L_tril, "L_tril")}
+        return {
+            "mu": pytensor.shared(start, "mu", shape=(self.ddim,)),
+            "L_tril": pytensor.shared(L_tril, "L_tril", shape=(self.num_tril_entries,)),
+        }
 
     @node_property
     def L(self):
@@ -226,7 +229,8 @@ class EmpiricalGroup(Group):
                 for j in range(len(trace)):
                     histogram[i] = DictToArrayBijection.map(trace.point(j, t)).data
                     i += 1
-        return {"histogram": pytensor.shared(floatX(histogram), "histogram")}
+        histogram = floatX(histogram)
+        return {"histogram": pytensor.shared(histogram, "histogram", shape=histogram.shape)}
 
     def _check_trace(self):
         trace = self._kwargs.get("trace", None)
