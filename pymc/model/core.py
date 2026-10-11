@@ -1016,8 +1016,13 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
 
         if isinstance(values, list):
             values = np.array(values)
-        same_dtype = getattr(values, "dtype", None) == shared_object.dtype
-        values = convert_observed_data(values, dtype=shared_object.dtype if same_dtype else None)
+        if getattr(values, "dtype", None) == shared_object.dtype:
+            # Same dtype as the container: skip the default floatX/intX conversion, which would
+            # change it (e.g. int64 -> int32, or float32 -> float64).
+            values = convert_observed_data(values, dtype=shared_object.dtype)
+        else:
+            # Different dtype: convert as usual, so `set_value` still rejects an unsafe update.
+            values = convert_observed_data(values)
         dims = self.named_vars_to_dims.get(name, None) or ()
         coords = coords or {}
 
