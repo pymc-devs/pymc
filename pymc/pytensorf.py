@@ -126,6 +126,7 @@ def convert_data(data, *, dtype=None) -> np.ndarray | Variable:
     else:
         ret = np.asarray(data)
 
+    # An explicit dtype replaces the default floatX/intX conversion below.
     if dtype is not None:
         return ret.astype(np.dtype(dtype).name)
 
