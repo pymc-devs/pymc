@@ -334,9 +334,15 @@ def test_bernoulli():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
         Bernoulli("x", p=0.3, dims="a")
+        Bernoulli("y", logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Can't specify both p and logit_p"):
+            Bernoulli("z", p=0.3, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Must specify either p or logit_p"):
+            Bernoulli("w", dims="a")
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Bernoulli("x", p=0.3, dims="a")
+        regular_distributions.Bernoulli("y", logit_p=-0.5, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
