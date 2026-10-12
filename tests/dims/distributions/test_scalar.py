@@ -334,9 +334,11 @@ def test_triangular():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
         Triangular("x", lower=0, upper=1, c=0.4, dims="a")
+        Triangular("y", dims="a")
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Triangular("x", lower=0, upper=1, c=0.4, dims="a")
+        regular_distributions.Triangular("y", dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
