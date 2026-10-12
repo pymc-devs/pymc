@@ -342,6 +342,20 @@ class NegativeBinomial(DimDistribution):
         return super().dist([n, p], **kwargs)
 
 
+@copy_docstring(regular_dists.HyperGeometric)
+class HyperGeometric(DimDistribution):
+    xrv_op = ptxr.hypergeometric
+
+    @classmethod
+    def dist(cls, N, k, n, **kwargs):
+        # Match the reference distribution, which casts the integer parameters to int64
+        # (as_xtensor would otherwise infer the smallest dtype, e.g. int8 for constants)
+        return super().dist(
+            [ptx.math.cast(k, "int64"), ptx.math.cast(N - k, "int64"), ptx.math.cast(n, "int64")],
+            **kwargs,
+        )
+
+
 @copy_docstring(regular_dists.DiracDelta)
 class DiracDelta(DimDistribution):
     @classmethod
