@@ -264,6 +264,15 @@ class Gamma(PositiveDimDistribution):
         return super().dist([alpha, ptx.math.reciprocal(beta)], **kwargs)
 
 
+@copy_docstring(regular_dists.Gumbel)
+class Gumbel(DimDistribution):
+    xrv_op = ptxr.gumbel
+
+    @classmethod
+    def dist(cls, mu, beta, **kwargs):
+        return super().dist([mu, beta], **kwargs)
+
+
 @copy_docstring(regular_dists.InverseGamma)
 class InverseGamma(PositiveDimDistribution):
     xrv_op = ptxr.invgamma

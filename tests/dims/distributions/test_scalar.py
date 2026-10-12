@@ -25,6 +25,7 @@ from pymc.dims import (
     Exponential,
     Flat,
     Gamma,
+    Gumbel,
     HalfCauchy,
     HalfFlat,
     HalfNormal,
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_gumbel():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Gumbel("x", mu=0.5, beta=1.2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Gumbel("x", mu=0.5, beta=1.2, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
