@@ -257,7 +257,7 @@ def Data(
         random variables). Use this when ``value`` is a pandas Series or DataFrame. The
         ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
-        :ref:`arviz:quickstart`.
+        :doc:`arviz_base:tutorial/WorkingWithDataTree`.
         If this parameter is not specified, the random variables will not have dimension
         names.
     coords : dict, optional
