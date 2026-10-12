@@ -41,6 +41,7 @@ from pymc.dims import (
     StudentT,
     TruncatedNormal,
     Uniform,
+    VonMises,
     Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
@@ -350,6 +351,15 @@ def test_logistic():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Logistic("x", mu=0.5, s=1.2, dims="a")
+
+
+def test_vonmises():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        VonMises("x", mu=0.5, kappa=2.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.VonMises("x", mu=0.5, kappa=2.0, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
