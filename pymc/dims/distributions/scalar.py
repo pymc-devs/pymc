@@ -26,7 +26,7 @@ from pymc.dims.distributions.core import (
     UnitDimDistribution,
     copy_docstring,
 )
-from pymc.dims.distributions.transforms import IntervalTransform
+from pymc.dims.distributions.transforms import IntervalTransform, circular
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
 from pymc.distributions.continuous import (
@@ -183,6 +183,16 @@ class HalfStudentT(PositiveDimDistribution):
         core_rv = HalfStudentTRV.rv_op(nu=nu.values, sigma=sigma.values).owner.op
         xop = ptxr.as_xrv(core_rv)
         return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
+
+
+@copy_docstring(regular_dists.VonMises)
+class VonMises(DimDistribution):
+    xrv_op = ptxr.vonmises
+    default_transform = circular
+
+    @classmethod
+    def dist(cls, mu, kappa, **kwargs):
+        return super().dist([mu, kappa], **kwargs)
 
 
 @copy_docstring(regular_dists.Cauchy)

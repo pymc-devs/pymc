@@ -58,6 +58,19 @@ class LogOddsTransform(DimTransform):
 log_odds_transform = LogOddsTransform()
 
 
+class CircularTransform(DimTransform):
+    name = "circular"
+
+    def forward(self, value, *inputs):
+        return value
+
+    def backward(self, value, *inputs):
+        return ptx.math.arctan2(ptx.math.sin(value), ptx.math.cos(value))
+
+    def log_jac_det(self, value, *inputs):
+        return ptx.zeros_like(value)
+
+
 class IntervalTransform(DimTransform):
     name = "interval"
 
@@ -204,3 +217,6 @@ class ZeroSumTransform(DimTransform):
 
     def log_jac_det(self, value, *rv_inputs):
         return as_xtensor(0.0).broadcast_like(value, exclude=self.dims)
+
+
+circular = CircularTransform()

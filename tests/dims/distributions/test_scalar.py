@@ -39,6 +39,7 @@ from pymc.dims import (
     StudentT,
     TruncatedNormal,
     Uniform,
+    VonMises,
     Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_vonmises():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        VonMises("x", mu=0.5, kappa=2.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.VonMises("x", mu=0.5, kappa=2.0, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
