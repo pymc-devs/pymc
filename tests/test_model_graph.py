@@ -694,3 +694,18 @@ def test_model_to_mermaid_with_variable_with_space():
     %% Plates:
     """)
     assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
+
+
+def test_plates_of_unsampleable_variables():
+    # Shapes are inferred symbolically, so variables without a random method can be plotted
+    with pm.Model(coords={"group": range(3)}) as model:
+        x = pm.Flat("x", dims="group")
+        pm.Normal("y", x, dims="group")
+
+    assert ModelGraph(model).get_plates() == [
+        Plate(
+            DimInfo(names=("group",), lengths=(3,)),
+            [NodeInfo(model["x"], NodeType.FREE_RV), NodeInfo(model["y"], NodeType.FREE_RV)],
+        )
+    ]
+    model_to_graphviz(model)

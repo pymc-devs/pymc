@@ -22,6 +22,7 @@ from typing import Any, cast
 
 from pytensor import function
 from pytensor.graph.basic import Variable
+from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.shape import Shape
 
@@ -345,9 +346,20 @@ class ModelGraph:
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
+        var_names_to_plot = self.vars_to_plot(var_names)
+        # Infer the shapes symbolically first, so that variables that cannot be
+        # sampled (e.g. Flat) don't need to be evaluated.
+        symbolic_shapes = (
+            rewrite_graph(
+                [self.model[var_name].shape for var_name in var_names_to_plot],
+                include=("ShapeOpt", "canonicalize"),
+            )
+            if var_names_to_plot
+            else []
+        )
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
-            for var_name in self.vars_to_plot(var_names)
+            var_name: tuple(map(int, fast_eval(shape)))
+            for var_name, shape in zip(var_names_to_plot, symbolic_shapes)
         }
 
         for var_name in self.vars_to_plot(var_names):
