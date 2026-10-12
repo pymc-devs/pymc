@@ -342,6 +342,15 @@ class NegativeBinomial(DimDistribution):
         return super().dist([n, p], **kwargs)
 
 
+@copy_docstring(regular_dists.Geometric)
+class Geometric(DimDistribution):
+    xrv_op = ptxr.geometric
+
+    @classmethod
+    def dist(cls, p, **kwargs):
+        return super().dist([p], **kwargs)
+
+
 @copy_docstring(regular_dists.DiracDelta)
 class DiracDelta(DimDistribution):
     @classmethod

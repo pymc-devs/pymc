@@ -25,6 +25,7 @@ from pymc.dims import (
     Exponential,
     Flat,
     Gamma,
+    Geometric,
     HalfCauchy,
     HalfFlat,
     HalfNormal,
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_geometric():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Geometric("x", p=0.3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Geometric("x", p=0.3, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
