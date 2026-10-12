@@ -20,6 +20,7 @@ from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
     Beta,
+    Binomial,
     Cauchy,
     DiracDelta,
     Exponential,
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_binomial():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Binomial("x", n=10, p=0.3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Binomial("x", n=10, p=0.3, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
