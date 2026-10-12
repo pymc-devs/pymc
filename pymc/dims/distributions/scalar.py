@@ -149,6 +149,15 @@ class TruncatedNormal(DimDistribution):
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
 
+@copy_docstring(regular_dists.Logistic)
+class Logistic(DimDistribution):
+    xrv_op = ptxr.logistic
+
+    @classmethod
+    def dist(cls, mu, s, **kwargs):
+        return super().dist([mu, s], **kwargs)
+
+
 @copy_docstring(regular_dists.LogNormal)
 class LogNormal(PositiveDimDistribution):
     xrv_op = ptxr.lognormal
