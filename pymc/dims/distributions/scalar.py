@@ -342,6 +342,17 @@ class NegativeBinomial(DimDistribution):
         return super().dist([n, p], **kwargs)
 
 
+@copy_docstring(regular_dists.BetaBinomial)
+class BetaBinomial(DimDistribution):
+    xrv_op = ptxr.betabinom
+
+    @classmethod
+    def dist(cls, n, alpha, beta, **kwargs):
+        # Match the regular BetaBinomial, which casts n to int
+        n = as_xtensor(n).astype("int64")
+        return super().dist([n, alpha, beta], **kwargs)
+
+
 @copy_docstring(regular_dists.DiracDelta)
 class DiracDelta(DimDistribution):
     @classmethod
