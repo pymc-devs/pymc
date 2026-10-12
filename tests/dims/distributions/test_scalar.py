@@ -32,6 +32,7 @@ from pymc.dims import (
     HalfStudentT,
     InverseGamma,
     Laplace,
+    Logistic,
     LogNormal,
     NegativeBinomial,
     Normal,
@@ -337,6 +338,18 @@ def test_gumbel():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Gumbel("x", mu=0.5, beta=1.2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_logistic():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Logistic("x", mu=0.5, s=1.2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Logistic("x", mu=0.5, s=1.2, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
