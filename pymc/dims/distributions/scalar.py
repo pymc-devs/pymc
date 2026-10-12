@@ -74,6 +74,31 @@ class HalfFlat(PositiveDimDistribution):
         return super().dist([], **kwargs)
 
 
+@copy_docstring(regular_dists.Triangular)
+class Triangular(DimDistribution):
+    def __new__(
+        cls, name, lower=0, upper=1, c=0.5, default_transform=UNSET, observed=None, **kwargs
+    ):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(lower, upper)
+        return super().__new__(
+            cls,
+            name,
+            lower,
+            c,
+            upper,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    xrv_op = ptxr.triangular
+
+    @classmethod
+    def dist(cls, lower, c, upper, **kwargs):
+        return super().dist([lower, c, upper], **kwargs)
+
+
 @copy_docstring(regular_dists.Uniform)
 class Uniform(DimDistribution):
     xrv_op = ptxr.uniform

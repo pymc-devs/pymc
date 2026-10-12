@@ -37,6 +37,7 @@ from pymc.dims import (
     Pareto,
     Poisson,
     StudentT,
+    Triangular,
     TruncatedNormal,
     Uniform,
     Weibull,
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_triangular():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Triangular("x", lower=0, upper=1, c=0.4, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Triangular("x", lower=0, upper=1, c=0.4, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
