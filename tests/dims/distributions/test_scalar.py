@@ -19,6 +19,7 @@ from pytensor.xtensor import as_xtensor
 from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
+    Bernoulli,
     Beta,
     Cauchy,
     DiracDelta,
@@ -324,6 +325,18 @@ def test_pareto():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_bernoulli():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Bernoulli("x", p=0.3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Bernoulli("x", p=0.3, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)

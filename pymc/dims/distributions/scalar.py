@@ -342,6 +342,21 @@ class NegativeBinomial(DimDistribution):
         return super().dist([n, p], **kwargs)
 
 
+@copy_docstring(regular_dists.Bernoulli)
+class Bernoulli(DimDistribution):
+    xrv_op = ptxr.bernoulli
+
+    @classmethod
+    def dist(cls, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        if p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+        if logit_p is not None:
+            p = ptx.math.sigmoid(logit_p)
+        return super().dist([p], **kwargs)
+
+
 @copy_docstring(regular_dists.DiracDelta)
 class DiracDelta(DimDistribution):
     @classmethod
