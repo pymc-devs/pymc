@@ -47,51 +47,55 @@ The codebase of PyMC is split among single Python file modules at the root
 level, as well as directories with Python code for logical groups of functionality.
 Admittedly the split between single `.py` module or directory is not defined by a strict
 criteria but tends to occur when single `.py` files would be "too big".
-We will with the modules needed implement "simple MCMC" model shown below
-before detailing the remaining modules, such as Variational Inference, Ordinary Differential Equations,
-or Sequential Monte Carlo.
+The following model illustrates how the core pieces fit together. The sections
+below describe the major packages and modules.
 
 ```python
+import pymc as pm
+
 with pm.Model() as model:
-  theta = pm.Beta("theta", alpha=1, beta=2)
-  p = pm.Beta("n", p=theta, n=2, observed=[1,2])
-  inf_data = pm.sample()
-
-
+    theta = pm.Beta("theta", alpha=1, beta=2)
+    y = pm.Binomial("y", n=2, p=theta, observed=[1, 2])
+    idata = pm.sample()
 ```
 
 ## {mod}`pymc.model`
-Contains primitives related model definition and methods used for evaluation of the model.
-In no particular order they are
+Contains primitives related to model definition and methods used to evaluate models.
+Core model implementation lives in `pymc/model/core.py`, while graph and transform
+functionality is organized in the other modules under `pymc/model/`.
 
-* `ContextMeta`: The context manager that enables the `with pm.Model() as model` syntax
-* {class}`~pymc.Factor`: Defines the methods for the various logprobs for models
-* `ValueGrad` which handles the value and gradient and is the main connection point to PyTensor
-* `Deterministic` and `Potential`: Definitions for two pieces of functionality useful in some model definitions
+`Model` provides the context manager used by `with pm.Model() as model`. The package
+also implements deterministic variables, potentials, model graph construction, and
+transformations.
 
-## distributions/
-Contains multiple submodules that define distributions,  as well as logic that aids in distributions usage.
-Important modules to note are
+## `pymc/distributions/`
+Contains distribution definitions and supporting logic, including:
 
-* `distribution.py`: This contains parent class for all PyMC distributions.
-  Notably the `distribution.distribution` class contains the `observed` argument which in PyMC differentiates
-  a random variable distribution from a likelihood distribution.
+* `distribution.py`: Base classes and shared distribution behavior.
+* `continuous.py`, `discrete.py`, and `multivariate.py`: Distribution definitions.
+* `dist_math.py` and `shape_utils.py`: Mathematical and shape utilities.
 
-* `logprob.py`: This contains the log probability logic for the distributions themselves.
-  The log probability calculation is deferred to PyTensor
+## `pymc/logprob/`
+Implements log-probability inference and graph rewrites, building on PyTensor.
 
-* `dist_math.py`: Various convenience operators for distributions.
-  This includes mathematical operators such as `logpower` or `all_true`methods.
-  It also contains a suite of lognormal methods and transformation methods
+## `pymc/sampling/`
+Sampling functionality is organized as a package rather than a single module:
 
-## /sampling.py
-Interface to posterior, prior predictive, and posterior sampling as well as various methods to identify and initialize
-stepper methods. Also contains logic to check for "all continuous" variables and initialize NUTS
+* `mcmc.py`: Posterior MCMC sampling and NUTS initialization.
+* `forward.py`: Prior and posterior predictive sampling and drawing.
+* `jax.py`: Interfaces to external JAX-based samplers.
+* `population.py`: Population-based sampling.
 
-## step_methods/
-Contains various step methods for various sampling algorithms, such as MCMC, and SMC. `step_methods.hmc` includes
-the Hamiltonian Monte Carlo sampling methods as well as helper functions such as the integrators used for those methods
+## `pymc/step_methods/`
+Contains step methods for MCMC algorithms, including the HMC/NUTS family, Metropolis,
+and Slice sampling.
 
-## tests/
-All tests for testing functionality of codebase. All modules prefixed with `test_` are tests themselves, whereas all
-other modules contain various supporting code such as fixtures, configurations, etc
+## Other inference and storage packages
+Other major areas of the codebase include `pymc/variational/` for variational inference,
+`pymc/smc/` for sequential Monte Carlo, `pymc/ode/` for ODE-based models,
+`pymc/dims/` for named-dimension functionality, and `pymc/backends/` for sample
+storage backends.
+
+## `tests/`
+Tests are organized by functionality, generally mirroring the corresponding package
+modules. Files named `test_*.py` contain tests; other files provide shared test support.
