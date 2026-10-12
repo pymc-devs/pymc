@@ -249,6 +249,7 @@ def sample_smc(
         for result in results:
             chain_results[result.chain].append(result)
 
+        trace_kwargs = {"compile_kwargs": compile_kwargs}
         for chain_idx, chain_samples in enumerate(chain_results):
             if not chain_samples:
                 raise RuntimeError(
@@ -262,7 +263,9 @@ def sample_smc(
                 final_result.variables,
                 chain_idx,
                 model,
+                trace_kwargs,
             )
+            trace_kwargs = _reusable_trace_kwargs(trace)
             traces.append(trace)
 
             sample_stats.append(final_result.sample_stats)
@@ -284,6 +287,7 @@ def sample_smc(
                 traces=traces,
                 sample_stats=sample_stats,
                 sample_settings=sample_settings,
+                compile_kwargs=compile_kwargs,
             )
 
     trace = MultiTrace(traces)
@@ -373,6 +377,7 @@ def _build_trace_from_kernel_state(
     variables: list,
     chain: int,
     model: Model,
+    trace_kwargs: dict | None = None,
 ):
     """Build a trace from kernel state.
 
@@ -390,6 +395,9 @@ def _build_trace_from_kernel_state(
         Chain index
     model : Model
         PyMC model for trace setup
+    trace_kwargs : dict, optional
+        Extra keyword arguments for the ``NDArray`` trace, e.g. a compiled ``fn`` with
+        ``var_shapes`` and ``var_dtypes`` reused from a previous chain
 
     Returns
     -------
@@ -401,7 +409,7 @@ def _build_trace_from_kernel_state(
     length_pos = len(tempered_posterior)
     varnames = [v.name for v in variables]
 
-    strace = NDArray(name=model.name, model=model)
+    strace = NDArray(name=model.name, model=model, **(trace_kwargs or {}))
     strace.setup(length_pos, chain)
 
     for i in range(length_pos):
@@ -420,6 +428,11 @@ def _build_trace_from_kernel_state(
     return strace
 
 
+def _reusable_trace_kwargs(strace) -> dict:
+    """Return the compiled trace function and variable info so later chains don't recompile it."""
+    return {"fn": strace.fn, "var_shapes": strace.var_shapes, "var_dtypes": strace.var_dtypes}
+
+
 def _sample_smc_sequentially(
     *,
     kernel,
@@ -432,6 +445,7 @@ def _sample_smc_sequentially(
     traces: list,
     sample_stats: list,
     sample_settings: list,
+    compile_kwargs: dict | None = None,
 ):
     """Sample all SMC chains sequentially.
 
@@ -457,7 +471,10 @@ def _sample_smc_sequentially(
         List to append sample_stats to
     sample_settings: list
         List to append sample_settings to
+    compile_kwargs: dict, optional
+        Keyword arguments used to compile the trace function
     """
+    trace_kwargs = {"compile_kwargs": compile_kwargs}
     with SMCProgressBarManager(
         kernel=kernel,
         chains=chains,
@@ -493,7 +510,9 @@ def _sample_smc_sequentially(
                 variables=kernel.variables,
                 chain=i,
                 model=model,
+                trace_kwargs=trace_kwargs,
             )
+            trace_kwargs = _reusable_trace_kwargs(trace)
 
             traces.append(trace)
             sample_stats.append(chain_sample_stats)
