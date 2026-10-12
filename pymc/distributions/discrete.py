@@ -1075,7 +1075,7 @@ class DiscreteUniform(Discrete):
             -np.inf,
             pt.switch(
                 pt.lt(value, upper),
-                pt.log(pt.minimum(pt.floor(value), upper) - lower + 1) - pt.log(upper - lower + 1),
+                pt.log(pt.floor(value) - lower + 1) - pt.log(upper - lower + 1),
                 0,
             ),
         )
