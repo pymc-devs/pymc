@@ -334,9 +334,15 @@ def test_binomial():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
         Binomial("x", n=10, p=0.3, dims="a")
+        Binomial("y", n=10, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Can't specify both p and logit_p"):
+            Binomial("z", n=10, p=0.3, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Must specify either p or logit_p"):
+            Binomial("w", n=10, dims="a")
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Binomial("x", n=10, p=0.3, dims="a")
+        regular_distributions.Binomial("y", n=10, logit_p=-0.5, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
