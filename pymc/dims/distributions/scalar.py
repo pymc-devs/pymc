@@ -74,6 +74,31 @@ class HalfFlat(PositiveDimDistribution):
         return super().dist([], **kwargs)
 
 
+@copy_docstring(regular_dists.Triangular)
+class Triangular(DimDistribution):
+    def __new__(
+        cls, name, lower=0, upper=1, c=0.5, default_transform=UNSET, observed=None, **kwargs
+    ):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(lower, upper)
+        return super().__new__(
+            cls,
+            name,
+            lower,
+            c,
+            upper,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    xrv_op = ptxr.triangular
+
+    @classmethod
+    def dist(cls, lower, c, upper, **kwargs):
+        return super().dist([lower, c, upper], **kwargs)
+
+
 @copy_docstring(regular_dists.Uniform)
 class Uniform(DimDistribution):
     xrv_op = ptxr.uniform
@@ -368,6 +393,72 @@ class NegativeBinomial(DimDistribution):
     def dist(cls, mu=None, alpha=None, *, p=None, n=None, **kwargs):
         n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n, math=ptx.math)
         return super().dist([n, p], **kwargs)
+
+
+@copy_docstring(regular_dists.BetaBinomial)
+class BetaBinomial(DimDistribution):
+    xrv_op = ptxr.betabinom
+
+    @classmethod
+    def dist(cls, n, alpha, beta, **kwargs):
+        # Match the regular BetaBinomial, which casts n to int
+        n = as_xtensor(n).astype("int64")
+        return super().dist([n, alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Bernoulli)
+class Bernoulli(DimDistribution):
+    xrv_op = ptxr.bernoulli
+
+    @classmethod
+    def dist(cls, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        if p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+        if logit_p is not None:
+            p = ptx.math.sigmoid(logit_p)
+        return super().dist([p], **kwargs)
+
+
+@copy_docstring(regular_dists.Binomial)
+class Binomial(DimDistribution):
+    xrv_op = ptxr.binomial
+
+    @classmethod
+    def dist(cls, n, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        if p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+        if logit_p is not None:
+            p = ptx.math.sigmoid(logit_p)
+        # Cast to int64 to match the dtype used by regular_dists.Binomial
+        n = ptx.math.cast(n, "int64")
+        return super().dist([n, p], **kwargs)
+
+
+@copy_docstring(regular_dists.Geometric)
+class Geometric(DimDistribution):
+    xrv_op = ptxr.geometric
+
+    @classmethod
+    def dist(cls, p, **kwargs):
+        return super().dist([p], **kwargs)
+
+
+@copy_docstring(regular_dists.HyperGeometric)
+class HyperGeometric(DimDistribution):
+    xrv_op = ptxr.hypergeometric
+
+    @classmethod
+    def dist(cls, N, k, n, **kwargs):
+        # Match the reference distribution, which casts the integer parameters to int64
+        # (as_xtensor would otherwise infer the smallest dtype, e.g. int8 for constants)
+        return super().dist(
+            [ptx.math.cast(k, "int64"), ptx.math.cast(N - k, "int64"), ptx.math.cast(n, "int64")],
+            **kwargs,
+        )
 
 
 @copy_docstring(regular_dists.DiracDelta)
