@@ -696,6 +696,41 @@ def test_model_to_mermaid_with_variable_with_space():
     assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
 
 
+def test_placeholder():
+    with pm.Model(coords={"group": range(3)}) as model:
+        mu = pm.Normal("mu")
+        sigma = pm.Placeholder("sigma", dims="group")
+        pm.Normal("y", mu, sigma, dims="group")
+
+    graph = ModelGraph(model)
+    assert graph.make_compute_graph() == {"mu": set(), "sigma": set(), "y": {"mu", "sigma"}}
+    # The shapes of Placeholder variables are inferred without sampling them
+    assert sort_plates(graph.get_plates()) == sort_plates(
+        [
+            Plate(
+                DimInfo(names=(), lengths=()),
+                [NodeInfo(model["mu"], NodeType.FREE_RV)],
+            ),
+            Plate(
+                DimInfo(names=("group",), lengths=(3,)),
+                [
+                    NodeInfo(model["sigma"], NodeType.FREE_RV),
+                    NodeInfo(model["y"], NodeType.FREE_RV),
+                ],
+            ),
+        ]
+    )
+
+    source = model_to_graphviz(model).source
+    assert 'sigma [label="sigma\n~\nPlaceholder" shape=ellipse style=dashed]' in source
+    assert 'mu [label="mu\n~\nNormal" shape=ellipse]' in source
+
+    mermaid = model_to_mermaid(model)
+    assert "sigma([sigma ~ Placeholder])" in mermaid
+    assert "style sigma stroke-dasharray: 5 5" in mermaid
+    assert "style mu stroke-dasharray" not in mermaid
+
+
 def test_plates_of_unsampleable_variables():
     # Shapes are inferred symbolically, so variables without a random method can be plotted
     with pm.Model(coords={"group": range(3)}) as model:
