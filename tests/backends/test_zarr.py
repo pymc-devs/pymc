@@ -498,8 +498,8 @@ def test_sample(
 
 
 @pytest.mark.xfail(
-    reason="Parallel and sequential ZarrTrace sampling differ on the ubuntu/numba/Python 3.14 CI "
-    "job, see https://github.com/pymc-devs/pymc/issues/8461",
+    reason="On a cold compile cache, numba code compiled in the workers can differ in the last "
+    "bits from the cached code: https://github.com/numba/numba/issues/10899",
     strict=False,
 )
 def test_sampling_consistency(
