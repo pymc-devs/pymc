@@ -131,6 +131,14 @@ class TestMatchesScipy:
             with pytest.raises(ParameterValueError):
                 icdf(invalid_dist, np.array(1)).eval()
 
+    def test_discrete_unif_logcdf_at_lower(self):
+        value = np.array([0, 1, 2, 3, 4])
+        dist = pm.DiscreteUniform.dist(lower=1, upper=4)
+        np.testing.assert_allclose(
+            pm.logcdf(dist, value).eval(),
+            st.randint.logcdf(value, 1, 5),
+        )
+
     def test_geometric(self):
         check_logp(
             pm.Geometric,
