@@ -358,6 +358,9 @@ def test_logistic():
     with Model(coords=coords) as reference_model:
         regular_distributions.Logistic("x", mu=0.5, s=1.2, dims="a")
 
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
 
 def test_vonmises():
     coords = {"a": range(3)}
