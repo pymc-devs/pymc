@@ -975,6 +975,30 @@ class TestLKJCholeskCov:
             warnings.simplefilter("error")
             m.logp()
 
+    def test_lkj_cholesky_cov_symbolic_eta(self):
+        with pm.Model() as model:
+            eta = pm.HalfNormal("eta", sigma=1.0)
+            sd_dist = pm.Exponential.dist(1.0)
+            chol = pm.LKJCholeskyCov("chol", eta=eta, n=3, sd_dist=sd_dist)
+
+            logp_fn = model.compile_logp()
+            dlogp_fn = model.compile_dlogp()
+
+        ip = model.initial_point()
+        logp_val = logp_fn(ip)
+        assert np.isfinite(logp_val)
+
+        dlogp_val = dlogp_fn(ip)
+        assert dlogp_val.size == 7
+        assert np.all(np.isfinite(dlogp_val))
+
+        with pm.Model() as m_invalid:
+            n_sym = pt.lscalar("n")
+            sd_dist = pm.Exponential.dist(1.0)
+            pm.LKJCholeskyCov("chol_invalid", eta=2.0, n=n_sym, sd_dist=sd_dist, compute_corr=False)
+            with pytest.raises(NotImplementedError, match="logp only implemented for constant `n`"):
+                m_invalid.logp()
+
     @pytest.mark.parametrize(
         "sd_dist",
         [
