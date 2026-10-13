@@ -32,6 +32,7 @@ from pymc.distributions.continuous import Gamma as RegularGamma
 from pymc.distributions.continuous import (
     HalfCauchyRV,
     HalfStudentTRV,
+    KumaraswamyRV,
     WeibullBetaRV,
     flat,
     halfflat,
@@ -260,6 +261,21 @@ class Beta(UnitDimDistribution):
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, nu=None, **kwargs):
         alpha, beta = RegularBeta.get_alpha_beta(alpha=alpha, beta=beta, mu=mu, sigma=sigma, nu=nu)
         return super().dist([alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Kumaraswamy)
+class Kumaraswamy(UnitDimDistribution):
+    @classmethod
+    def dist(cls, a, b, **kwargs):
+        return super().dist([a, b], **kwargs)
+
+    @classmethod
+    def xrv_op(cls, a, b, core_dims, extra_dims=None, rng=None, **kwargs):
+        a = as_xtensor(a)
+        b = as_xtensor(b)
+        core_rv = KumaraswamyRV.rv_op(a=a.values, b=b.values).owner.op
+        xop = ptxr.as_xrv(core_rv)
+        return xop(a, b, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
 @copy_docstring(regular_dists.Laplace)
