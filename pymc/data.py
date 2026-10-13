@@ -223,6 +223,7 @@ def Data(
     name: str,
     value,
     *,
+    dtype=None,
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
     infer_dims_and_coords=False,
@@ -252,6 +253,12 @@ def Data(
         The name for this variable.
     value : array_like or pandas.Series, pandas.Dataframe
         A value to associate with this variable.
+    dtype : data-type, optional
+        Dtype of the data container: anything :class:`numpy.dtype` accepts, such as ``bool``,
+        ``"int64"`` or ``np.float32``. Values are cast with NumPy's rules, which may be lossy.
+        If omitted, the dtype is taken from ``value`` as before: floats are converted to
+        ``floatX`` and signed integers to the integer precision paired with it (``int32``
+        when ``floatX`` is ``float64``). Missing values are not supported in either case.
     dims : str, tuple of str or tuple of None, optional
         Dimension names of the random variables (as opposed to the shapes of these
         random variables). Use this when ``value`` is a pandas Series or DataFrame. The
@@ -318,7 +325,7 @@ def Data(
             # It messes up InferenceData and can't be the input to a SharedVariable.
         )
     else:
-        arr = convert_data(value)
+        arr = convert_data(value, dtype=dtype)
 
     if isinstance(arr, np.ma.MaskedArray):
         raise NotImplementedError(
