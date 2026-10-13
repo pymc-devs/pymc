@@ -324,9 +324,8 @@ class TestExternalSamplerKwargCompat:
         [
             {"return_inferencedata": False},
             {"trace": object()},
-            {"callback": lambda **kw: None},
         ],
-        ids=["return_inferencedata_false", "custom_trace", "callback"],
+        ids=["return_inferencedata_false", "custom_trace"],
     )
     def test_explicit_nutpie_raises_on_incompatible(self, patched_sampler, extra):
         pytest.importorskip("nutpie")
@@ -339,6 +338,40 @@ class TestExternalSamplerKwargCompat:
                 with pytest.raises(ValueError, match="`nuts_sampler='nutpie'`"):
                     sample(nuts_sampler="nutpie", **self._BASE_KWARGS, **extra)
         patched_sampler.assert_not_called()
+
+    @pytest.mark.parametrize("nuts_sampler", ["blackjax", "numpyro"])
+    def test_non_nutpie_external_sampler_raises_on_callback(self, nuts_sampler):
+        pytest.importorskip(nuts_sampler)
+        with self._model:
+            with pytest.raises(
+                ValueError, match="External NUTS samplers don't invoke per-draw callbacks"
+            ):
+                sample(nuts_sampler=nuts_sampler, callback=lambda **kw: None, **self._BASE_KWARGS)
+
+    @pytest.mark.parametrize("progressbar", [True, False])
+    def test_explicit_nutpie_supports_callback(self, progressbar):
+        pytest.importorskip("nutpie")
+        recorded_calls = []
+
+        def my_callback(progress):
+            recorded_calls.append(progress)
+
+        with self._model:
+            idata = sample(
+                nuts_sampler="nutpie",
+                tune=5,
+                draws=5,
+                chains=1,
+                progressbar=progressbar,
+                callback=my_callback,
+                compile_kwargs={"mode": "NUMBA"},
+                random_seed=123,
+            )
+
+        assert len(recorded_calls) > 0
+        assert hasattr(recorded_calls[-1][0], "finished_draws")
+        assert recorded_calls[-1][0].finished_draws == 10
+        assert idata.posterior.sizes == {"chain": 1, "draw": 5}
 
     def test_explicit_nutpie_raises_on_non_nuts_step(self, patched_sampler):
         pytest.importorskip("nutpie")
