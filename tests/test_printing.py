@@ -15,6 +15,8 @@
 import re
 
 import numpy as np
+import pytensor.tensor as pt
+import pytest
 
 from pytensor.tensor.random import normal
 from rich.console import Console
@@ -568,3 +570,462 @@ def test_model_table():
  beta_subject_penalty =  Potential(f(beta_subject))      subject[20]
 """
     assert [s.strip() for s in table_txt.splitlines()] == [s.strip() for s in expected.splitlines()]
+
+
+class TestDeterministicExprs:
+    @staticmethod
+    def model() -> Model:
+        with Model() as model:
+            x = pm.Data("x", 2.0)
+            sigma = HalfNormal("sigma", sigma=1)
+            alpha_a = Normal("alpha_a", 0, 1)
+            mu = Deterministic("mu", alpha_a * x + pt.log(sigma**2) + 3)
+            Deterministic("eta", mu / (1 + mu))
+            Potential("pot", sigma * 2)
+            Normal("y", mu=mu, sigma=sigma)
+        return model
+
+    def test_default_repr_unchanged(self):
+        """Without the flag, deterministics still render opaque f(...) calls."""
+        model_text = self.model().str_repr()
+        assert "mu = Deterministic(f(x, alpha_a, sigma))" in model_text
+        assert "eta = Deterministic(f(mu))" in model_text
+        assert "pot ~ Potential(f(sigma))" in model_text
+
+    def test_plain_expression_bodies(self):
+        model_text = self.model().str_repr(deterministic_exprs=True)
+        assert "mu = ((alpha_a * x) + Log((sigma ** 2))) + 3" in model_text
+        # Nested deterministics stop at named variables
+        assert "eta = mu / (1 + mu)" in model_text
+        # Potentials get bodies too
+        assert "pot ~ sigma * 2" in model_text
+
+    def test_latex_expression_bodies(self):
+        model_tex = self.model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert (
+            r"\text{mu} &= &((\text{alpha\_a} \cdot \text{x}) + \log({\text{sigma}}^{2})) + 3"
+            in model_tex
+        )
+        assert r"\text{eta} &= &\frac{\text{mu}}{(1 + \text{mu})}" in model_tex
+        assert r"\text{pot} &\sim & \text{sigma} \cdot 2" in model_tex
+
+    def test_latex_underscore_escaping_in_bodies(self):
+        model_tex = self.model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert "\\_" in model_tex
+        body_tex = model_tex.replace("\\_", "")
+        assert "_" not in body_tex.replace(r"\_", "")
+
+    def test_standalone_str_for_potential_or_deterministic(self):
+        from pymc.printing import str_for_potential_or_deterministic
+
+        model = self.model()
+        mu = next(v for v in model.deterministics if v.name == "mu")
+        named_vars = set(model.deterministics) | set(model.free_RVs) | set(model.data_vars)
+        assert (
+            str_for_potential_or_deterministic(mu, named_vars=named_vars, deterministic_exprs=True)
+            == "mu = ((alpha_a * x) + Log((sigma ** 2))) + 3"
+        )
+        assert (
+            str_for_potential_or_deterministic(mu, named_vars=named_vars)
+            == "mu = Deterministic(f(x, alpha_a, sigma))"
+        )
+
+    def test_unnamed_viewop_wrapping_named_leaf(self):
+        # An unnamed ViewOp wrapper around a named variable must render as
+        # that variable, not crash on its missing name
+        from pytensor.compile.ops import view_op
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Deterministic("d", view_op(s) * 2 + s)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = (s * 2) + s" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{d} &= &(\text{s} \cdot 2) + \text{s}" in tex
+
+    def test_latex_elemwise_fallback_and_memoized_nodes(self):
+        # Unregistered Elemwise ops degrade to \operatorname, and nodes
+        # referenced more than once render identically at each occurrence
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            X = pm.Data("X", np.eye(2))
+            c = pt.as_tensor_variable(2.0)
+            sig = pt.sigmoid(s)
+            XT = X.T
+            Deterministic("d", sig + sig / c + XT @ XT * c)
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{sigmoid}" in tex
+        assert tex.count(r"\operatorname{sigmoid}\left(\text{s}\right)") == 2
+        assert r"\frac{\operatorname{sigmoid}\left(\text{s}\right)}{2}" in tex
+        assert r"({\text{X}}^{T} \cdot {\text{X}}^{T}) \cdot 2" in tex
+
+    def test_transpose_rendered_not_deleted(self):
+        # Adversarial review bug 1: real axis permutations must stay visible
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            Deterministic("dT", X.T)
+            Deterministic("dTX", X.T @ X)
+            Deterministic("dXX", X @ X)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "dT = X.T" in text
+        assert "dTX = X.T @ X" in text
+        assert "dXX = X @ X" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"{\text{X}}^{T}" in tex
+        assert r"{\text{X}}^{T} \cdot \text{X}" in tex
+
+    def test_axis_permutation_shows_order(self):
+        with Model() as model:
+            w = pm.Data("w", np.zeros((2, 3, 4)))
+            Deterministic("d", w.dimshuffle((2, 0, 1)))
+        text = model.str_repr(deterministic_exprs=True)
+        assert "transpose(w, order=(2, 0, 1))" in text
+
+    def test_latex_sum_axes_distinguished(self):
+        # Adversarial review bug 2: axis reductions must not collapse
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            Deterministic("d", X.sum(axis=0) + X.sum(axis=1) + X.sum())
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\sum\_{0}\left(\text{X}\right)" in tex
+        assert r"\sum\_{1}\left(\text{X}\right)" in tex
+        assert r"\sum\left(\text{X}\right)" in tex
+
+    def test_latex_blockwise_ops_unwrapped(self):
+        # Adversarial review bug 2: Blockwise core op must be shown, and
+        # eigh/cholesky/solve must not collapse onto the same output
+        with Model() as model:
+            X = pm.Data("X", np.eye(3))
+            L = pt.linalg.cholesky(X)
+            sol = pt.linalg.solve(L, X)
+            Deterministic("d", sol[0, 0])
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{Cholesky}" in tex
+        assert r"\operatorname{Solve}" in tex
+        assert "Blockwise" not in tex
+
+    def test_latex_cast_shows_dtype(self):
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Deterministic("d", pt.cast(s + 1.5, "int32"))
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\operatorname{cast}" in tex
+        assert r"\text{int32}" in tex
+
+    def test_scan_renders_opaque_placeholder(self):
+        # Adversarial review bug 4: inner-graph machinery must not leak
+        from pytensor.scan import scan as pt_scan
+
+        with Model() as model:
+            seq = pm.Data("seq", np.arange(5.0))
+            out = pt_scan(
+                fn=lambda a, acc: acc + a,
+                sequences=seq,
+                outputs_info=[pt.constant(0.0, dtype=seq.dtype)],
+                n_steps=5,
+                return_updates=False,
+            )
+            Deterministic("path", out)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "AllocEmpty" not in text
+        assert "set_subtensor" not in text
+        assert "Scan{" not in text
+        assert "f(seq)" in text
+
+    def test_include_params_false_takes_precedence(self):
+        text = self.model().str_repr(include_params=False, deterministic_exprs=True)
+        assert "mu = Deterministic" in text
+        assert "= ((alpha_a" not in text
+
+    def test_standalone_without_named_vars_stops_at_named(self):
+        from pymc.printing import str_for_potential_or_deterministic
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            inter = s + 1
+            d = Deterministic("d", s * inter)
+        res = str_for_potential_or_deterministic(d, deterministic_exprs=True)
+        assert res == "d = s * (s + 1)"
+        assert "~" not in res.split("=", 1)[1]
+
+    def test_named_leaves_matched_by_identity(self):
+        with Model() as model:
+            a = Normal("a", 0, 1)
+            decoy = pt.vector("z") + 1
+            decoy.name = "a"
+            Deterministic("d", a * 2)
+            Deterministic("e", decoy * 3)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = a * 2" in text
+        # A same-named non-model variable expands instead of masquerading
+        assert "e = (z + 1) * 3" in text
+
+    def test_named_leaf_beats_dict_registered_op(self):
+        # PPrinter checks dict-keyed registrations before condition rules;
+        # a potential whose owner op is a shared Elemwise instance must still
+        # stop traversal at the leaf boundary
+        from pymc.printing import str_for_potential_or_deterministic
+
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            Potential("pot", s * 2)
+            det = Deterministic("d", model.potentials[0] + 1)
+        named_vars = set(model.free_RVs) | set(model.deterministics) | set(model.potentials)
+        res = str_for_potential_or_deterministic(
+            det, named_vars=named_vars, deterministic_exprs=True
+        )
+        assert res == "d = pot + 1"
+
+    def test_ownerless_leaf_consistent_across_formats(self):
+        import pytensor
+
+        with Model() as model:
+            ext = pytensor.shared(np.ones(3), name="ext")
+            z = Normal("z", 0, 1, shape=3)
+            Deterministic("d", z * ext)
+        text = model.str_repr(deterministic_exprs=True)
+        assert "d = z * ext" in text
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{ext}" in tex
+
+
+class TestDeterministicExprsParametric:
+    """Table-driven coverage across model families.
+
+    Each case asserts output invariants that hold for any well-rendered body
+    (no leftover placeholders, no graph-internals leakage, consistent LaTeX
+    escaping), plus a small number of exact anchors for the ops that
+    distinguish the family. This catches regressions in op rendering without
+    snapshotting entire strings.
+    """
+
+    @staticmethod
+    def _cases() -> dict:
+        def linear_regression(m):
+            x = pm.Data("x", np.array([1.0, 2.0]))
+            a = Normal("a", 0, 1)
+            b = Normal("b", 0, 1)
+            mu = Deterministic("mu", a + b * x)
+            Normal("y", mu, 1)
+            return {
+                "anchors_plain": ["mu = a + (b * x)"],
+                "anchors_tex": [r"\text{a} + (\text{b} \cdot \text{x})"],
+            }
+
+        def nonlinear(m):
+            s = HalfNormal("s", 1)
+            nl = Deterministic("nl", pt.exp(s) / (pt.sqrt(s) + pt.tanh(s)))
+            return {
+                "anchors_plain": ["Exp(s) / (Sqrt(s) + Tanh(s))"],
+                "anchors_tex": [r"\frac{\exp(\text{s})}{(\sqrt{\text{s}} + \tanh(\text{s}))}"],
+            }
+
+        def matrix_ops(m):
+            X = pm.Data("X", np.eye(2))
+            b = Normal("b", 0, 1, shape=2)
+            pm.Deterministic("p", pt.dot(X, b) + b.sum(axis=0))
+            return {
+                "anchors_plain": ["(X @ b) + sum(b, axis=(0,))"],
+                "anchors_tex": [
+                    r"(\text{X} \cdot \text{b}) + \sum\_{0}\left(\text{b}\right)",
+                ],
+            }
+
+        def indexing_and_slicing(m):
+            X = pm.Data("X", np.ones((3, 3)))
+            s = HalfNormal("s", 1)
+            pm.Deterministic("d", X[:, 0] * s + X[:2].sum(axis=0))
+            return {
+                # plain renders real Python-style indexing...
+                "anchors_plain": ["X[:, 0]", "sum(X[:2]"],
+                # ...latex degrades gracefully to \operatorname for subtensors (#8407 open question)
+                "anchors_tex": [
+                    r"\operatorname{Subtensor}",
+                    r"\sum\_{0}\left(\operatorname{Subtensor}",
+                ],
+            }
+
+        def potential_only(m):
+            z = Normal("z")
+            pm.Potential("pot", -(z**2) / 2)
+            return {
+                "anchors_plain": ["pot ~ (-(z ** 2)) / 2"],
+                "anchors_tex": [r"\frac{(-{\text{z}}^{2})}{2}"],
+            }
+
+        def hierarchical(m):
+            # Non-centered hierarchical model: the pooled deterministic
+            # stops at named parents instead of inlining their graphs
+            mu = Normal("mu", 0, 5)
+            tau = HalfNormal("tau", 5)
+            z = Normal("z", 0, 1, shape=8)
+            theta = Deterministic("theta", mu + tau * z)
+            Normal("y", theta, 10, shape=8)
+            return {
+                "anchors_plain": ["theta = mu + (tau * z)"],
+                "anchors_tex": [r"\text{mu} + (\text{tau} \cdot \text{z})"],
+            }
+
+        def fixed_vs_prior_params(m):
+            # Parameters/hyperparameters as fixed values (scalars, and an
+            # inline anonymous prior) alongside named priors. Anonymous
+            # dists must render as distribution calls, not leak RNG internals
+            import pytensor
+
+            anon = Normal.dist(0, 2)
+            w = pytensor.shared(np.float64(1.5))  # unnamed non-model leaf
+            z = Normal("z", 0, 1, shape=3)
+            theta = Deterministic("theta", 2.0 + 1.5 * z + w + w * 3 + anon.sum() + anon.sum())
+            Normal("y", theta, 10, shape=3)
+            return {
+                "anchors_plain": [
+                    "2 + (1.5 * z)",
+                    "<Scalar(float64, shape=())>",
+                    "sum(Normal(0, 2), axis=None)",
+                ],
+                "anchors_tex": [
+                    r"(2 + (1.5 \cdot \text{z}))",
+                    r"\text{<Scalar(float64, shape=())>}",
+                    r"\sum\left(\operatorname{Normal}(0,~2)\right)",
+                ],
+            }
+
+        return {
+            "linear_regression": linear_regression,
+            "nonlinear": nonlinear,
+            "matrix_ops": matrix_ops,
+            "indexing_and_slicing": indexing_and_slicing,
+            "potential_only": potential_only,
+            "hierarchical": hierarchical,
+            "fixed_vs_prior_params": fixed_vs_prior_params,
+        }
+
+    @staticmethod
+    def _build(case_name: str) -> tuple[Model, dict]:
+        with Model() as model:
+            expected = TestDeterministicExprsParametric._cases()[case_name](model)
+        return model, expected
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_default_repr_uses_placeholders(self, case_name: str):
+        model, _ = self._build(case_name)
+        text = model.str_repr()
+        assert ("Deterministic(f(" in text) or ("Potential(f(" in text)
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_plain_bodies(self, case_name: str):
+        model, expected = self._build(case_name)
+        text = model.str_repr(deterministic_exprs=True)
+        # no opaque placeholders and no graph-internals leakage
+        assert "Deterministic(f(" not in text
+        assert "Potential(f(" not in text
+        assert "DimShuffle{" not in text
+        assert "ViewOp" not in text
+        assert "RNG(" not in text
+        for anchor in expected["anchors_plain"]:
+            assert anchor in text
+
+    @pytest.mark.parametrize("case_name", list(_cases()), ids=str)
+    def test_latex_bodies(self, case_name: str):
+        model, expected = self._build(case_name)
+        tex = model.str_repr(formatting="latex", deterministic_exprs=True)
+        # bodies replace the wrapper operator entirely
+        assert r"\operatorname{Deterministic}" not in tex
+        # names are consistently escaped (no bare underscores anywhere)
+        assert "_" not in tex.replace("\\_", "")
+        assert "RNG(" not in tex
+        for anchor in expected["anchors_tex"]:
+            assert anchor in tex
+
+
+class TestExpressionBounds:
+    """Verbosity bounds: pathological graphs degrade instead of exploding."""
+
+    @staticmethod
+    def _doubling_model(n: int) -> Model:
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            v = s
+            for _ in range(n):
+                v = v + v
+            Deterministic("d", v)
+        return model
+
+    def test_shared_subgraph_falls_back_to_placeholder(self):
+        # Each level doubles the rendered text; past the node budget the
+        # whole expression degrades to the opaque placeholder.
+        model = self._doubling_model(25)
+        text = model.str_repr(deterministic_exprs=True)
+        assert len(text) < 10_000
+        assert "d = f(s)" in text
+
+    def test_shared_subgraph_latex_bounded(self):
+        tex = self._doubling_model(25).str_repr(formatting="latex", deterministic_exprs=True)
+        assert len(tex) < 10_000
+
+    def test_deep_chain_degrades_gracefully(self):
+        # Printing must not raise RecursionError where the default repr works
+        with Model() as model:
+            s = HalfNormal("s", 1)
+            v = s
+            for _ in range(6000):
+                v = v + 1.0
+            Deterministic("d", v)
+        text = model.str_repr(deterministic_exprs=True)
+        body = [ln for ln in text.splitlines() if ln.startswith("d =")][0]
+        assert "f(s)" in body  # expansion stops at the depth limit
+        assert len(text) < 10_000
+
+    def test_moderate_sharing_still_expands(self):
+        # A realistic adstock-style chain reused twice stays fully expanded
+        with Model() as model:
+            alpha = Uniform("alpha", 0, 1)
+            x = Data("x", np.arange(6.0))
+            acc = x
+            for lag in range(1, 8):
+                acc = acc + (alpha**lag) * x
+            sat = Deterministic("sat", acc / (acc + alpha))
+        text = model.str_repr(deterministic_exprs=True)
+        start = text.index("sat = ")
+        end = text.find("\n", start)
+        end = len(text) if end == -1 else end
+        line = text[start:end]
+        assert "f(" not in line
+        assert line.count("alpha") >= 2
+
+
+class TestBodyConstants:
+    """Array constants describe their geometry instead of hiding behind <constant>."""
+
+    @staticmethod
+    def _model() -> Model:
+        with Model() as model:
+            x = Data("x", np.ones(4))
+            vec = np.array([1.5, 2.5, 3.5])
+            mat = np.arange(400, dtype="float64").reshape(20, 20)
+            ints = np.arange(5, dtype="int32")
+            a = HalfNormal("a", 1)
+            Deterministic("vec", pt.constant(vec) * x)
+            Deterministic("mat", pt.constant(mat) @ x)
+            Deterministic("ints", pt.constant(ints) * x)
+        return model
+
+    def test_short_vector_inlines(self):
+        text = self._model().str_repr(deterministic_exprs=True)
+        assert "vec = [1.5, 2.5, 3.5] * x" in text
+
+    def test_matrix_shows_shape(self):
+        text = self._model().str_repr(deterministic_exprs=True)
+        assert "<constant float64 (20, 20)> @ x" in text
+        assert "<constant int32 (5)> * x" in text
+
+    def test_matrix_shape_as_math_notation(self):
+        tex = self._model().str_repr(formatting="latex", deterministic_exprs=True)
+        assert r"\text{<constant float64>} \in \mathbb{R}^{20 \times 20}" in tex
+        assert r"\text{<constant int32>} \in \mathbb{Z}^{5}" in tex
+        assert r"\left[1.5,\ 2.5,\ 3.5\right]" in tex
+
+    def test_default_repr_unchanged(self):
+        # Shape-aware rendering is opt-in only; defaults keep <constant>
+        text = self._model().str_repr()
+        assert "(20, 20)" not in text
