@@ -36,6 +36,7 @@ from pymc.dims import (
     HalfStudentT,
     HyperGeometric,
     InverseGamma,
+    Kumaraswamy,
     Laplace,
     Logistic,
     LogNormal,
@@ -455,6 +456,15 @@ def test_hypergeometric():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.HyperGeometric("x", N=50, k=20, n=10, dims="a")
+
+
+def test_kumaraswamy():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Kumaraswamy("x", a=2, b=5, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Kumaraswamy("x", a=2, b=5, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
