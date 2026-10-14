@@ -28,6 +28,7 @@ import pymc as pm
 
 from pymc.distributions.continuous import get_tau_sigma, interpolated
 from pymc.distributions.dist_math import clipped_beta_rvs
+from pymc.distributions.transforms import logodds
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -2236,6 +2237,12 @@ class TestLogitNormal(BaseTestDistributionRandom):
         "check_pymc_draws_match_reference",
         "check_rv_size",
     ]
+
+    def test_default_transform(self):
+        # Regression test for #8441
+        with pm.Model() as m:
+            x = pm.LogitNormal("x", mu=0, sigma=1)
+        assert m.rvs_to_transforms[x] is logodds
 
 
 class TestLogitNormalTau(BaseTestDistributionRandom):
