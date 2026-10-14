@@ -306,6 +306,10 @@ def test_chain_vector_transform():
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
 
+@pytest.mark.skipif(
+    config.floatX == "float32",
+    reason="Numerical det(jacobian) baseline is too imprecise in 32bit",
+)
 def test_chain_jacob_det():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
 
