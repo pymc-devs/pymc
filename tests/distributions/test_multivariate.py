@@ -1522,6 +1522,110 @@ class TestMvNormalMisc:
         assert prior_pred["X"].shape == (1, N, 2)
 
 
+class TestWeightedZeroSumNormal:
+    WEIGHTS = np.array([0.9, 0.05, 0.03, 0.02])
+
+    def test_constraint_and_covariance(self):
+        w = self.WEIGHTS
+        u = w / np.linalg.norm(w)
+        dist = pm.WeightedZeroSumNormal.dist(weights=w, sigma=2.0)
+        draws = pm.draw(dist, draws=20_000, random_seed=964)
+
+        assert np.abs(draws @ u).max() < 1e-12
+        expected_cov = 4.0 * (np.eye(len(w)) - np.outer(u, u))
+        np.testing.assert_allclose(np.cov(draws.T), expected_cov, atol=0.15)
+
+    def test_equal_weights_match_zerosumnormal(self):
+        n = 5
+        rng = np.random.default_rng(207)
+        x = rng.normal(size=(3, n))
+        x = x - x.mean(axis=-1, keepdims=True)
+
+        zsn = pm.ZeroSumNormal.dist(shape=(n,))
+        wzsn = pm.WeightedZeroSumNormal.dist(weights=np.full(n, 1.0 / n))
+        np.testing.assert_allclose(
+            pm.logp(zsn, x).eval(),
+            pm.logp(wzsn, x).eval(),
+        )
+
+    def test_default_transform_bijective(self):
+        from pymc.distributions.transforms import WeightedZeroSumTransform
+
+        w = self.WEIGHTS
+        u = w / np.linalg.norm(w)
+        transform = WeightedZeroSumTransform(w)
+        rng = np.random.default_rng(6)
+        z = rng.normal(size=(7, len(w) - 1))
+
+        x = transform.backward(pt.as_tensor(z)).eval()
+        np.testing.assert_allclose(x @ u, 0.0, atol=1e-12)
+        np.testing.assert_allclose(transform.forward(pt.as_tensor(x)).eval(), z, atol=1e-12)
+        # isometry
+        np.testing.assert_allclose(
+            np.linalg.norm(x, axis=-1), np.linalg.norm(z, axis=-1), atol=1e-12
+        )
+
+    def test_logp_rejects_unconstrained_value(self):
+        w = self.WEIGHTS
+        dist = pm.WeightedZeroSumNormal.dist(weights=w)
+        with pytest.raises(ParameterValueError):
+            pm.logp(dist, np.ones(len(w))).eval()
+
+    def test_sampling_stays_on_constraint(self):
+        w = self.WEIGHTS
+        u = w / np.linalg.norm(w)
+        with pm.Model() as model:
+            pm.WeightedZeroSumNormal("x", weights=w)
+            idata = pm.sample(
+                draws=50,
+                tune=50,
+                chains=1,
+                progressbar=False,
+                random_seed=6,
+                compute_convergence_checks=False,
+            )
+        post = idata.posterior["x"].values.reshape(-1, len(w))
+        assert np.abs(post @ u).max() < 1e-12
+
+    def test_weights_must_be_vector(self):
+        with pytest.raises(ValueError, match="1-d"):
+            pm.WeightedZeroSumNormal.dist(weights=np.ones((2, 2)))
+
+    def test_change_dist_size(self):
+        base_dist = pm.WeightedZeroSumNormal.dist(weights=self.WEIGHTS)
+
+        new_dist = change_dist_size(base_dist, new_size=(4, 3))
+        assert tuple(new_dist.shape.eval()) == (4, 3, len(self.WEIGHTS))
+
+        new_dist = change_dist_size(base_dist, new_size=(5,), expand=True)
+        assert tuple(new_dist.shape.eval()) == (5, len(self.WEIGHTS))
+
+        u = self.WEIGHTS / np.linalg.norm(self.WEIGHTS)
+        draws = pm.draw(new_dist, random_seed=42)
+        assert np.abs(draws @ u).max() < 1e-12
+
+    def test_batched_sigma(self):
+        sigma = np.array([1.0, 2.0, 3.0])
+        dist = pm.WeightedZeroSumNormal.dist(sigma=sigma, weights=self.WEIGHTS)
+        draws = pm.draw(dist, draws=5000, random_seed=910)
+        assert draws.shape == (5000, 3, len(self.WEIGHTS))
+
+        u = self.WEIGHTS / np.linalg.norm(self.WEIGHTS)
+        assert np.abs(draws @ u).max() < 1e-12
+        # variance of the freest component scales with sigma**2
+        np.testing.assert_allclose(
+            draws[..., -1].var(axis=0), sigma**2 * (1 - u[-1] ** 2), rtol=0.1
+        )
+
+    def test_floatX(self):
+        with pytensor.config.change_flags(floatX="float32", warn_float64="ignore"):
+            dist = pm.WeightedZeroSumNormal.dist(weights=self.WEIGHTS)
+            assert dist.dtype == "float32"
+            value = pm.draw(dist, random_seed=1)
+            assert value.dtype == np.float32
+            assert pm.logp(dist, value).eval().dtype == np.float32
+
+
 class TestZeroSumNormal:
     coords = {
         "regions": ["a", "b", "c"],
