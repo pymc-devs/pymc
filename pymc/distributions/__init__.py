@@ -72,6 +72,7 @@ from pymc.distributions.distribution import (
     DiracDelta,
     Discrete,
     Distribution,
+    Placeholder,
     SymbolicRandomVariable,
 )
 from pymc.distributions.mixture import (
@@ -182,6 +183,7 @@ __all__ = [
     "OrderedMultinomial",
     "OrderedProbit",
     "Pareto",
+    "Placeholder",
     "Poisson",
     "PolyaGamma",
     "RandomWalk",

@@ -2376,3 +2376,56 @@ def test_change_dist_size_zero_sum_normal():
     resized = change_dist_size(intercept, new_size=(10,), expand=True)
 
     assert resized.type.shape == (10, 2)
+
+
+@pytest.fixture(scope="module")
+def placeholder_idata():
+    rng = np.random.default_rng(42)
+    return az_from_dict(
+        {
+            "posterior": {
+                "mu": rng.normal(size=(2, 10)),
+                "sigma": rng.uniform(1, 2, size=(2, 10, 3)),
+            }
+        },
+        dims={"sigma": ["group"]},
+        coords={"group": ["a", "b", "c"]},
+    )
+
+
+class TestPlaceholder:
+    def test_values_come_from_trace(self, placeholder_idata):
+        with pm.Model(coords={"group": ["a", "b", "c"]}):
+            new_mu = pm.Normal("new_mu", 10, 1)
+            sigma = pm.Placeholder("sigma", dims="group")
+            pm.Deterministic("sigma_x2", sigma * 2, dims="group")
+            pm.Normal("y", new_mu, sigma, dims="group")
+            pp = pm.sample_posterior_predictive(
+                placeholder_idata, var_names=["sigma_x2", "y"], predictions=True, random_seed=1
+            )
+
+        assert pp.predictions["y"].dims == ("chain", "draw", "group")
+        assert pp.predictions["y"].shape == (2, 10, 3)
+        npt.assert_allclose(pp.predictions["sigma_x2"], placeholder_idata.posterior["sigma"] * 2)
+
+    def test_name_mismatch_raises(self, placeholder_idata):
+        with pm.Model():
+            sigma = pm.Placeholder("sgima", shape=(3,))
+            pm.Normal("y", 0, sigma)
+            with pytest.raises(ValueError, match=r"Placeholder variables \['sgima'\]"):
+                pm.sample_posterior_predictive(placeholder_idata, var_names=["y"])
+
+    def test_sample_vars_raises(self, placeholder_idata):
+        with pm.Model():
+            pm.Normal("mu")
+            sigma = pm.Placeholder("sigma", shape=(3,))
+            pm.Normal("y", 0, sigma)
+            with pytest.raises(ValueError, match=r"Placeholder variables \['sigma'\]"):
+                pm.sample_posterior_predictive(placeholder_idata, sample_vars=["sigma", "y"])
+
+    def test_prior_predictive_raises(self):
+        with pm.Model():
+            sigma = pm.Placeholder("sigma")
+            pm.Normal("y", 0, sigma)
+            with pytest.raises(ValueError, match=r"Placeholder variables \['sigma'\]"):
+                pm.sample_prior_predictive(draws=10)
