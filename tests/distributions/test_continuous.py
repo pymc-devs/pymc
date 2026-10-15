@@ -13,6 +13,7 @@
 #   limitations under the License.
 
 import functools as ft
+import warnings
 
 import numpy as np
 import numpy.testing as npt
@@ -650,6 +651,14 @@ class TestMatchesScipy:
         check_icdf(
             pm.HalfCauchy, {"beta": Rplusbig}, lambda q, beta: st.halfcauchy.ppf(q, scale=beta)
         )
+
+    @pytest.mark.parametrize("val", [-10.0, -2.0, -1.0, -0.01, -1e-8])
+    def test_half_cauchy_logcdf_negative(self, val):
+        dist = pm.HalfCauchy.dist(beta=2.5)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", RuntimeWarning)
+            actual = pm.logcdf(dist, val).eval()
+        assert actual == -np.inf
 
     def test_gamma_logp(self):
         check_logp(
