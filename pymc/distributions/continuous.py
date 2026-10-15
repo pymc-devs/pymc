@@ -2390,10 +2390,11 @@ class HalfCauchy(PositiveContinuous):
         )
 
     def logcdf(value, beta):
+        safe_value = pt.switch(pt.lt(value, 0), 0.0, value)
         res = pt.switch(
-            value < 0,
+            pt.lt(value, 0),
             -np.inf,
-            pt.log(2 * pt.arctan(value / beta) / np.pi),
+            pt.log(2 * pt.arctan(safe_value / beta) / np.pi),
         )
 
         return check_parameters(
