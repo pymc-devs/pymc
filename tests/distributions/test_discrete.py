@@ -196,6 +196,37 @@ class TestMatchesScipy:
             {"N": N_domain, "k": k_domain, "n": n_domain},
         )
 
+    @pytest.mark.parametrize(
+        "N, k, n, val, expected",
+        [
+            # Case 1: lower > 0 (N=10, k=8, n=5 -> bad=2, lower = max(0, 5 - 2) = 3, upper = 5)
+            # Values below lower bound must evaluate to -inf
+            (10, 8, 5, -2, -np.inf),
+            (10, 8, 5, -1, -np.inf),
+            (10, 8, 5, 0, -np.inf),
+            (10, 8, 5, 1, -np.inf),
+            (10, 8, 5, 2, -np.inf),
+            # Values inside support [3, 5]
+            (10, 8, 5, 3, st.hypergeom(10, 8, 5).logcdf(3)),
+            (10, 8, 5, 4, st.hypergeom(10, 8, 5).logcdf(4)),
+            (10, 8, 5, 5, 0.0),
+            # Values above upper bound must evaluate to 0.0
+            (10, 8, 5, 6, 0.0),
+            (10, 8, 5, 10, 0.0),
+            # Case 2: upper < n (N=12, k=2, n=5 -> good=2, bad=10, lower = 0, upper = min(2, 5) = 2)
+            (12, 2, 5, -1, -np.inf),
+            (12, 2, 5, 0, st.hypergeom(12, 2, 5).logcdf(0)),
+            (12, 2, 5, 1, st.hypergeom(12, 2, 5).logcdf(1)),
+            (12, 2, 5, 2, 0.0),
+            (12, 2, 5, 3, 0.0),
+            (12, 2, 5, 5, 0.0),
+        ],
+    )
+    def test_hypergeometric_logcdf_bounds(self, N, k, n, val, expected):
+        dist = pm.HyperGeometric.dist(N=N, k=k, n=n)
+        actual = pm.logcdf(dist, val).eval()
+        np.testing.assert_allclose(actual, expected, rtol=1e-6, atol=1e-12)
+
     @pytest.mark.xfail(
         condition=(pytensor.config.floatX == "float32"),
         reason="SciPy log CDF stopped working after un-pinning NumPy version.",
