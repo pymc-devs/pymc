@@ -40,36 +40,17 @@ from typing import cast
 
 import pytensor.tensor as pt
 
-from pytensor.graph.rewriting.basic import node_rewriter
-from pytensor.scalar import Switch
-from pytensor.scalar import switch as scalar_switch
 from pytensor.scalar.basic import GE, GT, LE, LT, Mul
-from pytensor.tensor.basic import switch as tensor_switch
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import MeasurableElemwise, MeasurableOp, _logprob, _logprob_helper
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.transforms import MeasurableTransform
+from pymc.logprob.abstract import logprob_query
+from pymc.logprob.query import bind_value, contains_random, query_parts
 from pymc.logprob.utils import (
     CheckParameterValue,
-    check_potential_measurability,
-    filter_measurable_variables,
 )
-
-
-class MeasurableSwitchNonOverlapping(MeasurableElemwise):
-    """Placeholder for switch transforms whose branch images do not overlap.
-
-    Currently matches leaky-ReLU graphs of the form `switch(x > 0, x, a * x)`.
-    """
-
-    valid_scalar_types = (Switch,)
-
-
-measurable_switch_non_overlapping = MeasurableSwitchNonOverlapping(scalar_switch)
 
 
 def _zero_x_threshold_true_includes_zero(cond: TensorVariable, x: TensorVariable) -> bool | None:
@@ -109,91 +90,40 @@ def _zero_x_threshold_true_includes_zero(cond: TensorVariable, x: TensorVariable
     return None
 
 
-def _extract_scale_from_measurable_mul(
-    neg_branch: TensorVariable, x: TensorVariable
-) -> TensorVariable | None:
-    """Extract scale `a` from a measurable multiplication that represents `a * x`."""
+def _extract_scale(neg_branch: TensorVariable, x: TensorVariable) -> TensorVariable | None:
+    """Extract the other factors from a multiplication containing `x` once."""
     if neg_branch is x:
         return pt.constant(1.0)
 
     if neg_branch.owner is None:
         return None
 
-    if not isinstance(neg_branch.owner.op, MeasurableTransform):
+    if not isinstance(neg_branch.owner.op, Elemwise):
         return None
 
     op = neg_branch.owner.op
     if not isinstance(op.scalar_op, Mul):
         return None
 
-    # MeasurableTransform takes (measurable_input, scale)
-    if len(neg_branch.owner.inputs) != 2:
+    if neg_branch.owner.inputs.count(x) != 1:
+        return None
+    others = [inp for inp in neg_branch.owner.inputs if inp is not x]
+    return pt.mul(*others)
+
+
+def rewrite_switch_non_overlapping(fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    cond, x, neg_branch = rv.owner.inputs
+    if not isinstance(x.owner_op, RandomVariable) or x.type.numpy_dtype.kind != "f":
+        return None
+    if x.type.broadcastable != rv.type.broadcastable:
         return None
 
-    if neg_branch.owner.inputs[op.measurable_input_idx] is not x:
-        return None
-
-    scale = neg_branch.owner.inputs[1 - op.measurable_input_idx]
-    return cast(TensorVariable, scale)
-
-
-@node_rewriter([tensor_switch])
-def find_measurable_switch_non_overlapping(fgraph, node):
-    """Detect `switch(x > 0, x, a * x)` and replace it by a measurable op."""
-    if isinstance(node.op, MeasurableOp):
-        return None
-
-    cond, pos_branch, neg_branch = node.inputs
-
-    # Only mark the switch measurable once both branches are already measurable.
-    # Then the logprob can simply gate between branch logps evaluated at `value`.
-    if set(filter_measurable_variables([pos_branch, neg_branch])) != {pos_branch, neg_branch}:
-        return None
-
-    x = cast(TensorVariable, pos_branch)
-
-    if x.type.numpy_dtype.kind != "f":
-        return None
-
-    # Avoid rewriting cases where `x` is broadcasted/replicated by `cond` or `a`.
-    # We require the positive branch to be a base `RandomVariable` output.
-    if x.owner is None or not isinstance(x.owner.op, RandomVariable):
-        return None
-
-    if x.type.broadcastable != node.outputs[0].type.broadcastable:
-        return None
-
-    includes_zero_in_true = _zero_x_threshold_true_includes_zero(cast(TensorVariable, cond), x)
-    if includes_zero_in_true is None:
-        return None
-
-    a = _extract_scale_from_measurable_mul(cast(TensorVariable, neg_branch), x)
+    a = _extract_scale(cast(TensorVariable, neg_branch), cast(TensorVariable, x))
     if a is None:
         return None
-
-    # Disallow slope `a` that could be (directly or indirectly) measurable.
-    # This rewrite targets deterministic, non-overlapping transforms parametrized by non-RVs.
-    if check_potential_measurability([a]):
+    if contains_random(a):
         return None
-
-    return [
-        measurable_switch_non_overlapping(
-            cast(TensorVariable, cond),
-            x,
-            cast(TensorVariable, neg_branch),
-        )
-    ]
-
-
-@_logprob.register(MeasurableSwitchNonOverlapping)
-def logprob_switch_non_overlapping(op, values, cond, x, neg_branch, **kwargs):
-    (value,) = values
-
-    a = _extract_scale_from_measurable_mul(
-        cast(TensorVariable, neg_branch), cast(TensorVariable, x)
-    )
-    if a is None:
-        raise NotImplementedError("Could not extract non-overlapping scale")
 
     # Must be strictly positive: a == 0 is not invertible (collapses a region) and
     # invalidates the non-overlapping branch inference.
@@ -203,25 +133,14 @@ def logprob_switch_non_overlapping(op, values, cond, x, neg_branch, **kwargs):
         cast(TensorVariable, cond), cast(TensorVariable, x)
     )
     if includes_zero_in_true is None:
-        raise NotImplementedError("Could not identify zero-threshold condition")
+        return None
 
     # For `a > 0`, `switch(x > 0, x, a * x)` maps to disjoint regions in `value`.
     # Select the branch using the observed `value` and the strictness of the original
     # comparison (`>` vs `>=`).
     value_implies_true_branch = pt.ge(value, 0) if includes_zero_in_true else pt.gt(value, 0)
 
-    logp_expr = pt.switch(
-        value_implies_true_branch,
-        _logprob_helper(x, value, **kwargs),
-        _logprob_helper(neg_branch, value, **kwargs),
-    )
-
-    return CheckParameterValue("switch non-overlapping scale > 0")(logp_expr, a_is_positive)
-
-
-measurable_ir_rewrites_db.register(
-    "find_measurable_switch_non_overlapping",
-    find_measurable_switch_non_overlapping,
-    "basic",
-    "transform",
-)
+    inverse = pt.switch(value_implies_true_branch, value, value / a)
+    term = logprob_query(bind_value(fgraph, x, inverse))
+    logp_expr = term - pt.switch(value_implies_true_branch, 0, pt.log(a))
+    return [CheckParameterValue("switch non-overlapping scale > 0")(logp_expr, a_is_positive)]

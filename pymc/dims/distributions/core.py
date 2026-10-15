@@ -13,31 +13,37 @@
 #   limitations under the License.
 from collections.abc import Callable, Sequence
 from itertools import chain
-from typing import Any, cast
+from typing import Any
 
-import numpy as np
 import pytensor.tensor as pt
 
-from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
 from pytensor.tensor import TensorVariable
 from pytensor.tensor import expand_dims as pt_expand_dims
 from pytensor.tensor.elemwise import DimShuffle
-from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor
 from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
 from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
 from pytensor.xtensor.vectorization import XRV
 
-from pymc import SymbolicRandomVariable, modelcontext
+from pymc import modelcontext
 from pymc.dims.distributions.transforms import DimTransform, log_odds_transform, log_transform
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims_with_ellipsis
-from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
-from pymc.logprob.tensor import MeasurableDimShuffle
-from pymc.logprob.utils import filter_measurable_variables
+from pymc.logprob.abstract import (
+    _icdf,
+    _logccdf,
+    _logcdf,
+    logprob_query,
+)
+from pymc.logprob.query import (
+    bind_value,
+    infer_support_axes,
+    query_parts,
+    rewrite_logprob_query,
+    support_axes,
+)
 from pymc.util import UNSET
 
 
@@ -55,60 +61,7 @@ def xtensor_from_tensor_support_point(xtensor_op, _, rv):
     return xtensor_op(support_point(rv))
 
 
-class MeasurableXTensorFromTensor(MeasurableOp, XTensorFromTensor):
-    __props__ = ("dims", "core_dims")  # type: ignore[assignment]
-
-    def __init__(self, dims, core_dims):
-        super().__init__(dims=dims)
-        self.core_dims = tuple(core_dims) if core_dims is not None else None
-
-
-@node_rewriter([XTensorFromTensor])
-def find_measurable_xtensor_from_tensor(fgraph, node) -> list[XTensorVariable] | None:
-    if isinstance(node.op, MeasurableXTensorFromTensor):
-        return None
-
-    xs = filter_measurable_variables(node.inputs)
-
-    if not xs:
-        # Check if we have a transposition instead
-        # The rewrite that introduces measurable tranpsoses refuses to apply to multivariate RVs
-        # So we have a chance of inferring the core dims!
-        [ds] = node.inputs
-        ds_node = ds.owner
-        if not (
-            ds_node is not None
-            and isinstance(ds_node.op, DimShuffle)
-            and ds_node.op.is_transpose
-            and filter_measurable_variables(ds_node.inputs)
-        ):
-            return None
-        [x] = ds_node.inputs
-        if not (
-            x.owner is not None and isinstance(x.owner.op, RandomVariable | SymbolicRandomVariable)
-        ):
-            return None
-
-        measurable_x = MeasurableDimShuffle(**ds_node.op._props_dict())(x)  # type: ignore[attr-defined]
-
-        ndim_supp = x.owner.op.ndim_supp
-        if ndim_supp:
-            inverse_transpose = np.argsort(ds_node.op.shuffle)
-            dims = node.op.dims
-            dims_before_transpose = tuple(dims[i] for i in inverse_transpose)
-            core_dims = dims_before_transpose[-ndim_supp:]
-        else:
-            core_dims = ()
-
-        new_out = MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=core_dims)(measurable_x)
-    else:
-        # If this happens we know there's no measurable transpose in between and we can
-        # safely infer the core_dims positionally when the inner logp is returned
-        new_out = MeasurableXTensorFromTensor(dims=node.op.dims, core_dims=None)(*node.inputs)
-    return [cast(XTensorVariable, new_out)]
-
-
-def _to_tensor(op: MeasurableXTensorFromTensor, value: XTensorVariable) -> TensorVariable:
+def _to_tensor(op: XTensorFromTensor, value: XTensorVariable) -> TensorVariable:
     # Align dims that are shared between value and op to the right
     value_dims_set = set(value.dims)
     shared_dims = [dim for dim in op.dims if dim in value_dims_set]
@@ -122,58 +75,35 @@ def _to_tensor(op: MeasurableXTensorFromTensor, value: XTensorVariable) -> Tenso
 
 
 def _to_xtensor(
-    op: MeasurableXTensorFromTensor, value: XTensorVariable, var: TensorVariable
+    op: XTensorFromTensor, value: XTensorVariable, var: TensorVariable, support_axes=()
 ) -> XTensorVariable:
     extra_value_dims = [dim for dim in value.dims if dim not in op.dims]
     # Dims that are unique to the value and not present in the op, are placed on the left by _align_value_dims
     all_dims = (*extra_value_dims, *op.dims)
-    # core_dims are not present in the generated variable, exclude them
-    if op.core_dims is None:
-        # The core_dims of the inner rv are on the right
-        var_dims = all_dims[: var.ndim]
-    else:
-        # We inferred where the core_dims are!
-        var_dims = tuple(d for d in all_dims if d not in op.core_dims)
+    core_dims = {op.dims[axis] for axis in support_axes}
+    var_dims = tuple(d for d in all_dims if d not in core_dims)
     return xtensor_from_tensor(var, dims=var_dims)
 
 
-@_logprob.register(MeasurableXTensorFromTensor)
-def measurable_xtensor_from_tensor_logprob(op, values, rv, **kwargs):
-    tensor_values = tuple(_to_tensor(op, v) for v in values)
-    rv_logps_tensor = _logprob(rv.owner.op, tensor_values, *rv.owner.inputs, **kwargs)
-    if not isinstance(rv_logps_tensor, tuple | list):
-        rv_logps_tensor = (rv_logps_tensor,)
-    rv_logps = tuple(
-        _to_xtensor(op, value, rv_logp)
-        for value, rv_logp in zip(values, rv_logps_tensor, strict=True)
-    )
-    return rv_logps[0] if len(rv_logps) == 1 else rv_logps
-
-
-@_logcdf.register(MeasurableXTensorFromTensor)
+@_logcdf.register(XTensorFromTensor)
 def measurable_xtensor_from_tensor_logcdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
     rv_logcdf = _logcdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, rv_logcdf)
 
 
-@_logccdf.register(MeasurableXTensorFromTensor)
+@_logccdf.register(XTensorFromTensor)
 def measurable_xtensor_from_tensor_logccdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
     rv_logcdf = _logccdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, rv_logcdf)
 
 
-@_icdf.register(MeasurableXTensorFromTensor)
+@_icdf.register(XTensorFromTensor)
 def measurable_xtensor_from_tensor_icdf(op, value, rv):
     tensor_value = _to_tensor(op, value)
     icdf = _icdf(rv.owner.op, tensor_value, *rv.owner.inputs)
     return _to_xtensor(op, value, icdf)
-
-
-measurable_ir_rewrites_db.register(
-    "measurable_xtensor_from_tensor", find_measurable_xtensor_from_tensor, "basic", "xtensor"
-)
 
 
 def copy_docstring(regular_cls):
@@ -380,3 +310,17 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             )
         case _:
             raise NotImplementedError(f"expand_dist_dims not implemented for {dist} with op {op}")
+
+
+@infer_support_axes.register(XTensorFromTensor)
+def measure_xtensor_from_tensor(op, var):
+    return support_axes(var.owner.inputs[0])
+
+
+@rewrite_logprob_query.register(XTensorFromTensor)
+def rewrite_xtensor_logprob(op, fgraph, query, **kwargs):
+    rv, value = query_parts(query)
+    base = rv.owner.inputs[0]
+    axes = support_axes(base)
+    term = logprob_query(bind_value(fgraph, base, _to_tensor(op, value)))
+    return [_to_xtensor(op, value, term, axes)]
