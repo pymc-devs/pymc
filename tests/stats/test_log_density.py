@@ -19,6 +19,7 @@ import scipy.stats as st
 
 from arviz_base import from_dict
 from pytensor.compile import get_mode
+from xarray import Dataset, DataTree
 
 from pymc.distributions import Dirichlet, Normal
 from pymc.distributions.transforms import log
@@ -28,6 +29,35 @@ from tests.distributions.test_multivariate import dirichlet_logpdf
 
 
 class TestComputeLogLikelihood:
+    @pytest.mark.parametrize("kind", ["likelihood", "prior"])
+    @pytest.mark.parametrize("extend_inferencedata", [False, True])
+    def test_no_sample_dims(self, kind, extend_inferencedata):
+        with Model(coords={"obs": [1, 3, 5]}) as model:
+            x = Normal("x")
+            Normal("y", x, observed=[0, 1, 2], dims="obs")
+
+        idata = DataTree.from_dict({"posterior": Dataset({"x": 1.5})})
+        compute = compute_log_likelihood if kind == "likelihood" else compute_log_prior
+        result = compute(
+            idata,
+            model=model,
+            sample_dims=(),
+            extend_inferencedata=extend_inferencedata,
+            progressbar=False,
+        )
+
+        if extend_inferencedata:
+            assert result is idata
+            result = result[f"log_{kind}"].dataset
+
+        if kind == "likelihood":
+            assert result["y"].dims == ("obs",)
+            np.testing.assert_array_equal(result["obs"], [1, 3, 5])
+            np.testing.assert_allclose(result["y"], st.norm.logpdf([0, 1, 2], loc=1.5))
+        else:
+            assert result["x"].dims == ()
+            np.testing.assert_allclose(result["x"], st.norm.logpdf(1.5))
+
     @pytest.mark.parametrize("transform", (False, True))
     def test_basic(self, transform):
         transform = log if transform else None

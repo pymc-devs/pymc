@@ -784,10 +784,7 @@ def dataset_to_point_list(
         vn: da.values.reshape((stacked_size, *da.shape[num_sample_dims:]))
         for vn, da in transposed_dict.items()
     }
-    points = [
-        {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
-    ]
+    points = [{vn: stacked_dict[vn][i, ...] for vn in var_names} for i in range(stacked_size)]
     # use the list of points
     return cast(list[dict[str, np.ndarray]], points), stacked_dims
 
