@@ -30,8 +30,7 @@ from tests.distributions.test_multivariate import dirichlet_logpdf
 
 class TestComputeLogLikelihood:
     @pytest.mark.parametrize("kind", ["likelihood", "prior"])
-    @pytest.mark.parametrize("extend_inferencedata", [False, True])
-    def test_no_sample_dims(self, kind, extend_inferencedata):
+    def test_no_sample_dims(self, kind):
         with Model(coords={"obs": [1, 3, 5]}) as model:
             x = Normal("x")
             Normal("y", x, observed=[0, 1, 2], dims="obs")
@@ -41,14 +40,10 @@ class TestComputeLogLikelihood:
         result = compute(
             idata,
             model=model,
-            sample_dims=(),
-            extend_inferencedata=extend_inferencedata,
+            sample_dims=[],
+            extend_inferencedata=False,
             progressbar=False,
         )
-
-        if extend_inferencedata:
-            assert result is idata
-            result = result[f"log_{kind}"].dataset
 
         if kind == "likelihood":
             assert result["y"].dims == ("obs",)

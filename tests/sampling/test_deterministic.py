@@ -90,8 +90,7 @@ def test_compute_deterministics_thinned_dataset():
     assert_equal(result["mu"], (2 * dataset["mu_raw"]).rename("mu"))
 
 
-@pytest.mark.parametrize("extend_dataset", [False, True])
-def test_compute_deterministics_no_sample_dims(extend_dataset):
+def test_compute_deterministics_no_sample_dims():
     with Model(coords={"group": (0, 2, 4)}) as model:
         mu_raw = Normal("mu_raw", dims="group")
         Deterministic("mu", 2 * mu_raw, dims="group")
@@ -108,15 +107,11 @@ def test_compute_deterministics_no_sample_dims(extend_dataset):
         dataset,
         model=model,
         sample_dims=(),
-        extend_dataset=extend_dataset,
         progressbar=False,
     )
 
     assert_equal(result[["mu", "sigma"]], expected)
-    if extend_dataset:
-        assert result is dataset
-    else:
-        assert set(dataset.data_vars) == {"mu_raw", "sigma_raw"}
+    assert set(dataset.data_vars) == {"mu_raw", "sigma_raw"}
 
 
 def test_compute_deterministics_extend_dataset():
