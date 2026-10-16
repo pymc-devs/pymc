@@ -18,6 +18,9 @@ import scipy.special
 
 from pytensor import config, function
 from pytensor.tensor.random.basic import multinomial
+from pytensor.tensor.variable import TensorVariable
+from pytensor.xtensor import as_xtensor
+from pytensor.xtensor.type import XTensorVariable
 from scipy import interpolate
 
 import pymc as pm
@@ -66,6 +69,57 @@ def test_check_parameters(conditions, succeeds):
 def test_check_parameters_shape():
     conditions = [True, pt.ones(10), pt.ones(5)]
     assert check_parameters(1, *conditions).eval().shape == ()
+
+
+def test_check_parameters_xtensor_expression_and_conditions():
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+
+    result = check_parameters(expr, expr > 0, expr < 3)
+
+    assert isinstance(result, XTensorVariable)
+    assert result.dims == expr.dims
+    assert result.dtype == expr.dtype
+    assert result.type.shape == expr.type.shape
+    np.testing.assert_array_equal(result.eval(), expr.eval())
+
+
+def test_check_parameters_invalid_xtensor_condition():
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+    result = check_parameters(expr, expr < 2, msg="parameter check msg")
+
+    with pytest.raises(ParameterValueError, match="^parameter check msg*"):
+        result.eval()
+
+
+def test_check_parameters_xtensor_expression_replaced_by_ninf():
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+    result = check_parameters(expr, False)
+
+    np.testing.assert_array_equal(pm.compile([], result)(), [-np.inf, -np.inf])
+
+
+def test_check_parameters_tensor_expression_xtensor_condition():
+    expr = pt.as_tensor_variable([1.0, 2.0])
+    condition = as_xtensor(np.array([True, True]), dims=("batch",))
+
+    result = check_parameters(expr, condition)
+
+    assert isinstance(result, TensorVariable)
+    np.testing.assert_array_equal(result.eval(), expr.eval())
+
+
+@pytest.mark.parametrize("python_condition, succeeds", [(True, True), (False, False)])
+def test_check_parameters_mixed_conditions(python_condition, succeeds):
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+    tensor_condition = pt.as_tensor_variable([True, True])
+
+    result = check_parameters(expr, expr > 0, tensor_condition, python_condition)
+
+    if succeeds:
+        np.testing.assert_array_equal(result.eval(), expr.eval())
+    else:
+        with pytest.raises(ParameterValueError):
+            result.eval()
 
 
 class MultinomialA(Discrete):
