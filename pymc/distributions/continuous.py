@@ -1720,11 +1720,14 @@ class AsymmetricLaplace(Continuous):
         )
 
     def icdf(value, b, kappa, mu):
-        p_star = (kappa**2) / (kappa**2 + 1)
+        log_kappa = pt.log(kappa)
+        log_p_star = -pt.softplus(-2 * log_kappa)
+        log_value = pt.log(value)
+
         res = pt.switch(
-            pt.lt(value, p_star),
-            mu + (kappa / b) * pt.log(value / p_star),
-            mu - (1 / (b * kappa)) * pt.log((1 - value) / (1 - p_star)),
+            log_value < log_p_star,
+            mu + (kappa / b) * (log_value - log_p_star),
+            mu - (pt.log1p(-value) + pt.softplus(2 * log_kappa)) / (b * kappa),
         )
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
