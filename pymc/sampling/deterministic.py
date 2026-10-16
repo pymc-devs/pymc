@@ -82,6 +82,7 @@ def compute_deterministics(
         Model to use. If None, use context model.
     sample_dims : sequence of str, default ("chain", "draw")
         Sample (batch) dimensions of the dataset over which to compute the deterministics.
+        Use an empty sequence to evaluate a single point without sample dimensions.
     merge_dataset : bool, default False
         Whether to include the values of the original dataset in the returned one.
 
