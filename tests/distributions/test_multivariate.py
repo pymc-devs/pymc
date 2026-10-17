@@ -2283,9 +2283,7 @@ class TestLKJ:
     def test_normalizer(self, n, eta):
         j = np.arange(n - 1)
         alpha = eta + (n - j - 2) / 2
-        expected = np.sum(
-            (n - j - 1) * ((1 - 2 * alpha) * np.log(2) - sp.betaln(alpha, alpha))
-        )
+        expected = np.sum((n - j - 1) * ((1 - 2 * alpha) * np.log(2) - sp.betaln(alpha, alpha)))
         tolerance = select_by_precision(float64=1e-7, float32=1e-4)
         npt.assert_allclose(_lkj_normalizing_constant(eta, n).eval(), expected, atol=tolerance)
 
@@ -2321,8 +2319,7 @@ class TestLKJ:
         for value in [0.5, 1.0, 2.0, 5.0]:
             step = 1e-5
             expected = (
-                self.reference_logp(n, value + step)[1]
-                - self.reference_logp(n, value - step)[1]
+                self.reference_logp(n, value + step)[1] - self.reference_logp(n, value - step)[1]
             ) / (2 * step)
             tolerance = select_by_precision(float64=1e-7, float32=1e-4)
             npt.assert_allclose(fn(value), expected, atol=tolerance)
