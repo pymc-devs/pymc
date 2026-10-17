@@ -17,6 +17,7 @@ from operator import add
 
 import numpy as np
 import numpy.testing as npt
+import pandas as pd
 import pytensor.tensor as pt
 import pytest
 
@@ -537,3 +538,62 @@ class TestMarginalKron:
             gp2 = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
+
+
+class TestGPPandas:
+    def test_marginal_pandas(self):
+        rng = np.random.default_rng(42)
+        X_arr = np.linspace(0, 1, 10)[:, None]
+        y_arr = rng.normal(size=10)
+        X_df = pd.DataFrame(X_arr)
+        y_series = pd.Series(y_arr)
+        Xnew_df = pd.DataFrame(np.linspace(0, 1, 5)[:, None])
+
+        with pm.Model() as model_np:
+            gp_np = pm.gp.Marginal(cov_func=pm.gp.cov.ExpQuad(1, 0.1))
+            gp_np.marginal_likelihood("y", X=X_arr, y=y_arr, sigma=0.1)
+            f_np = gp_np.conditional("f", Xnew=Xnew_df.to_numpy())
+            mu_np, cov_np = gp_np.predict(Xnew_df.to_numpy())
+
+        with pm.Model() as model_pd:
+            gp_pd = pm.gp.Marginal(cov_func=pm.gp.cov.ExpQuad(1, 0.1))
+            gp_pd.marginal_likelihood("y", X=X_df, y=y_series, sigma=0.1)
+            f_pd = gp_pd.conditional("f", Xnew=Xnew_df)
+            mu_pd, cov_pd = gp_pd.predict(Xnew_df)
+
+        npt.assert_allclose(mu_pd, mu_np)
+        npt.assert_allclose(cov_pd, cov_np)
+
+    def test_latent_pandas(self):
+        X_df = pd.DataFrame(np.linspace(0, 1, 10)[:, None])
+        Xnew_df = pd.DataFrame(np.linspace(0, 1, 5)[:, None])
+
+        with pm.Model():
+            gp = pm.gp.Latent(cov_func=pm.gp.cov.ExpQuad(1, 0.1))
+            f = gp.prior("f", X=X_df)
+            fcond = gp.conditional("fcond", Xnew=Xnew_df)
+
+        assert tuple(f.shape.eval()) == (10,)
+        assert tuple(fcond.shape.eval()) == (5,)
+
+    def test_marginal_approx_pandas(self):
+        rng = np.random.default_rng(42)
+        X_df = pd.DataFrame(np.linspace(0, 1, 10)[:, None])
+        Xu_df = pd.DataFrame(np.linspace(0, 1, 4)[:, None])
+        y_series = pd.Series(rng.normal(size=10))
+        Xnew_df = pd.DataFrame(np.linspace(0, 1, 5)[:, None])
+
+        with pm.Model():
+            gp = pm.gp.MarginalApprox(cov_func=pm.gp.cov.ExpQuad(1, 0.1), approx="FITC")
+            gp.marginal_likelihood("y", X=X_df, Xu=Xu_df, y=y_series, sigma=0.1)
+            fcond = gp.conditional("fcond", Xnew=Xnew_df)
+
+        assert tuple(fcond.shape.eval()) == (5,)
+
+    def test_covariance_pandas(self):
+        X_df = pd.DataFrame(np.linspace(0, 1, 10)[:, None])
+        cov = pm.gp.cov.ExpQuad(1, 0.1)
+        K = cov(X_df).eval()
+        assert K.shape == (10, 10)
+        K_diag = cov(X_df, diag=True).eval()
+        assert K_diag.shape == (10,)
