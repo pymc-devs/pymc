@@ -982,7 +982,9 @@ class TestLKJCholeskyCov:
         factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
         n = pt.lscalar("n")
         eta = pt.scalar("eta")
-        rv = pm.LKJCholeskyCov.dist(n=n, eta=eta, sd_dist=pm.Exponential.dist(1), compute_corr=False)
+        rv = pm.LKJCholeskyCov.dist(
+            n=n, eta=eta, sd_dist=pm.Exponential.dist(1), compute_corr=False
+        )
         logp = pm.logp(rv, factor[np.tril_indices(2)])
         fn = pytensor.function([n, eta], [logp, pt.grad(logp, eta)])
         # Uniform correlation, independent Exponential scales, and the scale-map Jacobian.
