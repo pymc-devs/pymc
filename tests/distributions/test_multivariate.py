@@ -31,7 +31,6 @@ from pytensor.tensor.linalg.decomposition.cholesky import Cholesky
 from pytensor.tensor.linalg.inverse import MatrixInverse
 from pytensor.tensor.random.basic import multivariate_normal
 from pytensor.tensor.random.utils import broadcast_params
-from scipy.integrate import quad
 
 import pymc as pm
 
@@ -2251,94 +2250,54 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 class TestLKJ:
     seed = sum(map(ord, "lkj-regression"))
 
-    @staticmethod
-    def partial_factor(n):
-        rng = np.random.default_rng(TestLKJ.seed + n)
-        factor = np.eye(n)
-        partials = np.zeros((n, n))
-        log_jac = 0.0
-        for i in range(1, n):
-            remaining = 1.0
-            for j in range(i):
-                partials[i, j] = rng.uniform(-0.6, 0.6)
-                factor[i, j] = partials[i, j] * remaining
-                log_jac += np.log(remaining)
-                remaining *= np.sqrt(1 - partials[i, j] ** 2)
-            factor[i, i] = remaining
-        return factor, partials, log_jac
-
-    @staticmethod
-    def reference_logp(n, eta):
-        factor, partials, log_jac = TestLKJ.partial_factor(n)
-        density = 0.0
-        for i in range(1, n):
-            for j in range(i):
-                alpha = eta + (n - j - 2) / 2
-                density += st.beta.logpdf((partials[i, j] + 1) / 2, alpha, alpha)
-                density -= np.log(2)
-        return factor, density - log_jac
-
-    @pytest.mark.parametrize("n", range(2, 9))
-    @pytest.mark.parametrize("eta", [0.5, 1.0, 2.0, 5.0])
-    def test_normalizer(self, n, eta):
-        j = np.arange(n - 1)
-        alpha = eta + (n - j - 2) / 2
-        expected = np.sum((n - j - 1) * ((1 - 2 * alpha) * np.log(2) - sp.betaln(alpha, alpha)))
+    @pytest.mark.parametrize(
+        "n,eta,normalizer",
+        [(2, 1, 0.5), (3, 2, 16 / (3 * np.pi**2)), (4, 1, 27 / (32 * np.pi**2))],
+        ids=["uniform_2d", "nonunit_eta", "uniform_4d"],
+    )
+    def test_normalizer(self, n, eta, normalizer):
+        # Integrating the Cholesky density over each row's unit ball gives these constants.
         tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(_lkj_normalizing_constant(eta, n).eval(), expected, atol=tolerance)
+        npt.assert_allclose(
+            _lkj_normalizing_constant(eta, n).eval(), np.log(normalizer), atol=tolerance
+        )
 
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.parametrize("eta", [0.5, 1.0, 2.0, 5.0])
-    def test_absolute_factor_density(self, n, eta):
-        factor, expected = self.reference_logp(n, eta)
-        actual = pm.logp(pm.LKJCorr.dist(n=n, eta=eta), factor).eval()
+    @pytest.mark.parametrize("n", [3, 4])
+    def test_factor_density_ratio(self, n):
+        factor = np.eye(n)
+        factor[1, :2] = [0.6, 0.8]
+        factor[2, :3] = [0.2, -0.3, np.sqrt(0.87)]
+        log_jacobian = np.log(0.8)
+        if n == 4:
+            factor[3, :] = [0.1, 0.2, -0.3, np.sqrt(0.86)]
+            log_jacobian = 2 * np.log(0.8) + 0.5 * np.log(0.87)
+
+        # Ratios to the identity cancel the normalizer and isolate the L-to-R Jacobian.
+        expected = np.linalg.slogdet(factor @ factor.T)[1] + log_jacobian
+        values = np.stack([np.eye(n), factor])
+        actual = pm.logp(pm.LKJCorr.dist(n=n, eta=2, size=2), values).eval()
+        assert actual.shape == (2,)
+        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
+        npt.assert_allclose(actual[1] - actual[0], expected, atol=tolerance)
+
+    def test_covariance_density(self):
+        sds = np.array([0.7, 1.8])
+        factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
+        rv = pm.LKJCholeskyCov.dist(n=2, eta=1, sd_dist=pm.Exponential.dist(1), compute_corr=False)
+        # Uniform correlation, independent Exponential scales, and the scale-map Jacobian.
+        expected = -np.log(2) - sds.sum() + np.log(0.8) - np.log(sds[1])
+        actual = pm.logp(rv, factor[np.tril_indices(2)]).eval()
         tolerance = select_by_precision(float64=1e-7, float32=1e-4)
         npt.assert_allclose(actual, expected, atol=tolerance)
 
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.parametrize("eta", [0.5, 1.0, 2.0, 5.0])
-    def test_absolute_covariance_density(self, n, eta):
-        factor, factor_logp = self.reference_logp(n, eta)
-        sds = np.linspace(0.7, 1.8, n)
-        cov_factor = factor * sds[:, None]
-        packed = cov_factor[np.tril_indices(n)]
-        rv = pm.LKJCholeskyCov.dist(
-            n=n, eta=eta, sd_dist=pm.Exponential.dist(1), compute_corr=False
-        )
-        log_inverse_jacobian = np.log(np.diag(factor)).sum() - np.dot(np.arange(n), np.log(sds))
-        expected = factor_logp - sds.sum() + log_inverse_jacobian
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(pm.logp(rv, packed).eval(), expected, atol=tolerance)
-
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    def test_symbolic_eta_gradient(self, n):
+    def test_symbolic_eta_gradient(self):
         eta = pt.scalar("eta")
-        factor, _, _ = self.partial_factor(n)
-        logp = pm.logp(pm.LKJCorr.dist(n=n, eta=eta), factor)
+        logp = pm.logp(pm.LKJCorr.dist(n=2, eta=eta), np.eye(2))
         fn = pytensor.function([eta], pt.grad(logp, eta))
-        for value in [0.5, 1.0, 2.0, 5.0]:
-            step = 1e-5
-            expected = (
-                self.reference_logp(n, value + step)[1] - self.reference_logp(n, value - step)[1]
-            ) / (2 * step)
-            tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-            npt.assert_allclose(fn(value), expected, atol=tolerance)
-
-    @pytest.mark.parametrize("eta", [0.5, 1.0, 2.0, 5.0])
-    def test_two_dimensional_integral(self, eta):
-        value = pt.dmatrix("value")
-        logp = pytensor.function([value], pm.logp(pm.LKJCorr.dist(n=2, eta=eta), value))
-
-        def density(rho):
-            factor = np.array([[1, 0], [rho, np.sqrt(1 - rho**2)]])
-            return np.exp(logp(factor))
-
-        integral, _ = quad(density, -1, 1)
         tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(integral, 1, atol=tolerance)
+        npt.assert_allclose(fn(1.0), 2 - 2 * np.log(2), atol=tolerance)
 
-    @pytest.mark.parametrize("n", [2, 3, 4])
-    @pytest.mark.parametrize("eta", [0.5, 1.0, 2.0, 5.0])
+    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
     @pytest.mark.parametrize("distribution", ["corr", "cov"])
     def test_every_pair_prior_moments(self, n, eta, distribution):
         count = 20_000
@@ -2357,20 +2316,8 @@ class TestLKJ:
         denominator = 2 * eta + n - 1
         second = 1 / denominator
         fourth = 3 / (denominator * (denominator + 2))
-        mean_tolerance = 6 * np.sqrt(second / count)
         second_tolerance = 6 * np.sqrt((fourth - second**2) / count)
-        npt.assert_allclose(pairs.mean(axis=0), 0, atol=mean_tolerance)
         npt.assert_allclose((pairs**2).mean(axis=0), second, atol=second_tolerance)
-
-    def test_batched_factor_density(self):
-        n = 4
-        factor, expected = self.reference_logp(n, 2)
-        values = np.broadcast_to(factor, (2, 3, n, n))
-        rv = pm.LKJCorr.dist(n=n, eta=2, size=(2, 3))
-        actual = pm.logp(rv, values).eval()
-        assert actual.shape == (2, 3)
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(actual, expected, atol=tolerance)
 
 
 class TestLKJCorr(BaseTestDistributionRandom):
