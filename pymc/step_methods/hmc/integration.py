@@ -64,6 +64,12 @@ class CpuLeapfrogIntegrator:
                 f"dtypes of potential ({self._potential.dtype}) and logp function ({self._dtype})"
                 "don't match."
             )
+        # `dtype` is fixed for the integrator's lifetime, and the BLAS function
+        # lookup is deterministic for a given dtype, so resolve it once here
+        # instead of repeating it on every leapfrog step (`_step` runs many
+        # times per draw -- up to hundreds for NUTS -- across every draw of
+        # every chain).
+        self._axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
 
     def compute_state(self, q: RaveledVars, p: np.ndarray):
         """Compute Hamiltonian functions using a position and momentum."""
@@ -107,7 +113,7 @@ class CpuLeapfrogIntegrator:
                 raise
 
     def _step(self, epsilon, state):
-        axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
+        axpy = self._axpy
         pot = self._potential
 
         q = state.q
