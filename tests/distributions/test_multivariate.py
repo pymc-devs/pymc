@@ -976,7 +976,7 @@ def test_car_alpha_bounds(alpha):
         pm.logp(car_dist, values).eval()
 
 
-class TestLKJCholeskCov:
+class TestLKJCholeskyCov:
     def test_covariance_density(self):
         sds = np.array([0.7, 1.8])
         factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
@@ -2301,7 +2301,6 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
 
 
 class TestLKJCorr(BaseTestDistributionRandom):
-    seed = sum(map(ord, "lkj-regression"))
     pymc_dist = LKJCorr
     pymc_dist_params = {"n": 3, "eta": 1.0}
     expected_rv_op_params = {"n": 3, "eta": 1.0}
@@ -2353,8 +2352,9 @@ class TestLKJCorr(BaseTestDistributionRandom):
 
     def test_every_pair_prior_moments(self):
         n, eta = 3, 2
+        seed = sum(map(ord, "lkj-regression"))
         count = 20_000
-        factor = pm.draw(pm.LKJCorr.dist(n=n, eta=eta, size=count), random_seed=self.seed)
+        factor = pm.draw(pm.LKJCorr.dist(n=n, eta=eta, size=count), random_seed=seed)
         corr = factor @ factor.swapaxes(-1, -2)
         pairs = corr[:, *np.tril_indices(n, -1)]
         # Lewandowski et al. (2009), doi:10.1016/j.jmva.2009.04.008:
@@ -2385,8 +2385,7 @@ def test_LKJCorr_default_transform():
     assert np.isfinite(fn(x_val)).all()
 
 
-class TestLKJCholeskyCov(BaseTestDistributionRandom):
-    seed = sum(map(ord, "lkj-regression"))
+class TestLKJCholeskyCovRandom(BaseTestDistributionRandom):
     pymc_dist = _LKJCholeskyCov
     pymc_dist_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
     expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
@@ -2424,11 +2423,12 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
 
     def test_every_pair_prior_moments(self):
         n, eta = 4, 0.5
+        seed = sum(map(ord, "lkj-regression"))
         count = 20_000
         rv = pm.LKJCholeskyCov.dist(
             n=n, eta=eta, sd_dist=pm.Exponential.dist(1), size=count, compute_corr=False
         )
-        packed = pm.draw(rv, random_seed=self.seed)
+        packed = pm.draw(rv, random_seed=seed)
         factor = np.zeros((count, n, n))
         factor[:, *np.tril_indices(n)] = packed
         factor /= np.linalg.norm(factor, axis=-1, keepdims=True)
