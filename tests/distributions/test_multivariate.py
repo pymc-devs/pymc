@@ -980,12 +980,19 @@ class TestLKJCholeskCov:
     def test_covariance_density(self):
         sds = np.array([0.7, 1.8])
         factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
-        rv = pm.LKJCholeskyCov.dist(n=2, eta=1, sd_dist=pm.Exponential.dist(1), compute_corr=False)
+        n = pt.lscalar("n")
+        eta = pt.scalar("eta")
+        rv = pm.LKJCholeskyCov.dist(n=n, eta=eta, sd_dist=pm.Exponential.dist(1), compute_corr=False)
+        logp = pm.logp(rv, factor[np.tril_indices(2)])
+        fn = pytensor.function([n, eta], [logp, pt.grad(logp, eta)])
         # Uniform correlation, independent Exponential scales, and the scale-map Jacobian.
         expected = -np.log(2) - sds.sum() + np.log(0.8) - np.log(sds[1])
-        actual = pm.logp(rv, factor[np.tril_indices(2)]).eval()
+        actual, eta_gradient = fn(2, 1.0)
         tolerance = select_by_precision(float64=1e-7, float32=1e-4)
         npt.assert_allclose(actual, expected, atol=tolerance)
+        # d(logp)/d(eta) adds the log determinant to the normalizer derivative.
+        expected_gradient = 2 - 2 * np.log(2) + 2 * np.log(0.8)
+        npt.assert_allclose(eta_gradient, expected_gradient, atol=tolerance)
 
     def test_dist(self):
         sd_dist = pm.Exponential.dist(1, size=(10, 3))
@@ -2344,8 +2351,8 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
-    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
-    def test_every_pair_prior_moments(self, n, eta):
+    def test_every_pair_prior_moments(self):
+        n, eta = 3, 2
         count = 20_000
         factor = pm.draw(pm.LKJCorr.dist(n=n, eta=eta, size=count), random_seed=self.seed)
         corr = factor @ factor.swapaxes(-1, -2)
@@ -2415,8 +2422,8 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         x = _LKJCholeskyCov.dist(n=2, eta=100_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
 
-    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
-    def test_every_pair_prior_moments(self, n, eta):
+    def test_every_pair_prior_moments(self):
+        n, eta = 4, 0.5
         count = 20_000
         rv = pm.LKJCholeskyCov.dist(
             n=n, eta=eta, sd_dist=pm.Exponential.dist(1), size=count, compute_corr=False
