@@ -2506,9 +2506,13 @@ def Point(*args, filter_model_vars=False, **kwargs) -> dict[str, np.ndarray]:
 def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable.
 
-    Deterministic nodes are only deterministic given all of their inputs, i.e.
-    they don't add randomness to the model.  They are generally used to record
-    an intermediary result.
+    A deterministic variable records an expression that is fully determined by
+    its inputs. It adds no randomness or probability term to the model.
+
+    Wrapping an expression in :func:`pymc.Deterministic` is optional. Use it when
+    you want to save the expression's values in the inference data or target the
+    expression by name in a model transformation such as :func:`pymc.do` or
+    :func:`pymc.observe`.
 
     Parameters
     ----------
@@ -2524,13 +2528,26 @@ def Deterministic(name, var, model=None, dims=None):
 
     Returns
     -------
-    var : tensor_like
+    tensor_like
         The registered, named variable wrapped in Deterministic.
+
+    See Also
+    --------
+    pymc.do : Replace model variables with intervention variables.
+    pymc.observe : Convert free variables or deterministics to observed variables.
+
+    Notes
+    -----
+    Adding a Deterministic node forces PyMC to compute an expression that could
+    otherwise be optimized away. This does not add computations to the main
+    sampling graph. The main graph can be optimized as if there were no
+    Deterministic nodes, while the deterministic quantities are computed once at
+    the end of each step using the final values of the other random variables.
 
     Examples
     --------
-    Indeed, PyMC allows for arbitrary combinations of random variables, for
-    example in the case of a logistic regression
+    PyMC accepts arbitrary expressions built from random variables. For example,
+    this logistic regression uses ``p`` directly:
 
     .. code-block:: python
 
@@ -2540,11 +2557,9 @@ def Deterministic(name, var, model=None, dims=None):
             p = pm.math.invlogit(alpha * x + intercept)
             outcome = pm.Bernoulli("outcome", p, observed=outcomes)
 
-
-    but doesn't memorize the fact that the expression ``pm.math.invlogit(alpha *
-    x + intercept)`` has been affected to the variable ``p``.  If the quantity
-    ``p`` is important and one would like to track its value in the sampling
-    trace, then one can use a deterministic node:
+    Here, ``p`` is a Python variable, not a named model variable. Its values will
+    not be stored in the inference data. Register the expression as a
+    deterministic variable to store those values:
 
     .. code-block:: python
 
@@ -2554,21 +2569,11 @@ def Deterministic(name, var, model=None, dims=None):
             p = pm.Deterministic("p", pm.math.invlogit(alpha * x + intercept))
             outcome = pm.Bernoulli("outcome", p, observed=outcomes)
 
-    These two models are strictly equivalent from a mathematical point of view.
-    However, in the first case, the inference data will only contain values for
-    the variables ``alpha``, ``intercept`` and ``outcome``.  In the second, it
-    will also contain sampled values of ``p`` for each of the observed points.
-
-    Notes
-    -----
-    Even though adding a Deterministic node forces PyMC to compute this
-    expression, which could have been optimized away otherwise, this doesn't come
-    with a performance cost.  Indeed, Deterministic nodes are computed outside
-    the main computation graph, which can be optimized as though there was no
-    Deterministic nodes.  Whereas the optimized graph can be evaluated thousands
-    of times during a NUTS step, the Deterministic quantities are just
-    computeed once at the end of the step, with the final values of the other
-    random variables.
+    The two models have the same log-probability. In the first model, the
+    inference data contains values for ``alpha``, ``intercept``, and ``outcome``.
+    In the second, it also contains sampled values of ``p`` for each observed
+    point. Registering ``p`` also makes it available by name to model
+    transformations such as :func:`pymc.do` and :func:`pymc.observe`.
     """
     model = modelcontext(model)
     var = view_op(var, name=model.name_for(name))
