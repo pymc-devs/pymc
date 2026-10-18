@@ -1597,8 +1597,8 @@ class LKJCorr(BoundedContinuous):
             chol_corr = pm.LKJCorr("chol_corr", eta=4, n=10)
             corr = chol_corr @ chol_corr.T
 
-            # Define a new MvNormal with the given correlation matrix
-            vals = sds * pm.MvNormal("vals", mu=np.zeros(10), cov=corr, shape=10)
+            # Define a new MvNormal with the given Cholesky factor
+            vals = sds * pm.MvNormal("vals", mu=np.zeros(10), chol=chol_corr, shape=10)
 
             # Or transform an uncorrelated normal distribution:
             vals_raw = pm.Normal("vals_raw", shape=10)
