@@ -1595,7 +1595,8 @@ class LKJCorr(BoundedContinuous):
             sds = 3 * np.ones(10)
 
             chol_corr = pm.LKJCorr("chol_corr", eta=4, n=10)
-            corr = chol_corr @ chol_corr.T
+            # Optionally save the correlation matrix in the trace
+            corr = pm.Deterministic("corr", chol_corr @ chol_corr.T)
 
             # Define a new MvNormal with the given Cholesky factor
             vals = sds * pm.MvNormal("vals", mu=np.zeros(10), chol=chol_corr, shape=10)
