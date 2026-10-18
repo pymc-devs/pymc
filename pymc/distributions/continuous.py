@@ -1094,11 +1094,10 @@ class Wald(PositiveContinuous):
     def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
-        ell = lam * mu
-        r = pt.sqrt(value * lam)
+        r = pt.sqrt(lam / value)
 
-        a = normal_lcdf(0, 1, (q - 1.0) / r)
-        b = 2.0 / ell + normal_lcdf(0, 1, -(q + 1.0) / r)
+        a = normal_lcdf(0, 1, (q - 1.0) * r)
+        b = 2.0 * lam / mu + normal_lcdf(0, 1, -(q + 1.0) * r)
 
         logcdf = pt.switch(
             pt.le(value, 0),
