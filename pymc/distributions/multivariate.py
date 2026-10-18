@@ -1138,30 +1138,12 @@ def WishartBartlett(name, S, nu, is_cholesky=False, return_cholesky=False, initv
 
 
 def _lkj_normalizing_constant(eta, n):
-    result_1 = gammaln(2.0 * pt.arange(1, ((n - 1) / 2) + 1)).sum()
-    result_2 = -(n - 1) * gammaln(eta + 0.5 * (n - 1))
+    """Log normalizing constant for the LKJ correlation density."""
+    eta = pt.cast(eta, pytensor.config.floatX)
     k = pt.arange(1, n)
-
-    return pt.switch(
-        pt.eq(eta, 1.0),
-        pt.switch(
-            pt.eq(n % 2, 1.0),
-            result_1
-            + (
-                0.25 * (n**2 - 1) * pt.log(np.pi)
-                - 0.25 * (n - 1) ** 2 * pt.log(2.0)
-                - (n - 1) * gammaln((n + 1) / 2)
-            ),
-            result_1
-            + (
-                0.25 * n * (n - 2) * pt.log(np.pi)
-                + 0.25 * (3 * n**2 - 4 * n) * pt.log(2.0)
-                + n * gammaln(n / 2)
-                - (n - 1) * gammaln(n)
-            ),
-        ),
-        result_2 + (0.5 * k * pt.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))).sum(),
-    )
+    return (n - 1) * gammaln(eta + 0.5 * (n - 1)) - (
+        0.5 * k * np.log(np.pi) + gammaln(eta + 0.5 * (n - 1 - k))
+    ).sum()
 
 
 # _LKJCholeskyCovBaseRV requires a properly shaped `D`, which means the variable can't
@@ -1293,17 +1275,6 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     idx = pt.arange(n)
     det_invjac = pt.log(corr_diag) - idx * pt.log(sd_vals)
     det_invjac = det_invjac.sum()
-
-    # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
-    try:
-        n = int(get_underlying_scalar_constant_value(n))
-    except NotScalarConstantError:
-        raise NotImplementedError("logp only implemented for constant `n`")
-
-    try:
-        eta = float(get_underlying_scalar_constant_value(eta))
-    except NotScalarConstantError:
-        raise NotImplementedError("logp only implemented for constant `eta`")
 
     norm = _lkj_normalizing_constant(eta, n)
 
@@ -1537,7 +1508,7 @@ class LKJCorrRV(SymbolicRandomVariable):
 
             middle_rng, y = pt.random.beta(
                 alpha=mp1 / 2.0,
-                beta=beta,
+                beta=beta_next,
                 size=size,
                 rng=prev_rng,
                 return_next_rng=True,
@@ -1583,9 +1554,12 @@ class LKJCorr(BoundedContinuous):
     If eta = 1 this corresponds to the uniform distribution over correlation
     matrices. For eta :math:`\to \infty` the LKJ prior approaches the identity matrix.
 
-    ========  ==============================================
-    Support   Upper triangular matrix with values in [-1, 1]
-    ========  ==============================================
+    This implementation returns a lower triangular Cholesky factor ``L``,
+    where ``R = L @ L.T`` follows the LKJ distribution.
+
+    ========  ===================================================================
+    Support   Lower triangular matrices with positive diagonals and unit row norms
+    ========  ===================================================================
 
     Parameters
     ----------
@@ -1609,15 +1583,17 @@ class LKJCorr(BoundedContinuous):
             # Define the vector of fixed standard deviations
             sds = 3 * np.ones(10)
 
-            corr = pm.LKJCorr("corr", eta=4, n=10)
+            chol_corr = pm.LKJCorr("chol_corr", eta=4, n=10)
+            # Optionally save the correlation matrix in the trace
+            corr = pm.Deterministic("corr", chol_corr @ chol_corr.T)
 
-            # Define a new MvNormal with the given correlation matrix
-            vals = sds * pm.MvNormal("vals", mu=np.zeros(10), cov=corr, shape=10)
+            # Define a new MvNormal with the given Cholesky factor
+            mv_vals_raw = pm.MvNormal("mv_vals_raw", mu=np.zeros(10), chol=chol_corr, shape=10)
+            vals = sds * mv_vals_raw
 
             # Or transform an uncorrelated normal distribution:
             vals_raw = pm.Normal("vals_raw", shape=10)
-            chol = pt.linalg.cholesky(corr)
-            vals = sds * pt.dot(chol, vals_raw)
+            vals = sds * pt.dot(chol_corr, vals_raw)
 
 
     References
@@ -1644,7 +1620,7 @@ class LKJCorr(BoundedContinuous):
     @staticmethod
     def logp(value: TensorVariable, n, eta):
         """
-        Calculate the logp of a correlation matrix under an LKJ distribution.
+        Calculate the logp of a Cholesky factor under an LKJ distribution.
 
         Parameters
         ----------
@@ -1661,9 +1637,10 @@ class LKJCorr(BoundedContinuous):
         except NotScalarConstantError:
             raise NotImplementedError("logp only implemented for constant `n`")
 
-        result = _lkj_normalizing_constant(eta, n) + (eta - 1.0) * 2 * pt.diagonal(
-            value, axis1=-2, axis2=-1
-        ).log().sum(axis=-1)
+        log_diag = pt.diagonal(value, axis1=-2, axis2=-1).log()
+        # The Cholesky-to-correlation Jacobian contributes n - i for one-based i.
+        exponents = 2 * eta - 2 + n - pt.arange(1, n + 1)
+        result = _lkj_normalizing_constant(eta, n) + (exponents * log_diag).sum(axis=-1)
 
         row_norms = pt.sum(value**2, axis=-1)
 
