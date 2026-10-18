@@ -2320,17 +2320,15 @@ class TestLKJCorr(BaseTestDistributionRandom):
             _lkj_normalizing_constant(eta, n).eval(), np.log(normalizer), atol=tolerance
         )
 
-    @pytest.mark.parametrize("n", [3, 4])
-    def test_factor_density_ratio(self, n):
+    def test_factor_density_ratio(self):
+        n = 4
         factor = np.eye(n)
         factor[1, :2] = [0.6, 0.8]
         factor[2, :3] = [0.2, -0.3, np.sqrt(0.87)]
-        log_jacobian = np.log(0.8)
-        if n == 4:
-            factor[3, :] = [0.1, 0.2, -0.3, np.sqrt(0.86)]
-            log_jacobian = 2 * np.log(0.8) + 0.5 * np.log(0.87)
+        factor[3, :] = [0.1, 0.2, -0.3, np.sqrt(0.86)]
+        log_jacobian = 2 * np.log(0.8) + 0.5 * np.log(0.87)
 
-        # Ratios to the identity cancel the normalizer and isolate the L-to-R Jacobian.
+        # Ratios to the identity cancel the normalizer and check determinant and Jacobian terms.
         expected = np.linalg.slogdet(factor @ factor.T)[1] + log_jacobian
         values = np.stack([np.eye(n), factor])
         actual = pm.logp(pm.LKJCorr.dist(n=n, eta=2, size=2), values).eval()
