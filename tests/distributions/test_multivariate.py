@@ -941,6 +941,16 @@ def test_car_alpha_bounds(alpha):
 
 
 class TestLKJCholeskCov:
+    def test_covariance_density(self):
+        sds = np.array([0.7, 1.8])
+        factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
+        rv = pm.LKJCholeskyCov.dist(n=2, eta=1, sd_dist=pm.Exponential.dist(1), compute_corr=False)
+        # Uniform correlation, independent Exponential scales, and the scale-map Jacobian.
+        expected = -np.log(2) - sds.sum() + np.log(0.8) - np.log(sds[1])
+        actual = pm.logp(rv, factor[np.tril_indices(2)]).eval()
+        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
+        npt.assert_allclose(actual, expected, atol=tolerance)
+
     def test_dist(self):
         sd_dist = pm.Exponential.dist(1, size=(10, 3))
         x = pm.LKJCholeskyCov.dist(n=3, eta=1, sd_dist=sd_dist, size=10, compute_corr=False)
@@ -2247,80 +2257,8 @@ class TestOrderedMultinomial(BaseTestDistributionRandom):
     ]
 
 
-class TestLKJ:
-    seed = sum(map(ord, "lkj-regression"))
-
-    @pytest.mark.parametrize(
-        "n,eta,normalizer",
-        [(2, 1, 0.5), (3, 2, 16 / (3 * np.pi**2)), (4, 1, 27 / (32 * np.pi**2))],
-        ids=["uniform_2d", "nonunit_eta", "uniform_4d"],
-    )
-    def test_normalizer(self, n, eta, normalizer):
-        # Integrating the Cholesky density over each row's unit ball gives these constants.
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(
-            _lkj_normalizing_constant(eta, n).eval(), np.log(normalizer), atol=tolerance
-        )
-
-    @pytest.mark.parametrize("n", [3, 4])
-    def test_factor_density_ratio(self, n):
-        factor = np.eye(n)
-        factor[1, :2] = [0.6, 0.8]
-        factor[2, :3] = [0.2, -0.3, np.sqrt(0.87)]
-        log_jacobian = np.log(0.8)
-        if n == 4:
-            factor[3, :] = [0.1, 0.2, -0.3, np.sqrt(0.86)]
-            log_jacobian = 2 * np.log(0.8) + 0.5 * np.log(0.87)
-
-        # Ratios to the identity cancel the normalizer and isolate the L-to-R Jacobian.
-        expected = np.linalg.slogdet(factor @ factor.T)[1] + log_jacobian
-        values = np.stack([np.eye(n), factor])
-        actual = pm.logp(pm.LKJCorr.dist(n=n, eta=2, size=2), values).eval()
-        assert actual.shape == (2,)
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(actual[1] - actual[0], expected, atol=tolerance)
-
-    def test_covariance_density(self):
-        sds = np.array([0.7, 1.8])
-        factor = sds[:, None] * np.array([[1.0, 0.0], [0.6, 0.8]])
-        rv = pm.LKJCholeskyCov.dist(n=2, eta=1, sd_dist=pm.Exponential.dist(1), compute_corr=False)
-        # Uniform correlation, independent Exponential scales, and the scale-map Jacobian.
-        expected = -np.log(2) - sds.sum() + np.log(0.8) - np.log(sds[1])
-        actual = pm.logp(rv, factor[np.tril_indices(2)]).eval()
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(actual, expected, atol=tolerance)
-
-    def test_symbolic_eta_gradient(self):
-        eta = pt.scalar("eta")
-        logp = pm.logp(pm.LKJCorr.dist(n=2, eta=eta), np.eye(2))
-        fn = pytensor.function([eta], pt.grad(logp, eta))
-        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
-        npt.assert_allclose(fn(1.0), 2 - 2 * np.log(2), atol=tolerance)
-
-    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
-    @pytest.mark.parametrize("distribution", ["corr", "cov"])
-    def test_every_pair_prior_moments(self, n, eta, distribution):
-        count = 20_000
-        if distribution == "corr":
-            factor = pm.draw(pm.LKJCorr.dist(n=n, eta=eta, size=count), random_seed=self.seed)
-        else:
-            rv = pm.LKJCholeskyCov.dist(
-                n=n, eta=eta, sd_dist=pm.Exponential.dist(1), size=count, compute_corr=False
-            )
-            packed = pm.draw(rv, random_seed=self.seed)
-            factor = np.zeros((count, n, n))
-            factor[:, *np.tril_indices(n)] = packed
-            factor /= np.linalg.norm(factor, axis=-1, keepdims=True)
-        corr = factor @ factor.swapaxes(-1, -2)
-        pairs = corr[:, *np.tril_indices(n, -1)]
-        denominator = 2 * eta + n - 1
-        second = 1 / denominator
-        fourth = 3 / (denominator * (denominator + 2))
-        second_tolerance = 6 * np.sqrt((fourth - second**2) / count)
-        npt.assert_allclose((pairs**2).mean(axis=0), second, atol=second_tolerance)
-
-
 class TestLKJCorr(BaseTestDistributionRandom):
+    seed = sum(map(ord, "lkj-regression"))
     pymc_dist = LKJCorr
     pymc_dist_params = {"n": 3, "eta": 1.0}
     expected_rv_op_params = {"n": 3, "eta": 1.0}
@@ -2370,6 +2308,53 @@ class TestLKJCorr(BaseTestDistributionRandom):
             size=1000,
         )
 
+    @pytest.mark.parametrize(
+        "n,eta,normalizer",
+        [(2, 1, 0.5), (3, 2, 16 / (3 * np.pi**2)), (4, 1, 27 / (32 * np.pi**2))],
+        ids=["uniform_2d", "nonunit_eta", "uniform_4d"],
+    )
+    def test_normalizer(self, n, eta, normalizer):
+        # Integrating the Cholesky density over each row's unit ball gives these constants.
+        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
+        npt.assert_allclose(
+            _lkj_normalizing_constant(eta, n).eval(), np.log(normalizer), atol=tolerance
+        )
+
+    def test_factor_density_ratio(self):
+        n = 4
+        factor = np.eye(n)
+        factor[1, :2] = [0.6, 0.8]
+        factor[2, :3] = [0.2, -0.3, np.sqrt(0.87)]
+        factor[3, :] = [0.1, 0.2, -0.3, np.sqrt(0.86)]
+        log_jacobian = 2 * np.log(0.8) + 0.5 * np.log(0.87)
+
+        # Ratios to the identity cancel the normalizer and check determinant and Jacobian terms.
+        expected = np.linalg.slogdet(factor @ factor.T)[1] + log_jacobian
+        values = np.stack([np.eye(n), factor])
+        actual = pm.logp(pm.LKJCorr.dist(n=n, eta=2, size=2), values).eval()
+        assert actual.shape == (2,)
+        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
+        npt.assert_allclose(actual[1] - actual[0], expected, atol=tolerance)
+
+    def test_symbolic_eta_gradient(self):
+        eta = pt.scalar("eta")
+        logp = pm.logp(pm.LKJCorr.dist(n=2, eta=eta), np.eye(2))
+        fn = pytensor.function([eta], pt.grad(logp, eta))
+        tolerance = select_by_precision(float64=1e-7, float32=1e-4)
+        npt.assert_allclose(fn(1.0), 2 - 2 * np.log(2), atol=tolerance)
+
+    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
+    def test_every_pair_prior_moments(self, n, eta):
+        count = 20_000
+        factor = pm.draw(pm.LKJCorr.dist(n=n, eta=eta, size=count), random_seed=self.seed)
+        corr = factor @ factor.swapaxes(-1, -2)
+        pairs = corr[:, *np.tril_indices(n, -1)]
+        denominator = 2 * eta + n - 1
+        second = 1 / denominator
+        fourth = 3 / (denominator * (denominator + 2))
+        second_tolerance = 6 * np.sqrt((fourth - second**2) / count)
+        npt.assert_allclose((pairs**2).mean(axis=0), second, atol=second_tolerance)
+
 
 def test_LKJCorr_default_transform():
     # Make n large -- regression test for https://github.com/pymc-devs/pymc/issues/7101
@@ -2390,6 +2375,7 @@ def test_LKJCorr_default_transform():
 
 
 class TestLKJCholeskyCov(BaseTestDistributionRandom):
+    seed = sum(map(ord, "lkj-regression"))
     pymc_dist = _LKJCholeskyCov
     pymc_dist_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
     expected_rv_op_params = {"n": 3, "eta": 1.0, "sd_dist": pm.DiracDelta.dist([0.5, 1.0, 2.0])}
@@ -2424,6 +2410,24 @@ class TestLKJCholeskyCov(BaseTestDistributionRandom):
         rng = np.random.default_rng(2248)
         x = _LKJCholeskyCov.dist(n=2, eta=100_000, sd_dist=pm.DiracDelta.dist([0.5, 2.0]))
         assert np.all(np.abs(draw(x, random_seed=rng) - np.array([0.5, 0, 2.0])) < 0.01)
+
+    @pytest.mark.parametrize("n,eta", [(3, 2), (4, 0.5)])
+    def test_every_pair_prior_moments(self, n, eta):
+        count = 20_000
+        rv = pm.LKJCholeskyCov.dist(
+            n=n, eta=eta, sd_dist=pm.Exponential.dist(1), size=count, compute_corr=False
+        )
+        packed = pm.draw(rv, random_seed=self.seed)
+        factor = np.zeros((count, n, n))
+        factor[:, *np.tril_indices(n)] = packed
+        factor /= np.linalg.norm(factor, axis=-1, keepdims=True)
+        corr = factor @ factor.swapaxes(-1, -2)
+        pairs = corr[:, *np.tril_indices(n, -1)]
+        denominator = 2 * eta + n - 1
+        second = 1 / denominator
+        fourth = 3 / (denominator * (denominator + 2))
+        second_tolerance = 6 * np.sqrt((fourth - second**2) / count)
+        npt.assert_allclose((pairs**2).mean(axis=0), second, atol=second_tolerance)
 
 
 class TestICAR(BaseTestDistributionRandom):
