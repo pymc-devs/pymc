@@ -3284,7 +3284,8 @@ class SkewNormal(Continuous):
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = (
-            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / pt.sqrt(2)))
+            np.log(2.0)
+            + normal_lcdf(0, 1, (value - mu) * pt.sqrt(tau) * alpha)
             + (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0
         )
 

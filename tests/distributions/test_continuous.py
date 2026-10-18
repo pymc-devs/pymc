@@ -806,6 +806,31 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize(
+        "value, mu, sigma, alpha",
+        [
+            (-10.0, 1.0, 2.0, 3.0),
+            (-2.0, 0.0, 1.0, 20.0),
+            (-3.0, 0.0, 1.0, 20.0),
+            (10.0, 0.0, 1.0, -50.0),
+        ],
+    )
+    def test_skew_normal_logp_tail(self, value, mu, sigma, alpha):
+        rtol = select_by_precision(float64=1e-6, float32=1e-3)
+        rv = pm.SkewNormal.dist(mu=mu, sigma=sigma, alpha=alpha)
+        npt.assert_allclose(
+            pm.logp(rv, value).eval(),
+            st.skewnorm.logpdf(value, alpha, mu, sigma),
+            rtol=rtol,
+        )
+
+        alpha_var = pt.scalar("alpha")
+        logp = pm.logp(pm.SkewNormal.dist(mu=mu, sigma=sigma, alpha=alpha_var), value)
+        dlogp_dalpha = pytensor.function([alpha_var], pytensor.grad(logp, alpha_var))
+        w = alpha * (value - mu) / sigma
+        expected = (value - mu) / sigma * np.exp(st.norm.logpdf(w) - st.norm.logcdf(w))
+        npt.assert_allclose(dlogp_dalpha(alpha), expected, rtol=rtol)
+
+    @pytest.mark.parametrize(
         "value,mu,sigma,nu,logcdf_val",
         [
             (0.5, -50.000, 0.500, 0.500, 0.0000000),
