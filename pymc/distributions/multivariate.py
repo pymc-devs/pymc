@@ -1276,6 +1276,7 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     det_invjac = pt.log(corr_diag) - idx * pt.log(sd_vals)
     det_invjac = det_invjac.sum()
 
+    # TODO: _lkj_normalizing_constant currently requires `eta` and `n` to be constants
     try:
         n = int(get_underlying_scalar_constant_value(n))
     except NotScalarConstantError:
@@ -1558,12 +1559,14 @@ class LKJCorrRV(SymbolicRandomVariable):
 
 class LKJCorr(BoundedContinuous):
     r"""
-    Cholesky factors of LKJ (Lewandowski, Kurowicka and Joe) correlation matrices.
+    The LKJ (Lewandowski, Kurowicka and Joe) distribution.
 
-    Returns a lower triangular Cholesky factor ``L``. The correlation matrix
-    ``R = L @ L.T`` follows the LKJ distribution.
+    The LKJ distribution is a prior distribution for correlation matrices.
     If eta = 1 this corresponds to the uniform distribution over correlation
     matrices. For eta :math:`\to \infty` the LKJ prior approaches the identity matrix.
+
+    This implementation returns a lower triangular Cholesky factor ``L``,
+    where ``R = L @ L.T`` follows the LKJ distribution.
 
     ========  ===================================================================
     Support   Lower triangular matrices with positive diagonals and unit row norms
@@ -1581,12 +1584,7 @@ class LKJCorr(BoundedContinuous):
     Notes
     -----
     This is mainly useful if you want the standard deviations to be fixed, as
-    LKJCholeskyCov is optimized for the case where they come from a distribution.
-
-    The density is defined with respect to the strictly lower triangular entries
-    of ``L``. Its diagonal entries have exponents :math:`n-i+2\eta-2`, for
-    one-based indices :math:`i=2,\ldots,n`. It is not constant at ``eta=1``
-    when ``n > 2``.
+    LKJCholsekyCov is optimized for the case where they come from a distribution.
 
     Examples
     --------
@@ -1597,10 +1595,10 @@ class LKJCorr(BoundedContinuous):
             sds = 3 * np.ones(10)
 
             chol_corr = pm.LKJCorr("chol_corr", eta=4, n=10)
-            corr = pm.Deterministic("corr", chol_corr @ chol_corr.T)
+            corr = chol_corr @ chol_corr.T
 
-            # Define a new MvNormal with the given Cholesky factor
-            vals = sds * pm.MvNormal("vals", mu=np.zeros(10), chol=chol_corr, shape=10)
+            # Define a new MvNormal with the given correlation matrix
+            vals = sds * pm.MvNormal("vals", mu=np.zeros(10), cov=corr, shape=10)
 
             # Or transform an uncorrelated normal distribution:
             vals_raw = pm.Normal("vals_raw", shape=10)
