@@ -3175,7 +3175,7 @@ class VonMises(CircularContinuous):
         return mu
 
     def logp(value, mu, kappa):
-        res = kappa * pt.cos(mu - value) - pt.log(2 * np.pi) - pt.log(pt.i0(kappa))
+        res = kappa * (pt.cos(mu - value) - 1) - pt.log(2 * np.pi) - pt.log(i0e(kappa))
         res = pt.switch(pt.bitwise_and(pt.ge(value, -np.pi), pt.le(value, np.pi)), res, -np.inf)
         return check_parameters(
             res,

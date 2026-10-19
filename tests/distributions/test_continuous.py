@@ -849,6 +849,16 @@ class TestMatchesScipy:
             lambda value, mu, kappa: floatX(st.vonmises.logpdf(value, kappa, loc=mu)),
         )
 
+    @pytest.mark.skipif(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.parametrize("kappa", [100.0, np.float64(1000.0)])
+    def test_vonmises_large_kappa(self, kappa):
+        value = np.array([-0.1, 0.0, 0.1])
+        npt.assert_allclose(
+            logp(pm.VonMises.dist(mu=0.0, kappa=kappa), value).eval(),
+            st.vonmises.logpdf(value, kappa),
+            rtol=1e-6,
+        )
+
     def test_gumbel(self):
         check_logp(
             pm.Gumbel,
