@@ -214,7 +214,7 @@ class TestTransform:
 
 
 def test_exp_transform_rv():
-    base_rv = pt.random.normal(0, 1, size=3, name="base_rv")
+    base_rv = pt.random.normal(0, 1, size=4, name="base_rv")
     y_rv = pt.exp(base_rv)
     y_rv.name = "y"
 
@@ -223,8 +223,8 @@ def test_exp_transform_rv():
     logcdf_fn = pytensor.function([y_vv], logcdf(y_rv, y_vv))
     icdf_fn = pytensor.function([y_vv], icdf(y_rv, y_vv))
 
-    y_val = [-2.0, 0.1, 0.3]
-    q_val = [0.2, 0.5, 0.9]
+    y_val = [-2.0, 0.0, 0.1, 0.3]
+    q_val = [0.2, 0.5, 0.7, 0.9]
     np.testing.assert_allclose(
         logp_fn(y_val),
         sp.stats.lognorm(s=1).logpdf(y_val),
