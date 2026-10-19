@@ -283,7 +283,7 @@ def Data(
 
     * Create the container with ``shape=(1, None)``. Dimensions left as ``None`` can
       still be resized with :meth:`pymc.Model.set_data`, but those set to 1 cannot.
-    * Leave the dimension out of ``value`` and add it back by indexing, e.g. ``x[None]``.
+    * Leave the dimension out of ``value`` and add it afterwards, e.g. ``x[None]``.
     * Apply :func:`pytensor.tensor.specify_shape` to the container, e.g.
       ``pt.specify_shape(x, (1, None))``, if you don't control how it is created.
 
