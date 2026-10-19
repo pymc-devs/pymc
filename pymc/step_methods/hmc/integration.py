@@ -71,6 +71,18 @@ class CpuLeapfrogIntegrator:
         # every chain).
         self._axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
 
+    def __getstate__(self):
+        # The BLAS function is a compiled `fortran` object and cannot be
+        # pickled (e.g. when sampling with multiple processes); it is
+        # resolved again in `__setstate__`.
+        state = self.__dict__.copy()
+        del state["_axpy"]
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self._axpy = linalg.blas.get_blas_funcs("axpy", dtype=self._dtype)
+
     def compute_state(self, q: RaveledVars, p: np.ndarray):
         """Compute Hamiltonian functions using a position and momentum."""
         logp, dlogp = self._logp_dlogp_func(q.data, q.point_map_info)
