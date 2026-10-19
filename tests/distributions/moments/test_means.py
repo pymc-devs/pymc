@@ -134,6 +134,7 @@ from pymc.exceptions import UndefinedMomentException
         [ChiSquared, chi2, {"nu": 6}, {"df": 6}],
         [Dirichlet, dirichlet, {"a": np.ones(4)}, {"alpha": np.ones(4)}],
         [ExGaussian, exponnorm, {"mu": 0, "sigma": 1, "nu": 1}, {"loc": 0, "scale": 1, "K": 1}],
+        [ExGaussian, exponnorm, {"mu": 1, "sigma": 2, "nu": 3}, {"loc": 1, "scale": 2, "K": 1.5}],
         [Exponential, expon, {"lam": 1}, {"scale": 1}],
         [Gamma, gamma, {"alpha": 4, "beta": 3}, {"a": 4, "scale": 1 / 3}],
         [Geometric, geom, {"p": 0.1}, {"p": 0.1}],
@@ -177,6 +178,12 @@ from pymc.exceptions import UndefinedMomentException
             jf_skew_t,
             {"mu": 2, "sigma": 2, "a": 3, "b": 3},
             {"loc": 2, "scale": 2, "a": 3, "b": 3},
+        ],
+        [
+            SkewStudentT,
+            jf_skew_t,
+            {"mu": 1, "sigma": 2, "a": 3, "b": 5},
+            {"loc": 1, "scale": 2, "a": 3, "b": 5},
         ],
         [StudentT, t, {"mu": 2, "sigma": 2, "nu": 6}, {"loc": 2, "scale": 2, "df": 6}],
         [

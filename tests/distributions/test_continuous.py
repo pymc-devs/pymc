@@ -1353,6 +1353,7 @@ class TestMoments:
                 (2, 5),
                 np.full((2, 5), np.arange(5)),
             ),
+            (3, 5, 1, 2, None, st.jf_skew_t(3, 5, loc=1, scale=2).mean()),
         ],
     )
     def test_skewstudentt_support_point(self, a, b, mu, sigma, size, expected):

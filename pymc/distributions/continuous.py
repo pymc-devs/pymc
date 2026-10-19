@@ -2051,8 +2051,8 @@ class SkewStudentT(Continuous):
         return super().dist([a, b, mu, sigma], **kwargs)
 
     def support_point(rv, size, a, b, mu, sigma):
-        a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
-        Et = mu + (a - b) * pt.sqrt(a + b) * gammafn(a - 0.5) * gammafn(b - 0.5) / (
+        a, b, mu, sigma = pt.broadcast_arrays(a, b, mu, sigma)
+        Et = mu + sigma * (a - b) * pt.sqrt(a + b) * gammafn(a - 0.5) * gammafn(b - 0.5) / (
             2 * gammafn(a) * gammafn(b)
         )
         if not rv_size_is_none(size):
