@@ -360,10 +360,12 @@ class Bernoulli(Discrete):
         return pt.switch(p < 0.5, 0, 1)
 
     def logp(value, p):
+        # Spelled log(1 - p) because the sigmoid stabilization rewrites do not recognize
+        # log1p(-p): with p = sigmoid(logit_p) its gradient is nan once 1 - p rounds to 0
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, 1)),
             -np.inf,
-            pt.switch(value, pt.log(p), pt.log1p(-p)),
+            pt.switch(value, pt.log(p), pt.log(1 - p)),
         )
 
         return check_parameters(
