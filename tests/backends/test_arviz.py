@@ -875,6 +875,27 @@ class TestDatasetToPointList:
         assert pl[0]["x"].shape == (0, 5)
         assert pl[0]["x"].dtype == np.float64
 
+    def test_no_sample_dims(self):
+        values = np.arange(3, dtype=np.int64)
+        ds = xarray.Dataset({"x": xarray.DataArray(values)})
+
+        points, stacked_dims = dataset_to_point_list(ds, sample_dims=())
+
+        assert stacked_dims == {}
+        assert len(points) == 1
+        assert tuple(points[0]) == ("x",)
+        np.testing.assert_array_equal(points[0]["x"], values)
+        assert points[0]["x"].dtype == values.dtype
+
+    def test_zero_samples(self):
+        ds = xarray.Dataset({"x": (("chain", "draw", "group"), np.empty((0, 3, 2)))})
+
+        points, stacked_dims = dataset_to_point_list(ds, sample_dims=("chain", "draw"))
+
+        assert points == []
+        assert tuple(stacked_dims) == ("chain", "draw")
+        assert tuple(len(coords) for coords in stacked_dims.values()) == (0, 3)
+
 
 def test_apply_function_over_dataset_preserves_sample_coords():
     dataset = xarray.Dataset(
