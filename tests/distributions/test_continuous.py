@@ -1765,11 +1765,20 @@ class TestMoments:
                     ),
                 ),
             ),
+            (4.0, 2.0, None, 4.544766856137485),
+            (50.0, 2.0, None, 50.04001603859353),
+            (
+                np.array([100.0, 1000.0]),
+                np.array([2.0, 1.0]),
+                None,
+                np.array([100.0200020012015, 1000.000500000125]),
+            ),
         ],
     )
     def test_rice_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,
