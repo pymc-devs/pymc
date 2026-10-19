@@ -81,6 +81,7 @@ from pymc.distributions.dist_math import (
     check_parameters,
     clipped_beta_rvs,
     i0e,
+    i1e,
     log_diff_normal_cdf,
     log_normal,
     logpow,
@@ -3618,17 +3619,9 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu or b.")
 
-    def support_point(rv, size, nu, sigma):
-        nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
-        mean = (
-            sigma
-            * np.sqrt(np.pi / 2)
-            * pt.exp(nu_sigma_ratio / 2)
-            * (
-                (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
-            )
-        )
+    def support_point(rv, size, b, sigma):
+        x = -(b**2) / 2
+        mean = sigma * np.sqrt(np.pi / 2) * ((1 - x) * i0e(-x / 2) - x * i1e(-x / 2))
 
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)
