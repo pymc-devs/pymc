@@ -391,7 +391,7 @@ def truncated_support_point(op: TruncatedRV, truncated_rv, *inputs):
 
     fallback_support_point = pt.switch(
         pt.and_(pt.bitwise_not(pt.isinf(lower)), pt.bitwise_not(pt.isinf(upper))),
-        (upper - lower) / 2,  # lower and upper are finite
+        lower / 2 + upper / 2,  # lower and upper are finite
         pt.switch(
             pt.isinf(upper),
             lower + 1,  # only lower is finite

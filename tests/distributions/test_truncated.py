@@ -401,7 +401,9 @@ def test_truncated_transform_logp():
         # Moment of truncated dist can be used
         (icdf_normal(0, 1), -1, 2, None, 0),
         # Moment of truncated dist cannot be used, both bounds are finite
-        (icdf_normal(3, 1), -1, 2, (2,), np.full((2,), 3 / 2)),
+        (icdf_normal(3, 1), -1, 2, (2,), np.full((2,), 1 / 2)),
+        # Moment of truncated dist cannot be used, both bounds are finite and sum to more than 127
+        (icdf_normal(0, 30), 100, 120, None, 110),
         # Moment of truncated dist cannot be used, lower bound is finite
         (icdf_normal(-3, 1), -1, None, (2, 3), np.full((2, 3), 0)),
         # Moment of truncated dist can be used for 1st and 3rd mus, upper bound is finite
