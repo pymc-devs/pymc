@@ -268,7 +268,24 @@ def Data(
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
     **kwargs : dict, optional
-        Extra arguments passed to :func:`pytensor.shared`.
+        Extra arguments passed to :func:`pytensor.shared`, such as ``shape`` (see Notes).
+
+    Notes
+    -----
+    Unless ``shape`` is given, every dimension of the data container has an unknown
+    static length (``None``), so that its value can later be replaced with one of a
+    different shape. PyTensor only broadcasts dimensions that are statically known to
+    have length 1, so the container does not broadcast like the NumPy array it wraps:
+    a value of shape ``(1, 3)`` will not broadcast against a variable of shape
+    ``(2, 3)``, and evaluating such a graph raises an error.
+
+    To broadcast along a dimension, give it a static length of 1 in one of these ways:
+
+    * Create the container with ``shape=(1, None)``. Dimensions left as ``None`` can
+      still be resized with :meth:`pymc.Model.set_data`, but those set to 1 cannot.
+    * Leave the dimension out of ``value`` and add it afterwards, e.g. ``x[None]``.
+    * Apply :func:`pytensor.tensor.specify_shape` to the container, e.g.
+      ``pt.specify_shape(x, (1, None))``, if you don't control how it is created.
 
     Examples
     --------
@@ -290,6 +307,14 @@ def Data(
     ...         # Switch out the observed dataset
     ...         model.set_data("data", data_vals)
     ...         idatas.append(pm.sample())
+
+    Use ``shape`` to let a data container broadcast along a dimension of length 1:
+
+    >>> with pm.Model():
+    ...     mu = pm.Data("mu", np.zeros((1, 3)), shape=(1, None))
+    ...     y = pm.Normal("y", mu=mu, shape=(2, 3))
+    >>> pm.draw(y).shape
+    (2, 3)
     """
     from pymc.model.core import Model, modelcontext
 
