@@ -90,3 +90,33 @@ def test_updates_fast(opt, loss_and_params, kwargs, getter):
         # Usual call to optimizer, old behaviour
         updates = opt(**args)
         assert isinstance(updates, dict)
+
+
+def test_adagrad_window_normaliser():
+    """Ensure adagrad_window excludes the current step's gradient from the normalizer (#8444)."""
+    param = pytensor.shared(0.0)
+    loss = 2.0 * param  # grad = 2.0
+    lr = 1.0
+    eps = 0.25
+    n_win = 5
+
+    updates = adagrad_window(loss, [param], learning_rate=lr, epsilon=eps, n_win=n_win)
+    step = pytensor.function([], updates=updates)
+
+    # Step 1:
+    # Initial buffer `accu` is 0. Normalizer should only include prior accumulated gradients,
+    # so denom = sqrt(0 + eps) = 0.5.
+    # If the current gradient was inside the normalizer, denom would be sqrt(2^2 + 0.25) = sqrt(4.25).
+    step()
+    expected_step1 = 0.0 - lr * 2.0 / np.sqrt(eps)
+    np.testing.assert_allclose(param.get_value(), expected_step1)
+
+    # Step 2:
+    # Buffer `accu` now contains [4.0, 0, 0, 0, 0], sum is 4.0.
+    # Current gradient (2.0) should not be added before normalizing,
+    # so denom = sqrt(4.0 + eps) = sqrt(4.25).
+    # If current gradient were included, denom would be sqrt(4.0 + 4.0 + 0.25) = sqrt(8.25).
+    step()
+    expected_step2 = expected_step1 - lr * 2.0 / np.sqrt(4.0 + eps)
+    np.testing.assert_allclose(param.get_value(), expected_step2)
+
