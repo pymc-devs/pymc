@@ -2317,7 +2317,7 @@ class HalfCauchyRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, beta, *, size=None, rng=None):
-        bt = pt.as_tensor(beta)
+        beta = pt.as_tensor_variable(beta)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
