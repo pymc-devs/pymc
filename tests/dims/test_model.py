@@ -313,3 +313,21 @@ def test_model_table_xtensor_without_registered_dims():
     det =  f(beta)       [5]
 """
     assert [s.rstrip() for s in text.splitlines()] == expected.splitlines()
+
+@pytest.mark.parametrize("potential", [pm.Potential, pmd.Potential])
+def test_potential_depending_on_xtensor_arithmetic_has_gradient(potential):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/8506
+    with pm.Model() as xmodel:
+        beta = pmd.HalfNormal("beta", sigma=1)
+        share = pmd.Deterministic("share", beta / 2)
+        potential("belief", pm.logp(pm.Normal.dist(mu=0.3, sigma=0.1), share.values))
+
+    with pm.Model() as tmodel:
+        beta = pm.HalfNormal("beta", sigma=1)
+        share = pm.Deterministic("share", beta / 2)
+        pm.Potential("belief", pm.logp(pm.Normal.dist(mu=0.3, sigma=0.1), share))
+
+    x_logp, x_dlogp = xmodel.compile_fn([xmodel.logp(), xmodel.dlogp()])(xmodel.initial_point())
+    t_logp, t_dlogp = tmodel.compile_fn([tmodel.logp(), tmodel.dlogp()])(tmodel.initial_point())
+    np.testing.assert_allclose(x_logp, t_logp)
+    np.testing.assert_allclose(x_dlogp, t_dlogp)
