@@ -26,7 +26,11 @@ from pytensor.compile.mode import Mode
 
 import pymc as pm
 
-from pymc.distributions.continuous import get_tau_sigma, interpolated
+from pymc.distributions.continuous import (
+    HalfCauchyRV,
+    get_tau_sigma,
+    interpolated,
+)
 from pymc.distributions.dist_math import clipped_beta_rvs
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
@@ -2395,6 +2399,16 @@ class TestHalfCauchy(BaseTestDistributionRandom):
         "check_pymc_params_match_rv_op",
         "check_pymc_draws_match_reference_not_numba",
     ]
+
+    def test_rv_op_accepts_non_tensor_params(self):
+        """Test HalfCauchyRV.rv_op works when beta is not a TensorVariable."""
+        rv = HalfCauchyRV.rv_op(2.0)
+        assert rv.eval() >= 0
+
+        rv = HalfCauchyRV.rv_op([1.0, 5.0], size=(3, 2))
+        draws = rv.eval()
+        assert draws.shape == (3, 2)
+        assert (draws >= 0).all()
 
 
 class TestGamma(BaseTestDistributionRandom):
