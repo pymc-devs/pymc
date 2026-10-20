@@ -1096,8 +1096,10 @@ def pregrad_inner_graphs(fgraph):
 
 def rewrite_pregrad(graph):
     """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
-    return rewrite_graph(
-        graph, include=("canonicalize", "stabilize"), custom_rewrite=pregrad_inner_graphs
+        return rewrite_graph(
+        graph,
+        include=("lower_xtensor", "canonicalize", "stabilize"),
+        custom_rewrite=pregrad_inner_graphs,
     )
 
 
