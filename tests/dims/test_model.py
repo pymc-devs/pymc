@@ -314,6 +314,7 @@ def test_model_table_xtensor_without_registered_dims():
 """
     assert [s.rstrip() for s in text.splitlines()] == expected.splitlines()
 
+
 @pytest.mark.parametrize("potential", [pm.Potential, pmd.Potential])
 def test_potential_depending_on_xtensor_arithmetic_has_gradient(potential):
     # Regression test for https://github.com/pymc-devs/pymc/issues/8506
