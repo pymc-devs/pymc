@@ -24,6 +24,7 @@ import warnings
 from abc import ABC
 from collections.abc import Mapping, Sequence, Sized
 from typing import (
+    TYPE_CHECKING,
     Any,
     TypeVar,
     cast,
@@ -35,6 +36,10 @@ import pytensor
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
 from pymc.util import get_var_name
+
+if TYPE_CHECKING:
+    from pymc.step_methods.compound import BlockedStep, CompoundStep
+    from pymc.step_methods.state import DataClassState
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +145,34 @@ class IBaseTrace(ABC, Sized):
         """Close the backend.
 
         This is called after sampling has finished.
+        """
+        pass
+
+    def link_stepper(self, step_method: "BlockedStep | CompoundStep") -> None:
+        """Provide a reference to the step method used during sampling.
+
+        Backends that store the step method's ``sampling_state`` can use this
+        reference in :meth:`record_sampling_state`. By default this does nothing.
+        """
+        pass
+
+    def record_sampling_state(self, step: "BlockedStep | CompoundStep | None" = None) -> None:
+        """Record the ``sampling_state`` of a step method.
+
+        By default this does nothing.
+
+        Parameters
+        ----------
+        step : BlockedStep | CompoundStep | None
+            The step method from which to take the ``sampling_state``. If ``None``,
+            the step method provided to :meth:`link_stepper` is used.
+        """
+        pass
+
+    def store_sampling_state(self, sampling_state: "DataClassState") -> None:
+        """Store a step method's ``sampling_state``.
+
+        By default this does nothing.
         """
         pass
 
