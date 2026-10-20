@@ -1339,7 +1339,7 @@ class TestMoments:
             pm.StudentT("x", mu=mu, nu=nu, sigma=sigma, size=size)
         assert_support_point_is_expected(model, expected)
 
-    @pytest.mark.parametrize(
+        @pytest.mark.parametrize(
         "a, b, mu, sigma, size, expected",
         [
             (1, 1, 0, 1, None, 0),
@@ -1353,6 +1353,7 @@ class TestMoments:
                 (2, 5),
                 np.full((2, 5), np.arange(5)),
             ),
+            (3, 5, 1, 2, None, -0.8222762051040178),
         ],
     )
     def test_skewstudentt_support_point(self, a, b, mu, sigma, size, expected):
