@@ -17,11 +17,17 @@
 Store sampling values in memory as a NumPy array.
 """
 
+from typing import TYPE_CHECKING
+
 import numpy as np
 
 from pymc.backends import base
 from pymc.backends.base import MultiTrace
 from pymc.model import Model, modelcontext
+
+if TYPE_CHECKING:
+    from pymc.step_methods.compound import BlockedStep, CompoundStep
+    from pymc.step_methods.state import DataClassState
 
 
 class NDArray(base.BaseTrace):
@@ -38,12 +44,19 @@ class NDArray(base.BaseTrace):
         `model.unobserved_RVs` is used.
     """
 
+    sampling_state: "DataClassState | None"
+    """The step method's ``sampling_state`` recorded at the end of sampling, if any."""
+
+    _step_method: "BlockedStep | CompoundStep | None"
+
     def __init__(self, name=None, model=None, vars=None, test_point=None, **kwargs):
         super().__init__(name, model, vars, test_point, **kwargs)
         self.draw_idx = 0
         self.draws = None
         self.samples = {}
         self._stats = None
+        self._step_method = None
+        self.sampling_state = None
 
     # Sampling methods
 
@@ -117,12 +130,41 @@ class NDArray(base.BaseTrace):
 
         self.draw_idx += 1
 
+    def link_stepper(self, step_method: "BlockedStep | CompoundStep") -> None:
+        """Provide a reference to the step method used during sampling.
+
+        The reference is used by :meth:`record_sampling_state` when it is called
+        without a ``step``, and it is released when the trace is closed.
+        """
+        self._step_method = step_method
+
+    def record_sampling_state(self, step: "BlockedStep | CompoundStep | None" = None) -> None:
+        """Record the step method's ``sampling_state`` in :attr:`sampling_state`.
+
+        Parameters
+        ----------
+        step : BlockedStep | CompoundStep | None
+            The step method from which to take the ``sampling_state``. If ``None``,
+            the step method provided to :meth:`link_stepper` is used. If no step
+            method was linked either, nothing is recorded.
+        """
+        if step is None:
+            step = self._step_method
+        if step is not None:
+            self.store_sampling_state(step.sampling_state)
+
+    def store_sampling_state(self, sampling_state: "DataClassState") -> None:
+        """Store a step method's ``sampling_state`` in :attr:`sampling_state`."""
+        self.sampling_state = sampling_state
+
     def _get_sampler_stats(
         self, varname: str, sampler_idx: int, burn: int, thin: int
     ) -> np.ndarray:
         return self._stats[sampler_idx][varname][burn::thin]
 
     def close(self):
+        # Release the step method so that it is not kept alive (or pickled) with the trace
+        self._step_method = None
         if self.draw_idx == self.draws:
             return
         # Remove trailing zeros if interrupted before completed all
@@ -176,6 +218,7 @@ class NDArray(base.BaseTrace):
         sliced.samples = {varname: values[idx] for varname, values in self.samples.items()}
         sliced.sampler_vars = self.sampler_vars
         sliced.draw_idx = (idx.stop - idx.start) // idx.step
+        sliced.sampling_state = self.sampling_state
 
         if self._stats is None:
             return sliced
