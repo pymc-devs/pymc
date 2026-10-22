@@ -17,6 +17,8 @@ import sys
 import textwrap
 import types
 
+import pytest
+
 import pymc
 
 # Submodules whose entire public namespace is re-exported at the pymc root via `from pymc.<submodule> import *`.
@@ -86,6 +88,52 @@ def test_root_module_not_polluted():
     )
     assert not unexpected, f"Unexpected names at pymc root: {sorted(unexpected)}. {hint}"
     assert not missing, f"Missing names at pymc root: {sorted(missing)}. {hint}"
+
+
+@pytest.mark.parametrize("root_configured", [False, True])
+@pytest.mark.parametrize("level, own_handler", [(0, False), (10, False), (40, True)])
+def test_import_preserves_logging_configuration(root_configured, level, own_handler):
+    # 独立进程保证断言覆盖首次导入, 不受 pytest 已安装的日志处理器影响。
+    code = textwrap.dedent(f"""\
+        import logging
+
+        root = logging.getLogger()
+        if {root_configured!r}:
+            root.addHandler(logging.NullHandler())
+        logger = logging.getLogger("pymc")
+        logger.setLevel({level})
+        if {own_handler!r}:
+            logger.addHandler(logging.NullHandler())
+        root_handlers = root.handlers.copy()
+        handlers = logger.handlers.copy()
+
+        import pymc
+
+        assert root.handlers == root_handlers
+        assert logger.handlers == handlers
+        assert logger.level == {level}
+    """)
+    subprocess.run(
+        [sys.executable, "-c", code], check=True, capture_output=True, text=True, timeout=60
+    )
+
+
+def test_logging_can_be_configured_after_import():
+    code = textwrap.dedent("""\
+        import io
+        import logging
+
+        import pymc
+
+        stream = io.StringIO()
+        logging.basicConfig(stream=stream, level=logging.INFO)
+        logging.getLogger("pymc").info("pymc logging probe")
+        assert stream.getvalue().count("pymc logging probe") == 1
+    """)
+    result = subprocess.run(
+        [sys.executable, "-c", code], check=True, capture_output=True, text=True, timeout=60
+    )
+    assert "pymc logging probe" not in result.stderr
 
 
 def test_eager_import_heavy_dependencies():

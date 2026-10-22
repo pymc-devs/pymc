@@ -19,11 +19,6 @@ import logging
 
 _log = logging.getLogger(__name__)
 
-if not logging.root.handlers:
-    _log.setLevel(logging.INFO)
-    if len(_log.handlers) == 0:
-        _log.addHandler(logging.StreamHandler())
-
 
 def __set_compiler_flags():
     # Workarounds for PyTensor compiler problems on various platforms

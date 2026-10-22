@@ -64,6 +64,20 @@ The sample is returned as arrays inside a ``MultiTrace`` object, which is then p
 .. image:: ./images/forestplot.png
    :width: 1000px
 
+Logging
+========
+
+Configure the ``pymc`` logger through your application's Python logging setup.
+For example, to display informational sampling messages:
+
+.. code-block:: python
+
+    import logging
+
+    logging.basicConfig(level=logging.INFO)
+
+Progress displays are controlled separately with the ``progressbar`` argument to sampling functions.
+
 See also
 ========
 
