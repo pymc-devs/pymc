@@ -290,8 +290,8 @@ def test_potential_gradients(potential, dims, jacobian):
         reference.compile_dlogp(jacobian=jacobian)(point),
     )
     np.testing.assert_allclose(
-        model.compile_d2logp(jacobian=jacobian)(point),
-        reference.compile_d2logp(jacobian=jacobian)(point),
+        model.compile_d2logp(jacobian=jacobian, negate_output=False)(point),
+        reference.compile_d2logp(jacobian=jacobian, negate_output=False)(point),
     )
 
 
