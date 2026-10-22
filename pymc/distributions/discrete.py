@@ -961,19 +961,25 @@ class HyperGeometric(Discrete):
             )
 
         N = good + bad
-        # TODO: Use lower upper in locgdf for smarter logsumexp?
-        safe_lower = pt.switch(pt.lt(value, 0), value, 0)
+        lower = pt.switch(pt.gt(n - bad, 0), n - bad, 0)
+        upper = pt.switch(pt.lt(good, n), good, n)
+
+        safe_value = pt.switch(
+            pt.lt(value, lower),
+            lower,
+            pt.switch(pt.lt(value, upper), value, upper),
+        )
 
         res = pt.switch(
-            pt.lt(value, 0),
+            pt.lt(value, lower),
             -np.inf,
             pt.switch(
-                pt.lt(value, n),
+                pt.lt(value, upper),
                 pt.logsumexp(
-                    HyperGeometric.logp(pt.arange(safe_lower, value + 1), good, bad, n),
+                    HyperGeometric.logp(pt.arange(lower, safe_value + 1), good, bad, n),
                     keepdims=False,
                 ),
-                0,
+                0.0,
             ),
         )
 
