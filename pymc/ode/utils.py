@@ -64,7 +64,7 @@ def augment_system(ode_func, n_states, n_theta):
 
     Take a function which specifies a set of differential equations and return
     a compiled function which allows for computation of gradients of the
-    differential equation's solition with repsect to the parameters.
+    differential equation's solution with respect to the parameters.
 
     Uses float64 even if floatX=float32, because the scipy integrator always uses float64.
 
