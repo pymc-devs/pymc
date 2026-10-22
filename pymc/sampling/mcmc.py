@@ -1551,7 +1551,7 @@ def _iter_sample(
         trace.link_stepper(step)
 
     try:
-        step.tune = bool(tune)
+        # _sample_many 已恢复每条链的初始状态, 保留用户设置的 tune=False。
         if hasattr(step, "reset_tuning"):
             step.reset_tuning()
         for i in range(draws):

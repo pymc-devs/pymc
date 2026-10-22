@@ -219,6 +219,62 @@ class TestSample:
             assert step.potential._n_samples == tune
             assert step.step_adapt._count == tune + 1
 
+    @pytest.mark.parametrize("step_cls", [Slice, Metropolis])
+    @pytest.mark.parametrize("step_tune", [False, True])
+    @pytest.mark.parametrize("tune", [0, 4])
+    def test_step_tuning_in_each_sequential_chain(self, step_cls, step_tune, tune):
+        tuning_flags = []
+        with pm.Model():
+            pm.Normal("x")
+            step = step_cls(tune=step_tune)
+            original_step = step.step
+
+            def record_tuning(point):
+                tuning_flags.append(step.tune)
+                return original_step(point)
+
+            with mock.patch.object(step, "step", side_effect=record_tuning):
+                pm.sample(
+                    draws=3,
+                    tune=tune,
+                    chains=2,
+                    cores=1,
+                    step=step,
+                    random_seed=123,
+                    progressbar=False,
+                    compute_convergence_checks=False,
+                )
+
+        assert tuning_flags == ([step_tune] * tune + [False] * 3) * 2
+
+    def test_mixed_step_tuning_in_sequential_chains(self):
+        tuning_flags = []
+        with pm.Model():
+            x = pm.Normal("x")
+            y = pm.Normal("y")
+            fixed_step = Slice([x], tune=False)
+            adaptive_step = Metropolis([y], tune=True)
+            step = CompoundStep([fixed_step, CompoundStep([adaptive_step])])
+            original_step = step.step
+
+            def record_tuning(point):
+                tuning_flags.append((fixed_step.tune, adaptive_step.tune))
+                return original_step(point)
+
+            with mock.patch.object(step, "step", side_effect=record_tuning):
+                pm.sample(
+                    draws=3,
+                    tune=4,
+                    chains=2,
+                    cores=1,
+                    step=step,
+                    random_seed=123,
+                    progressbar=False,
+                    compute_convergence_checks=False,
+                )
+
+        assert tuning_flags == ([(False, True)] * 4 + [(False, False)] * 3) * 2
+
     @pytest.mark.parametrize(
         "start, error",
         [
