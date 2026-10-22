@@ -18,6 +18,7 @@ import numpy.testing as npt
 import pandas as pd
 import pytensor
 import pytensor.tensor as pt
+import pytensor.xtensor as xt
 import pytest
 import scipy.sparse as sps
 
@@ -810,6 +811,19 @@ def test_pickle_point_func():
     np.testing.assert_allclose(
         point_f_unpickled({"y": [3], "x": [2]}), point_f({"y": [3], "x": [2]})
     )
+
+
+@pytest.mark.parametrize("inner_graph", [False, True])
+def test_rewrite_pregrad_xtensor(inner_graph):
+    x = pt.vector("x")
+    named_x = xt.as_xtensor(x, dims=("item",))
+    cost = (named_x / 2).sum().values
+    if inner_graph:
+        cost = OpFromGraph([x], [cost])(x)
+
+    dcost = pt.grad(rewrite_pregrad(cost), x)
+    dcost_fn = pytensor.function([x], dcost)
+    np.testing.assert_allclose(dcost_fn([1.0, 2.0, 3.0]), [0.5, 0.5, 0.5])
 
 
 def test_rewrite_pregrad_inner_graphs():

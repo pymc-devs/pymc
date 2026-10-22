@@ -263,6 +263,38 @@ def test_freeze_dims_and_data():
     assert frozen_m["y"].type.shape == (5, 3)
 
 
+@pytest.mark.parametrize("potential", [pm.Potential, pmd.Potential])
+@pytest.mark.parametrize("dims", [(), ("item",)])
+@pytest.mark.parametrize("jacobian", [False, True])
+def test_potential_gradients(potential, dims, jacobian):
+    coords = {"item": range(3)}
+    with pm.Model(coords=coords) as model:
+        beta = pmd.HalfNormal("beta", sigma=1, dims=dims)
+        share = pmd.Deterministic("share", beta / 2)
+        potential("belief", pm.logp(pm.Normal.dist(mu=0.3, sigma=0.1), share.values), dims=dims)
+
+    with pm.Model(coords=coords) as reference:
+        beta = pm.HalfNormal("beta", sigma=1, dims=dims)
+        share = pm.Deterministic("share", beta / 2)
+        pm.Potential("belief", pm.logp(pm.Normal.dist(mu=0.3, sigma=0.1), share))
+
+    # 在非初始点比较普通张量模型, 检查变换及雅可比项均参与梯度和 Hessian。
+    point = model.initial_point()
+    point["beta_log__"] = np.full_like(point["beta_log__"], 0.2)
+    np.testing.assert_allclose(
+        model.compile_logp(jacobian=jacobian)(point),
+        reference.compile_logp(jacobian=jacobian)(point),
+    )
+    np.testing.assert_allclose(
+        model.compile_dlogp(jacobian=jacobian)(point),
+        reference.compile_dlogp(jacobian=jacobian)(point),
+    )
+    np.testing.assert_allclose(
+        model.compile_d2logp(jacobian=jacobian)(point),
+        reference.compile_d2logp(jacobian=jacobian)(point),
+    )
+
+
 def test_model_table_dims():
     coords = {"subject": range(20), "param": ["a", "b"]}
     with pm.Model(coords=coords) as m:

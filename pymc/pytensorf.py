@@ -1087,7 +1087,7 @@ def pregrad_inner_graphs(fgraph):
     def rewrite(linker, op, node, inner, *, mode):
         rewrite_graph(
             inner,
-            include=("canonicalize", "stabilize"),
+            include=("lower_xtensor", "canonicalize", "stabilize"),
             custom_rewrite=pregrad_inner_graphs,
         )
 
@@ -1095,9 +1095,12 @@ def pregrad_inner_graphs(fgraph):
 
 
 def rewrite_pregrad(graph):
-    """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
+    """Lower XTensor operations and apply simplifying or stabilizing pre-grad rewrites."""
+    # Potential 可保留未实现梯度的 XTensor 运算, 需先转换为普通张量运算。
     return rewrite_graph(
-        graph, include=("canonicalize", "stabilize"), custom_rewrite=pregrad_inner_graphs
+        graph,
+        include=("lower_xtensor", "canonicalize", "stabilize"),
+        custom_rewrite=pregrad_inner_graphs,
     )
 
 
