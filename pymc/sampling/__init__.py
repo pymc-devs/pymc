@@ -23,8 +23,12 @@ from pymc.sampling.forward import (
     vectorize_over_posterior,
 )
 from pymc.sampling.mcmc import init_nuts, sample
+from pymc.sampling.samplers import ExternalSampler, Sampler, StepSampler
 
 __all__ = (
+    "ExternalSampler",
+    "Sampler",
+    "StepSampler",
     "compile_forward_sampling_function",
     "compute_deterministics",
     "draw",
