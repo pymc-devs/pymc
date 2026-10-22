@@ -170,7 +170,7 @@ def discrete_uniform_mean(op, rv, rng, size, lower, upper):
 
 
 @_mean.register(ExGaussianRV)
-def exgaussian_mean(op, rv, rng, size, mu, nu, sigma):
+def exgaussian_mean(op, rv, rng, size, mu, sigma, nu):
     mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
     return maybe_resize(mu + nu, size)
 
@@ -391,8 +391,8 @@ def skew_normal_mean(op, rv, rng, size, mu, sigma, alpha):
 
 @_mean.register(SkewStudentTRV)
 def skew_studentt_mean(op, rv, rng, size, a, b, mu, sigma):
-    a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
-    Et = mu + (a - b) * pt.sqrt(a + b) * pt.gamma(a - 0.5) * pt.gamma(b - 0.5) / (
+    a, b, mu, sigma = pt.broadcast_arrays(a, b, mu, sigma)
+    Et = mu + sigma * (a - b) * pt.sqrt(a + b) * pt.gamma(a - 0.5) * pt.gamma(b - 0.5) / (
         2 * pt.gamma(a) * pt.gamma(b)
     )
     if not rv_size_is_none(size):
