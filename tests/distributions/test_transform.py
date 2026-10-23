@@ -306,6 +306,10 @@ def test_chain_vector_transform():
     check_vector_transform(chain_tranf, UnitSortedVector(3))
 
 
+@pytest.mark.xfail(
+    config.floatX == "float32" and config.linker == "cvm",
+    reason="The numerical determinant baseline loses precision with float32 under CVM",
+)
 def test_chain_jacob_det():
     chain_tranf = tr.Chain([tr.logodds, tr.ordered])
 
