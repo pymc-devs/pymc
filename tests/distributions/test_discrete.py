@@ -850,6 +850,17 @@ class TestBernoulliLogitP(BaseTestDistributionRandom):
     expected_rv_op_params = {"p": sp.expit(1.0)}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
+    def test_saturated_logp_gradient(self):
+        with pm.Model() as model:
+            logits = pm.Flat("logits", shape=2)
+            observed = pm.Bernoulli("observed", logit_p=logits, observed=[0, 1])
+
+        point = {"logits": floatX([50.0, -50.0])}
+        logp_value = model.compile_logp(vars=[observed], sum=False)(point)[0]
+        gradient = model.compile_dlogp()(point)
+        np.testing.assert_allclose(logp_value, [-50, -50])
+        np.testing.assert_allclose(gradient, [-1, 1])
+
 
 class TestPoisson(BaseTestDistributionRandom):
     pymc_dist = pm.Poisson
