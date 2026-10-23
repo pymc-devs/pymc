@@ -22,7 +22,6 @@ from pytensor import tensor as pt
 from pytensor.tensor.math import tanh
 from pytensor.tensor.random.basic import (
     BernoulliRV,
-    BetaBinomialRV,
     BetaRV,
     BinomialRV,
     CategoricalRV,
@@ -67,7 +66,7 @@ from pymc.distributions.continuous import (
     WaldRV,
     WeibullBetaRV,
 )
-from pymc.distributions.discrete import DiscreteUniformRV
+from pymc.distributions.discrete import BetaBinomialRV, DiscreteUniformRV
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (

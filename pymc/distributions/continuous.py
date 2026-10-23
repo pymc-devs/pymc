@@ -47,6 +47,7 @@ from pytensor.tensor.random.basic import (
     triangular,
     uniform,
     vonmises,
+    wald,
 )
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import normalize_size_param
@@ -935,18 +936,31 @@ class HalfNormal(PositiveContinuous):
         return res
 
 
-class WaldRV(RandomVariable):
+class WaldRV(SymbolicRandomVariable):
     name = "wald"
-    signature = "(),(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),(),()->[rng],()"
     _print_name = ("Wald", "\\operatorname{Wald}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, lam, alpha, size) -> np.ndarray:
-        return np.asarray(rng.wald(mu, lam, size=size) + alpha)
+    def rv_op(cls, mu, lam, alpha, *, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        lam = pt.as_tensor(lam)
+        alpha = pt.as_tensor(alpha)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(mu, lam, alpha, ndims_params=cls.ndims_params)
+            mu_bcast = mu
+        else:
+            mu_bcast, _ = pt.broadcast_arrays(mu, alpha)
 
-wald = WaldRV()
+        next_rng, draws = wald(mu_bcast, lam, size=size, rng=rng, return_next_rng=True)
+        draws = (draws + alpha).astype(pytensor.config.floatX)
+
+        return cls(inputs=[rng, size, mu, lam, alpha], outputs=[next_rng, draws])(
+            rng, size, mu, lam, alpha
+        )
 
 
 class Wald(PositiveContinuous):
@@ -1029,7 +1043,8 @@ class Wald(PositiveContinuous):
        statmod: Probability Calculations for the Inverse Gaussian Distribution
     """
 
-    rv_op = wald
+    rv_type = WaldRV
+    rv_op = WaldRV.rv_op
 
     @classmethod
     def dist(
@@ -1982,20 +1997,35 @@ class StudentT(Continuous):
         )
 
 
-class SkewStudentTRV(RandomVariable):
+class SkewStudentTRV(SymbolicRandomVariable):
     name = "skewstudentt"
-    signature = "(),(),(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),(),(),()->[rng],()"
     _print_name = ("SkewStudentT", "\\operatorname{SkewStudentT}")
 
     @classmethod
-    def rng_fn(cls, rng, a, b, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(
-            stats.jf_skew_t.rvs(a=a, b=b, loc=mu, scale=sigma, size=size, random_state=rng)
+    def rv_op(cls, a, b, mu, sigma, *, size=None, rng=None):
+        a = pt.as_tensor(a)
+        b = pt.as_tensor(b)
+        mu = pt.as_tensor(mu)
+        sigma = pt.as_tensor(sigma)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(a, b, mu, sigma, ndims_params=cls.ndims_params)
+            a_bcast = a
+        else:
+            a_bcast, _, _ = pt.broadcast_arrays(a, mu, sigma)
+
+        next_rng, beta_draws = pt.random.beta(a_bcast, b, size=size, rng=rng, return_next_rng=True)
+        draws = mu + sigma * (2 * beta_draws - 1) * pt.sqrt(a + b) / (
+            2 * pt.sqrt(beta_draws * (1 - beta_draws))
         )
+        draws = draws.astype(pytensor.config.floatX)
 
-
-skewstudentt = SkewStudentTRV()
+        return cls(inputs=[rng, size, a, b, mu, sigma], outputs=[next_rng, draws])(
+            rng, size, a, b, mu, sigma
+        )
 
 
 class SkewStudentT(Continuous):
@@ -2039,7 +2069,8 @@ class SkewStudentT(Continuous):
 
     """
 
-    rv_op = skewstudentt
+    rv_type = SkewStudentTRV
+    rv_op = SkewStudentTRV.rv_op
 
     @classmethod
     def dist(cls, a, b, *, mu=0, sigma=None, lam=None, **kwargs):
@@ -3184,20 +3215,35 @@ class VonMises(CircularContinuous):
         )
 
 
-class SkewNormalRV(RandomVariable):
+class SkewNormalRV(SymbolicRandomVariable):
     name = "skewnormal"
-    signature = "(),(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),(),()->[rng],()"
     _print_name = ("SkewNormal", "\\operatorname{SkewNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, alpha, size=None) -> np.ndarray:
-        return np.asarray(
-            stats.skewnorm.rvs(a=alpha, loc=mu, scale=sigma, size=size, random_state=rng)
+    def rv_op(cls, mu, sigma, alpha, *, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        sigma = pt.as_tensor(sigma)
+        alpha = pt.as_tensor(alpha)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        normal_mean = 0.0
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(mu, sigma, alpha, ndims_params=cls.ndims_params)
+        else:
+            mu_bcast, _, _ = pt.broadcast_arrays(mu, sigma, alpha)
+            normal_mean = pt.zeros_like(mu_bcast)
+
+        next_rng, u = normal(loc=normal_mean, size=size, rng=rng, return_next_rng=True)
+        final_rng, v = normal(loc=normal_mean, size=size, rng=next_rng, return_next_rng=True)
+        delta = alpha / pt.sqrt(1 + alpha**2)
+        draws = delta * u + pt.sqrt(1 - delta**2) * v
+        draws = (mu + sigma * pt.where(u >= 0, draws, -draws)).astype(pytensor.config.floatX)
+
+        return cls(inputs=[rng, size, mu, sigma, alpha], outputs=[final_rng, draws])(
+            rng, size, mu, sigma, alpha
         )
-
-
-skewnormal = SkewNormalRV()
 
 
 class SkewNormal(Continuous):
@@ -3262,7 +3308,8 @@ class SkewNormal(Continuous):
 
     """
 
-    rv_op = skewnormal
+    rv_type = SkewNormalRV
+    rv_op = SkewNormalRV.rv_op
 
     @classmethod
     def dist(cls, alpha=1, mu=0.0, sigma=None, tau=None, *args, **kwargs):
@@ -3521,18 +3568,33 @@ class Gumbel(Continuous):
         )
 
 
-class RiceRV(RandomVariable):
+class RiceRV(SymbolicRandomVariable):
     name = "rice"
-    signature = "(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("Rice", "\\operatorname{Rice}")
 
     @classmethod
-    def rng_fn(cls, rng, b, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.rice.rvs(b=b, scale=sigma, size=size, random_state=rng))
+    def rv_op(cls, b, sigma, *, size=None, rng=None):
+        b = pt.as_tensor(b)
+        sigma = pt.as_tensor(sigma)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        normal_mean = 0.0
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(b, sigma, ndims_params=cls.ndims_params)
+        else:
+            b_bcast, _ = pt.broadcast_arrays(b, sigma)
+            normal_mean = pt.zeros_like(b_bcast)
 
-rice = RiceRV()
+        next_rng, x = normal(loc=normal_mean, size=size, rng=rng, return_next_rng=True)
+        final_rng, y = normal(loc=normal_mean, size=size, rng=next_rng, return_next_rng=True)
+        shift = b / pt.sqrt(2.0)
+        draws = (sigma * pt.sqrt((x + shift) ** 2 + (y + shift) ** 2)).astype(
+            pytensor.config.floatX
+        )
+
+        return cls(inputs=[rng, size, b, sigma], outputs=[final_rng, draws])(rng, size, b, sigma)
 
 
 class Rice(PositiveContinuous):
@@ -3596,7 +3658,8 @@ class Rice(PositiveContinuous):
 
     """
 
-    rv_op = rice
+    rv_type = RiceRV
+    rv_op = RiceRV.rv_op
 
     @classmethod
     def dist(cls, nu=None, sigma=None, b=None, *args, **kwargs):
@@ -3965,18 +4028,28 @@ def interpolated_default_transform(op, rv):
     return transforms.Interval(bounds_fn=transform_params)
 
 
-class MoyalRV(RandomVariable):
+class MoyalRV(SymbolicRandomVariable):
     name = "moyal"
-    signature = "(),()->()"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("Moyal", "\\operatorname{Moyal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, sigma, size=None) -> np.ndarray:
-        return np.asarray(stats.moyal.rvs(mu, sigma, size=size, random_state=rng))
+    def rv_op(cls, mu, sigma, *, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        sigma = pt.as_tensor(sigma)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        gamma_shape = 0.5
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(mu, sigma, ndims_params=cls.ndims_params)
+        else:
+            gamma_shape = pt.full(pt.broadcast_shape(mu, sigma), 0.5)
 
-moyal = MoyalRV()
+        next_rng, gamma_draws = _gamma(gamma_shape, 2.0, size=size, rng=rng, return_next_rng=True)
+        draws = (mu - sigma * pt.log(gamma_draws)).astype(pytensor.config.floatX)
+
+        return cls(inputs=[rng, size, mu, sigma], outputs=[next_rng, draws])(rng, size, mu, sigma)
 
 
 class Moyal(Continuous):
@@ -4028,7 +4101,8 @@ class Moyal(Continuous):
         Scale parameter (sigma > 0).
     """
 
-    rv_op = moyal
+    rv_type = MoyalRV
+    rv_op = MoyalRV.rv_op
 
     @classmethod
     def dist(cls, mu=0, sigma=1.0, *args, **kwargs):

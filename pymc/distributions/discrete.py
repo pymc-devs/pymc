@@ -18,19 +18,17 @@ import pytensor.tensor as pt
 
 from pytensor.tensor import TensorConstant
 from pytensor.tensor.random.basic import (
-    ScipyRandomVariable,
     bernoulli,
-    betabinom,
     binomial,
     categorical,
     geometric,
     hypergeometric,
+    integers,
     nbinom,
     poisson,
     uniform,
 )
 from pytensor.tensor.random.utils import normalize_size_param
-from pytensor.utils import lazy_scipy_module
 
 import pymc as pm
 
@@ -51,8 +49,6 @@ from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is
 from pymc.logprob.basic import logcdf, logp
 from pymc.math import sigmoid
 from pymc.pytensorf import normalize_rng_param
-
-stats = lazy_scipy_module("stats")
 
 __all__ = [
     "Bernoulli",
@@ -175,6 +171,33 @@ class Binomial(Discrete):
         )
 
 
+class BetaBinomialRV(SymbolicRandomVariable):
+    name = "beta_binomial"
+    extended_signature = "[rng],[size],(),(),()->[rng],()"
+    _print_name = ("BetaBinomial", "\\operatorname{BetaBinomial}")
+
+    @classmethod
+    def rv_op(cls, n, alpha, beta, *, size=None, rng=None):
+        n = pt.as_tensor(n, dtype=int)
+        alpha = pt.as_tensor(alpha)
+        beta = pt.as_tensor(beta)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
+
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(n, alpha, beta, ndims_params=cls.ndims_params)
+            alpha_bcast = alpha
+        else:
+            alpha_bcast, _ = pt.broadcast_arrays(alpha, n)
+
+        next_rng, p = pt.random.beta(alpha_bcast, beta, size=size, rng=rng, return_next_rng=True)
+        final_rng, draws = binomial(n, p, size=size, rng=next_rng, return_next_rng=True)
+
+        return cls(inputs=[rng, size, n, alpha, beta], outputs=[final_rng, draws])(
+            rng, size, n, alpha, beta
+        )
+
+
 class BetaBinomial(Discrete):
     R"""
     Beta-binomial distribution.
@@ -232,7 +255,8 @@ class BetaBinomial(Discrete):
         beta > 0.
     """
 
-    rv_op = betabinom
+    rv_type = BetaBinomialRV
+    rv_op = BetaBinomialRV.rv_op
 
     @classmethod
     def dist(cls, alpha, beta, n, *args, **kwargs):
@@ -988,18 +1012,32 @@ class HyperGeometric(Discrete):
         )
 
 
-class DiscreteUniformRV(ScipyRandomVariable):
+class DiscreteUniformRV(SymbolicRandomVariable):
     name = "discrete_uniform"
-    signature = "(),()->()"
-    dtype = "int64"
+    extended_signature = "[rng],[size],(),()->[rng],()"
     _print_name = ("DiscreteUniform", "\\operatorname{DiscreteUniform}")
 
     @classmethod
-    def rng_fn_scipy(cls, rng, lower, upper, size=None):
-        return stats.randint.rvs(lower, upper + 1, size=size, random_state=rng)
+    def rv_op(cls, lower, upper, *, size=None, rng=None):
+        lower = pt.as_tensor(lower)
+        upper = pt.as_tensor(upper)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(lower, upper, ndims_params=cls.ndims_params)
 
-discrete_uniform = DiscreteUniformRV()
+        next_rng, draws = integers(
+            lower.astype("int64"),
+            upper.astype("int64") + 1,
+            size=size,
+            rng=rng,
+            return_next_rng=True,
+        )
+
+        return cls(inputs=[rng, size, lower, upper], outputs=[next_rng, draws])(
+            rng, size, lower, upper
+        )
 
 
 class DiscreteUniform(Discrete):
@@ -1043,7 +1081,8 @@ class DiscreteUniform(Discrete):
         Upper limit (upper > lower).
     """
 
-    rv_op = discrete_uniform
+    rv_type = DiscreteUniformRV
+    rv_op = DiscreteUniformRV.rv_op
 
     @classmethod
     def dist(cls, lower, upper, *args, **kwargs):
