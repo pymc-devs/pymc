@@ -41,6 +41,7 @@ from pytensor.tensor.random.basic import (
     dirichlet,
     multinomial,
     multivariate_normal,
+    normal,
 )
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
@@ -111,7 +112,6 @@ __all__ = [
 ]
 
 solve_lower = partial(solve_triangular, lower=True)
-solve_upper = partial(solve_triangular, lower=False)
 
 
 def _squeeze_to_ndim(var: TensorVariable | np.ndarray, ndim: int):
@@ -1663,23 +1663,35 @@ def lkjcorr_default_transform(op, rv):
     return CholeskyCorrTransform(n=n, upper=False)
 
 
-class MatrixNormalRV(RandomVariable):
+class MatrixNormalRV(SymbolicRandomVariable):
     name = "matrixnormal"
-    signature = "(m,n),(m,m),(n,n)->(m,n)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(m,n),(m,m),(n,n)->[rng],(m,n)"
     _print_name = ("MatrixNormal", "\\operatorname{MatrixNormal}")
 
     @classmethod
-    def rng_fn(cls, rng, mu, rowchol, colchol, size=None):
-        if size is None:
-            size = np.broadcast_shapes(mu.shape[:-2], rowchol.shape[:-2], colchol.shape[:-2])
-        dist_shape = (rowchol.shape[-2], colchol.shape[-2])
-        output_shape = size + dist_shape
-        standard_normal = rng.standard_normal(output_shape)
-        return mu + np.matmul(rowchol, np.matmul(standard_normal, np.swapaxes(colchol, -1, -2)))
+    def rv_op(cls, mu, rowchol, colchol, *, size=None, rng=None):
+        mu = pt.as_tensor(mu)
+        rowchol = pt.as_tensor(rowchol)
+        colchol = pt.as_tensor(colchol)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
+        batch_shape = implicit_size_from_params(mu, rowchol, colchol, ndims_params=cls.ndims_params)
+        normal_mean = 0.0
+        if rv_size_is_none(size):
+            size = batch_shape
+        else:
+            normal_mean = pt.zeros((*batch_shape, rowchol.shape[-2], colchol.shape[-2]))
 
-matrixnormal = MatrixNormalRV()
+        draw_size = pt.concatenate([size, [rowchol.shape[-2], colchol.shape[-2]]])
+        next_rng, standard_normal = normal(
+            loc=normal_mean, size=draw_size, rng=rng, return_next_rng=True
+        )
+        draws = (mu + rowchol @ (standard_normal @ colchol.mT)).astype(pytensor.config.floatX)
+
+        return cls(inputs=[rng, size, mu, rowchol, colchol], outputs=[next_rng, draws])(
+            rng, size, mu, rowchol, colchol
+        )
 
 
 class MatrixNormal(Continuous):
@@ -1704,18 +1716,19 @@ class MatrixNormal(Continuous):
     ----------
     mu : tensor_like of float
         Array of means. Must be broadcastable with the random variable X such
-        that the shape of mu + X is (M, N).
-    rowcov : (M, M) tensor_like of float, optional
+        that the last two dimensions of mu + X have shape (M, N).
+        Leading dimensions of the parameters are broadcast as batch dimensions.
+    rowcov : (..., M, M) tensor_like of float, optional
         Among-row covariance matrix. Defines variance within
         columns. Exactly one of rowcov or rowchol is needed.
-    rowchol : (M, M) tensor_like of float, optional
+    rowchol : (..., M, M) tensor_like of float, optional
         Cholesky decomposition of among-row covariance matrix. Exactly one of
         rowcov or rowchol is needed.
-    colcov : (N, N) tensor_like of float, optional
+    colcov : (..., N, N) tensor_like of float, optional
         Among-column covariance matrix. If rowcov is the identity matrix,
         this functions as `cov` in MvNormal.
         Exactly one of colcov or colchol is needed.
-    colchol : (N, N) tensor_like of float, optional
+    colchol : (..., N, N) tensor_like of float, optional
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
@@ -1777,7 +1790,8 @@ class MatrixNormal(Continuous):
             vals = pm.MatrixNormal("vals", mu=mu, colchol=colchol, rowcov=rowcov, observed=data)
     """
 
-    rv_op = matrixnormal
+    rv_type = MatrixNormalRV
+    rv_op = MatrixNormalRV.rv_op
 
     @classmethod
     def dist(
@@ -1796,13 +1810,14 @@ class MatrixNormal(Continuous):
                 "Incompatible parameterization. Specify exactly one of rowcov, or rowchol."
             )
         if rowcov is not None:
-            if rowcov.ndim != 2:
-                raise ValueError("rowcov must be two dimensional.")
+            rowcov = pt.as_tensor_variable(rowcov)
+            if rowcov.ndim < 2:
+                raise ValueError("rowcov must be at least two dimensional.")
             rowchol_cov = pt.linalg.cholesky(rowcov, lower=True)
         else:
-            if rowchol.ndim != 2:
-                raise ValueError("rowchol must be two dimensional.")
             rowchol_cov = pt.as_tensor_variable(rowchol)
+            if rowchol_cov.ndim < 2:
+                raise ValueError("rowchol must be at least two dimensional.")
 
         # Among-column matrices
         if len([i for i in [colcov, colchol] if i is not None]) != 1:
@@ -1811,19 +1826,16 @@ class MatrixNormal(Continuous):
             )
         if colcov is not None:
             colcov = pt.as_tensor_variable(colcov)
-            if colcov.ndim != 2:
-                raise ValueError("colcov must be two dimensional.")
+            if colcov.ndim < 2:
+                raise ValueError("colcov must be at least two dimensional.")
             colchol_cov = pt.linalg.cholesky(colcov, lower=True)
         else:
-            if colchol.ndim != 2:
-                raise ValueError("colchol must be two dimensional.")
             colchol_cov = pt.as_tensor_variable(colchol)
+            if colchol_cov.ndim < 2:
+                raise ValueError("colchol must be at least two dimensional.")
 
-        dist_shape = (rowchol_cov.shape[-1], colchol_cov.shape[-1])
-
-        # Broadcasting mu
-        mu = pt.extra_ops.broadcast_to(mu, shape=dist_shape)
-        mu = pt.as_tensor_variable(mu)
+        mu = pt.atleast_2d(mu)
+        mu = pt.broadcast_to(mu, (*mu.shape[:-2], rowchol_cov.shape[-1], colchol_cov.shape[-1]))
 
         return super().dist([mu, rowchol_cov, colchol_cov], **kwargs)
 
@@ -1843,30 +1855,24 @@ class MatrixNormal(Continuous):
         -------
         TensorVariable
         """
-        if value.ndim != 2:
-            raise ValueError("Value must be two dimensional.")
+        if value.ndim < 2:
+            raise ValueError("Value must be at least two dimensional.")
 
-        # Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
-        # the logdet of colcov and rowcov.
-        delta = value - mu
+        # Whiten both matrix dimensions, retaining all batch dimensions.
+        whitened = solve_lower(rowchol, value - mu, b_ndim=2)
+        whitened = solve_lower(colchol, whitened.mT, b_ndim=2)
+        quaddist = pt.sum(whitened**2, axis=(-2, -1))
 
-        # Find exponent piece by piece
-        right_quaddist = solve_lower(rowchol, delta)
-        quaddist = pt.linalg.matrix_dot(right_quaddist.T, right_quaddist)
-        quaddist = solve_lower(colchol, quaddist)
-        quaddist = solve_upper(colchol.T, quaddist)
-        trquaddist = pt.linalg.trace(quaddist)
+        coldiag = pt.diagonal(colchol, axis1=-2, axis2=-1)
+        rowdiag = pt.diagonal(rowchol, axis1=-2, axis2=-1)
+        half_collogdet = pt.sum(pt.log(coldiag), axis=-1)
+        half_rowlogdet = pt.sum(pt.log(rowdiag), axis=-1)
 
-        coldiag = pt.diag(colchol)
-        rowdiag = pt.diag(rowchol)
-        half_collogdet = pt.sum(pt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = pt.sum(pt.log(rowdiag))  # Using Cholesky: M = L L^T
-
-        m = rowchol.shape[0]
-        n = colchol.shape[0]
+        m = rowchol.shape[-1]
+        n = colchol.shape[-1]
 
         norm = -0.5 * m * n * np.log(2 * np.pi)
-        return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
+        return norm - 0.5 * quaddist - m * half_collogdet - n * half_rowlogdet
 
 
 class KroneckerNormalRV(SymbolicMVNormalUsedInternally):
