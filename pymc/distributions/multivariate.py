@@ -35,7 +35,13 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.linalg import eigh, solve_triangular
 from pytensor.tensor.linalg import inv as matrix_inverse
 from pytensor.tensor.random import chisquare
-from pytensor.tensor.random.basic import MvNormalRV, dirichlet, multinomial, multivariate_normal
+from pytensor.tensor.random.basic import (
+    MvNormalRV,
+    beta,
+    dirichlet,
+    multinomial,
+    multivariate_normal,
+)
 from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.utils import (
     normalize_size_param,
@@ -67,7 +73,6 @@ from pymc.distributions.shape_utils import (
     get_support_shape,
     implicit_size_from_params,
     rv_size_is_none,
-    to_tuple,
 )
 from pymc.distributions.transforms import (
     CholeskyCorrTransform,
@@ -2424,55 +2429,35 @@ class ICAR(Continuous):
         return check_parameters(pairwise_difference + zero_sum, sigma > 0, msg="sigma > 0")
 
 
-class StickBreakingWeightsRV(RandomVariable):
+class StickBreakingWeightsRV(SymbolicRandomVariable):
     name = "stick_breaking_weights"
-    signature = "(),()->(k)"
-    dtype = "floatX"
+    extended_signature = "[rng],[size],(),()->[rng],(k)"
     _print_name = ("StickBreakingWeights", "\\operatorname{StickBreakingWeights}")
 
-    def make_node(self, rng, size, alpha, K):
-        alpha = pt.as_tensor_variable(alpha)
-        K = pt.as_tensor_variable(K, dtype=int)
+    @classmethod
+    def rv_op(cls, alpha, K, *, size=None, rng=None):
+        alpha = pt.as_tensor(alpha)
+        K = pt.as_tensor(K, dtype=int)
+        rng = normalize_rng_param(rng)
+        size = normalize_size_param(size)
 
         if not all(K.type.broadcastable):
             raise ValueError("K must be a scalar.")
 
-        return super().make_node(rng, size, alpha, K)
+        if rv_size_is_none(size):
+            size = implicit_size_from_params(alpha, K, ndims_params=cls.ndims_params)
 
-    def _supp_shape_from_params(self, dist_params, param_shapes):
-        K = dist_params[1]
-        return (K.squeeze() + 1,)
-
-    @classmethod
-    def rng_fn(cls, rng, alpha, K, size):
-        K = K.squeeze()
-        if K < 0:
-            raise ValueError("K needs to be positive.")
-
-        size = to_tuple(size) if size is not None else alpha.shape
-        size = (*size, K)
-        alpha = alpha[..., np.newaxis]
-
-        betas = rng.beta(1, alpha, size=size)
-
-        sticks = np.concatenate(
-            (
-                np.ones(shape=(size[:-1] + (1,))),
-                np.cumprod(1 - betas[..., :-1], axis=-1),
-            ),
+        n_sticks = Assert("K needs to be positive.")(K.squeeze(), pt.ge(K.squeeze(), 0))
+        draw_size = pt.concatenate([size, [n_sticks]])
+        next_rng, betas = beta(1, alpha[..., None], size=draw_size, rng=rng, return_next_rng=True)
+        sticks = pt.concatenate(
+            [pt.ones_like(betas[..., :1]), pt.cumprod(1 - betas[..., :-1], axis=-1)],
             axis=-1,
         )
-
         weights = sticks * betas
-        weights = np.concatenate(
-            (weights, 1 - weights.sum(axis=-1)[..., np.newaxis]),
-            axis=-1,
-        )
+        draws = pt.concatenate([weights, 1 - weights.sum(axis=-1, keepdims=True)], axis=-1)
 
-        return weights
-
-
-stickbreakingweights = StickBreakingWeightsRV()
+        return cls(inputs=[rng, size, alpha, K], outputs=[next_rng, draws])(rng, size, alpha, K)
 
 
 class StickBreakingWeights(SimplexContinuous):
@@ -2513,7 +2498,8 @@ class StickBreakingWeights(SimplexContinuous):
            analysis. New York: Springer.
     """
 
-    rv_op = stickbreakingweights
+    rv_type = StickBreakingWeightsRV
+    rv_op = StickBreakingWeightsRV.rv_op
 
     @classmethod
     def dist(cls, alpha, K, *args, **kwargs):
