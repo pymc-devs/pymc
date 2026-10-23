@@ -391,7 +391,13 @@ def _sample_external_nuts(
     idata_kwargs: dict | None,
     **kwargs,
 ):
-    # Shallow copy dicts so we can safely matute them below
+    if kwargs:
+        raise TypeError(
+            f"Unexpected keyword arguments for {sampler}: {', '.join(sorted(kwargs))}. "
+            "Pass sampler options in nuts={...}."
+        )
+
+    # Shallow copy dicts so we can safely mutate them below
     nuts_kwargs = nuts_kwargs.copy()
     compile_kwargs = compile_kwargs.copy()
     idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
