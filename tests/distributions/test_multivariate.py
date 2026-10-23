@@ -1279,9 +1279,7 @@ class TestMoments:
         with pm.Model() as model:
             x = pm.MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
 
-        # MatrixNormal logp is only implemented for 2d values
-        check_logp = x.ndim == 2
-        assert_support_point_is_expected(model, expected, check_finite_logp=check_logp)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, K, size, expected",
@@ -2233,7 +2231,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                 colcov=np.eye(3),
             )
             with pytest.raises(ValueError):
-                logp(matrixnormal, pytensor.tensor.ones((3, 3, 3)))
+                logp(matrixnormal, pytensor.tensor.ones(3))
 
     def check_random_variable_prior(self):
         """
