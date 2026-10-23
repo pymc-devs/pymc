@@ -225,7 +225,7 @@ def lift_loc_scale(fgraph, node):
             if (extra_scale_const == -1).all():
                 # There is no scale to lift, it's just a negated rv (happens in argmin(rv))
                 return None
-            # Scale is homogenously negative, make it positive, and return rv * -1 later so other rewrites can handle it
+            # Scale is homogeneously negative, make it positive, and return rv * -1 later so other rewrites can handle it
             extra_scale *= -1
         loc *= extra_scale
         scale *= extra_scale
