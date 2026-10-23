@@ -262,11 +262,11 @@ def Data(
         names.
     coords : dict, optional
         Coordinate values to set for new dimensions introduced by this ``Data`` variable.
-    export_index_as_coords : bool
-        Deprecated, previous version of "infer_dims_and_coords"
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
+    model : Model, optional
+        Model in which to register the container. Defaults to the current context.
     **kwargs : dict, optional
         Extra arguments passed to :func:`pytensor.shared`, including ``shape``.
 
