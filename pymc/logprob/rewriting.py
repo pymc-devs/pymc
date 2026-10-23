@@ -39,7 +39,6 @@ from collections.abc import Sequence
 from pytensor.compile.mode import optdb
 from pytensor.graph.basic import Variable
 from pytensor.graph.fg import FunctionGraph
-from pytensor.graph.replace import clone_replace
 from pytensor.graph.rewriting.basic import (
     GraphRewriter,
     node_rewriter,
@@ -52,7 +51,6 @@ from pytensor.graph.rewriting.db import (
     SequenceDB,
     TopoDB,
 )
-from pytensor.graph.traversal import ancestors, truncated_graph_inputs
 from pytensor.tensor.basic import Alloc
 from pytensor.tensor.elemwise import DimShuffle, Elemwise
 from pytensor.tensor.random.rewriting import local_subtensor_rv_lift
@@ -65,9 +63,8 @@ from pytensor.tensor.subtensor import (
     IncSubtensor,
     Subtensor,
 )
-from pytensor.tensor.variable import TensorVariable
 
-from pymc.logprob.abstract import PromisedValuedRV, ValuedRV, valued_rv
+from pymc.logprob.abstract import ValuedRV, valued_rv
 from pymc.logprob.utils import DiracDelta
 from pymc.pytensorf import toposort_replace
 
@@ -82,19 +79,6 @@ def local_remove_valued_rv(fgraph, node):
 
 
 remove_valued_rvs = out2in(local_remove_valued_rv)
-
-
-@node_rewriter([PromisedValuedRV])
-def local_remove_promised_value_rv(fgraph, node):
-    rv = node.inputs[0]
-    return [rv]
-
-
-def remove_promised_valued_rvs(outputs):
-    fgraph = FunctionGraph(outputs=outputs, clone=False)
-    rewrite = out2in(local_remove_promised_value_rv)
-    rewrite.apply(fgraph)
-    return fgraph.outputs
 
 
 @register_canonicalize
@@ -166,7 +150,7 @@ logprob_rewrites_db.register(
     position=0.9,
 )
 # local_join_dims/local_split_dims are excluded so that JoinDims/SplitDims survive
-# until the measurable rewrites (and their measurable subclasses survive after);
+# until density queries can interpret their axis structure;
 # non-measurable ones are still lowered to Reshape when the logp graph is compiled
 CANONICALIZE_IR_QUERY_ARGS = (
     "+canonicalize",
@@ -182,9 +166,8 @@ logprob_rewrites_db.register(
     position=1,
 )
 
-# These rewrites convert un-measurable variables into their measurable forms,
-# but they need to be reapplied, because some of the measurable forms require
-# their inputs to be measurable.
+# Algebraic rewrites expose forms handled by density rules. They run to a fixed
+# point, and are revisited as query rewrites establish new conditioning points.
 measurable_ir_rewrites_db = EquilibriumDB()
 measurable_ir_rewrites_db.name = "measurable_ir_rewrites_db"
 
@@ -241,24 +224,10 @@ def construct_ir_fgraph(
     A custom IR rewriter can be specified. By default,
     `logprob_rewrites_db.query(RewriteDatabaseQuery(include=["basic"]))` is used.
 
-    Our measurable IR takes the form of a PyTensor graph that is more-or-less
-    equivalent to a given PyTensor graph (i.e. the keys of `rv_values`) but
-    contains `Op`s that are subclasses of the `MeasurableOp` type in
-    place of ones that do not inherit from `MeasurableOp` in the original
-    graph but are nevertheless measurable.
-
-    `MeasurableOp` variables are mapped to log-probabilities, so this IR is how
-    non-trivial log-probabilities are constructed, especially when the
-    "measurability" of a term depends on the measurability of its inputs
-    (e.g. a mixture).
-
-    In some cases, entire sub-graphs in the original graph are replaced with a
-    single measurable node.  In other cases, the relevant nodes are already
-    measurable and there is no difference between the resulting measurable IR
-    graph and the original.  In general, some changes will be present,
-    because--at the very least--canonicalization is always performed and the
-    measurable IR includes manipulations that are not applicable to outside of
-    the context of measurability/log-probabilities.
+    The IR uses `ValuedRV` nodes to preserve conditioning points. Algebraic
+    rewrites recognize measurable tensor Ops and attach their support axes and
+    density rank. Query rules subsequently move values upstream and assemble
+    density expressions, enabling further forward recognition.
 
     Returns
     -------
@@ -294,39 +263,7 @@ def cleanup_ir(vars: Sequence[Variable]) -> Sequence[Variable]:
     fgraph = FunctionGraph(outputs=vars, clone=False)
     ir_rewriter = logprob_rewrites_db.query(logprob_rewrites_cleanup_query)
     ir_rewriter.rewrite(fgraph)
-    return fgraph.outputs
+    from pymc.logprob.measurable import remove_measurable_tensor
 
-
-def assume_valued_outputs(outputs: Sequence[TensorVariable]) -> Sequence[TensorVariable]:
-    """Run IR rewrite assuming each output is measured.
-
-    IR variables could depend on each other in a way that looks unmeasurable without a value variable assigned to each.
-    For instance `join([add(x, z), z])` is a potentially measurable join, but `add(x, z)` can look unmeasurable
-    because neither `x` and `z` are valued in the IR representation.
-    This helper runs an inner ir rewrite after giving each output a dummy value variable.
-    We replace inputs by dummies and then undo it so that any dependency on outer variables is preserved.
-    """
-    # Replace inputs by dummy variables (so they are not affected)
-    inputs = [
-        valued_var
-        for valued_var in ancestors(outputs)
-        if (valued_var.owner and isinstance(valued_var.owner.op, ValuedRV))
-    ]
-    replaced_inputs = {
-        var: var.type()
-        for var in truncated_graph_inputs(outputs, ancestors_to_include=inputs)
-        if var in inputs
-    }
-    cloned_outputs = clone_replace(outputs, replace=replaced_inputs)
-
-    dummy_rv_values = {base_var: base_var.type() for base_var in cloned_outputs}
-    fgraph = construct_ir_fgraph(dummy_rv_values)
-    remove_valued_rvs.apply(fgraph)
-
-    # Replace dummy variables by original inputs
-    fgraph.replace_all(
-        tuple((repl, orig) for orig, repl in replaced_inputs.items()),
-        import_missing=True,
-    )
-
+    out2in(remove_measurable_tensor).rewrite(fgraph)
     return fgraph.outputs

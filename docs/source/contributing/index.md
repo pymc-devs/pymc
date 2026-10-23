@@ -116,5 +116,6 @@ release_checklist
 :maxdepth: 1
 :caption: In depth explanations
 
+logprob_inference
 versioning_schemes_explanation
 :::

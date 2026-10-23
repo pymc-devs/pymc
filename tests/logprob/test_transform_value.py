@@ -31,7 +31,7 @@ import pymc as pm
 from pymc.distributions.transforms import _default_transform, log, logodds
 from pymc.logprob import conditional_logp
 from pymc.logprob.abstract import MeasurableOp, _logprob
-from pymc.logprob.transform_value import TransformValuesMapping, TransformValuesRewrite
+from pymc.logprob.transform_value import TransformValuesRewrite
 from pymc.logprob.transforms import ExpTransform, LogOddsTransform, LogTransform
 from pymc.testing import assert_no_rvs
 from tests.logprob.test_transforms import DirichletScipyDist
@@ -43,6 +43,8 @@ def multiout_measurable_op():
     mu1, mu2 = pt.scalars("mu1", "mu2")
 
     class TestOpFromGraph(MeasurableOp, OpFromGraph):
+        supp_axes = ((), ())
+
         def do_constant_folding(self, fgraph, node):
             False
 
@@ -54,19 +56,6 @@ def multiout_measurable_op():
         return value1 + mu1, value2 + mu2
 
     return multiout_op
-
-
-def test_TransformValuesMapping():
-    x = pt.vector()
-    fg = FunctionGraph(outputs=[x])
-
-    tvm = TransformValuesMapping({})
-    fg.attach_feature(tvm)
-
-    tvm2 = TransformValuesMapping({})
-    fg.attach_feature(tvm2)
-
-    assert fg._features[-1] is tvm
 
 
 def test_original_values_output_dict():
@@ -304,10 +293,8 @@ def test_value_transform_logprob_nojac(use_jacobian):
     x_vv = X_rv.clone()
     x_vv.name = "x"
 
-    transform_rewrite = TransformValuesRewrite({x_vv: log})
-    tr_logp = conditional_logp(
-        {X_rv: x_vv}, extra_rewrites=transform_rewrite, use_jacobian=use_jacobian
-    )
+    transform_rewrite = TransformValuesRewrite({x_vv: log}, use_jacobian=use_jacobian)
+    tr_logp = conditional_logp({X_rv: x_vv}, extra_rewrites=transform_rewrite)
     tr_logp_combined = pt.sum([pt.sum(factor) for factor in tr_logp.values()])
 
     np.testing.assert_allclose(
@@ -504,12 +491,11 @@ def test_mixture_transform():
     )
     logp_no_trans_comb = pt.sum([pt.sum(factor) for factor in logp_no_trans.values()])
 
-    transform_rewrite = TransformValuesRewrite({y_vv: LogTransform()})
+    transform_rewrite = TransformValuesRewrite({y_vv: LogTransform()}, use_jacobian=False)
 
     logp_trans = conditional_logp(
         {Y_rv: y_vv, I_rv: i_vv},
         extra_rewrites=transform_rewrite,
-        use_jacobian=False,
     )
     logp_trans_combined = pt.sum([pt.sum(factor) for factor in logp_trans.values()])
 
@@ -551,9 +537,7 @@ def test_scan_transform():
             innov_vv: LogOddsTransform(),
         }
     )
-    logp = conditional_logp({init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True)[
-        innov_vv
-    ]
+    logp = conditional_logp({init: init_vv, innov: innov_vv}, extra_rewrites=tr)[innov_vv]
     logp_fn = pytensor.function([init_vv, innov_vv], logp, on_unused_input="ignore")
 
     # Create an unrolled scan graph as reference
@@ -572,9 +556,7 @@ def test_scan_transform():
             innov_vv: LogOddsTransform(),
         }
     )
-    ref_logp = conditional_logp(
-        {init: init_vv, innov: innov_vv}, extra_rewrites=tr, use_jacobian=True
-    )[innov_vv]
+    ref_logp = conditional_logp({init: init_vv, innov: innov_vv}, extra_rewrites=tr)[innov_vv]
     ref_logp_fn = pytensor.function([init_vv, innov_vv], ref_logp, on_unused_input="ignore")
 
     test_point = {
@@ -595,7 +577,8 @@ def test_halfstudent_t_with_frozen_dims():
 
     fmodel = freeze_dims_and_data(model)
     [x_logp] = fmodel.logp(sum=False)
-    assert x_logp.type.shape == (1,)
+    [evaluated] = fmodel.compile_logp(sum=False)(fmodel.initial_point())
+    assert evaluated.shape == (1,)
 
 
 def test_weakref_leak():
