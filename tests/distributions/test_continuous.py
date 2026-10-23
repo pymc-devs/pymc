@@ -348,6 +348,14 @@ class TestMatchesScipy:
             lambda value, mu, alpha: st.invgauss.logcdf(value, mu=mu, loc=alpha),
         )
 
+    def test_wald_icdf(self):
+        check_icdf(
+            pm.Wald,
+            {"mu": Rplus, "alpha": Rplus},  # no lam — defaults to 1
+            lambda q, mu, alpha: st.invgauss.ppf(q, mu=mu, loc=alpha),
+            decimal=4,
+        )
+
     @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
