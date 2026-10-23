@@ -2506,9 +2506,13 @@ def Point(*args, filter_model_vars=False, **kwargs) -> dict[str, np.ndarray]:
 def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable.
 
-    Deterministic nodes are only deterministic given all of their inputs, i.e.
-    they don't add randomness to the model.  They are generally used to record
-    an intermediary result.
+    Wrapping an expression in ``Deterministic`` is optional: ordinary symbolic
+    expressions already participate in the model. Use it to store an intermediate
+    result in the inference data, or to register an expression as a named target
+    for :func:`pymc.do` or :func:`pymc.observe`.
+
+    Deterministic nodes do not add randomness to the model; their values are
+    determined by their inputs.
 
     Parameters
     ----------
@@ -2541,10 +2545,9 @@ def Deterministic(name, var, model=None, dims=None):
             outcome = pm.Bernoulli("outcome", p, observed=outcomes)
 
 
-    but doesn't memorize the fact that the expression ``pm.math.invlogit(alpha *
-    x + intercept)`` has been affected to the variable ``p``.  If the quantity
-    ``p`` is important and one would like to track its value in the sampling
-    trace, then one can use a deterministic node:
+    Here ``p`` is a local Python name for an expression, not a named model
+    variable. To record its value in the sampling trace, register it with
+    ``Deterministic``:
 
     .. code-block:: python
 
