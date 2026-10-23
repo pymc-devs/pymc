@@ -125,6 +125,11 @@ class TestHSGP(_BaseFixtures):
         L = pm.gp.hsgp_approx.set_boundary(X2s, c=2)
         assert np.all(L == 10)
 
+    def test_set_boundary_constant_dimension(self):
+        X = np.array([[1.0, 0.0], [1.0, 1.0]])
+        with pytest.raises(ValueError, match="boundary lengths must be positive"):
+            pm.gp.hsgp_approx.set_boundary(X, c=1.5)
+
     def test_mean_invariance(self):
         X = np.linspace(0, 10, 100)[:, None]
         original_center = (np.max(X, axis=0) - np.min(X, axis=0)) / 2

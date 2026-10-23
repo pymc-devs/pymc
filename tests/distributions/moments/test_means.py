@@ -133,7 +133,7 @@ from pymc.exceptions import UndefinedMomentException
         [Binomial, binom, {"p": 0.6, "n": 5}, {"p": 0.6, "n": 5}],
         [ChiSquared, chi2, {"nu": 6}, {"df": 6}],
         [Dirichlet, dirichlet, {"a": np.ones(4)}, {"alpha": np.ones(4)}],
-        [ExGaussian, exponnorm, {"mu": 0, "sigma": 1, "nu": 1}, {"loc": 0, "scale": 1, "K": 1}],
+        [ExGaussian, exponnorm, {"mu": 2, "sigma": 3, "nu": 4}, {"loc": 2, "scale": 3, "K": 4 / 3}],
         [Exponential, expon, {"lam": 1}, {"scale": 1}],
         [Gamma, gamma, {"alpha": 4, "beta": 3}, {"a": 4, "scale": 1 / 3}],
         [Geometric, geom, {"p": 0.1}, {"p": 0.1}],
@@ -168,15 +168,13 @@ from pymc.exceptions import UndefinedMomentException
         [Normal, norm, {"mu": 2, "sigma": 2}, {"loc": 2, "scale": 2}],
         [Pareto, pareto, {"alpha": 5, "m": 2}, {"b": 5, "scale": 2}],
         [Poisson, poisson, {"mu": 20}, {"mu": 20}],
-        pytest.param(
-            Rice, rice, {"b": 2, "sigma": 2}, {"b": 2, "scale": 2}, marks=pytest.mark.xfail
-        ),  # Something is wrong with the Rice mean, maybe a Bessel function in pytensor?
+        [Rice, rice, {"b": np.float64(2), "sigma": 2}, {"b": 2, "scale": 2}],
         [SkewNormal, skewnorm, {"mu": 2, "sigma": 2, "alpha": 2}, {"loc": 2, "scale": 2, "a": 2}],
         [
             SkewStudentT,
             jf_skew_t,
-            {"mu": 2, "sigma": 2, "a": 3, "b": 3},
-            {"loc": 2, "scale": 2, "a": 3, "b": 3},
+            {"mu": 2, "sigma": 2, "a": np.float64(4), "b": np.float64(3)},
+            {"loc": 2, "scale": 2, "a": 4, "b": 3},
         ],
         [StudentT, t, {"mu": 2, "sigma": 2, "nu": 6}, {"loc": 2, "scale": 2, "df": 6}],
         [

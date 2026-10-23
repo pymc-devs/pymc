@@ -360,10 +360,11 @@ class Bernoulli(Discrete):
         return pt.switch(p < 0.5, 0, 1)
 
     def logp(value, p):
+        # Spell log(1 - p) so sigmoid stabilization rewrites can recognize it.
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, 1)),
             -np.inf,
-            pt.switch(value, pt.log(p), pt.log1p(-p)),
+            pt.switch(value, pt.log(p), pt.log(1 - p)),
         )
 
         return check_parameters(
@@ -961,16 +962,17 @@ class HyperGeometric(Discrete):
             )
 
         N = good + bad
-        # TODO: Use lower upper in locgdf for smarter logsumexp?
-        safe_lower = pt.switch(pt.lt(value, 0), value, 0)
+        lower = pt.maximum(0, n - bad)
+        upper = pt.minimum(good, n)
+        safe_value = pt.clip(pt.floor(value), lower, upper)
 
         res = pt.switch(
-            pt.lt(value, 0),
+            pt.lt(value, lower),
             -np.inf,
             pt.switch(
-                pt.lt(value, n),
+                pt.lt(value, upper),
                 pt.logsumexp(
-                    HyperGeometric.logp(pt.arange(safe_lower, value + 1), good, bad, n),
+                    HyperGeometric.logp(pt.arange(lower, safe_value + 1), good, bad, n),
                     keepdims=False,
                 ),
                 0,
@@ -1176,7 +1178,7 @@ class Categorical(Discrete):
 
     @staticmethod
     def _safe_index_value_p(value, p):
-        # Find the probabily of the given value by indexing in p,
+        # Find the probability of the given value by indexing in p,
         # after handling broadcasting and invalid values.
 
         # In the standard case p has one more dimension than value

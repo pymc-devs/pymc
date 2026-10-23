@@ -782,7 +782,7 @@ def collect_default_updates(
             return None
 
         if len(rng_clients) > 1:
-            # Multiple clients are techincally fine if they are used in identical operations
+            # Multiple clients are technically fine if they are used in identical operations
             # We check if the default_update of each client would be the same
             all_updates = [
                 find_default_update(

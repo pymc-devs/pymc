@@ -68,6 +68,7 @@ from pymc.distributions.continuous import (
     WeibullBetaRV,
 )
 from pymc.distributions.discrete import DiscreteUniformRV
+from pymc.distributions.dist_math import i0e, i1e
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (
@@ -170,8 +171,8 @@ def discrete_uniform_mean(op, rv, rng, size, lower, upper):
 
 
 @_mean.register(ExGaussianRV)
-def exgaussian_mean(op, rv, rng, size, mu, nu, sigma):
-    mu, nu, _ = pt.broadcast_arrays(mu, nu, sigma)
+def exgaussian_mean(op, rv, rng, size, mu, sigma, nu):
+    mu, _, nu = pt.broadcast_arrays(mu, sigma, nu)
     return maybe_resize(mu + nu, size)
 
 
@@ -370,16 +371,12 @@ def polya_gamma_mean(op, rv, rng, size, h, z):
 
 
 @_mean.register(RiceRV)
-def rice_mean(op, rv, rng, size, nu, sigma):
-    nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
+def rice_mean(op, rv, rng, size, b, sigma):
+    b_squared = b**2 / 2
     return maybe_resize(
         sigma
         * np.sqrt(np.pi / 2)
-        * pt.exp(nu_sigma_ratio / 2)
-        * (
-            (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
-            - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
-        ),
+        * ((1 + b_squared) * i0e(b_squared / 2) + b_squared * i1e(b_squared / 2)),
         size,
     )
 
@@ -391,8 +388,8 @@ def skew_normal_mean(op, rv, rng, size, mu, sigma, alpha):
 
 @_mean.register(SkewStudentTRV)
 def skew_studentt_mean(op, rv, rng, size, a, b, mu, sigma):
-    a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
-    Et = mu + (a - b) * pt.sqrt(a + b) * pt.gamma(a - 0.5) * pt.gamma(b - 0.5) / (
+    a, b, mu, sigma = pt.broadcast_arrays(a, b, mu, sigma)
+    Et = mu + sigma * (a - b) * pt.sqrt(a + b) * pt.gamma(a - 0.5) * pt.gamma(b - 0.5) / (
         2 * pt.gamma(a) * pt.gamma(b)
     )
     if not rv_size_is_none(size):

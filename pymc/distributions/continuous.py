@@ -25,7 +25,6 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.tensor import gamma as gammafn
 from pytensor.tensor import gammaln, get_underlying_scalar_constant_value
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
@@ -754,10 +753,10 @@ class TruncatedNormal(BoundedContinuous):
         is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded:
-            logcdf = pt.switch(value < lower, -np.inf, logcdf)
+            logcdf = pt.switch(value <= lower, -np.inf, logcdf)
 
         if is_upper_bounded:
-            logcdf = pt.switch(value <= upper, logcdf, 0.0)
+            logcdf = pt.switch(value < upper, logcdf, 0.0)
 
         if is_lower_bounded and is_upper_bounded:
             logcdf = check_parameters(
@@ -1094,8 +1093,8 @@ class Wald(PositiveContinuous):
     def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
-        ell = lam * mu
-        r = pt.sqrt(value * lam)
+        ell = mu / lam
+        r = pt.sqrt(value / lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / ell + normal_lcdf(0, 1, -(q + 1.0) / r)
@@ -1451,7 +1450,7 @@ class Exponential(PositiveContinuous):
     ----------
     lam : tensor_like of float
         Rate or inverse scale (``lam`` > 0).
-    scale: tensor_like of float
+    scale : tensor_like of float, optional
         Alternative parameter (scale = 1/lam).
     """
 
@@ -1637,8 +1636,8 @@ class AsymmetricLaplace(Continuous):
     The pdf of this distribution is
 
     .. math::
-        {f(x|\\b,\kappa,\mu) =
-            \left({\frac{\\b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)\\b\,s\kappa ^{s}}}
+        {f(x|b,\kappa,\mu) =
+            \left({\frac{b}{\kappa + 1/\kappa}}\right)\,e^{-(x-\mu)b\,s\kappa ^{s}}}
 
     where
 
@@ -1648,7 +1647,7 @@ class AsymmetricLaplace(Continuous):
 
     ========  ========================
     Support   :math:`x \in \mathbb{R}`
-    Mean      :math:`\mu-\frac{\\\kappa-1/\kappa}b`
+    Mean      :math:`\mu-\frac{\kappa-1/\kappa}{b}`
     Variance  :math:`\frac{1+\kappa^{4}}{b^2\kappa^2 }`
     ========  ========================
 
@@ -1657,7 +1656,7 @@ class AsymmetricLaplace(Continuous):
 
     .. math::
 
-       \kappa = \sqrt(\frac{q}{1-q})
+       \kappa = \sqrt{\frac{q}{1-q}}
 
     Parameters
     ----------
@@ -1953,11 +1952,15 @@ class StudentT(Continuous):
     def logcdf(value, nu, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
 
-        t = (value - mu) / sigma
+        is_inf = pt.isinf(value)
+        # Keep the unused beta-CDF branch finite, including its parameter gradients.
+        safe_value = pt.switch(is_inf, mu, value)
+        t = (safe_value - mu) / sigma
         sqrt_t2_nu = pt.sqrt(t**2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
+        res = pt.switch(is_inf, pt.switch(value < 0, -np.inf, 0), res)
 
         return check_parameters(
             res,
@@ -2030,12 +2033,12 @@ class SkewStudentT(Continuous):
         Second kurtosis parameter (b > 0).
     mu : tensor_like of float
         Location parameter.
-    sigma : tensor_like of float
+    sigma : tensor_like of float, default 1
         Scale parameter (sigma > 0). Converges to the standard deviation as a and b
-        become close (only required if lam is not specified). Defaults to 1.
-    lam : tensor_like of float, optional
+        become close (only required if lam is not specified).
+    lam : tensor_like of float, default 1
         Scale parameter (lam > 0). Converges to the precision as a and b
-        become close (only required if sigma is not specified). Defaults to 1.
+        become close (only required if sigma is not specified).
 
     """
 
@@ -2051,13 +2054,10 @@ class SkewStudentT(Continuous):
         return super().dist([a, b, mu, sigma], **kwargs)
 
     def support_point(rv, size, a, b, mu, sigma):
-        a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
-        Et = mu + (a - b) * pt.sqrt(a + b) * gammafn(a - 0.5) * gammafn(b - 0.5) / (
-            2 * gammafn(a) * gammafn(b)
-        )
+        _, _, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
         if not rv_size_is_none(size):
-            Et = pt.full(size, Et)
-        return Et
+            mu = pt.full(size, mu)
+        return mu
 
     def logp(value, a, b, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
@@ -2081,10 +2081,14 @@ class SkewStudentT(Continuous):
     def logcdf(value, a, b, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
 
-        x = (value - mu) / sigma
+        is_inf = pt.isinf(value)
+        # Keep the unused beta-CDF branch finite, including its parameter gradients.
+        safe_value = pt.switch(is_inf, mu, value)
+        x = (safe_value - mu) / sigma
 
         y = (1 + x / pt.sqrt(a + b + x**2)) * 0.5
         res = pt.log(pt.betainc(a, b, y))
+        res = pt.switch(is_inf, pt.switch(value < 0, -np.inf, 0), res)
 
         return check_parameters(
             res,
@@ -2317,7 +2321,7 @@ class HalfCauchyRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, beta, *, size=None, rng=None):
-        bt = pt.as_tensor(beta)
+        beta = pt.as_tensor(beta)
         rng = normalize_rng_param(rng)
         size = normalize_size_param(size)
 
@@ -2777,9 +2781,9 @@ class Weibull(PositiveContinuous):
 
     Parameters
     ----------
-    alpha : float
+    alpha : tensor_like of float
         Shape parameter (alpha > 0).
-    beta : float
+    beta : tensor_like of float
         Scale parameter (beta > 0).
     """
 
@@ -3040,7 +3044,7 @@ class ExGaussian(Continuous):
     ----------
     mu : tensor_like of float, default 0
         Mean of the normal distribution.
-    sigma : tensor_like of float
+    sigma : tensor_like of float, default 1
         Standard deviation of the normal distribution (sigma > 0).
     nu : tensor_like of float
         Mean of the exponential distribution (nu > 0).
@@ -3282,9 +3286,11 @@ class SkewNormal(Continuous):
 
     def logp(value, mu, sigma, alpha):
         tau, _ = get_tau_sigma(sigma=sigma)
+        z = (value - mu) * pt.sqrt(tau) * alpha
 
         res = (
-            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / pt.sqrt(2)))
+            np.log(2, dtype=z.dtype)
+            + normal_lcdf(0, 1, z)
             + (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0
         )
 
@@ -3618,21 +3624,11 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu or b.")
 
-    def support_point(rv, size, nu, sigma):
-        nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
-        mean = (
-            sigma
-            * np.sqrt(np.pi / 2)
-            * pt.exp(nu_sigma_ratio / 2)
-            * (
-                (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
-            )
-        )
-
+    def support_point(rv, size, b, sigma):
+        point = pt.maximum(b, 1) * sigma
         if not rv_size_is_none(size):
-            mean = pt.full(size, mean)
-        return mean
+            point = pt.full(size, point)
+        return point
 
     def logp(value, b, sigma):
         x = value / sigma
@@ -3861,9 +3857,9 @@ class Interpolated(BoundedContinuous):
     different size and it is possible to vary the precision between regions
     of the support.
 
-    The probability density function values don not have to be normalized, as the
+    The probability density function values do not have to be normalized, as the
     interpolated density is any way normalized to make the total probability
-    equal to $1$.
+    equal to :math:`1`.
 
     Both parameters ``x_points`` and values ``pdf_points`` are not variables, but
     plain array-like objects, so they are constant and cannot be sampled.
@@ -4055,7 +4051,7 @@ class Moyal(Continuous):
 
     def logcdf(value, mu, sigma):
         scaled = (value - mu) / sigma
-        res = pt.log(pt.erfc(pt.exp(-scaled / 2) * (2**-0.5)))
+        res = np.log(2, dtype=scaled.dtype) + normal_lcdf(0, 1, -pt.exp(-scaled / 2))
         return check_parameters(
             res,
             sigma > 0,

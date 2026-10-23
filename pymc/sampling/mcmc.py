@@ -391,7 +391,13 @@ def _sample_external_nuts(
     idata_kwargs: dict | None,
     **kwargs,
 ):
-    # Shallow copy dicts so we can safely matute them below
+    if kwargs:
+        raise TypeError(
+            f"Unexpected keyword arguments for {sampler}: {', '.join(sorted(kwargs))}. "
+            "Pass sampler options in nuts={...}."
+        )
+
+    # Shallow copy dicts so we can safely mutate them below
     nuts_kwargs = nuts_kwargs.copy()
     compile_kwargs = compile_kwargs.copy()
     idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
@@ -674,7 +680,7 @@ def sample(
     random_seed : int, array-like of int, or Generator, optional
         Random seed(s) used by the sampling steps. Each step will create its own
         :py:class:`~numpy.random.Generator` object to make its random draws in a way that is
-        indepedent from all other steppers and all other chains.
+        independent from all other steppers and all other chains.
         A ``TypeError`` will be raised if a legacy :py:class:`~numpy.random.RandomState` object is passed.
         We no longer support ``RandomState`` objects because their seeding mechanism does not allow
         easy spawning of new independent random streams that are needed by the step methods.
@@ -1646,7 +1652,7 @@ def _mp_sample(
 
         if isinstance(traces[0]._posterior.store, MemoryStore):  # type: ignore[attr-defined]
             warnings.warn(
-                "Parallel sampling with MemoryStore zarr store wont write the processes "
+                "Parallel sampling with MemoryStore zarr store won't write the processes "
                 "step method sampling state. If you wish to be able to access the step "
                 "method sampling state, please use a different storage backend, e.g. "
                 "DirectoryStore or ZipStore"
