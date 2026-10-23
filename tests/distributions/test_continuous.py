@@ -1014,6 +1014,13 @@ class TestMatchesScipy:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
+    def test_truncated_normal_logcdf_boundaries(self):
+        value = pt.dvector("value")
+        rv = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=2)
+        fn = pytensor.function([value], pm.logcdf(rv, value))
+        values = np.array([-2.0, -1.0, 0.0, 2.0, 3.0])
+        np.testing.assert_allclose(fn(values), st.truncnorm.logcdf(values, -1, 2))
+
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sigma, lower, upper):
             return st.truncnorm.logpdf(
