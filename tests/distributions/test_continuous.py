@@ -1342,7 +1342,7 @@ class TestMoments:
     @pytest.mark.parametrize(
         "a, b, mu, sigma, size, expected",
         [
-            (1, 1, 0, 1, None, 0),
+            (0.5, 2, 2, 2, None, 2),
             (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
             (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
             (
