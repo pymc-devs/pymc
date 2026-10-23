@@ -168,9 +168,7 @@ from pymc.exceptions import UndefinedMomentException
         [Normal, norm, {"mu": 2, "sigma": 2}, {"loc": 2, "scale": 2}],
         [Pareto, pareto, {"alpha": 5, "m": 2}, {"b": 5, "scale": 2}],
         [Poisson, poisson, {"mu": 20}, {"mu": 20}],
-        pytest.param(
-            Rice, rice, {"b": 2, "sigma": 2}, {"b": 2, "scale": 2}, marks=pytest.mark.xfail
-        ),  # Something is wrong with the Rice mean, maybe a Bessel function in pytensor?
+        [Rice, rice, {"b": np.float64(2), "sigma": 2}, {"b": 2, "scale": 2}],
         [SkewNormal, skewnorm, {"mu": 2, "sigma": 2, "alpha": 2}, {"loc": 2, "scale": 2, "a": 2}],
         [
             SkewStudentT,

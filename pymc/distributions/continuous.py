@@ -3614,21 +3614,11 @@ class Rice(PositiveContinuous):
             return nu, b, sigma
         raise ValueError("Rice distribution must specify either nu or b.")
 
-    def support_point(rv, size, nu, sigma):
-        nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
-        mean = (
-            sigma
-            * np.sqrt(np.pi / 2)
-            * pt.exp(nu_sigma_ratio / 2)
-            * (
-                (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
-                - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
-            )
-        )
-
+    def support_point(rv, size, b, sigma):
+        point = pt.maximum(b, 1) * sigma
         if not rv_size_is_none(size):
-            mean = pt.full(size, mean)
-        return mean
+            point = pt.full(size, point)
+        return point
 
     def logp(value, b, sigma):
         x = value / sigma
