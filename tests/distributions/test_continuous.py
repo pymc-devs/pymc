@@ -798,6 +798,18 @@ class TestMatchesScipy:
             extra_args={"nu": 1},
         )
 
+    def test_skew_normal_tail(self):
+        value = pt.dvector("value")
+        logp = pm.logp(pm.SkewNormal.dist(alpha=20), value)
+        fn = pytensor.function([value], [logp, pt.grad(logp.sum(), value)])
+        values = np.array([-2.0, 0.0, 2.0])
+        actual, gradient = fn(values)
+        np.testing.assert_allclose(actual, st.skewnorm.logpdf(values, 20))
+        expected_gradient = -values + 20 * np.exp(
+            st.norm.logpdf(20 * values) - st.norm.logcdf(20 * values)
+        )
+        np.testing.assert_allclose(gradient, expected_gradient)
+
     def test_skew_normal(self):
         check_logp(
             pm.SkewNormal,
