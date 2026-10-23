@@ -753,10 +753,10 @@ class TruncatedNormal(BoundedContinuous):
         is_lower_bounded, is_upper_bounded = _truncation_is_bounded(lower, upper)
 
         if is_lower_bounded:
-            logcdf = pt.switch(value < lower, -np.inf, logcdf)
+            logcdf = pt.switch(value <= lower, -np.inf, logcdf)
 
         if is_upper_bounded:
-            logcdf = pt.switch(value <= upper, logcdf, 0.0)
+            logcdf = pt.switch(value < upper, logcdf, 0.0)
 
         if is_lower_bounded and is_upper_bounded:
             logcdf = check_parameters(
