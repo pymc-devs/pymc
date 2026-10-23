@@ -344,8 +344,10 @@ class TestMatchesScipy:
         check_logcdf(
             pm.Wald,
             Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: st.invgauss.logcdf(value, mu=mu, loc=alpha),
+            {"mu": Rplus, "lam": Rplus, "alpha": Rplus},
+            lambda value, mu, lam, alpha: st.invgauss.logcdf(
+                value, mu=mu / lam, scale=lam, loc=alpha
+            ),
         )
 
     @pytest.mark.parametrize(
