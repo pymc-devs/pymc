@@ -32,6 +32,8 @@ from pymc.distributions import (
     HalfNormal,
     LogNormal,
     Mixture,
+    SkewStudentT,
+    StudentT,
     TruncatedNormal,
 )
 from pymc.distributions.shape_utils import change_dist_size
@@ -172,6 +174,39 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
     else:
         with pytest.raises(TruncationError, match="^Truncation did not converge"):
             draw(xt, draws=100 if scalar else 1)
+
+
+@pytest.mark.parametrize(
+    "dist, shape_params, scipy_dist",
+    [
+        (StudentT, {"nu": 3}, scipy.stats.t(3)),
+        (SkewStudentT, {"a": 2, "b": 3}, scipy.stats.jf_skew_t(2, 3)),
+    ],
+)
+def test_truncation_studentt_infinite_bounds(dist, shape_params, scipy_dist):
+    base = dist.dist(**shape_params)
+    lower_draws, upper_draws = draw(
+        [Truncated.dist(base, lower=0), Truncated.dist(base, upper=0)],
+        draws=5,
+        random_seed=1,
+    )
+    assert np.all(np.isfinite([lower_draws, upper_draws]))
+    assert np.all(lower_draws >= 0)
+    assert np.all(upper_draws <= 0)
+
+    lower = np.array([0, -np.inf, 0])
+    upper = np.array([np.inf, 10, np.inf])
+    value = np.array([0.5, 1, 3])
+    with Model() as model:
+        params = {name: Exponential(name, initval=val) for name, val in shape_params.items()}
+        base = dist.dist(**params, mu=Normal("mu"), sigma=HalfNormal("sigma"))
+        truncated = Truncated("observed", base, lower=lower, upper=upper, observed=value)
+
+    point = model.initial_point()
+    expected = scipy_dist.logpdf(value) - np.log(scipy_dist.cdf(upper) - scipy_dist.cdf(lower))
+    actual = model.compile_logp(vars=[truncated], sum=False)(point)[0]
+    np.testing.assert_allclose(actual, expected)
+    assert np.all(np.isfinite(model.compile_dlogp()(point)))
 
 
 @pytest.mark.parametrize("lower, upper", [(-1, np.inf), (-1, 1.5), (-np.inf, 1.5)])

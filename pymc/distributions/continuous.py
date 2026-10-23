@@ -1952,11 +1952,15 @@ class StudentT(Continuous):
     def logcdf(value, nu, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
 
-        t = (value - mu) / sigma
+        is_inf = pt.isinf(value)
+        # Keep the unused beta-CDF branch finite, including its parameter gradients.
+        safe_value = pt.switch(is_inf, mu, value)
+        t = (safe_value - mu) / sigma
         sqrt_t2_nu = pt.sqrt(t**2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
 
         res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
+        res = pt.switch(is_inf, pt.switch(value < 0, -np.inf, 0), res)
 
         return check_parameters(
             res,
@@ -2077,10 +2081,14 @@ class SkewStudentT(Continuous):
     def logcdf(value, a, b, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
 
-        x = (value - mu) / sigma
+        is_inf = pt.isinf(value)
+        # Keep the unused beta-CDF branch finite, including its parameter gradients.
+        safe_value = pt.switch(is_inf, mu, value)
+        x = (safe_value - mu) / sigma
 
         y = (1 + x / pt.sqrt(a + b + x**2)) * 0.5
         res = pt.log(pt.betainc(a, b, y))
+        res = pt.switch(is_inf, pt.switch(value < 0, -np.inf, 0), res)
 
         return check_parameters(
             res,
