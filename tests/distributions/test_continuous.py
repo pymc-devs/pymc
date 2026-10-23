@@ -980,6 +980,13 @@ class TestMatchesScipy:
         if pytensor.config.floatX == "float32":
             raise Exception("Flaky test: It passed this time, but XPASS is not allowed.")
 
+    def test_moyal_logcdf_tail(self):
+        value = pt.dvector("value")
+        fn = pytensor.function([value], pm.logcdf(pm.Moyal.dist(), value))
+        values = np.array([-10.0, 0.0, 10.0])
+        expected = np.log(2) + sp.log_ndtr(-np.exp(-values / 2))
+        np.testing.assert_allclose(fn(values), expected)
+
     def test_moyal_icdf(self):
         check_icdf(
             pm.Moyal,

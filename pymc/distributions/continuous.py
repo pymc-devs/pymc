@@ -4043,7 +4043,7 @@ class Moyal(Continuous):
 
     def logcdf(value, mu, sigma):
         scaled = (value - mu) / sigma
-        res = pt.log(pt.erfc(pt.exp(-scaled / 2) * (2**-0.5)))
+        res = np.log(2, dtype=scaled.dtype) + normal_lcdf(0, 1, -pt.exp(-scaled / 2))
         return check_parameters(
             res,
             sigma > 0,
