@@ -68,6 +68,7 @@ from pymc.distributions.continuous import (
     WeibullBetaRV,
 )
 from pymc.distributions.discrete import DiscreteUniformRV
+from pymc.distributions.dist_math import i0e, i1e
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (
@@ -370,16 +371,12 @@ def polya_gamma_mean(op, rv, rng, size, h, z):
 
 
 @_mean.register(RiceRV)
-def rice_mean(op, rv, rng, size, nu, sigma):
-    nu_sigma_ratio = -(nu**2) / (2 * sigma**2)
+def rice_mean(op, rv, rng, size, b, sigma):
+    b_squared = b**2 / 2
     return maybe_resize(
         sigma
         * np.sqrt(np.pi / 2)
-        * pt.exp(nu_sigma_ratio / 2)
-        * (
-            (1 - nu_sigma_ratio) * pt.i0(-nu_sigma_ratio / 2)
-            - nu_sigma_ratio * pt.i1(-nu_sigma_ratio / 2)
-        ),
+        * ((1 + b_squared) * i0e(b_squared / 2) + b_squared * i1e(b_squared / 2)),
         size,
     )
 

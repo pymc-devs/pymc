@@ -1746,40 +1746,28 @@ class TestMoments:
     @pytest.mark.parametrize(
         "nu, sigma, size, expected",
         [
-            (1.0, 1.0, None, 1.5485724605511453),
-            (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+            (0.0, 1.0, None, 1.0),
+            (4.0, 2.0, None, 4.0),
+            (25.0, 1.0, None, 25.0),
+            (1.0, np.ones(5), None, np.ones(5)),
             (
                 np.arange(1, 6),
                 1.0,
                 None,
-                (
-                    1.5485724605511453,
-                    2.2723834280687427,
-                    3.1725772879007166,
-                    4.127193542536757,
-                    5.101069639492123,
-                ),
+                np.arange(1, 6),
             ),
             (
                 np.arange(1, 6),
                 np.ones(5),
                 (2, 5),
-                np.full(
-                    (2, 5),
-                    (
-                        1.5485724605511453,
-                        2.2723834280687427,
-                        3.1725772879007166,
-                        4.127193542536757,
-                        5.101069639492123,
-                    ),
-                ),
+                np.full((2, 5), np.arange(1, 6)),
             ),
         ],
     )
     def test_rice_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,
