@@ -163,6 +163,16 @@ class TestMatchesScipy:
             st.geom.ppf,
         )
 
+    def test_hypergeometric_logcdf_support_bounds(self):
+        value = pt.dscalar("value")
+        fn = pytensor.function(
+            [value],
+            [pm.logcdf(pm.HyperGeometric.dist(N=10, k=k, n=8), value) for k in (8, 2)],
+        )
+        for x in (-1, 0, 1.5, 2, 6, 7, 8, 9):
+            expected = [st.hypergeom.logcdf(np.floor(x), 10, k, 8) for k in (8, 2)]
+            np.testing.assert_allclose(fn(x), expected)
+
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
             original_res = st.hypergeom.logcdf(value, N, k, n)
