@@ -25,7 +25,6 @@ import pytensor.tensor as pt
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
 from pytensor.raise_op import Assert
-from pytensor.tensor import gamma as gammafn
 from pytensor.tensor import gammaln, get_underlying_scalar_constant_value
 from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
@@ -2051,13 +2050,10 @@ class SkewStudentT(Continuous):
         return super().dist([a, b, mu, sigma], **kwargs)
 
     def support_point(rv, size, a, b, mu, sigma):
-        a, b, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
-        Et = mu + (a - b) * pt.sqrt(a + b) * gammafn(a - 0.5) * gammafn(b - 0.5) / (
-            2 * gammafn(a) * gammafn(b)
-        )
+        _, _, mu, _ = pt.broadcast_arrays(a, b, mu, sigma)
         if not rv_size_is_none(size):
-            Et = pt.full(size, Et)
-        return Et
+            mu = pt.full(size, mu)
+        return mu
 
     def logp(value, a, b, mu, sigma):
         _, sigma = get_tau_sigma(sigma=sigma)
