@@ -1095,7 +1095,7 @@ def pregrad_inner_graphs(fgraph):
 
 
 def rewrite_pregrad(graph):
-    """Lower XTensor operations and apply simplifying or stabilizing pre-grad rewrites."""
+    """将 XTensor 运算转换为普通张量, 并在求导前执行安全的简化与数值稳定化重写."""
     # Potential 可保留未实现梯度的 XTensor 运算, 需先转换为普通张量运算。
     return rewrite_graph(
         graph,
