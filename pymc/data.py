@@ -268,7 +268,19 @@ def Data(
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
     **kwargs : dict, optional
-        Extra arguments passed to :func:`pytensor.shared`.
+        Extra arguments passed to :func:`pytensor.shared`, including ``shape``.
+
+    Notes
+    -----
+    By default, the lengths of a data container's dimensions are not statically
+    fixed. A dimension whose current length happens to be 1 cannot broadcast
+    against a longer dimension unless its static shape is also 1. To allow this:
+
+    * Pass ``shape=(1, None)`` for a matrix whose first dimension should broadcast.
+      The second dimension can still be resized with :func:`pymc.set_data`, while
+      the first must keep length 1.
+    * Leave the dimension out of ``value`` and add it afterwards, e.g. ``x[None]``.
+    * Apply ``pt.specify_shape(x, (1, None))`` to the container downstream.
 
     Examples
     --------
