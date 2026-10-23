@@ -610,6 +610,15 @@ class TestMatchesScipy:
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
+    @pytest.mark.parametrize(
+        "dist, shape_params",
+        [(pm.StudentT, {"nu": 3}), (pm.SkewStudentT, {"a": 2, "b": 3})],
+    )
+    def test_studentt_logcdf_infinities(self, dist, shape_params):
+        value = pt.vector("value")
+        logcdf = pm.logcdf(dist.dist(**shape_params, mu=1, sigma=2), value)
+        npt.assert_array_equal(logcdf.eval({value: floatX([-np.inf, np.inf])}), [-np.inf, 0])
+
     def test_skewstudentt_icdf(self):
         check_icdf(
             pm.SkewStudentT,
