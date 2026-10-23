@@ -1714,6 +1714,12 @@ class MatrixNormal(Continuous):
         Cholesky decomposition of among-column covariance matrix. Exactly one
         of colcov or colchol is needed.
 
+    Notes
+    -----
+    The last two dimensions of a value are the matrix dimensions. Any preceding
+    dimensions are batch dimensions, and ``logp`` returns one log-probability per
+    matrix. Use ``size`` to draw independent matrices with shared parameters.
+
     Examples
     --------
     Define a matrixvariate normal variable for given row and column covariance
@@ -1838,8 +1844,8 @@ class MatrixNormal(Continuous):
         -------
         TensorVariable
         """
-        if value.ndim != 2:
-            raise ValueError("Value must be two dimensional.")
+        if value.ndim < 2:
+            raise ValueError("Value must be at least two dimensional.")
 
         # Compute Tr[colcov^-1 @ (x - mu).T @ rowcov^-1 @ (x - mu)] and
         # the logdet of colcov and rowcov.
@@ -1847,18 +1853,18 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = solve_lower(rowchol, delta)
-        quaddist = pt.linalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = right_quaddist.mT @ right_quaddist
         quaddist = solve_lower(colchol, quaddist)
-        quaddist = solve_upper(colchol.T, quaddist)
-        trquaddist = pt.linalg.trace(quaddist)
+        quaddist = solve_upper(colchol.mT, quaddist)
+        trquaddist = pt.trace(quaddist, axis1=-2, axis2=-1)
 
-        coldiag = pt.diag(colchol)
-        rowdiag = pt.diag(rowchol)
-        half_collogdet = pt.sum(pt.log(coldiag))  # logdet(M) = 2*Tr(log(L))
-        half_rowlogdet = pt.sum(pt.log(rowdiag))  # Using Cholesky: M = L L^T
+        coldiag = pt.diagonal(colchol, axis1=-2, axis2=-1)
+        rowdiag = pt.diagonal(rowchol, axis1=-2, axis2=-1)
+        half_collogdet = pt.sum(pt.log(coldiag), axis=-1)  # logdet(M) = 2*Tr(log(L))
+        half_rowlogdet = pt.sum(pt.log(rowdiag), axis=-1)  # Using Cholesky: M = L L^T
 
-        m = rowchol.shape[0]
-        n = colchol.shape[0]
+        m = rowchol.shape[-1]
+        n = colchol.shape[-1]
 
         norm = -0.5 * m * n * np.log(2 * np.pi)
         return norm - 0.5 * trquaddist - m * half_collogdet - n * half_rowlogdet
