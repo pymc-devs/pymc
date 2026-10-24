@@ -22,6 +22,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import pytest
+import scipy
 
 from pytensor.compile.ops import as_op
 from pytensor.tensor.type import TensorType
@@ -76,6 +77,102 @@ class TestMpCtxJaxSwitch:
             ctx = ps._initialize_multiprocessing_context(explicit, mode="JAX")
         assert ctx.get_start_method() == explicit
         assert not any("JAX backend" in str(x.message) for x in w)
+
+
+class TestForkWithAccelerate:
+    @pytest.mark.parametrize(
+        "accelerate, set_threading, expected",
+        [(False, None, "fork"), (True, None, "forkserver"), (True, object(), "fork")],
+        ids=["no_accelerate", "accelerate_before_macos_15", "accelerate"],
+    )
+    def test_default_on_apple_silicon(self, monkeypatch, accelerate, set_threading, expected):
+        if "forkserver" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork and forkserver start methods not available on this platform")
+        monkeypatch.setattr(platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(platform, "processor", lambda: "arm")
+        monkeypatch.setattr(ps, "_blas_is_accelerate", lambda: accelerate)
+        monkeypatch.setattr(ps, "_accelerate_blas_set_threading", lambda: set_threading)
+        assert ps._initialize_multiprocessing_context(None).get_start_method() == expected
+
+    def test_warns_when_user_explicitly_picks_fork_before_macos_15(self, monkeypatch):
+        if "fork" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork start method not available on this platform")
+        monkeypatch.setattr(ps, "_blas_is_accelerate", lambda: True)
+        monkeypatch.setattr(ps, "_accelerate_blas_set_threading", lambda: None)
+        with pytest.warns(UserWarning, match="Accelerate BLAS before macOS 15"):
+            ctx = ps._initialize_multiprocessing_context("fork")
+        assert ctx.get_start_method() == "fork"
+
+    def test_no_warning_when_fork_is_safe(self, monkeypatch):
+        if "fork" not in multiprocessing.get_all_start_methods():
+            pytest.skip("fork start method not available on this platform")
+        monkeypatch.setattr(ps, "_blas_is_accelerate", lambda: True)
+        monkeypatch.setattr(ps, "_accelerate_blas_set_threading", lambda: object())
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")
+            ps._initialize_multiprocessing_context("fork")
+
+    @pytest.mark.parametrize(
+        "numpy_blas, scipy_blas, expected",
+        [
+            ("accelerate", "scipy-openblas", True),
+            ("scipy-openblas", "Accelerate", True),
+            ("openblas", "blas", False),
+            (None, None, False),
+        ],
+    )
+    def test_blas_is_accelerate(self, monkeypatch, numpy_blas, scipy_blas, expected):
+        def show_config(name):
+            def show(mode):
+                if name is None:
+                    # NumPy < 1.26 and old SciPy have no mode="dicts"
+                    raise TypeError
+                return {"Build Dependencies": {"blas": {"name": name}}}
+
+            return show
+
+        monkeypatch.setattr(platform, "system", lambda: "Darwin")
+        monkeypatch.setattr(np, "show_config", show_config(numpy_blas))
+        monkeypatch.setattr(scipy, "show_config", show_config(scipy_blas))
+        ps._blas_is_accelerate.cache_clear()
+        try:
+            assert ps._blas_is_accelerate() is expected
+        finally:
+            ps._blas_is_accelerate.cache_clear()
+
+    @pytest.mark.skipif(
+        not (ps._blas_is_accelerate() and ps._accelerate_blas_set_threading() is not None),
+        reason="Needs Accelerate BLAS on macOS 15 or later",
+    )
+    @pytest.mark.parametrize("sampler", ["nuts", "smc"])
+    def test_sample_with_fork(self, sampler):
+        X = np.random.default_rng(0).normal(size=(5000, 50))
+        # Large enough for Accelerate to use its threads in the parent, after which
+        # multithreaded calls in forked workers segfault
+        X @ np.ones(50)
+        with pm.Model():
+            b = pm.Normal("b", shape=50)
+            pm.Normal("y", pm.math.dot(X, b), observed=np.zeros(5000))
+            if sampler == "nuts":
+                pm.sample(
+                    tune=5,
+                    draws=5,
+                    chains=2,
+                    cores=2,
+                    mp_ctx="fork",
+                    nuts_sampler="pymc",
+                    compute_convergence_checks=False,
+                    progressbar=False,
+                )
+            else:
+                pm.sample_smc(
+                    draws=50,
+                    chains=2,
+                    cores=2,
+                    mp_ctx="fork",
+                    compute_convergence_checks=False,
+                    progressbar=False,
+                )
 
 
 class NoUnpickle:
