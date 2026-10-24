@@ -349,6 +349,24 @@ class TestMatchesScipy:
         )
 
     @pytest.mark.parametrize(
+        "value,mu,lam,alpha",
+        [
+            (3.0, 5.0, 0.2, 0.0),
+            (2.0, 2.0, 0.2, 0.0),
+            (1.5, 1.0, 1.0, 0.0),
+            (5.0, 2.0, 2.5, 0.0),
+            (7.5, 5.0, 0.75, 2.5),
+        ],
+    )
+    def test_wald_logcdf_matches_scipy_when_lam_is_not_one(self, value, mu, lam, alpha):
+        # scipy's invgauss is parameterized by shape mu/lam and scale lam.
+        expected = st.invgauss.logcdf(value - alpha, mu / lam, scale=lam)
+        observed = pm.logcdf(pm.Wald.dist(mu=mu, lam=lam, alpha=alpha), value).eval()
+        npt.assert_almost_equal(
+            observed, expected, decimal=select_by_precision(float64=6, float32=1)
+        )
+
+    @pytest.mark.parametrize(
         "value,mu,lam,phi,alpha,logp",
         [
             (0.5, 0.001, 0.5, None, 0.0, -124500.7257914),

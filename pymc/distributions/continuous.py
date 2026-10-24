@@ -1094,8 +1094,12 @@ class Wald(PositiveContinuous):
     def logcdf(value, mu, lam, alpha):
         value -= alpha
         q = value / mu
-        ell = lam * mu
-        r = pt.sqrt(value * lam)
+        # F(x) = Phi(sqrt(lam/x)(x/mu - 1)) + exp(2*lam/mu) * Phi(-sqrt(lam/x)(x/mu + 1)).
+        # `q - 1` is divided by r, so r must be sqrt(x/lam) (not sqrt(lam*x)), and the
+        # exponent is 2*lam/mu, i.e. 2/ell with ell = mu/lam. The previous spelling
+        # inverted both lambda terms, which only cancels when mu == lam == 1.
+        ell = mu / lam
+        r = pt.sqrt(value / lam)
 
         a = normal_lcdf(0, 1, (q - 1.0) / r)
         b = 2.0 / ell + normal_lcdf(0, 1, -(q + 1.0) / r)
