@@ -1,1 +1,2 @@
 pymc/_version.py export-subst
+* text=auto
