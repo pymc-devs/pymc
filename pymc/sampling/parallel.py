@@ -14,9 +14,11 @@
 from __future__ import annotations
 
 import ctypes
+import functools
 import logging
 import multiprocessing
 import multiprocessing.sharedctypes
+import os
 import platform
 import time
 import traceback
@@ -29,6 +31,7 @@ from typing import TYPE_CHECKING
 
 import cloudpickle
 import numpy as np
+import scipy
 
 from pytensor.compile import get_mode
 from pytensor.link.jax.linker import JAXLinker
@@ -85,6 +88,68 @@ def rebuild_exc(exc, tb):
     return exc
 
 
+# Apple's Accelerate multithreads BLAS and LAPACK calls through Grand Central Dispatch, which
+# is unusable in the child of a fork once the parent has used it: the child's next
+# multithreaded call segfaults. Since macOS 15, BLASSetThreading can make Accelerate
+# single-threaded (see vecLib.framework/Headers/thread_api.h in the macOS SDK).
+_ACCELERATE_PATH = "/System/Library/Frameworks/Accelerate.framework/Accelerate"
+_BLAS_THREADING_SINGLE_THREADED = 1
+
+
+@functools.cache
+def _blas_is_accelerate() -> bool:
+    """Whether NumPy or SciPy use Accelerate for BLAS."""
+    if platform.system() != "Darwin":
+        return False
+    for lib in (np, scipy):
+        try:
+            name = lib.show_config(mode="dicts")["Build Dependencies"]["blas"]["name"]
+        except Exception:
+            continue
+        if name.lower() == "accelerate":
+            return True
+    return False
+
+
+@functools.cache
+def _accelerate_blas_set_threading():
+    """Return Accelerate's BLASSetThreading, or None if this macOS (< 15) does not have it."""
+    try:
+        return ctypes.CDLL(_ACCELERATE_PATH).BLASSetThreading
+    except (OSError, AttributeError):
+        return None
+
+
+# Accelerate is usually already loaded at interpreter startup. RTLD_NOLOAD makes sure a
+# forked worker never loads it for the first time after fork(), and covers Accelerate
+# used by anything (conda-forge's libblas shim, PyTensor's C code), not only NumPy/SciPy.
+def _accelerate_is_loaded() -> bool:
+    """Whether anything in this process (NumPy, SciPy, PyTensor's C code, ...) loaded Accelerate."""
+    if platform.system() != "Darwin":
+        return False
+    try:
+        ctypes.CDLL(_ACCELERATE_PATH, mode=os.RTLD_NOLOAD)
+    except OSError:
+        return False
+    return True
+
+
+def _make_accelerate_single_threaded():
+    """Keep Accelerate from multithreading the BLAS and LAPACK calls of the current thread.
+
+    Workers started with fork must call this before using BLAS. The setting is per thread,
+    so it only protects the thread that calls it.
+    """
+    if _accelerate_is_loaded() and (set_threading := _accelerate_blas_set_threading()) is not None:
+        if set_threading(_BLAS_THREADING_SINGLE_THREADED) != 0:
+            logger.debug("BLASSetThreading could not make Accelerate single-threaded.")
+
+
+def _fork_unsafe_accelerate() -> bool:
+    """Whether NumPy or SciPy use Accelerate, and forked workers cannot make it single-threaded."""
+    return _blas_is_accelerate() and _accelerate_blas_set_threading() is None
+
+
 def _initialize_multiprocessing_context(
     mp_ctx: str | multiprocessing.context.BaseContext | None,
     *,
@@ -98,17 +163,32 @@ def _initialize_multiprocessing_context(
         # Closes issue https://github.com/pymc-devs/pymc/issues/3849
         # Related issue https://github.com/pymc-devs/pymc/issues/5339
         if mp_ctx is None and platform.system() == "Darwin":
-            if platform.processor() == "arm":
+            if platform.processor() != "arm":
+                mp_ctx = "forkserver"
+            elif _fork_unsafe_accelerate():
+                mp_ctx = "forkserver"
+                if not quiet:
+                    logger.debug(
+                        "mp_ctx is set to 'forkserver' for MacOS with ARM architecture, because "
+                        + "Accelerate BLAS crashes in forked workers before macOS 15."
+                    )
+            else:
                 mp_ctx = "fork"
                 if not quiet:
                     logger.debug(
                         "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
                         + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
                     )
-            else:
-                mp_ctx = "forkserver"
 
         mp_ctx = multiprocessing.get_context(mp_ctx)
+
+    if user_specified and mp_ctx.get_start_method() == "fork" and _fork_unsafe_accelerate():
+        warnings.warn(
+            "Using multiprocessing start method 'fork' with Accelerate BLAS before macOS 15 is "
+            "unsafe and may segfault. Consider passing `mp_ctx='forkserver'` or `mp_ctx='spawn'`.",
+            UserWarning,
+            stacklevel=2,
+        )
 
     if jax_mode and mp_ctx.get_start_method() == "fork":
         if user_specified:
@@ -197,6 +277,8 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
+        if self._mp_start_method == "fork":
+            _make_accelerate_single_threaded()
         # Only apply threadpool_limits for non-fork methods.
         with (
             nullcontext()

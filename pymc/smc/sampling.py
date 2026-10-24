@@ -91,6 +91,9 @@ def sample_smc(
         number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
+        Note that this argument is ignored when using fork multiprocessing start method.
+        With fork on macOS 15+, workers run Apple's Accelerate BLAS single-threaded, because
+        multithreaded Accelerate calls crash in forked processes.
     compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
