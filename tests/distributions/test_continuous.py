@@ -608,6 +608,15 @@ class TestMatchesScipy:
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
+    @pytest.mark.parametrize(
+        "dist",
+        [pm.StudentT.dist(nu=3, mu=1, sigma=2), pm.SkewStudentT.dist(a=2, b=5, mu=1, sigma=2)],
+        ids=["StudentT", "SkewStudentT"],
+    )
+    def test_studentt_logcdf_infinite_value(self, dist):
+        # Regression test for https://github.com/pymc-devs/pymc/issues/8524
+        npt.assert_equal(logcdf(dist, [-np.inf, np.inf]).eval(), [-np.inf, 0.0])
+
     def test_skewstudentt_icdf(self):
         check_icdf(
             pm.SkewStudentT,

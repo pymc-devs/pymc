@@ -1956,6 +1956,8 @@ class StudentT(Continuous):
         t = (value - mu) / sigma
         sqrt_t2_nu = pt.sqrt(t**2 + nu)
         x = (t + sqrt_t2_nu) / (2.0 * sqrt_t2_nu)
+        # inf / inf above is nan
+        x = pt.switch(pt.isinf(t), pt.gt(t, 0), x)
 
         res = pt.log(pt.betainc(nu / 2.0, nu / 2.0, x))
 
@@ -2084,6 +2086,8 @@ class SkewStudentT(Continuous):
         x = (value - mu) / sigma
 
         y = (1 + x / pt.sqrt(a + b + x**2)) * 0.5
+        # inf / inf above is nan
+        y = pt.switch(pt.isinf(x), pt.gt(x, 0), y)
         res = pt.log(pt.betainc(a, b, y))
 
         return check_parameters(
