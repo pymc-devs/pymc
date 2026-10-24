@@ -32,6 +32,7 @@ from pymc.distributions import (
     HalfNormal,
     LogNormal,
     Mixture,
+    StudentT,
     TruncatedNormal,
 )
 from pymc.distributions.shape_utils import change_dist_size
@@ -360,6 +361,15 @@ def test_truncation_logprob_bound_check():
     xt = Truncated.dist(x, lower=5, upper=-5)
     with pytest.raises(ParameterValueError):
         logp(xt, 0).eval()
+
+
+@pytest.mark.parametrize("lower, upper", [(0, None), (None, 0)])
+def test_truncated_studentt_one_sided_draws(lower, upper):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/8524
+    x = Truncated.dist(StudentT.dist(nu=3), lower=lower, upper=upper, size=1000)
+    draws = draw(x, random_seed=1)
+    assert np.all(np.isfinite(draws))
+    assert np.all(draws >= 0) if lower is not None else np.all(draws <= 0)
 
 
 def test_change_truncated_size():
