@@ -418,6 +418,76 @@ class TestMatchesScipy:
             decimal=select_by_precision(float64=5, float32=3),
         )
 
+    @pytest.mark.parametrize(
+        "batch_shape, event_shape, row_form, col_form",
+        [
+            ((4,), (2, 3), "rowcov", "colcov"),
+            ((2, 4), (2, 3), "rowcov", "colchol"),
+            ((2, 4), (2, 3), "rowchol", "colcov"),
+            ((2, 4), (2, 3), "rowchol", "colchol"),
+            ((2, 1), (1, 3), "rowcov", "colcov"),
+            ((2,), (3, 1), "rowcov", "colcov"),
+        ],
+    )
+    def test_matrixnormal_batched_values(self, batch_shape, event_shape, row_form, col_form):
+        rng = np.random.default_rng(1983)
+        m, n = event_shape
+        mu = floatX(rng.normal(size=event_shape))
+        rowcov = floatX(np.eye(m) + 0.2 * np.ones((m, m)))
+        colcov = floatX(np.eye(n) + 0.3 * np.ones((n, n)))
+        value = floatX(rng.normal(size=(*batch_shape, *event_shape)))
+        rowparam = np.linalg.cholesky(rowcov) if row_form == "rowchol" else rowcov
+        colparam = np.linalg.cholesky(colcov) if col_form == "colchol" else colcov
+        dist = pm.MatrixNormal.dist(
+            mu=mu, size=batch_shape, **{row_form: rowparam, col_form: colparam}
+        )
+        assert all(param.dtype == pytensor.config.floatX for param in dist.owner.inputs[2:])
+
+        actual = pm.logp(dist, value).eval()
+        expected = np.array(
+            [
+                st.matrix_normal.logpdf(value[index], mu, rowcov, colcov)
+                for index in np.ndindex(batch_shape)
+            ]
+        ).reshape(batch_shape)
+
+        assert actual.shape == batch_shape
+        np.testing.assert_allclose(
+            actual, expected, rtol=select_by_precision(float64=1e-10, float32=1e-5)
+        )
+
+    def test_matrixnormal_batched_model_gradients(self):
+        data = floatX(np.random.default_rng(1983).normal(size=(4, 2, 3)))
+        rowchol = floatX([[1.2, 0], [0.3, 0.9]])
+        colchol = floatX([[1.0, 0, 0], [0.25, 1.3, 0], [0.1, -0.2, 0.8]])
+        functions = []
+        for batched in (False, True):
+            with pm.Model() as model:
+                mu = pm.Normal("mu", shape=(2, 3))
+                row_scale = pm.HalfNormal("row_scale", 2)
+                col_scale = pm.HalfNormal("col_scale", 2)
+                params = {
+                    "mu": mu,
+                    "rowchol": rowchol * row_scale,
+                    "colchol": colchol * col_scale,
+                }
+                if batched:
+                    pm.MatrixNormal("observed", observed=data, **params)
+                else:
+                    for i, matrix in enumerate(data):
+                        pm.MatrixNormal(f"observed_{i}", observed=matrix, **params)
+
+            functions.append(model.logp_dlogp_function(ravel_inputs=True))
+
+        point = floatX(np.concatenate([np.linspace(-0.2, 0.3, 6), np.log([1.1, 0.9])]))
+        reference_logp, reference_gradient = functions[0](point)
+        batched_logp, batched_gradient = functions[1](point)
+        tolerance = select_by_precision(float64=1e-10, float32=1e-5)
+        np.testing.assert_allclose(batched_logp, reference_logp, rtol=tolerance, atol=tolerance)
+        np.testing.assert_allclose(
+            batched_gradient, reference_gradient, rtol=tolerance, atol=tolerance
+        )
+
     @pytest.mark.parametrize("n", [2, 3])
     @pytest.mark.parametrize("m", [3])
     @pytest.mark.parametrize("sigma", [0, 1])
@@ -1279,9 +1349,7 @@ class TestMoments:
         with pm.Model() as model:
             x = pm.MatrixNormal("x", mu=mu, rowchol=rowchol, colchol=colchol, size=size)
 
-        # MatrixNormal logp is only implemented for 2d values
-        check_logp = x.ndim == 2
-        assert_support_point_is_expected(model, expected, check_finite_logp=check_logp)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
         "alpha, K, size, expected",
@@ -2233,7 +2301,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                 colcov=np.eye(3),
             )
             with pytest.raises(ValueError):
-                logp(matrixnormal, pytensor.tensor.ones((3, 3, 3)))
+                logp(matrixnormal, pytensor.tensor.ones(3))
 
     def check_random_variable_prior(self):
         """
