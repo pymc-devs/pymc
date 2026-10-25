@@ -206,6 +206,14 @@ class TestMatchesScipy:
             {"N": N_domain, "k": k_domain, "n": n_domain},
         )
 
+    def test_hypergeometric_logcdf_batched_params(self):
+        k = np.array([[10], [15]])
+        value = 2
+        res = pm.logcdf(pm.HyperGeometric.dist(N=20, k=k, n=5), value).eval()
+        expected = st.hypergeom.logcdf(value, 20, k, 5)
+        assert res.shape == expected.shape
+        np.testing.assert_allclose(res, expected)
+
     @pytest.mark.xfail(
         condition=(pytensor.config.floatX == "float32"),
         reason="SciPy log CDF stopped working after un-pinning NumPy version.",
@@ -304,6 +312,15 @@ class TestMatchesScipy:
             Nat,
             {"alpha": Rplus, "beta": Rplus, "n": NatSmall},
         )
+
+    def test_beta_binomial_logcdf_batched_params(self):
+        alpha = np.array([[0.5], [2.0], [5.0]])
+        beta = np.array([[0.5], [2.0], [1.0]])
+        value = 3
+        res = pm.logcdf(pm.BetaBinomial.dist(alpha=alpha, beta=beta, n=10), value).eval()
+        expected = st.betabinom.logcdf(value, 10, alpha, beta)
+        assert res.shape == expected.shape
+        np.testing.assert_allclose(res, expected)
 
     def test_bernoulli(self):
         check_logp(

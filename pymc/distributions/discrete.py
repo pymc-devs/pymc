@@ -279,7 +279,8 @@ class BetaBinomial(Discrete):
                         BetaBinomial.dist(alpha=alpha, beta=beta, n=n),
                         pt.arange(safe_lower, value + 1),
                     ),
-                    keepdims=False,
+                    axis=-1,
+                    keepdims=True,
                 ),
                 0,
             ),
@@ -966,15 +967,26 @@ class HyperGeometric(Discrete):
         upper = pt.minimum(good, n)
         safe_value = pt.clip(pt.floor(value), lower, upper)
 
+        # arange needs scalar bounds, so build a grid up to the batch-wide
+        # max(safe_value) and mask per-element to each row's [lower, safe_value].
+        max_k = pt.max(safe_value)
+        ks = pt.arange(max_k + 1)
+        ks_padded = pt.shape_padleft(ks, safe_value.ndim)
+
+        good_b = pt.shape_padright(good)
+        bad_b = pt.shape_padright(bad)
+        logps = HyperGeometric.logp(ks_padded, good_b, bad_b, n)
+        lower_b = pt.shape_padright(lower)
+        safe_value_b = pt.shape_padright(safe_value)
+        valid = pt.and_(ks_padded >= lower_b, ks_padded <= safe_value_b)
+        logps = pt.where(valid, logps, -np.inf)
+
         res = pt.switch(
             pt.lt(value, lower),
             -np.inf,
             pt.switch(
                 pt.lt(value, upper),
-                pt.logsumexp(
-                    HyperGeometric.logp(pt.arange(lower, safe_value + 1), good, bad, n),
-                    keepdims=False,
-                ),
+                pt.logsumexp(logps, axis=-1),
                 0,
             ),
         )
