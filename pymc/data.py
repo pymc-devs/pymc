@@ -15,6 +15,7 @@
 import io
 import typing
 import urllib.request
+import warnings
 
 from collections.abc import Sequence
 from copy import copy
@@ -174,23 +175,23 @@ def determine_coords(
         coords = {}
 
     dim_name = None
-    # If value is a df or a series, we interpret the index as coords:
-    if hasattr(value, "index"):
+    # If value is a pandas df or series, we interpret the index as coords:
+    if isinstance(value, pd.Series | pd.DataFrame):
         if dims is not None:
             dim_name = dims[0]
         if dim_name is None and value.index.name is not None:
-            dim_name = value.index.name
+            dim_name = cast(str, value.index.name)
         if dim_name is not None:
-            coords[dim_name] = value.index
+            coords[dim_name] = cast(Sequence, value.index)
 
-    # If value is a df, we also interpret the columns as coords:
-    if hasattr(value, "columns"):
+    # If value is a pandas df, we also interpret the columns as coords:
+    if isinstance(value, pd.DataFrame):
         if dims is not None:
             dim_name = dims[1]
         if dim_name is None and value.columns.name is not None:
-            dim_name = value.columns.name
+            dim_name = cast(str, value.columns.name)
         if dim_name is not None:
-            coords[dim_name] = value.columns
+            coords[dim_name] = cast(Sequence, value.columns)
 
     if isinstance(value, xr.DataArray):
         if dims is not None:
@@ -250,14 +251,15 @@ def Data(
     ----------
     name : str
         The name for this variable.
-    value : array_like or pandas.Series, pandas.Dataframe
-        A value to associate with this variable.
+    value : array_like, DataFrame or Series
+        A value to associate with this variable. Accepts anything convertible to a
+        numpy array, an :class:`xarray.DataArray`, a scipy sparse matrix, or any
+        DataFrame or Series supported by `narwhals <https://narwhals-dev.github.io/narwhals/>`_
+        (pandas, polars, pyarrow, ...). Lazy frames are collected.
     dims : str, tuple of str or tuple of None, optional
         Dimension names of the random variables (as opposed to the shapes of these
-        random variables). Use this when ``value`` is a pandas Series or DataFrame. The
-        ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
-        documentation for more information about dimensions and coordinates:
-        :doc:`arviz_base:tutorial/WorkingWithDataTree`.
+        random variables). See ArviZ documentation for more information about
+        dimensions and coordinates: :doc:`arviz_base:tutorial/WorkingWithDataTree`.
         If this parameter is not specified, the random variables will not have dimension
         names.
     coords : dict, optional
@@ -265,6 +267,11 @@ def Data(
     infer_dims_and_coords : bool, default=False
         If True, the ``Data`` container will try to infer what the coordinates
         and dimension names should be if there is an index in ``value``.
+        Only pandas and xarray inputs carry such an index.
+
+        .. deprecated:: 6.4.0
+            Pass coordinate values explicitly via ``coords`` or
+            :class:`pymc.Model` instead. This argument will be removed in PyMC 7.0.
     model : Model, optional
         Model in which to register the container. Defaults to the current context.
     **kwargs : dict, optional
@@ -322,6 +329,16 @@ def Data(
     if not isinstance(model, Model):
         raise TypeError(f"Cannot add new data to an immutable {type(model).__name__}.")
     name = model.name_for(name)
+
+    if infer_dims_and_coords:
+        warnings.warn(
+            "`infer_dims_and_coords=True` is deprecated and will be removed in PyMC 7.0. "
+            "It only infers coordinates from pandas and xarray inputs. Pass coordinate "
+            "values explicitly instead, e.g. `pm.Model(coords={'date': df.index})` or "
+            "`pm.Data(..., dims='date', coords={'date': df.index})`.",
+            FutureWarning,
+            stacklevel=2,
+        )
 
     # Transform `value` it to something digestible for PyTensor.
     if isgenerator(value):
