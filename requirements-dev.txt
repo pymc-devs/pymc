@@ -10,11 +10,13 @@ jupyter-sphinx
 mcbackend>=0.4.0
 mypy==1.19.1
 myst-nb<=1.0.0
+narwhals>=2.0
 netCDF4
 numdifftools>=0.9.40
 numpy>=1.25.0
 numpydoc
 pandas>=0.24.0
+polars>=2.0.0
 polyagamma
 pre-commit>=2.8.0
 pymc-sphinx-theme>=0.16.0
