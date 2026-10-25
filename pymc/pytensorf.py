@@ -17,8 +17,8 @@ import warnings
 from collections.abc import Iterable, Sequence
 from typing import Literal, cast, overload
 
+import narwhals.stable.v2 as nw
 import numpy as np
-import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 
@@ -51,7 +51,7 @@ from pytensor.tensor.rewriting.shape import ShapeFeature
 from pytensor.tensor.sharedvar import SharedVariable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 from pytensor.tensor.variable import TensorVariable
-from pytensor.utils import lazy_scipy_module
+from pytensor.utils import add_lazy_dispatcher, lazy_scipy_module
 
 from pymc.exceptions import NotConstantValueError
 from pymc.util import makeiter
@@ -86,14 +86,65 @@ def convert_observed_data(data) -> np.ndarray | Variable:
     return convert_data(data)
 
 
+def _narwhals_to_numpy(data) -> tuple[np.ndarray, np.ndarray] | None:
+    """Convert any narwhals-supported DataFrame or Series to ``(values, null_mask)``.
+
+    Returns ``None`` when ``data`` is not a dataframe-like object narwhals recognizes.
+    LazyFrames are collected. NaN entries in float columns count as missing, matching
+    how pandas treats them. The mask is derived from the narwhals object rather than the
+    numpy output because backends such as polars widen integer columns with nulls to
+    float NaN on ``to_numpy()``.
+    """
+    nw_data = nw.from_native(data, allow_series=True, pass_through=True)
+    if nw_data is data:
+        return None
+    if isinstance(nw_data, nw.LazyFrame):
+        nw_data = nw_data.collect()
+    if isinstance(nw_data, nw.Series):
+        nulls = nw_data.fill_nan(None) if nw_data.dtype.is_float() else nw_data
+        mask = nulls.is_null().to_numpy()
+    else:
+        mask = nw_data.select(
+            (nw.col(name).fill_nan(None) if dtype.is_float() else nw.col(name)).is_null()
+            for name, dtype in nw_data.schema.items()
+        ).to_numpy()
+    return nw_data.to_numpy(), mask
+
+
 def convert_data(data) -> np.ndarray | Variable:
     ret: np.ndarray | Variable
-    if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
-        # typically, but not limited to pandas objects
+    if isinstance(data, Variable):
+        ret = data
+    elif sparse.issparse(data):
+        ret = data
+    elif isinstance(data, np.ma.MaskedArray):
+        if not data.mask.any():
+            # empty mask
+            ret = data.filled()
+        else:
+            # already masked and rightly so
+            ret = data
+    elif isinstance(data, np.ndarray):
+        # already a ndarray, but not masked
+        if np.issubdtype(data.dtype, np.floating) and np.any(mask := np.isnan(data)):
+            ret = np.ma.MaskedArray(data, mask)
+        else:
+            # no masking required
+            ret = data
+    elif (converted := _narwhals_to_numpy(data)) is not None:
+        # any DataFrame or Series narwhals knows about (pandas, polars, pyarrow, ...)
+        vals, mask = converted
+        if mask.any():
+            # there are missing values
+            ret = np.ma.MaskedArray(vals, mask)
+        else:
+            ret = vals
+    elif hasattr(data, "to_numpy") and hasattr(data, "isnull"):
+        # objects narwhals does not wrap, e.g. pandas Index or xarray DataArray
         vals = data.to_numpy()
         null_data = data.isnull()
         if hasattr(null_data, "to_numpy"):
-            # pandas Series
+            # xarray DataArray
             mask = null_data.to_numpy()
         else:
             # pandas Index
@@ -103,26 +154,6 @@ def convert_data(data) -> np.ndarray | Variable:
             ret = np.ma.MaskedArray(vals, mask)
         else:
             ret = vals
-    elif isinstance(data, np.ndarray):
-        if isinstance(data, np.ma.MaskedArray):
-            if not data.mask.any():
-                # empty mask
-                ret = data.filled()
-            else:
-                # already masked and rightly so
-                ret = data
-        else:
-            # already a ndarray, but not masked
-            mask = np.isnan(data)
-            if np.any(mask):
-                ret = np.ma.MaskedArray(data, mask)
-            else:
-                # no masking required
-                ret = data
-    elif isinstance(data, Variable):
-        ret = data
-    elif sparse.issparse(data):
-        ret = data
     else:
         ret = np.asarray(data)
 
@@ -134,10 +165,28 @@ def convert_data(data) -> np.ndarray | Variable:
     return smarttypeX(ret)
 
 
-@_as_tensor_variable.register(pd.Series)
-@_as_tensor_variable.register(pd.DataFrame)
-def dataframe_to_tensor_variable(df: pd.DataFrame, *args, **kwargs) -> TensorVariable:
-    return pt.as_tensor_variable(df.to_numpy(), *args, **kwargs)
+# Give `as_tensor_variable` a cooperative fallback for dataframe-like inputs without
+# importing any dataframe library eagerly. The first time a narwhals-supported type
+# (pandas, polars, pyarrow, ...) reaches the `object` default, the handler is registered
+# for that exact type and later calls dispatch directly.
+add_lazy_dispatcher(_as_tensor_variable)
+
+
+def dataframe_to_tensor_variable(df, *args, **kwargs) -> TensorVariable:
+    """Convert any narwhals-supported DataFrame or Series to a TensorVariable."""
+    converted = _narwhals_to_numpy(df)
+    if converted is None:
+        raise NotImplementedError(f"Cannot convert {df!r} to a tensor variable.")
+    # Missing values are not masked here, matching the previous `df.to_numpy()` behavior.
+    values, _ = converted
+    return pt.as_tensor_variable(values, *args, **kwargs)
+
+
+@_as_tensor_variable.register_lazy  # type: ignore[attr-defined]
+def _lazy_dataframe_to_tensor_variable(x):
+    if nw.from_native(x, allow_series=True, pass_through=True) is x:
+        return None
+    return dataframe_to_tensor_variable
 
 
 _cheap_eval_mode = Mode(linker="py", optimizer=None)
