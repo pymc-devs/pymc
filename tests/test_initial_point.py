@@ -202,6 +202,21 @@ class TestInitvalEvaluation:
         assert np.isclose(iv["B_log__"], 0)
         assert iv["C_log__"] == 0
 
+    def test_string_overrides_transform_name_with_underscores(self):
+        # Transform names such as "log_exp_m1" or "cholesky_corr" contain underscores
+        with pm.Model() as pmodel:
+            A = pm.HalfFlat("A", default_transform=pm.distributions.transforms.log_exp_m1)
+
+        assert pmodel.rvs_to_values[A].name == "A_log_exp_m1__"
+        fn = make_initial_point_fn(
+            model=pmodel,
+            jitter_rvs={},
+            return_transformed=True,
+            overrides={"A_log_exp_m1__": 0.5},
+        )
+        iv = fn(0)
+        assert np.isclose(iv["A_log_exp_m1__"], 0.5)
+
     @pytest.mark.parametrize("reverse_rvs", [False, True])
     def test_dependent_initval_from_OFG(self, reverse_rvs):
         class MyTestOp(OpFromGraph):
