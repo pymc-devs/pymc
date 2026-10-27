@@ -872,10 +872,7 @@ def sample(
             raise ValueError(
                 "`target_accept` was defined twice. Please specify it either as a direct keyword argument or in the `nuts` kwarg."
             )
-        if "nuts" in kwargs:
-            kwargs["nuts"]["target_accept"] = kwargs.pop("target_accept")
-        else:
-            kwargs["nuts"] = {"target_accept": kwargs.pop("target_accept")}
+        kwargs["nuts"] = {**kwargs.get("nuts", {}), "target_accept": kwargs.pop("target_accept")}
     if isinstance(trace, list):
         raise ValueError("Please use `var_names` keyword argument for partial traces.")
 
