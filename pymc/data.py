@@ -332,7 +332,7 @@ def Data(
 
     if infer_dims_and_coords:
         warnings.warn(
-            "`infer_dims_and_coords=True` is deprecated and will be removed in PyMC 7.0. "
+            "`infer_dims_and_coords=True` is deprecated and will be removed in a future PyMC release. "
             "It only infers coordinates from pandas and xarray inputs. Pass coordinate "
             "values explicitly instead, e.g. `pm.Model(coords={'date': df.index})` or "
             "`pm.Data(..., dims='date', coords={'date': df.index})`.",
