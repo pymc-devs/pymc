@@ -67,6 +67,20 @@ def test_set_optimizer_function_defaults_ignores_unused_flags(method, flags, exp
         assert set_optimizer_function_defaults(method, *flags) == expected
 
 
+@pytest.mark.filterwarnings("error:better_optimize.constants:DeprecationWarning")
+def test_set_optimizer_function_defaults_reads_better_optimize_configs():
+    # better-optimize 0.4.3 removed `constants.MINIMIZE_MODE_KWARGS`; 0.5.1 only restores it
+    # behind a deprecation warning. The method capabilities come from the configurations.
+    from better_optimize.configuration import MINIMIZE_CONFIGS
+
+    for method, config in MINIMIZE_CONFIGS.items():
+        assert set_optimizer_function_defaults(method, None, None, None) == (
+            config.uses_grad,
+            config.uses_hess and not config.uses_hessp,
+            config.uses_hessp,
+        )
+
+
 @pytest.mark.parametrize(
     "use_grad, use_hess, use_hessp",
     [(False, False, False), (True, False, False), (True, True, False), (True, False, True)],

@@ -35,22 +35,22 @@ def set_optimizer_function_defaults(
 
     Of a Hessian and a Hessian-vector product only one is used: the explicit one, else ``hessp``.
     """
-    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+    from better_optimize.configuration import MINIMIZE_CONFIGS
 
-    info = MINIMIZE_MODE_KWARGS[method]
+    config = MINIMIZE_CONFIGS[method]
     for flag, value, key in (
         ("use_grad", use_grad, "uses_grad"),
         ("use_hess", use_hess, "uses_hess"),
         ("use_hessp", use_hessp, "uses_hessp"),
     ):
-        if value and not info[key]:
+        if value and not getattr(config, key):
             warnings.warn(
                 f"Method {method!r} does not use `{flag}`; it will be ignored.", UserWarning
             )
     hess_was_none, hessp_was_none = use_hess is None, use_hessp is None
-    use_grad = info["uses_grad"] and (info["uses_grad"] if use_grad is None else use_grad)
-    use_hess = info["uses_hess"] and (info["uses_hess"] if hess_was_none else use_hess)
-    use_hessp = info["uses_hessp"] and (info["uses_hessp"] if hessp_was_none else use_hessp)
+    use_grad = config.uses_grad and (config.uses_grad if use_grad is None else use_grad)
+    use_hess = config.uses_hess and (config.uses_hess if hess_was_none else use_hess)
+    use_hessp = config.uses_hessp and (config.uses_hessp if hessp_was_none else use_hessp)
     if use_hess and use_hessp:
         if not (hess_was_none or hessp_was_none):
             warnings.warn(
