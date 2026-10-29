@@ -11,6 +11,8 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import warnings
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -30,6 +32,7 @@ from pymc.distributions import (
     Exponential,
     Gamma,
     HalfNormal,
+    InverseGamma,
     LogNormal,
     Mixture,
     SkewStudentT,
@@ -509,6 +512,17 @@ def test_truncated_gamma():
         logp_resized_pymc,
         logp_scipy,
     )
+
+
+def test_truncated_inverse_gamma_no_rv_warning():
+    # Regression test for https://github.com/pymc-devs/pymc/issues/8579
+    upper = 3.0
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "error", message="RandomVariables .* were found in the derived graph"
+        )
+        trunc_x = Truncated.dist(InverseGamma.dist(alpha=3.0, beta=1.0), upper=upper)
+    assert np.all(draw(trunc_x, draws=20) <= upper)
 
 
 def test_vectorized_bounds():
