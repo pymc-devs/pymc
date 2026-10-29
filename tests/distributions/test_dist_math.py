@@ -17,6 +17,7 @@ import pytest
 import scipy.special
 
 from pytensor import config, function
+from pytensor.compile.mode import Mode
 from pytensor.tensor.random.basic import multinomial
 from scipy import interpolate
 
@@ -171,7 +172,7 @@ class TestSplineWrapper:
         x = np.linspace(0, 1, 100)
         y = x * x
         spline = SplineWrapper(interpolate.InterpolatedUnivariateSpline(x, y, k=1))
-        verify_grad(spline, [0.5])
+        verify_grad(spline, [0.5], mode=Mode(linker="py", optimizer="fast_compile"))
 
     def test_hessian(self):
         x = np.linspace(0, 1, 100)
