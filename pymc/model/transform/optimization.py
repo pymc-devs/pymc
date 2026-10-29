@@ -16,6 +16,7 @@ from typing import cast
 
 import numpy as np
 
+from pymc.util import locally_cachedmethod
 from pytensor.compile import SharedVariable
 from pytensor.graph import Constant, FunctionGraph, Variable
 from pytensor.graph.replace import clone_replace
@@ -226,6 +227,20 @@ def freeze_model(model: Model) -> FrozenModel:
     # BaseModel with the same instance layout, so only the method resolution changes
     # (mutators become unavailable, compiled functions become cached).
     frozen_model.__class__ = FrozenModel  # type: ignore[assignment]
+
+    # Cached graphs and compiled functions.
+    # Seeding happens outside the cached calls, so every entry is seed-independent.
+    frozen_model.logp = locally_cachedmethod(model.logp)
+    frozen_model.dlogp = locally_cachedmethod(model.dlogp)
+    frozen_model.d2logp = locally_cachedmethod(model.d2logp)
+
+    # The initial point only seeds the runtime-settable extra variables, so it is not part
+    # of the cache key (it is re-applied by `logp_dlogp_function` on every call).
+    frozen_model._cached_logp_dlogp_function = locally_cachedmethod(
+        model._logp_dlogp_function, ignore=("initial_point",)
+    )
+    frozen_model._make_initial_point = locally_cachedmethod(model._make_initial_point)
+
     return cast(FrozenModel, frozen_model)
 
 

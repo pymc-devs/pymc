@@ -2249,23 +2249,11 @@ class FrozenModel(BaseModel):
             "Create one from an existing model with freeze_model."
         )
 
-    # Cached graphs and compiled functions. Seeding happens outside the cached calls, so
-    # every entry is seed-independent.
-    logp = locally_cachedmethod(BaseModel.logp)
-    dlogp = locally_cachedmethod(BaseModel.dlogp)
-    d2logp = locally_cachedmethod(BaseModel.d2logp)
-    # The initial point only seeds the runtime-settable extra variables, so it is not part
-    # of the cache key (it is re-applied by `logp_dlogp_function` on every call).
-    _cached_logp_dlogp_function = locally_cachedmethod(
-        BaseModel._logp_dlogp_function, ignore=("initial_point",)
-    )
 
     def _logp_dlogp_function(self, *args, **kwargs):
         # Unlike the graphs and functions cached above, a `ValueGradFunction` owns mutable
         # state, so callers get their own shared variables on top of the cached graph.
         return self._cached_logp_dlogp_function(*args, **kwargs).copy()
-
-    _make_initial_point = locally_cachedmethod(BaseModel._make_initial_point)
 
     @overload
     def compile_fn(
