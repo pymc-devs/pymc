@@ -23,7 +23,7 @@ from typing import cast
 import cloudpickle
 import numpy as np
 
-from cachetools import LRUCache, cachedmethod
+from cachetools import LRUCache
 from pytensor.compile import SharedVariable
 from pytensor.compile.io import In, Out
 from pytensor.graph.basic import Variable
@@ -382,18 +382,16 @@ def locally_cachedmethod(f=None, *, ignore: Sequence[str] = ()):
     from collections import defaultdict
 
     def decorator(f):
-        def self_cache_fn(f_name):
-            def cf(self):
-                return self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))[
-                    f_name
-                ]
+        @functools.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            cache = self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))
+            cache = cache[f.__name__]
+            key = hash_key(*args, **{k: v for k, v in kwargs.items() if k not in ignore})
+            if key not in cache:
+                cache[key] = f(self, *args, **kwargs)
+            return cache[key]
 
-            return cf
-
-        def key(*args, **kwargs):
-            return hash_key(*args, **{k: v for k, v in kwargs.items() if k not in ignore})
-
-        return cachedmethod(self_cache_fn(f.__name__), key=key)(f)
+        return wrapper
 
     return decorator if f is None else decorator(f)
 
