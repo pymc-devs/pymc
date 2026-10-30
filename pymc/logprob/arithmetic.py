@@ -69,7 +69,7 @@ def sum_of_normals(fgraph: FunctionGraph, node: Apply) -> list[TensorVariable] |
     mu_sum = pt.sum(mu_b, axis=axis)
     sigma_sum = pt.sqrt(pt.sum(pt.square(sigma_b), axis=axis))
 
-    sum_rv = latent_op(mu_sum, sigma_sum, rng=rng, size=None)
+    _, sum_rv = latent_op(mu_sum, sigma_sum, rng=rng, size=None, return_next_rng=True)
     return [sum_rv]
 
 
