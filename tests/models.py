@@ -18,7 +18,7 @@ import numpy as np
 import pytensor
 import pytensor.tensor as pt
 
-from pytensor.compile.ops import as_op
+from pytensor.compile.ops import wrap_py
 
 import pymc as pm
 
@@ -64,7 +64,7 @@ def multidimensional_model():
 def simple_arbitrary_det():
     scalar_type = pt.dscalar if pytensor.config.floatX == "float64" else pt.fscalar
 
-    @as_op(itypes=[scalar_type], otypes=[scalar_type])
+    @wrap_py(itypes=[scalar_type], otypes=[scalar_type])
     def arbitrary_det(value):
         return value
 
