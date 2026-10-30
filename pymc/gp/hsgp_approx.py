@@ -251,6 +251,44 @@ def approx_hsgp_hyperparams(
     return m, c
 
 
+def approx_hsgp_periodic_m(lengthscale_min: float) -> int:
+    """Use heuristics to recommend a minimum `m` for `HSGPPeriodic`, based on Ruitort-Mayol et. al.
+
+    Smaller lengthscales need more basis vectors. Use your prior on the lengthscale of the
+    `Periodic` kernel as guidance, and pass in the smallest lengthscale you expect. There is no
+    boundary factor `c` because the periodic basis does not depend on the range of `X`.
+
+    The recommendation is ``m = ceil(1.86 / lengthscale_min) + 1``. This is the rule
+    ``J >= 3.72 / ell`` from Appendix B of Ruitort-Mayol et al. converted to the `Periodic`
+    kernel's lengthscale convention, which is half of theirs. One is added because `m` also
+    counts the constant term.
+
+    Parameters
+    ----------
+    lengthscale_min : float
+        The smallest lengthscale of the `Periodic` kernel you expect.
+
+    Returns
+    -------
+    - `m` : int
+        Number of basis vectors. Increasing it helps approximate smaller lengthscales, but increases computational cost.
+
+    Raises
+    ------
+    ValueError
+        If `lengthscale_min` is not positive.
+
+    References
+    ----------
+    - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
+    Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
+    """
+    if lengthscale_min <= 0:
+        raise ValueError("`lengthscale_min` must be positive.")
+
+    return int(np.ceil(1.86 / lengthscale_min)) + 1
+
+
 class HSGP(Base):
     R"""
     Hilbert Space Gaussian process approximation.
@@ -679,8 +717,10 @@ class HSGPPeriodic(Base):
     For these reasons, we have followed the same API as `gp.HSGP`, and can be used as a drop-in
     replacement for `gp.Latent`. Like `gp.Latent`, it has `prior` and `conditional` methods.
 
-    For information on choosing appropriate `m`, refer to Ruitort-Mayol et al.. Note, this approximation
-    is only implemented for the 1-D case.
+    Smaller lengthscales need larger `m`. A good minimum is ``m = ceil(1.86 / ls) + 1``, where `ls`
+    is the smallest lengthscale of the `Periodic` kernel you expect. `approx_hsgp_periodic_m`
+    computes this. See Ruitort-Mayol et al., Appendix B. Note, this approximation is only
+    implemented for the 1-D case.
 
     To work with the approximation in its "linearized" form, as a matrix of basis vectors and a
     vector of coefficients, see the method `prior_linearized`.
@@ -789,7 +829,8 @@ class HSGPPeriodic(Base):
             List of either Numpy or PyTensor 2D array of the cosine and sine fixed basis vectors.
             There are n rows, one per row of `Xs` and `m` columns, one for each basis vector.
         psd: array-like
-            Either a Numpy or PyTensor 1D array of the coefficients of the expansion.
+            Either a Numpy or PyTensor 1D array of the standard deviations of the expansion
+            coefficients.
 
         Examples
         --------
@@ -844,8 +885,8 @@ class HSGPPeriodic(Base):
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
         J = pt.arange(0, self._m, 1)
-        # rescale basis coefficients by the sqrt variance term
-        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
+        # the approximate psd gives variances, the basis coefficients need standard deviations
+        psd = self.scale * pt.sqrt(self.cov_func.power_spectral_density_approx(J))
         return (phi_cos, phi_sin), psd
 
     def prior(  # type: ignore[override]
@@ -898,8 +939,8 @@ class HSGPPeriodic(Base):
         )
         m = self._m
         J = pt.arange(0, m, 1)
-        # rescale basis coefficients by the sqrt variance term
-        psd = self.scale * self.cov_func.power_spectral_density_approx(J)
+        # the approximate psd gives variances, the basis coefficients need standard deviations
+        psd = self.scale * pt.sqrt(self.cov_func.power_spectral_density_approx(J))
 
         phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi
