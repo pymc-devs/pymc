@@ -41,10 +41,8 @@ import pytest
 import scipy.stats.distributions as sp
 
 from pytensor import function
-from pytensor.compile import get_default_mode
 from pytensor.conditional import ifelse
 from pytensor.graph.basic import Variable
-from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple
 from pytensor.tensor.subtensor import (
@@ -974,11 +972,6 @@ def test_switch_mixture_constant_branch_broadcast_ok():
     assert np.isneginf(bad_dirac[0])
 
 
-@pytest.mark.xfail(
-    condition=isinstance(get_default_mode().linker, NumbaLinker),
-    raises=AssertionError,
-    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
-)
 def test_ifelse_mixture_one_component():
     if_rv = pt.random.bernoulli(0.5, name="if")
     scale_rv = pt.random.halfnormal(name="scale")
@@ -1005,11 +998,6 @@ def test_ifelse_mixture_one_component():
     )
 
 
-@pytest.mark.xfail(
-    condition=isinstance(get_default_mode().linker, NumbaLinker),
-    raises=AssertionError,
-    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
-)
 def test_ifelse_mixture_multiple_components():
     rng = np.random.default_rng(968)
 
@@ -1047,11 +1035,6 @@ def test_ifelse_mixture_multiple_components():
     )
 
 
-@pytest.mark.xfail(
-    condition=isinstance(get_default_mode().linker, NumbaLinker),
-    raises=AssertionError,
-    reason="Logp graph fails when evaluated with a non-lazy approach. https://github.com/pymc-devs/pymc/issues/8036",
-)
 def test_ifelse_mixture_shared_component():
     rng = np.random.default_rng(1009)
 
