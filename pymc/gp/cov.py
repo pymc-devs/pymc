@@ -863,12 +863,15 @@ class Periodic(Stationary):
 
         .. math::
 
-            \tilde{q}_j^2 = \frac{2 \text{I}_j (\\ell^{-2})}{\\exp(\\ell^{-2})} \\
-            \tilde{q}_0^2 = \frac{\text{I}_0 (\\ell^{-2})}{\\exp(\\ell^{-2})}
+            \tilde{q}_j^2 = \frac{2 \text{I}_j (a)}{\exp(a)} \\
+            \tilde{q}_0^2 = \frac{\text{I}_0 (a)}{\exp(a)}
 
-        where $\text{I}_j$ is the modified Bessel function of the first kind.
+        where $\text{I}_j$ is the modified Bessel function of the first kind and
+        $a = (2\ell)^{-2}$. Ruitort-Mayol et al. (2022, Appendix B) use $a = \ell^{-2}$ because
+        their kernel has 2 in the exponent instead of 0.5. The coefficients are variances, so
+        they sum to one.
         """
-        a = 1 / pt.square(self.ls)
+        a = 1 / (4 * pt.square(self.ls))
         c = pt.where(J > 0, 2, 1)
 
         q2 = c * pt.ive(J, a)
