@@ -75,10 +75,8 @@ def _field_dtype_specs(name: str, value: Any) -> list[tuple]:
                 ),
             )
         ]
-    if isinstance(value, DataClassState):
+    if isinstance(value, DataClassState | WithSamplingState):
         return [(name, value.struct_dtype())]
-    if isinstance(value, WithSamplingState):
-        return [(name, value.sampling_state.struct_dtype())]
     if isinstance(value, np.ndarray):
         return [(name, value.dtype, value.shape)]
     # Everything else (str, list, dict, ...) is pickled
