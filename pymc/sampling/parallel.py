@@ -207,7 +207,6 @@ class _Process:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.
                 self._unpickle_step_method()
-                self._link_step_to_zarrchain()
                 self._point = self._make_numpy_refs()
                 self._start_loop()
             except KeyboardInterrupt:
@@ -220,10 +219,6 @@ class _Process:
                 self._wait_for_abortion()
             finally:
                 self._msg_pipe.close()
-
-    def _link_step_to_zarrchain(self):
-        if self._zarr_recording:
-            self._zarr_chain.link_stepper(self._step_method)
 
     def _wait_for_abortion(self):
         while True:

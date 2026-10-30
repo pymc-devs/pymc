@@ -1270,10 +1270,10 @@ def _sample_return(
         traces.sampling_time = t_sampling
 
         # Compute number of actual draws per chain
-        total_draws_per_chain = traces._sampling_state.draw_idx[:]
+        total_draws_per_chain = traces._sampling_state["draw_idx"][:]
         n_chains = len(traces.straces)
         desired_tune = traces.tuning_steps
-        desired_draw = len(traces.posterior.draw)
+        desired_draw = traces.posterior["draw"].shape[0]
         tuning_steps_per_chain = np.clip(total_draws_per_chain, 0, desired_tune)
         draws_per_chain = total_draws_per_chain - tuning_steps_per_chain
 
@@ -1304,8 +1304,6 @@ def _sample_return(
 
             if compute_convergence_checks:
                 warns = run_convergence_checks(idata, model)
-                for warn in warns:
-                    traces._sampling_state.global_warnings.append(np.array([warn]))
                 if not quiet:
                     log_warnings(warns)
 
@@ -1553,8 +1551,6 @@ def _iter_sample(
     step.setup_chain(rng, tune, draws - tune)
 
     point = start
-    if isinstance(trace, _ZarrChainBase):
-        trace.link_stepper(step)
 
     try:
         step.tune = bool(tune)
@@ -1578,15 +1574,7 @@ def _iter_sample(
 
             yield stats
 
-    except (KeyboardInterrupt, BaseException):
-        if isinstance(trace, _ZarrChainBase):
-            trace.record_sampling_state(step=step)
-        trace.close()
-        raise
-
-    else:
-        if isinstance(trace, _ZarrChainBase):
-            trace.record_sampling_state(step=step)
+    finally:
         trace.close()
 
 
