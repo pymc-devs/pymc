@@ -16,7 +16,12 @@ from dataclasses import field
 import numpy as np
 import pytest
 
-from pymc.step_methods.state import DataClassState, WithSamplingState, dataclass_state
+from pymc.step_methods.state import (
+    PICKLE_BUFFER_SIZE,
+    DataClassState,
+    WithSamplingState,
+    dataclass_state,
+)
 from tests.helpers import equal_sampling_states
 
 
@@ -92,8 +97,6 @@ class RngState(DataClassState):
 
 
 def test_struct_dtype():
-    from pymc.step_methods.state import PICKLE_BUFFER_SIZE
-
     s = State1(a=1, b=2.0, c="c", d=np.array([1, 2]), e=[1, 2, 3], f={"a": 1})
     dtype = s.struct_dtype()
     assert dtype == np.dtype(
@@ -125,7 +128,7 @@ def test_struct_dtype():
     assert nested.fields["state1"][0] == dtype
     assert nested.fields["extra_info1"][0] == np.dtype(("i8", (3,)))
 
-    # Generators become name + pickled state bytes + verified hash
+    # Generators become their bit generator name, pickled state and hash
     rng_state = RngState(rng=np.random.default_rng(42)).struct_dtype()
     rng_dtype = rng_state.fields["rng"][0]
     assert rng_dtype.names == ("bit_generator_name", "state", "state_hash")
