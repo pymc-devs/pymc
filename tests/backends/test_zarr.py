@@ -627,6 +627,7 @@ def test_sample(
 def test_sampling_consistency(
     model,
     model_step,
+    include_transformed,
     draws_per_chunk,
     tmp_path,
 ):
