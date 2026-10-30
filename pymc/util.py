@@ -387,9 +387,11 @@ def locally_cachedmethod(f=None, *, ignore: Sequence[str] = ()):
             cache = self.__dict__.setdefault("_cache", defaultdict(lambda: LRUCache(128)))
             cache = cache[f.__name__]
             key = hash_key(*args, **{k: v for k, v in kwargs.items() if k not in ignore})
-            if key not in cache:
-                cache[key] = f(self, *args, **kwargs)
-            return cache[key]
+            try:  # Thread safety
+                return cache[key]
+            except KeyError:
+                value = cache[key] = f(self, *args, **kwargs)
+                return value
 
         return wrapper
 
