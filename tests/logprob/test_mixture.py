@@ -42,8 +42,8 @@ import scipy.stats.distributions as sp
 
 from pytensor import function
 from pytensor.compile import get_default_mode
+from pytensor.conditional import ifelse
 from pytensor.graph.basic import Variable
-from pytensor.ifelse import ifelse
 from pytensor.link.numba import NumbaLinker
 from pytensor.tensor.random.basic import CategoricalRV
 from pytensor.tensor.shape import shape_tuple

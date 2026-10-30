@@ -38,12 +38,12 @@ from typing import cast
 
 import pytensor.tensor as pt
 
+from pytensor.conditional import IfElse, ifelse
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.op import Op
 from pytensor.graph.rewriting.basic import EquilibriumGraphRewriter, node_rewriter
 from pytensor.graph.traversal import ancestors
-from pytensor.ifelse import IfElse, ifelse
 from pytensor.scalar import Switch
 from pytensor.scalar import switch as scalar_switch
 from pytensor.tensor.basic import Join, MakeVector, switch
