@@ -23,7 +23,7 @@ import pymc as pm
 from pymc.backends.zarr import ZarrTrace
 from pymc.pytensorf import make_shared_replacements
 from pymc.stats.convergence import SamplerWarning, WarningType
-from pymc.step_methods import NUTS, CompoundStep, Metropolis
+from pymc.step_methods import NUTS, CompoundStep, Metropolis, Slice
 from pymc.step_methods.arraystep import ArrayStepShared
 
 
@@ -141,6 +141,25 @@ def test_warnings_include_warmup_after_split(store):
     assert trace.warnings == expected
     trace.split_warmup_groups()
     assert trace.warnings == expected
+
+
+@pytest.mark.parametrize("step_cls", [Metropolis, Slice])
+def test_sample_steps_that_reshape_state_during_tuning(step_cls, store):
+    # Metropolis widens its scaling at the first tune (tune_interval=100), and Slice
+    # resizes its window on the first step
+    with pm.Model():
+        pm.Normal("x", shape=3)
+        trace = pm.sample(
+            draws=5,
+            tune=150,
+            chains=1,
+            step=step_cls(),
+            trace=ZarrTrace(store=store, draws_per_chunk=10),
+            return_inferencedata=False,
+            compute_convergence_checks=False,
+            progressbar=False,
+        )
+    assert trace.posterior["x"].shape == (1, 5, 3)
 
 
 def test_to_datatree(model, model_step, store):
