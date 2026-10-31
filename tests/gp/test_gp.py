@@ -20,6 +20,8 @@ import numpy.testing as npt
 import pytensor.tensor as pt
 import pytest
 
+from scipy import stats
+
 import pymc as pm
 
 from pymc.math import cartesian
@@ -537,3 +539,52 @@ class TestMarginalKron:
             gp2 = pm.gp.MarginalKron(mean_func=self.mean, cov_funcs=self.cov_funcs)
         with pytest.raises(TypeError):
             gp1 + gp2
+
+
+@pytest.fixture(params=[0.2, 0.5, 1.5])
+def kron_prediction_case(request):
+    sigma = request.param
+    xs = [np.array([[0.0], [1.0]]), np.array([[0.0], [1.0]])]
+    x = cartesian(*xs)
+    xnew = np.array([[0.2, 0.3], [5.0, 5.0]])
+    y = np.array([0.1, -0.2, 0.3, -0.4])
+
+    def kernel(a, b):
+        distances = (a[:, None, :] - b[None, :, :]) / np.array([0.4, 0.8])
+        return np.exp(-0.5 * np.square(distances).sum(axis=-1))
+
+    k = kernel(x, x) + sigma**2 * np.eye(len(x))
+    ks = kernel(x, xnew)
+    expected_mean = ks.T @ np.linalg.solve(k, y)
+    expected_cov = kernel(xnew, xnew) - ks.T @ np.linalg.solve(k, ks)
+    with pm.Model() as model:
+        gp = pm.gp.MarginalKron(
+            cov_funcs=[pm.gp.cov.ExpQuad(1, ls=0.4), pm.gp.cov.ExpQuad(1, ls=0.8)]
+        )
+        gp.marginal_likelihood("y", Xs=xs, y=y, sigma=sigma)
+        yield gp, model, xnew, sigma, expected_mean, expected_cov
+
+
+@pytest.mark.parametrize("diag", [False, True])
+def test_marginal_kron_predictive_noise(kron_prediction_case, diag):
+    gp, _, xnew, sigma, expected_mean, expected_cov = kron_prediction_case
+    latent_mean, latent_cov = gp.predict(xnew, diag=diag, pred_noise=False)
+    noisy_mean, noisy_cov = gp.predict(xnew, diag=diag, pred_noise=True)
+    noise = sigma**2 * (np.ones(len(xnew)) if diag else np.eye(len(xnew)))
+    if diag:
+        expected_cov = np.diag(expected_cov)
+    npt.assert_allclose(latent_mean, expected_mean, atol=1e-10, rtol=1e-9)
+    npt.assert_allclose(noisy_mean, expected_mean, atol=1e-10, rtol=1e-9)
+    npt.assert_allclose(latent_cov, expected_cov, atol=1e-10, rtol=1e-9)
+    npt.assert_allclose(noisy_cov, expected_cov + noise, atol=1e-10, rtol=1e-9)
+
+
+def test_marginal_kron_noisy_conditional_logp(kron_prediction_case):
+    gp, model, xnew, sigma, expected_mean, expected_cov = kron_prediction_case
+    prediction = gp.conditional("prediction", Xnew=xnew, pred_noise=True)
+    value = np.array([0.4, -0.1])
+    actual = model.compile_logp(vars=[prediction])({"prediction": value})
+    expected = stats.multivariate_normal.logpdf(
+        value, mean=expected_mean, cov=expected_cov + sigma**2 * np.eye(len(xnew))
+    )
+    npt.assert_allclose(actual, expected, atol=1e-10, rtol=1e-9)
