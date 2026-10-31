@@ -33,6 +33,7 @@ from pymc.blocking import DictToArrayBijection, RaveledVars
 from pymc.initial_point import PointType
 from pymc.pytensorf import (
     CallableTensor,
+    PointFunc,
     compile,
     floatX,
     join_nonshared_inputs,
@@ -480,7 +481,9 @@ class BinaryMetropolis(ArrayStep):
 
         if compile_kwargs is None:
             compile_kwargs = {}
-        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
+        super().__init__(
+            vars, [_compile_dependent_logp(model, vars, compile_kwargs)], blocked=blocked, rng=rng
+        )
 
     def astep(self, apoint: RaveledVars, *args) -> tuple[RaveledVars, StatsType]:
         logp = args[0]
@@ -613,7 +616,9 @@ class BinaryGibbsMetropolis(ArrayStep):
         if compile_kwargs is None:
             compile_kwargs = {}
 
-        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
+        super().__init__(
+            vars, [_compile_dependent_logp(model, vars, compile_kwargs)], blocked=blocked, rng=rng
+        )
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -752,7 +757,9 @@ class CategoricalGibbsMetropolis(ArrayStep):
 
         if compile_kwargs is None:
             compile_kwargs = {}
-        super().__init__(vars, [model.compile_logp(**compile_kwargs)], blocked=blocked, rng=rng)
+        super().__init__(
+            vars, [_compile_dependent_logp(model, vars, compile_kwargs)], blocked=blocked, rng=rng
+        )
 
     def reset_tuning(self):
         # There are no tuning parameters in this step method.
@@ -1255,3 +1262,12 @@ def delta_logp(
     f = compile([inarray1, inarray0], logp1 - logp0, **compile_kwargs)
     f.trust_input = True
     return f
+
+
+def _compile_dependent_logp(model, vars, compile_kwargs: dict) -> PointFunc:
+    """Compile the logp terms that depend on ``vars`` as a function of the model value variables.
+
+    The other terms cancel in the logp differences these step methods compute.
+    """
+    compile_kwargs = {"on_unused_input": "ignore", **compile_kwargs}
+    return model.compile_fn(model.dependent_logp(vars), inputs=model.value_vars, **compile_kwargs)
