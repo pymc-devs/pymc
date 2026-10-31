@@ -208,7 +208,7 @@ class CholeskyCorrTransform(Transform):
         L = L[..., diag_idx, diag_idx].set(1)
 
         # Normalize each row to unit L2 norm.
-        L /= pt.linalg.norm(L, axis=-1, ord=2)[..., None]
+        L = L / pt.sqrt(pt.sum(L**2, axis=-1, keepdims=True))
         return L
 
     def log_jac_det(self, unconstrained_vector: TensorLike, *inputs) -> TensorVariable:
