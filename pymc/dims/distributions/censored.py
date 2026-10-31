@@ -11,17 +11,94 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from typing import cast
+
 import numpy as np
 
-from pytensor.xtensor.random.variable import shared_rng as xtensor_shared_rng
+from pytensor.graph.basic import Variable
+from pytensor.xtensor import as_xtensor, broadcast
+from pytensor.xtensor.random import shared_rng
+from pytensor.xtensor.random.type import xrandom_generator_type
 
-from pymc.dims.distributions.core import DimDistribution, copy_docstring, expand_dist_dims
+from pymc.dims.distributions.core import (
+    DimDistribution,
+    DimSymbolicRandomVariable,
+    copy_docstring,
+    expand_dist_dims,
+)
 from pymc.distributions.censored import Censored as RegularCensored
-from pymc.distributions.censored import _is_unbounded
+from pymc.distributions.censored import _is_unbounded, support_point_censored
+from pymc.distributions.distribution import _support_point
+
+
+class DimCensoredRV(DimSymbolicRandomVariable):
+    """Censored distribution on XTensorVariables.
+
+    The logp is derived from the inner clip graph. The randomness belongs to
+    the censored dist input, so the RNG input is passed through unchanged.
+    """
+
+    inline_logprob = True
+    _print_name = ("Censored", "\\operatorname{Censored}")
+
+    @classmethod
+    def rv_op(
+        cls,
+        dist,
+        lower,
+        upper,
+        *,
+        core_dims=None,
+        extra_dims=None,
+        rng=None,
+        # The next rng is always returned; the argument exists only while
+        # the pytensor XRV constructors transition to doing the same
+        return_next_rng: bool = True,
+    ):
+        assert return_next_rng, "return_next_rng=False is not supported"
+        dist = DimDistribution._as_xtensor(dist)
+        lower = DimDistribution._as_xtensor(lower)
+        upper = DimDistribution._as_xtensor(upper)
+
+        # Any dimensions in extra_dims, or only present in lower, upper,
+        # must propagate back to the dist as `extra_dims`
+        bounds_sizes = lower.sizes | upper.sizes
+        dist_dims_set = set(dist.dims)
+        extra_dist_dims = (extra_dims or {}) | {
+            dim: size for dim, size in bounds_sizes.items() if dim not in dist_dims_set
+        }
+        if extra_dist_dims:
+            dist = expand_dist_dims(dist, extra_dist_dims)
+
+        # Preserve the dtype of discrete distributions when a bound is infinite.
+        clipped = dist.clip(
+            dist if _is_unbounded(lower, lower=True) else lower,
+            dist if _is_unbounded(upper, lower=False) else upper,
+        )
+        # The randomness belongs to the dist input, so the RNG is passed through.
+        dummy_rng = xrandom_generator_type("rng")
+        op = cls(
+            inputs=[dist, lower, upper, dummy_rng],
+            outputs=[clipped, dummy_rng],
+        )
+        if rng is None:
+            rng = shared_rng(seed=None)
+        censored, next_rng = cast(list[Variable], op(dist, lower, upper, rng, return_list=True))
+        return next_rng, censored
+
+
+@_support_point.register(DimCensoredRV)
+def dim_censored_support_point(op, rv, dist, lower, upper, rng):
+    # Align the inputs by name and reuse the regular CensoredRV implementation
+    dist, lower, upper = broadcast(dist, lower, upper)
+    sp = support_point_censored(op, rv.values, dist.values, lower.values, upper.values)
+    return as_xtensor(sp, dims=dist.type.dims).transpose(*rv.type.dims)
 
 
 @copy_docstring(RegularCensored)
 class Censored(DimDistribution):
+    xrv_op = DimCensoredRV.rv_op
+
     @classmethod
     def dist(cls, dist, *, lower=None, upper=None, dim_lengths, **kwargs):
         if lower is None:
@@ -29,39 +106,3 @@ class Censored(DimDistribution):
         if upper is None:
             upper = np.inf
         return super().dist([dist, lower, upper], dim_lengths=dim_lengths, **kwargs)
-
-    @classmethod
-    def xrv_op(cls, dist, lower, upper, core_dims=None, extra_dims=None, rng=None, **kwargs):
-        if extra_dims is None:
-            extra_dims = {}
-
-        dist = cls._as_xtensor(dist)
-        lower = cls._as_xtensor(lower)
-        upper = cls._as_xtensor(upper)
-
-        # Any dimensions in extra_dims, or only present in lower, upper,
-        # must propagate back to the dist as `extra_dims`
-        bounds_sizes = lower.sizes | upper.sizes
-        dist_dims_set = set(dist.dims)
-        extra_dist_dims = extra_dims | {
-            dim: size for dim, size in bounds_sizes.items() if dim not in dist_dims_set
-        }
-        if extra_dist_dims:
-            dist = expand_dist_dims(dist, extra_dist_dims)
-
-        # Probability is inferred from the clip operation.
-        # Infinite bounds are replaced by the variable itself, which clips nothing and,
-        # unlike an infinite constant, does not upcast discrete variables to float.
-        # TODO: Make this a SymbolicRandomVariable that can itself be resized
-        clipped = dist.clip(
-            dist if _is_unbounded(lower, lower=True) else lower,
-            dist if _is_unbounded(upper, lower=False) else upper,
-        )
-        if kwargs.get("return_next_rng"):
-            # TODO: Hack -- we have no rng of our own to thread forward.
-            # change_dist_size should grow a return_next_rng option so that
-            # Censored (and similar wrappers) can retrieve and forward the
-            # underlying dist's next_rng instead of returning a throwaway
-            # shared rng here.
-            return xtensor_shared_rng(seed=None), clipped
-        return clipped
