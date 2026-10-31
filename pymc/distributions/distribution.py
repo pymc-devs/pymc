@@ -51,6 +51,7 @@ from pymc.distributions.shape_utils import (
     rv_size_is_none,
     shape_from_dims,
 )
+from pymc.exceptions import ShapeError
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
 from pymc.logprob.basic import logp
 from pymc.logprob.rewriting import logprob_rewrites_db
@@ -551,6 +552,20 @@ class Distribution(metaclass=DistributionMeta):
                 kwargs["shape"] = tuple(observed.shape)
 
         rv_out = cls.dist(*args, **kwargs)
+
+        # gh-6406: an explicit shape/size/dims must not silently disagree with observed data
+        if observed is not None and isinstance(observed, np.ndarray):
+            rv_shape = rv_out.type.shape
+            if len(observed.shape) == len(rv_shape) and any(
+                expected is not None and expected != actual
+                for expected, actual in zip(rv_shape, observed.shape)
+            ):
+                raise ShapeError(
+                    f"The shape of the observed data for variable {name!r} is "
+                    f"incompatible with its explicit shape.",
+                    actual=observed.shape,
+                    expected=rv_shape,
+                )
 
         rv_out = model.register_rv(
             rv_out,
