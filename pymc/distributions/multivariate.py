@@ -1281,6 +1281,15 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     return norm + logp_lkj + logp_sd + det_invjac
 
 
+def _expand_packed_lower(packed, n):
+    """Batch-safe expansion of a (*, n(n+1)/2) packed lower-triangular vector to (*, n, n)."""
+    tril_idx = pt.tril_indices(n, k=0)
+    out = pt.zeros((*packed.shape[:-1], n, n), dtype=packed.dtype)
+    out = out[..., tril_idx[0], tril_idx[1]].set(packed)
+    out.tag.lower_triangular = True
+    return out
+
+
 class LKJCholeskyCov:
     r"""Wrapper class for covariance matrix with LKJ distributed correlations.
 
@@ -1445,13 +1454,11 @@ class LKJCholeskyCov:
 
     @classmethod
     def helper_deterministics(cls, n, packed_chol):
-        chol = pm.math.expand_packed_triangular(n, packed_chol, lower=True)
-        # compute covariance matrix
-        cov = pt.dot(chol, chol.T)
-        # extract standard deviations and rho
-        stds = pt.sqrt(pt.diag(cov))
-        inv_stds = 1 / stds
-        corr = inv_stds[None, :] * cov * inv_stds[:, None]
+        chol = _expand_packed_lower(packed_chol, n)
+        cov = chol @ chol.mT
+        stds = pt.sqrt(pt.diagonal(cov, axis1=-2, axis2=-1))
+        inv_stds = 1.0 / stds
+        corr = inv_stds[..., None, :] * cov * inv_stds[..., :, None]
         return chol, corr, stds
 
 
