@@ -401,6 +401,13 @@ class TestData:
         assert "columns" in pmodel.coords
         assert pmodel.named_vars_to_dims == {"observations": ("rows", "columns")}
 
+    def test_int_dataframe(self):
+        pd = pytest.importorskip("pandas")
+        df = pd.DataFrame({"a": [0, 1, 2], "b": [1, 2, 3]})
+        with pm.Model():
+            data = pm.Data("x", df)
+        assert data.dtype == pm.pytensorf._conversion_map[pytensor.config.floatX]
+
     def test_implicit_coords_xarray(self):
         xr = pytest.importorskip("xarray")
         data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))

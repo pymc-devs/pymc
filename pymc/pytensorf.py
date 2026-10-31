@@ -129,6 +129,9 @@ def convert_data(data) -> np.ndarray | Variable:
     # Data without dtype info is converted to float arrays by default.
     # This is the most common case for simple examples.
     if not hasattr(data, "dtype"):
+        # Integer and boolean DataFrames convert like the equivalent Series.
+        if hasattr(data, "dtypes") and ret.dtype.kind in "biu":
+            return smarttypeX(ret)
         return floatX(ret)
     # Otherwise we only convert the precision.
     return smarttypeX(ret)
