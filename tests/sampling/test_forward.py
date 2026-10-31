@@ -2369,6 +2369,42 @@ def test_vectorize_over_posterior_with_intermediate_rvs():
     assert np.array_equiv(a_ancestor2.eval(), idata.posterior.a.data)
 
 
+def test_vectorize_over_posterior_dims():
+    from pymc import dims as pmd
+
+    with pm.Model(coords={"obs_id": range(5)}) as model:
+        mu = pmd.Normal("mu", dims=("obs_id",))
+        sigma = pmd.HalfNormal("sigma")
+        obs = pmd.Normal("obs", mu=mu, sigma=sigma, dims=("obs_id",))
+        idata = pm.sample_prior_predictive(draws=10, random_seed=1)
+    # Posterior dims are matched by name, not position
+    posterior = idata.prior.to_dataset().transpose("obs_id", "draw", "chain")
+
+    [vectorized_obs] = vectorize_over_posterior(
+        outputs=[obs],
+        posterior=posterior,
+        input_rvs=[mu, sigma],
+    )
+    assert vectorized_obs.type.dims == ("chain", "draw", "obs_id")
+    assert vectorized_obs.eval().shape == (1, 10, 5)
+    [vectorized_mu] = get_var_by_name([vectorized_obs], "mu")
+    np.testing.assert_array_equal(
+        vectorized_mu.eval(), idata.prior["mu"].transpose("chain", "draw", "obs_id").data
+    )
+
+    # sigma is not given a posterior, so it must be resized over the sample dims
+    [vectorized_obs] = vectorize_over_posterior(
+        outputs=[obs],
+        posterior=posterior,
+        input_rvs=[mu],
+    )
+    assert vectorized_obs.type.dims == ("chain", "draw", "obs_id")
+    assert {rv.type.dims for rv in rvs_in_graph([vectorized_obs])} == {
+        ("chain", "draw"),
+        ("chain", "draw", "obs_id"),
+    }
+
+
 def test_change_dist_size_zero_sum_normal():
     with pm.Model():
         intercept = pm.ZeroSumNormal("intercept", sigma=1.0, shape=2)
