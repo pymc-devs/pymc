@@ -26,6 +26,7 @@ from pytensor.compile import Function, UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.link.vm import VMLinker
+from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -54,6 +55,7 @@ from pymc.pytensorf import (
 from pymc.vartypes import int_types
 
 
+@pytest.mark.parametrize("library", ["pandas", "polars"])
 @pytest.mark.parametrize(
     argnames="np_array",
     argvalues=[
@@ -62,18 +64,40 @@ from pymc.vartypes import int_types
         np.ones(shape=(10, 1)),
     ],
 )
-def test_pd_dataframe_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.DataFrame(np_array)
+def test_dataframe_as_tensor_variable(library: str, np_array: np.ndarray) -> None:
+    lib = pytest.importorskip(library)
+    df = lib.DataFrame(np_array)
     np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
 
 
+@pytest.mark.parametrize("library", ["pandas", "polars"])
 @pytest.mark.parametrize(
     argnames="np_array",
     argvalues=[np.array([1.0, 2.0, -1.0]), np.ones(shape=4), np.zeros(shape=10), [1, 2, 3, 4]],
 )
-def test_pd_series_as_tensor_variable(np_array: np.ndarray) -> None:
-    df = pd.Series(np_array)
-    np.testing.assert_array_equal(pt.as_tensor_variable(df).eval(), np_array)
+def test_series_as_tensor_variable(library: str, np_array: np.ndarray) -> None:
+    lib = pytest.importorskip(library)
+    series = lib.Series(np_array)
+    np.testing.assert_array_equal(pt.as_tensor_variable(series).eval(), np_array)
+
+
+def test_lazyframe_as_tensor_variable() -> None:
+    pl = pytest.importorskip("polars")
+    np_array = np.array([[1.0, 2.0], [3.0, 4.0]])
+    lazy = pl.DataFrame(np_array).lazy()
+    np.testing.assert_array_equal(pt.as_tensor_variable(lazy).eval(), np_array)
+
+
+def test_as_tensor_variable_unsupported_type_still_raises() -> None:
+    with pytest.raises(NotImplementedError, match="Cannot convert"):
+        pt.as_tensor_variable(object())
+
+
+def test_lazy_dispatch_registers_dataframe_type() -> None:
+    pl = pytest.importorskip("polars")
+    df = pl.DataFrame({"a": [1.0, 2.0]})
+    pt.as_tensor_variable(df)
+    assert type(df) in _as_tensor_variable.registry
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
@@ -284,6 +308,112 @@ def test_pandas_to_array_pandas_index():
     result = convert_data(data)
     expected = np.array([1, 2, 3])
     np.testing.assert_array_equal(result, expected)
+
+
+@pytest.mark.parametrize("input_dtype", ["int64", "float64"])
+def test_convert_data_polars(input_dtype):
+    pl = pytest.importorskip("polars")
+    dense_input = np.arange(9).reshape((3, 3)).astype(input_dtype)
+    missing_numpy_input = np.array([[np.nan, 1, np.nan], [3, np.nan, 5], [np.nan, 7, np.nan]])
+    masked_array_input = ma.array(dense_input, mask=(np.mod(dense_input, 2) == 0))
+
+    dense_output = convert_data(pl.DataFrame(dense_input))
+    assert isinstance(dense_output, np.ndarray)
+    assert not isinstance(dense_output, ma.MaskedArray)
+    assert dense_output.shape == dense_input.shape
+    npt.assert_allclose(dense_output, dense_input)
+
+    missing_output = convert_data(pl.DataFrame(missing_numpy_input))
+    assert isinstance(missing_output, ma.MaskedArray)
+    assert missing_output.shape == dense_input.shape
+    npt.assert_allclose(missing_output, masked_array_input)
+
+    series_output = convert_data(pl.Series(dense_input[0]))
+    assert isinstance(series_output, np.ndarray)
+    npt.assert_allclose(series_output, dense_input[0])
+
+
+def _null_handling_cases():
+    cases = []
+    try:
+        import polars as pl
+    except ImportError:
+        pl = None
+    if pl is not None:
+        cases += [
+            pytest.param(
+                lambda: pl.Series([1, None, 3]),
+                [1.0, np.nan, 3.0],
+                [False, True, False],
+                id="polars_int",
+            ),
+            pytest.param(
+                lambda: pl.Series([1.0, None, np.nan]),
+                [1.0, np.nan, np.nan],
+                [False, True, True],
+                id="polars_float_null_and_nan",
+            ),
+            pytest.param(
+                lambda: pl.Series(["a", None]), ["a", None], [False, True], id="polars_string"
+            ),
+            pytest.param(
+                lambda: pl.DataFrame({"f": [1.0, None], "i": [1, 2]}),
+                [[1.0, 1], [None, 2]],
+                [[False, False], [True, False]],
+                id="polars_mixed_numeric_frame",
+            ),
+        ]
+    cases += [
+        pytest.param(
+            lambda: pd.Series([1, None, 3], dtype="Int64"),
+            [1.0, np.nan, 3.0],
+            [False, True, False],
+            id="pandas_nullable_int",
+        ),
+        pytest.param(
+            lambda: pd.Series(["a", None]), ["a", None], [False, True], id="pandas_string"
+        ),
+    ]
+    return cases
+
+
+@pytest.mark.parametrize("make_input, expected_values, expected_mask", _null_handling_cases())
+def test_convert_data_null_handling(make_input, expected_values, expected_mask):
+    result = convert_data(make_input())
+    assert isinstance(result, ma.MaskedArray)
+    np.testing.assert_array_equal(result.mask, np.asarray(expected_mask))
+    expected = np.asarray(expected_values, dtype=object)
+    for value, exp, masked in zip(result.data.ravel(), expected.ravel(), result.mask.ravel()):
+        if masked:
+            continue
+        assert value == exp
+
+
+def test_narwhals_mask_frame_with_string_column():
+    """String columns must not be passed through fill_nan, which raises on non-float dtypes."""
+    pl = pytest.importorskip("polars")
+    df = pl.DataFrame({"f": [1.0, None, np.nan], "s": ["a", None, "c"], "i": [1, 2, 3]})
+    values, mask = pm.pytensorf._narwhals_to_numpy(df)
+    assert values.shape == (3, 3)
+    np.testing.assert_array_equal(
+        mask, [[False, False, False], [True, True, False], [True, False, False]]
+    )
+
+
+def test_convert_data_object_ndarray_no_nan_check():
+    data = np.array(["a", "b"], dtype=object)
+    result = convert_data(data)
+    assert isinstance(result, np.ndarray)
+    assert not isinstance(result, ma.MaskedArray)
+    np.testing.assert_array_equal(result, data)
+
+
+def test_convert_data_xarray_nan_masked():
+    xr = pytest.importorskip("xarray")
+    data = xr.DataArray([1.0, np.nan, 3.0])
+    result = convert_data(data)
+    assert isinstance(result, ma.MaskedArray)
+    np.testing.assert_array_equal(result.mask, [False, True, False])
 
 
 class TestCompile:
