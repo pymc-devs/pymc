@@ -150,7 +150,9 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
     assert isinstance(xt.owner.op, TruncatedRV)
     assert xt.type.dtype == x.type.dtype
 
-    xt_draws = draw(xt, draws=5)
+    # Unseeded on purpose. 2000 values per parametrization let the loose p-value
+    # threshold below keep its power while making false failures very rare.
+    xt_draws = draw(xt, draws=2000 if scalar else 20)
     assert np.all(xt_draws >= lower)
     assert np.all(xt_draws <= upper)
     assert np.unique(xt_draws).size == xt_draws.size
@@ -162,7 +164,7 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
         loc,
         scale,
     )
-    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 0.001
+    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 1e-5
 
     # Test max_n_steps
     xt = Truncated.dist(x, lower=lower, upper=upper, max_n_steps=1)
