@@ -18,11 +18,12 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from scipy.integrate import trapezoid
 from scipy.spatial import distance
 
 import pymc as pm
 
-from pymc.gp.hsgp_approx import calc_eigenvalues, calc_eigenvectors
+from pymc.gp.hsgp_approx import approx_hsgp_periodic_m, calc_eigenvalues, calc_eigenvectors
 
 BOUNDARIES = ["dirichlet", "neumann", "dirichlet-neumann", "neumann-dirichlet"]
 
@@ -458,15 +459,37 @@ class TestHSGPPeriodic(_BaseFixtures):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
+    @pytest.mark.parametrize("ls", [0.2, 0.7, 2.0])
+    def test_prior_covariance(self, ls):
+        """The covariance implied by the basis and coefficients should match the full GP kernel."""
+        scale, period = 3.0, 1.3
+        X = np.linspace(-2, 3, 40)[:, None]
+        cov_func = pm.gp.cov.Periodic(1, period=period, ls=ls)
+        hsgp = pm.gp.HSGPPeriodic(m=100, scale=scale, cov_func=cov_func)
+        (phi_cos, phi_sin), psd = hsgp.prior_linearized(X)
+        phi_cos, phi_sin, psd = pytensor.function([], [phi_cos, phi_sin, psd])()
+
+        K_approx = (phi_cos * psd**2) @ phi_cos.T + (phi_sin * psd**2) @ phi_sin.T
+        K_true = scale**2 * cov_func(X).eval()
+        np.testing.assert_allclose(K_approx, K_true, atol=1e-10)
+
+    @pytest.mark.parametrize("ls", [0.05, 0.2, 0.7, 2.0])
+    def test_approx_hsgp_periodic_m(self, ls):
+        """The recommended m should meet the accuracy criterion of Ruitort-Mayol et al., Appendix B."""
+        m = approx_hsgp_periodic_m(ls)
+        cov_func = pm.gp.cov.Periodic(1, period=1, ls=ls)
+        tau = np.linspace(0, 1, 2001)
+        J = np.arange(m)
+        q2 = cov_func.power_spectral_density_approx(J).eval()
+        k_approx = np.cos(2 * np.pi * J[None, :] * tau[:, None]) @ q2
+        k_true = cov_func(np.array([[0.0]]), tau[:, None]).eval().flatten()
+        assert trapezoid(np.abs(k_true - k_approx), tau) < 0.005 * trapezoid(k_true, tau)
+
+        with pytest.raises(ValueError, match="must be positive"):
+            approx_hsgp_periodic_m(0.0)
+
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("eta", [100.0])
-    @pytest.mark.xfail(
-        reason="For `pm.gp.cov.Periodic`, this test does not pass.\
-        The mmd is around `0.0468`.\
-        The test passes more often when subtracting the mean from the mean from the samples.\
-        It might be that the period is slightly off for the approximate power spectral density.\
-        See https://github.com/pymc-devs/pymc/pull/6877/ for the full discussion."
-    )
     def test_prior(self, model, cov_func, eta, X1, rng):
         """Compare HSGPPeriodic prior to unapproximated GP prior, pm.gp.Latent. Draw samples from the
         prior and compare them using MMD two sample test.
