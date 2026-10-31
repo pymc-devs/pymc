@@ -49,6 +49,7 @@ from pymc.dims import (
     TruncatedNormal,
     Uniform,
     VonMises,
+    Wald,
     Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
@@ -465,6 +466,18 @@ def test_kumaraswamy():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Kumaraswamy("x", a=2, b=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_wald():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Wald("x", mu=2.0, lam=3.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Wald("x", mu=2.0, lam=3.0, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
