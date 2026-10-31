@@ -902,7 +902,7 @@ class ExpTransform(Transform):
         return pt.log(value)
 
     def log_jac_det(self, value, *inputs):
-        return -pt.log(value)
+        return pt.switch(value > 0, -pt.log(value), np.nan)
 
 
 class AbsTransform(Transform):
