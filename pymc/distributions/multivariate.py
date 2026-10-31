@@ -1749,11 +1749,23 @@ class LKJCorr(BoundedContinuous):
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
+    dims : tuple of str, optional
+        When provided, must be a tuple of at least two registered model coord names.
+        The last two dims label the rows and columns of the matrix; earlier dims are
+        batch. Both matrix dims must already be registered in the model's coords with
+        length `n`. With ``store_packed=True``, a packed coord ``f"{name}__corr_packed"``
+        of ``"{row_label},{col_label}"`` strings labels the strict upper triangle of the
+        correlation matrix.
+    store_packed : bool, default=False
+        If `True`, add a Deterministic ``f"{name}_corr"`` holding the strict upper triangle
+        of the correlation matrix ``rv @ rv.mT``. Summarize this variable in ArviZ instead
+        of the RV, whose constant upper triangle produces NaN ``r_hat`` and ``ess``. When
+        combined with `dims`, `n` must be constant.
 
     Notes
     -----
     This is mainly useful if you want the standard deviations to be fixed, as
-    LKJCholsekyCov is optimized for the case where they come from a distribution.
+    LKJCholeskyCov is optimized for the case where they come from a distribution.
 
     Examples
     --------
@@ -1786,6 +1798,28 @@ class LKJCorr(BoundedContinuous):
 
     rv_type = LKJCorrRV
     rv_op = LKJCorrRV.rv_op
+
+    def __new__(cls, name, n, eta, *, store_packed=False, **kwargs):
+        dims = kwargs.get("dims", None)
+
+        corr_dims = None
+        if store_packed and dims is not None:
+            dims, n_int = _parse_matrix_dims(dims, n, context="LKJCorr")
+            batch_dims, row_dim, col_dim = dims[:-2], dims[-2], dims[-1]
+            corr_packed_dim_name = f"{name}__corr_packed"
+            model = pm.modelcontext(None)
+            _register_packed_pair_coord(
+                model, corr_packed_dim_name, row_dim, col_dim, n_int, strict_upper=True
+            )
+            corr_dims = (*batch_dims, corr_packed_dim_name)
+
+        rv = super().__new__(cls, name, n=n, eta=eta, **kwargs)
+
+        if store_packed:
+            corr_packed = _strict_upper_packed(rv @ rv.mT, n)
+            pm.Deterministic(f"{name}_corr", corr_packed, dims=corr_dims)
+
+        return rv
 
     @classmethod
     def dist(cls, n, eta, **kwargs):

@@ -1530,7 +1530,9 @@ class TestMvNormalMisc:
             prior = pm.sample_prior_predictive(draws=10, return_inferencedata=False)
 
         assert prior["corr_mat"].shape == (10, 3, 3)  # square
-        assert (prior["corr_mat"] == prior["corr_mat"].transpose(0, 2, 1)).all()  # symmetric
+        np.testing.assert_allclose(
+            prior["corr_mat"], prior["corr_mat"].transpose(0, 2, 1)
+        )  # symmetric
 
         np.testing.assert_allclose(
             prior["corr_mat"][:, [0, 1, 2], [0, 1, 2]], 1.0
@@ -2574,6 +2576,49 @@ class TestLKJCholeskyCovDims:
 
         # Strict upper triangle has n*(n-1)/2 = 3 entries
         assert idata.prior["cov_corr"].shape[-1] == 3
+
+
+class TestLKJCorrDims:
+    """Tests for the auto-dims + packed Deterministic API on `pm.LKJCorr`."""
+
+    def test_basic_dims_and_packed_deterministic(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"]}
+        with pm.Model(coords=coords) as m:
+            pm.LKJCorr("L", n=3, eta=2, dims=("g", "g_"), store_packed=True)
+
+        assert m.named_vars_to_dims["L"] == ("g", "g_")
+        assert "L__corr_packed" in m.coords
+        assert list(m.coords["L__corr_packed"]) == ["a,b", "a,c", "b,c"]
+        assert m.named_vars_to_dims["L_corr"] == ("L__corr_packed",)
+
+    def test_inferencedata_pair_coord_selection(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"]}
+        with pm.Model(coords=coords):
+            pm.LKJCorr("L", n=3, eta=2, dims=("g", "g_"), store_packed=True)
+            idata = pm.sample_prior_predictive(draws=20, random_seed=0)
+
+        ds = idata.prior
+        assert ds["L"].dims[-2:] == ("g", "g_")
+        assert ds["L_corr"].dims[-1] == "L__corr_packed"
+        sel = ds["L_corr"].sel(L__corr_packed="a,b")
+        assert sel.shape == (1, 20)
+
+    def test_single_dim_raises(self):
+        with pm.Model(coords={"g": ["a", "b", "c"]}):
+            with pytest.raises(ValueError, match="must include at least the two matrix dims"):
+                pm.LKJCorr("L", n=3, eta=2, dims=("g",), store_packed=True)
+
+    def test_packed_deterministic_is_opt_in(self):
+        with pm.Model() as m:
+            pm.LKJCorr("L", n=3, eta=2)
+        assert "L_corr" not in m.named_vars
+
+    def test_no_dims_emits_packed_deterministic(self):
+        with pm.Model() as m:
+            pm.LKJCorr("L", n=3, eta=2, store_packed=True)
+        assert "L_corr" in m.named_vars
+        # Strict upper triangle has n*(n-1)/2 = 3 entries
+        assert m.named_vars["L_corr"].type.shape[-1] == 3
 
 
 class TestICAR(BaseTestDistributionRandom):
