@@ -16,18 +16,37 @@
 import re
 import sys
 
+from collections import deque
 from collections.abc import Iterable
 from functools import partial
+from numbers import Integral
 
 import numpy as np
 import pytensor.tensor as pt
 
 from pytensor.compile import SharedVariable
+from pytensor.compile.builders import OpFromGraph
+from pytensor.compile.ops import ViewOp
 from pytensor.graph.basic import Constant, Variable
-from pytensor.graph.traversal import walk
+from pytensor.graph.traversal import ancestors, walk
 from pytensor.graph.type import HasShape
-from pytensor.tensor.elemwise import DimShuffle
+from pytensor.printing import (
+    FunctionPrinter,
+    OperatorPrinter,
+    PatternPrinter,
+    PPrinter,
+    Printer,
+    PrinterState,
+    set_precedence,
+)
+from pytensor.printing import pprint as _pytensor_pprint
+from pytensor.scan.op import Scan
+from pytensor.tensor.blockwise import Blockwise
+from pytensor.tensor.elemwise import DimShuffle, Elemwise
+from pytensor.tensor.math import Dot, Sum
+from pytensor.tensor.random.op import RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.subtensor import AdvancedSubtensor, Subtensor
 from pytensor.tensor.type_other import NoneTypeT
 from pytensor.tensor.variable import TensorVariable
 from rich.box import SIMPLE_HEAD
@@ -139,11 +158,36 @@ def str_for_data_var(
             return rf"{print_name} = Data"
 
 
-def str_for_model(model: Model, formatting: str = "plain", include_params: bool = True) -> str:
+def str_for_model(
+    model: Model,
+    formatting: str = "plain",
+    include_params: bool = True,
+    deterministic_exprs: bool = False,
+) -> str:
     """Make a human-readable string representation of Model.
 
     This lists all random variables and their distributions, optionally
     including parameter values.
+
+    Parameters
+    ----------
+    model
+        The model to represent.
+    formatting
+        Either "plain" or "latex".
+    include_params
+        Whether to include parameter values.
+    deterministic_exprs
+        If True, Deterministics and Potentials render their full symbolic
+        expression instead of an opaque ``f(inputs)`` placeholder. Traversal
+        stops at named model variables, matched by identity, which are
+        rendered by name. Purely a graph traversal: no rewrites, compilation,
+        or evaluation happen. ``include_params=False`` takes precedence,
+        falling back to the opaque ``Deterministic``/``Potential`` rendering.
+        Expressions are bounded: unnamed subgraphs deeper than 64 levels
+        render as the opaque placeholder, and if more than 1000 nodes would
+        still be rendered, the whole expression degrades to it. Naming
+        intermediates keeps large models fully expanded.
     """
     named_vars: set[Variable] = set()
     named_vars.update(model.data_vars)
@@ -161,6 +205,7 @@ def str_for_model(model: Model, formatting: str = "plain", include_params: bool 
         formatting=formatting,
         include_params=include_params,
         named_vars=named_vars,
+        deterministic_exprs=deterministic_exprs,
     )
     sfdv = partial(str_for_data_var, formatting=formatting, include_params=include_params)
 
@@ -213,18 +258,35 @@ def str_for_potential_or_deterministic(
     include_params: bool = True,
     dist_name: str = "Deterministic",
     named_vars: set[Variable] | None = None,
+    deterministic_exprs: bool = False,
 ) -> str:
     """Make a human-readable string representation of a Deterministic or Potential in a model.
 
     This can be either LaTeX or plain, optionally with distribution parameter
     values included.
+
+    ``deterministic_exprs`` only takes effect when ``include_params=True``;
+    otherwise the opaque ``Deterministic``/``Potential`` form is rendered.
+    If ``named_vars`` is omitted, every named variable reachable from ``var``
+    is treated as a known variable and rendered by name, so standalone calls
+    never inline distributions into the expression.
+
+    Expression bodies are bounded: unnamed subgraphs deeper than 64 levels
+    render as the opaque placeholder, and if more than 1000 nodes would
+    still be rendered, the whole expression degrades to it.
     """
     if named_vars is None:
-        named_vars = set()
+        named_vars = {v for v in ancestors([var]) if v.name is not None}
 
     print_name = var.name if var.name is not None else "<unnamed>"
     sep_plain = "~" if dist_name == "Potential" else "="
     sep_latex = r"\sim" if dist_name == "Potential" else "="
+    if deterministic_exprs and include_params:
+        expr = _str_for_expression_body(var, formatting=formatting, named_vars=named_vars)
+        if "latex" in formatting:
+            latex_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
+            return rf"${latex_name} {sep_latex} {expr}$"
+        return rf"{print_name} {sep_plain} {expr}"
     if "latex" in formatting:
         print_name = r"\text{" + _latex_escape(print_name.strip("$")) + "}"
         if include_params:
@@ -323,6 +385,587 @@ def _str_for_expression(var: Variable, formatting: str, named_vars: set[Variable
         )
     else:
         return r"f(" + ", ".join([n.strip("$") for n in names]) + ")"
+
+
+class _TransparentFirstInputPrinter(Printer):
+    """Render a unary ``ViewOp`` as its first input.
+
+    Identity wrappers around deterministics and other unnamed view ops carry
+    no mathematical content, so they are skipped during rendering.
+    """
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        r = pstate.pprinter.process(output.owner.inputs[0], pstate)
+        pstate.memo[output] = r
+        return r
+
+
+def _dimshuffle_is_broadcast_only(op) -> bool:
+    """True if a DimShuffle only inserts 'x' axes or drops broadcastable ones.
+
+    Surviving axes must stay in their original order, i.e. nothing is
+    permuted and dropping the node cannot change the printed expression.
+    """
+    last = -1
+    for o in op.new_order:
+        if o == "x":
+            continue
+        if not isinstance(o, Integral) or o <= last:
+            return False
+        last = int(o)
+    return True
+
+
+class _DimShufflePrinter(Printer):
+    """Render DimShuffle without hiding real axis permutations.
+
+    Pure broadcasting renders transparently; a full axis reversal renders as
+    a transpose (``X.T`` / ``{X}^{T}``); any other permutation shows its axis
+    order so the printed expression stays faithful to the graph.
+    """
+
+    def __init__(self, formatting: str):
+        self.formatting = formatting
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        op = output.owner.op
+        with set_precedence(pstate):
+            arg = pstate.pprinter.process(output.owner.inputs[0], pstate)
+        if _dimshuffle_is_broadcast_only(op):
+            r = arg
+        elif op.new_order == tuple(range(output.type.ndim))[::-1]:
+            r = rf"{{{arg}}}^{{T}}" if "latex" in self.formatting else rf"{arg}.T"
+        else:
+            order = tuple(int(o) for o in op.new_order)
+            if "latex" in self.formatting:
+                shown = r",\ ".join(str(o) for o in order)
+                r = rf"\operatorname{{transpose}}\left({arg},~\text{{order}}=\left({shown}\right)\right)"
+            else:
+                r = rf"transpose({arg}, order={order})"
+        pstate.memo[output] = r
+        return r
+
+
+def _is_matmul(r) -> bool:
+    """Matrix products: a plain Dot or a Blockwise wrapping a core Dot."""
+    op = getattr(r.owner, "op", None)
+    if op is None:
+        return False
+    return isinstance(op, Dot) or (isinstance(op, Blockwise) and isinstance(op.core_op, Dot))
+
+
+class _BodyLeafPrinter(Printer):
+    """Render named model variables by name, without expanding their graphs."""
+
+    def __init__(self, formatting: str):
+        self.formatting = formatting
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        # The leaf condition may match an unnamed ViewOp wrapper whose
+        # unwrapped target is the named variable being rendered.
+        name = _unwrap_viewops(output).name.strip("$")
+        if "latex" in self.formatting:
+            r = rf"\text{{{_latex_escape(name)}}}"
+        else:
+            r = name
+        pstate.memo[output] = r
+        return r
+
+
+class _BodyDistPrinter(Printer):
+    """Render anonymous distributions inside bodies as distribution calls.
+
+    Delegates to ``str_for_dist`` so an inline prior such as
+    ``pm.Normal.dist(0, 1)`` looks like its named counterpart on RV lines,
+    instead of leaking graph internals (including a nondeterministic RNG
+    memory address) into the repr.
+    """
+
+    def __init__(self, formatting: str, named_vars: set[Variable]):
+        self.formatting = formatting
+        self.named_vars = named_vars
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        r = str_for_dist(output, formatting=self.formatting, named_vars=self.named_vars)
+        # str_for_dist wraps latex in $...$ for standalone use; strip for inline bodies
+        r = r.strip("$")
+        pstate.memo[output] = r
+        return r
+
+
+class _LatexFunctionPrinter(Printer):
+    r"""Fallback LaTeX rendering: \operatorname{name}(args).
+
+    Distinguishing op parameters are carried into the output so distinct ops
+    never collapse onto the same rendering: ``Blockwise`` and ``Elemwise``
+    are unwrapped to their inner op, and casts show their target dtype.
+    """
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        op = output.owner.op
+        dtype = None
+        if isinstance(op, Blockwise):
+            name = type(op.core_op).__name__
+        elif isinstance(op, Elemwise):
+            scalar_op = op.scalar_op
+            name = type(scalar_op).__name__.lower()
+            o_type = getattr(scalar_op, "o_type", None)
+            if o_type is not None:
+                dtype = o_type.dtype
+        else:
+            name = getattr(op, "name", None) or type(op).__name__
+        name = re.sub(r"\W+", "", str(name)) or "op"
+        with set_precedence(pstate):
+            args = [pstate.pprinter.process(i, pstate) for i in output.owner.inputs]
+        if dtype is not None:
+            args.append(rf"\text{{{dtype}}}")
+        r = rf"\operatorname{{{name}}}\left({r',\ '.join(args)}\right)"
+        pstate.memo[output] = r
+        return r
+
+
+class _LatexSumPrinter(Printer):
+    r"""LaTeX Sum rendering that keeps the reduction axes visible."""
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        op = output.owner.op
+        with set_precedence(pstate):
+            arg = pstate.pprinter.process(output.owner.inputs[0], pstate)
+        if op.axis is None:
+            r = rf"\sum\left({arg}\right)"
+        else:
+            axes = r",\ ".join(str(int(a)) for a in op.axis)
+            r = rf"\sum_{{{axes}}}\left({arg}\right)"
+        pstate.memo[output] = r
+        return r
+
+
+class _BodyConstantPrinter(Printer):
+    """Render constants inside expression bodies.
+
+    Scalars and single-element arrays render their value, short 1-D arrays
+    inline their values, and larger arrays describe their dtype and shape
+    instead: geometry is the information a reader needs, and the values
+    would flood the line. This only affects opt-in expression bodies;
+    ``_str_for_constant_value`` keeps default ``str_for_model`` output
+    unchanged.
+    """
+
+    def __init__(self, formatting: str):
+        self.formatting = formatting
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        data = output.data
+        if isinstance(data, np.ndarray):
+            r = self._render_array(data)
+        else:
+            # e.g. NoneConst placeholders inside RV signatures
+            r = str(data)
+        pstate.memo[output] = r
+        return r
+
+    def _render_array(self, data: np.ndarray) -> str:
+        latex = "latex" in self.formatting
+        if data.ndim == 0 or data.size == 1:
+            return _str_for_constant_value(data, self.formatting)
+        if data.ndim == 1 and data.size <= _MAX_INLINE_CONST_ELEMENTS:
+            sep = r",\ " if latex else ", "
+            values = sep.join(f"{v:.3g}" for v in data)
+            return rf"\left[{values}\right]" if latex else f"[{values}]"
+        shape = ", ".join(map(str, data.shape))
+        if not latex:
+            return f"<constant {data.dtype} ({shape})>"
+        number_set = {"f": r"\mathbb{R}", "i": r"\mathbb{Z}", "u": r"\mathbb{Z}"}.get(
+            data.dtype.kind
+        )
+        if number_set is None:
+            return rf"\text{{<constant {data.dtype} ({shape})}}>"
+        dims = r" \times ".join(map(str, data.shape))
+        return rf"\text{{<constant {data.dtype}>}} \in {number_set}^{{{dims}}}"
+
+
+class _OwnerlessLeafPrinter(Printer):
+    r"""Render ownerless leaves consistently across formats.
+
+    A named-but-not-in-model variable (e.g. an external shared container)
+    renders by name; an anonymous one by its type, mirroring plain text.
+    """
+
+    def __init__(self, formatting: str):
+        self.formatting = formatting
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        name = getattr(output, "name", None)
+        r = name.strip("$") if name is not None else f"<{output.type}>"
+        if "latex" in self.formatting:
+            r = rf"\text{{{_latex_escape(r)}}}"
+        pstate.memo[output] = r
+        return r
+
+
+def _is_unary_viewop(r) -> bool:
+    return r.owner is not None and isinstance(r.owner.op, ViewOp) and len(r.owner.inputs) == 1
+
+
+def _is_random_op(r) -> bool:
+    # Covers both pytensor RandomVariables and PyMC SymbolicRandomVariables,
+    # which also derive from RNGConsumerOp.
+    return r.owner is not None and isinstance(r.owner.op, RNGConsumerOp)
+
+
+def _hides_inner_graph(r) -> bool:
+    """True for nodes whose rendering would leak inner-graph machinery.
+
+    Ops like ``Scan`` and ``OpFromGraph`` carry their own subgraph: printing
+    their inputs shows allocation machinery while never showing the loop
+    body. Slicing such a result also leaks the slice's index machinery, so it
+    is hidden as well.
+    """
+    if r.owner is None:
+        return False
+    op = r.owner.op
+    if isinstance(op, Scan | OpFromGraph):
+        return True
+    return isinstance(op, Subtensor | AdvancedSubtensor) and _hides_inner_graph(r.owner.inputs[0])
+
+
+class _InnerGraphOpPrinter(Printer):
+    """Render inner-graph ops as an opaque ``f(...)`` placeholder."""
+
+    def __init__(self, formatting: str, named_vars: set[Variable]):
+        self.formatting = formatting
+        self.named_vars = named_vars
+
+    def process(self, output, pstate):
+        if output in pstate.memo:
+            return pstate.memo[output]
+        r = _str_for_expression(output, self.formatting, self.named_vars)
+        pstate.memo[output] = r
+        return r
+
+
+class _LeafGuardPrinter(Printer):
+    """Intercept a dict-keyed printer so named model leaves still win.
+
+    ``PPrinter.process`` checks dict-keyed registrations before every
+    condition rule, so an op instance shared between a named leaf's owner and
+    ordinary nodes would otherwise expand past the leaf boundary.
+    """
+
+    def __init__(self, inner: Printer, named_leaf_condition, leaf_printer: Printer):
+        self.inner = inner
+        self.named_leaf_condition = named_leaf_condition
+        self.leaf_printer = leaf_printer
+
+    def process(self, output, pstate):
+        if self.named_leaf_condition(pstate, output):
+            return self.leaf_printer.process(output, pstate)
+        return self.inner.process(output, pstate)
+
+
+def _shield_named_leaves(
+    printer: PPrinter, named_leaf_condition, leaf_printer: Printer, named_vars: set[Variable]
+):
+    """Wrap dict-keyed registrations that could swallow a named leaf."""
+    ops = {v.owner.op for v in named_vars if getattr(v, "owner", None) is not None}
+    for op in ops:
+        for key in (op, type(op)):
+            inner = printer.printers_dict.get(key)
+            if inner is not None:
+                printer.printers_dict[key] = _LeafGuardPrinter(
+                    inner, named_leaf_condition, leaf_printer
+                )
+                break
+
+
+def _unwrap_viewops(r):
+    """Descend through identity wrappers, but never past a named variable.
+
+    Named Deterministics are themselves unary ``ViewOp`` outputs
+    (``view_op(var, name=...)``), so unwrapping must treat any named node as
+    a hard boundary.
+    """
+    while getattr(r, "name", None) is None and _is_unary_viewop(r):
+        r = r.owner.inputs[0]
+    return r
+
+
+def _make_plain_body_printer(named_leaf_condition, named_vars: set[Variable]) -> PPrinter:
+    """Clone the global pytensor printer with model-aware overrides.
+
+    Inheriting the global printer's registrations gives plain-text coverage of
+    many ops for free.
+
+    Anonymous distributions are rendered via ``str_for_dist`` (like named RV
+    lines) rather than the inherited raw-RNG rendering, which leaks a
+    nondeterministic memory address. Matrix products print as ``@`` (the
+    inherited registration emits a LaTeX escape into plain output), real axis
+    permutations stay visible, and inner-graph ops degrade to opaque
+    placeholders.
+
+    Dict-keyed registrations outrank every condition rule in
+    ``PPrinter.process``, so ``DimShuffle`` and ``Scan`` are overridden in
+    kind, and entries shared with a named leaf's owner are wrapped via
+    ``_shield_named_leaves``.
+    """
+    leaf_printer = _BodyLeafPrinter("plain")
+    printer = _pytensor_pprint.clone_assign(DimShuffle, _DimShufflePrinter("plain"))
+    printer = printer.clone_assign(Scan, _InnerGraphOpPrinter("plain", named_vars))
+    at_printer = OperatorPrinter("@", -1, "left")
+    # pytensor registers its Dot singleton by instance, which outranks the
+    # class-keyed entry assigned next; override it in kind
+    printer = printer.clone_assign(Dot, at_printer)
+    for k in [k for k in printer.printers_dict if isinstance(k, Dot)]:
+        printer.printers_dict[k] = at_printer
+    printer = printer.clone_assign(
+        lambda pstate, r: _is_matmul(r),
+        OperatorPrinter("@", -1, "left"),
+    )
+    printer = printer.clone_assign(
+        lambda pstate, r: _is_random_op(r),
+        _BodyDistPrinter("plain", named_vars),
+    )
+    printer = printer.clone_assign(
+        lambda pstate, r: _is_unary_viewop(r),
+        _TransparentFirstInputPrinter(),
+    )
+    printer = printer.clone_assign(
+        lambda pstate, r: _hides_inner_graph(r),
+        _InnerGraphOpPrinter("plain", named_vars),
+    )
+    printer = printer.clone_assign(
+        lambda pstate, r: isinstance(r, Constant),
+        _BodyConstantPrinter("plain"),
+    )
+    printer = printer.clone_assign(
+        lambda pstate, r: r.owner is None and not isinstance(r, Constant),
+        _OwnerlessLeafPrinter("plain"),
+    )
+    printer = printer.clone_assign(named_leaf_condition, leaf_printer)
+    _shield_named_leaves(printer, named_leaf_condition, leaf_printer, named_vars)
+    return printer
+
+
+def _make_latex_body_printer(named_leaf_condition, named_vars: set[Variable]) -> PPrinter:
+    r"""A fresh printer rendering expression bodies as LaTeX.
+
+    Priority is the reverse of assignment order (``assign`` inserts at head).
+    Ops without a dedicated registration degrade gracefully to
+    ``\\operatorname{name}(args)``.
+
+    Dict-keyed registrations outrank every condition rule in
+    ``PPrinter.process``. Condition-based ViewOp handling must therefore stay
+    below the named-leaf rule, which resolves ViewOp wrappers itself;
+    DimShuffle is overridden with a dict key because pytensor's own dict
+    entry would otherwise take precedence (DimShuffle outputs are never
+    named, so it cannot preempt the leaf rule).
+    """
+    leaf_printer = _BodyLeafPrinter("latex")
+    printer = PPrinter()
+    printer.assign(lambda pstate, r: True, _LatexFunctionPrinter())  # lowest priority
+    printer.assign(lambda pstate, r: r.owner.op is pt.exp, FunctionPrinter([r"\exp"]))
+    printer.assign(lambda pstate, r: r.owner.op is pt.log, FunctionPrinter([r"\log"]))
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.sqrt,
+        PatternPrinter((r"\sqrt{%(0)s}",)),
+    )
+    printer.assign(lambda pstate, r: r.owner.op is pt.sin, FunctionPrinter([r"\sin"]))
+    printer.assign(lambda pstate, r: r.owner.op is pt.cos, FunctionPrinter([r"\cos"]))
+    printer.assign(lambda pstate, r: r.owner.op is pt.tanh, FunctionPrinter([r"\tanh"]))
+    printer.assign(
+        lambda pstate, r: isinstance(r.owner.op, Sum),
+        _LatexSumPrinter(),
+    )
+    printer.assign(
+        lambda pstate, r: _is_matmul(r),
+        PatternPrinter((r"(%(0)s \cdot %(1)s)",)),
+    )
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.true_div,
+        PatternPrinter((r"\frac{%(0)s}{%(1)s}",)),
+    )
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.pow,
+        PatternPrinter((r"{%(0)s}^{%(1)s}",)),
+    )
+    printer.assign(lambda pstate, r: r.owner.op is pt.neg, OperatorPrinter("-", 0, "either"))
+    printer.assign(lambda pstate, r: r.owner.op is pt.sub, OperatorPrinter("-", -2, "left"))
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.add,
+        OperatorPrinter("+", -2, "either"),
+    )
+    printer.assign(
+        lambda pstate, r: r.owner.op is pt.mul,
+        OperatorPrinter(r"\cdot", -1, "either"),
+    )
+    # Anonymous distributions render as distribution calls; without this they
+    # would fall through to conditions that assume r.owner is not None and
+    # crash on their ownerless rng/size inputs.
+    # Ownerless leaves (e.g. unnamed shared variables referenced directly)
+    # must terminate here: the operator conditions below assume r.owner.
+    printer.assign(
+        lambda pstate, r: r.owner is None and not isinstance(r, Constant),
+        _OwnerlessLeafPrinter("latex"),
+    )
+    printer.assign(
+        lambda pstate, r: _is_random_op(r),
+        _BodyDistPrinter("latex", named_vars),
+    )
+    # Condition-based ViewOp handling: must stay below the named-leaf rule,
+    # which resolves ViewOp wrappers itself.
+    printer.assign(lambda pstate, r: _is_unary_viewop(r), _TransparentFirstInputPrinter())
+    printer.assign(DimShuffle, _DimShufflePrinter("latex"))
+    # Inner-graph ops (and slices thereof) hide their machinery behind the
+    # opaque placeholder; placed above the generic fallback so Scan results
+    # sliced through Subtensor conditions collapse entirely.
+    printer.assign(
+        lambda pstate, r: _hides_inner_graph(r),
+        _InnerGraphOpPrinter("latex", named_vars),
+    )
+    printer.assign(
+        lambda pstate, r: isinstance(r, Constant),
+        _BodyConstantPrinter("latex"),
+    )
+    printer.assign(named_leaf_condition, leaf_printer)  # highest priority
+    _shield_named_leaves(printer, named_leaf_condition, leaf_printer, named_vars)
+    return printer
+
+
+def _strip_outer_parens(s: str) -> str:
+    while s.startswith("(") and s.endswith(")") and _parens_balanced(s[1:-1]):
+        s = s[1:-1]
+    return s
+
+
+def _parens_balanced(s: str) -> bool:
+    depth = 0
+    for char in s:
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+            if depth < 0:
+                return False
+    return depth == 0
+
+
+_MAX_EXPR_NODES = 1000
+_MAX_EXPR_DEPTH = 64
+_MAX_INLINE_CONST_ELEMENTS = 4
+
+
+def _is_expr_leaf(r: Variable, leaf_vars: set[Variable]) -> bool:
+    """True for nodes rendered atomically, without expanding their inputs."""
+    return (
+        _unwrap_viewops(r) in leaf_vars
+        or isinstance(r, Constant)
+        or r.owner is None
+        or _is_random_op(r)
+        or _hides_inner_graph(r)
+    )
+
+
+def _print_plan(body: Variable, leaf_vars: set[Variable]) -> tuple[set[Variable], bool]:
+    """Decide how to print an expression body within the verbosity budget.
+
+    Printing renders the graph as a tree: pytensor's print memo avoids
+    recomputing shared subexpressions, not duplicating them, so output size
+    grows with the number of root-to-node paths, which is exponential for
+    shared intermediates (an adstock chain reused twice, ``v = v + v``
+    loops). Printer recursion depth also follows graph depth.
+
+    Returns ``(cut_roots, fits)``. Nodes at depth ``_MAX_EXPR_DEPTH + 1``
+    are cut: they render as the opaque ``f(inputs)`` placeholder via a
+    pre-seeded print memo, bounding recursion depth. ``fits`` is False when
+    even after these cuts more than ``_MAX_EXPR_NODES`` nodes would be
+    rendered; the caller should then fall back to a single placeholder for
+    the whole expression.
+    """
+    depth = {body: 0}
+    visited = {body}
+    queue = deque([body])
+    order = []
+    while queue:
+        r = queue.popleft()
+        order.append(r)
+        if _is_expr_leaf(r, leaf_vars):
+            continue
+        for i in r.owner.inputs:
+            if i not in visited:
+                visited.add(i)
+                depth[i] = depth[r] + 1
+                queue.append(i)
+
+    # Minimal cut: seeding only the shallowest nodes past the depth limit
+    # makes every deeper node unreachable, so each placeholder walk happens
+    # once instead of once per cut node.
+    cut_roots = {
+        r for r, d in depth.items() if d == _MAX_EXPR_DEPTH + 1 and not _is_expr_leaf(r, leaf_vars)
+    }
+
+    # Occurrences of each node in the rendered tree, counting only paths
+    # through visible (uncut) parents. ``order`` is breadth-first, so all
+    # parents are final before a child is accumulated.
+    occ = {body: 1}
+    for r in order:
+        if depth[r] > _MAX_EXPR_DEPTH or _is_expr_leaf(r, leaf_vars):
+            continue
+        for i in r.owner.inputs:
+            occ[i] = occ.get(i, 0) + occ[r]
+    occurrences = sum(o for r, o in occ.items() if depth[r] <= _MAX_EXPR_DEPTH)
+    return cut_roots, occurrences <= _MAX_EXPR_NODES
+
+
+def _str_for_expression_body(var: Variable, formatting: str, named_vars: set[Variable]) -> str:
+    """Render the full symbolic body of an expression graph as text or LaTeX.
+
+    Traversal stops at any model variable in ``named_vars`` (matched by
+    identity, so unrelated variables that merely share a name are not
+    mistaken for model variables); those render by name since their
+    definitions appear elsewhere in the model representation. The rendered
+    variable itself is excluded so its own body expands.
+    """
+    body = var
+    while _is_unary_viewop(body) and (body is var or getattr(body, "name", None) is None):
+        body = body.owner.inputs[0]
+
+    leaf_vars = {v for v in named_vars if v is not var}
+
+    def _named_leaf_condition(pstate, r) -> bool:
+        return _unwrap_viewops(r) in leaf_vars
+
+    if "latex" in formatting:
+        printer = _make_latex_body_printer(_named_leaf_condition, named_vars)
+    else:
+        printer = _make_plain_body_printer(_named_leaf_condition, named_vars)
+
+    cut_roots, fits = _print_plan(body, leaf_vars)
+    if not fits:
+        return _str_for_expression(var, formatting, named_vars)
+
+    pstate = PrinterState(pprinter=printer)
+    for r in cut_roots:
+        # Pre-seeding the memo makes every printer stop here, rendering the
+        # subtree as the opaque placeholder instead of recursing into it.
+        pstate.memo[r] = _str_for_expression(r, formatting, named_vars)
+    s = printer.process(body, pstate)
+    return _strip_outer_parens(s)
 
 
 def _latex_text_format(text: str) -> str:
