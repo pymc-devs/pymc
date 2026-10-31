@@ -150,7 +150,9 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
     assert isinstance(xt.owner.op, TruncatedRV)
     assert xt.type.dtype == x.type.dtype
 
-    xt_draws = draw(xt, draws=5)
+    # Seeded: with 24 parametrizations run in two CI jobs, an unseeded draw fails the
+    # p > 0.001 check below in about one CI run in twenty even when the sampler is correct.
+    xt_draws = draw(xt, draws=5, random_seed=1)
     assert np.all(xt_draws >= lower)
     assert np.all(xt_draws <= upper)
     assert np.unique(xt_draws).size == xt_draws.size
@@ -167,13 +169,13 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
     # Test max_n_steps
     xt = Truncated.dist(x, lower=lower, upper=upper, max_n_steps=1)
     if op_type == "icdf":
-        xt_draws = draw(xt)
+        xt_draws = draw(xt, random_seed=1)
         assert np.all(xt_draws >= lower)
         assert np.all(xt_draws <= upper)
         assert np.unique(xt_draws).size == xt_draws.size
     else:
         with pytest.raises(TruncationError, match="^Truncation did not converge"):
-            draw(xt, draws=100 if scalar else 1)
+            draw(xt, draws=100 if scalar else 1, random_seed=1)
 
 
 @pytest.mark.parametrize(
