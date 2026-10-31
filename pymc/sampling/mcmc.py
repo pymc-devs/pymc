@@ -389,6 +389,7 @@ def _sample_external_nuts(
     nuts_kwargs: dict,
     compile_kwargs: dict,
     idata_kwargs: dict | None,
+    callback=None,
     **kwargs,
 ):
     if kwargs:
@@ -473,6 +474,11 @@ def _sample_external_nuts(
             progressbar_theme=progressbar_theme,
         )
 
+        def progress_callback(progress):
+            pb_manager.update(progress)
+            if callback is not None:
+                callback(progress)
+
         t_start = time.time()
         with pb_manager:
             idata = nutpie.sample(
@@ -485,7 +491,7 @@ def _sample_external_nuts(
                 save_warmup=not discard_tuned_samples,
                 store_unconstrained=include_transformed,
                 progress_bar=False,
-                progress_callback=pb_manager.update,
+                progress_callback=progress_callback,
                 **nuts_kwargs,
             )
         t_sample = time.time() - t_start
@@ -766,6 +772,8 @@ def sample(
         called with the trace and the current draw and will contain all samples for a single trace.
         the ``draw.chain`` argument can be used to determine which of the active chains the sample
         is drawn from.
+        When using ``nuts_sampler="nutpie"``, the callback instead receives a list of
+        ``nutpie.ChainProgress`` objects reflecting current per-chain sampling progress.
         Sampling can be interrupted by throwing a ``KeyboardInterrupt`` in the callback.
     mp_ctx : multiprocessing.context.BaseContent
         A multiprocessing context for parallel sampling.
@@ -1000,7 +1008,7 @@ def sample(
                 f"A custom `trace` backend is not supported with `nuts_sampler={nuts_sampler!r}`. "
                 "Trace backends (e.g. `ZarrTrace`) only work with `nuts_sampler='pymc'`."
             )
-        if callback is not None:
+        if callback is not None and nuts_sampler != "nutpie":
             raise ValueError(
                 f"`callback` is not supported with `nuts_sampler={nuts_sampler!r}`. "
                 "External NUTS samplers don't invoke per-draw callbacks."
@@ -1027,6 +1035,7 @@ def sample(
                 progressbar=progressbar if nuts_sampler == "nutpie" else progress_bool,
                 progressbar_theme=progressbar_theme,
                 quiet=quiet,
+                callback=callback,
                 idata_kwargs=idata_kwargs,
                 compute_convergence_checks=compute_convergence_checks,
                 discard_tuned_samples=discard_tuned_samples,
