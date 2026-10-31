@@ -102,10 +102,14 @@ def transformed_value_logprob(op, values, *rv_outs, use_jacobian=True, **kwargs)
         log_jac_det = transform.log_jac_det(original_forward_value, *rv_inputs).copy()
         # The jacobian determinant has less dims than the logp
         # when a multivariate transform (like Simplex or Ordered) is applied to univariate distributions.
-        # In this case we have to reduce the last logp dimensions, as they are no longer independent
+        # In this case we have to reduce those logp dimensions, as they are no longer independent.
+        # Default to the trailing axes; transforms may override which axes via `jacobian_reduce_axes`.
         if log_jac_det.ndim < logp.ndim:
             diff_ndims = logp.ndim - log_jac_det.ndim
-            logp = logp.sum(axis=np.arange(-diff_ndims, 0))
+            reduce_axes = getattr(transform, "jacobian_reduce_axes", None)
+            if reduce_axes is None:
+                reduce_axes = np.arange(-diff_ndims, 0)
+            logp = logp.sum(axis=tuple(reduce_axes))
         # This case is sometimes, but not always, trivial to accommodate depending on the "space rank" of the
         # multivariate distribution. See https://proceedings.mlr.press/v130/radul21a.html
         elif log_jac_det.ndim > logp.ndim:
