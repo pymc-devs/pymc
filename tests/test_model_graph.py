@@ -694,3 +694,21 @@ def test_model_to_mermaid_with_variable_with_space():
     %% Plates:
     """)
     assert model_to_mermaid(variable_with_space) == expected_mermaid_string.strip()
+
+
+def test_multivariate_random_walk_with_dims():
+    # Issue #8572: the +1 support_shape_offset belongs to the steps dimension
+    # only. Broadcasting it across a multivariate innovation's dimensions made
+    # model_to_graphviz raise "support_shape does not match respective shape
+    # dimension" for walks defined with dims.
+    coords = {"time": range(5), "series": range(3)}
+    with pm.Model(coords=coords) as model:
+        pm.MvGaussianRandomWalk(
+            "x",
+            mu=np.zeros(3),
+            cov=np.eye(3),
+            init_dist=pm.MvNormal.dist(np.zeros(3), np.eye(3)),
+            dims=("time", "series"),
+        )
+    g = model_to_graphviz(model)
+    assert "x [label=" in g.source
