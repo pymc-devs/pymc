@@ -67,8 +67,8 @@ The sample is returned as arrays inside a ``MultiTrace`` object, which is then p
 See also
 ========
 
-* `Tutorials <nb_tutorials/index.html>`__
-* `Examples <nb_examples/index.html>`__
+* :doc:`Tutorials <learn/core_notebooks/index>`
+* :doc:`Examples <nb:gallery>`
 
 
 .. |NumFOCUS| image:: https://numfocus.org/wp-content/uploads/2017/07/NumFocus_LRG.png
