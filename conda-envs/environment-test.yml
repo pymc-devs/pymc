@@ -6,7 +6,7 @@ channels:
 dependencies:
 # Base dependencies
 - arviz>=1.1.0,<2.0
-- better-optimize>=0.4.2,<0.5
+- better-optimize>=0.5.1,<0.6
 - blas
 - cachetools>=4.2.1,<7
 - cloudpickle
@@ -16,7 +16,7 @@ dependencies:
 - pandas>=0.24.0
 - pip
 - polyagamma
-- pytensor>=3.2.2,<3.4
+- pytensor>=3.3.6,<3.4
 - python-graphviz
 - networkx
 - rich>=13.7.1

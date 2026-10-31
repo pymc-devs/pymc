@@ -1847,7 +1847,7 @@ class MatrixNormal(Continuous):
 
         # Find exponent piece by piece
         right_quaddist = solve_lower(rowchol, delta)
-        quaddist = pt.linalg.matrix_dot(right_quaddist.T, right_quaddist)
+        quaddist = right_quaddist.T @ right_quaddist
         quaddist = solve_lower(colchol, quaddist)
         quaddist = solve_upper(colchol.T, quaddist)
         trquaddist = pt.linalg.trace(quaddist)

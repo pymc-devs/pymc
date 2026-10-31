@@ -23,7 +23,7 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from pytensor.compile.ops import as_op
+from pytensor.compile.ops import wrap_py
 from pytensor.tensor.type import TensorType
 
 import pymc as pm
@@ -109,7 +109,7 @@ def test_bad_unpickle():
 at_vector = TensorType(pytensor.config.floatX, [False])
 
 
-@as_op([at_vector, pt.iscalar], [at_vector])
+@wrap_py(itypes=[at_vector, pt.iscalar], otypes=[at_vector])
 def _crash_remote_process(a, master_pid):
     if os.getpid() != master_pid:
         sys.exit(0)

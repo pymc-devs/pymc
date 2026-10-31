@@ -33,12 +33,12 @@ keywords = [
 ]
 dependencies = [
     "arviz>=1.1.0,<2.0",
-    "better-optimize>=0.4.2,<0.5",
+    "better-optimize>=0.5.1,<0.6",
     "cachetools>=4.2.1,<7",
     "cloudpickle",
     "numpy>=1.25.0",
     "pandas>=0.24.0",
-    "pytensor>=3.2.2,<3.4",
+    "pytensor>=3.3.6,<3.4",
     "rich>=13.7.1",
     "scipy>=1.4.1",
     "threadpoolctl>=3.1.0,<4.0.0",
