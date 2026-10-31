@@ -2446,6 +2446,19 @@ class TestLKJCholeskyCovRandom(BaseTestDistributionRandom):
         npt.assert_allclose((pairs**2).mean(axis=0), second, atol=second_tolerance)
 
 
+class TestLKJCholeskyCovDims:
+    """Tests for the auto-dims API on `pm.LKJCholeskyCov`."""
+
+    def test_no_dims_stores_corr_as_strict_upper_packed(self):
+        with pm.Model():
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, store_packed=True)
+            idata = pm.sample_prior_predictive(draws=5, random_seed=0)
+
+        # Strict upper triangle has n*(n-1)/2 = 3 entries
+        assert idata.prior["cov_corr"].shape[-1] == 3
+
+
 class TestICAR(BaseTestDistributionRandom):
     pymc_dist = pm.ICAR
     pymc_dist_params = {"W": np.array([[0, 1, 1], [1, 0, 1], [1, 1, 0]]), "sigma": 2}

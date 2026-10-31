@@ -1281,6 +1281,13 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     return norm + logp_lkj + logp_sd + det_invjac
 
 
+def _strict_upper_packed(matrix, n):
+    """Extract the strict upper triangle of a (*, n, n) tensor as (*, n(n-1)/2)."""
+    triu_idx = pt.triu_indices(n, k=1)
+    packed = matrix[..., triu_idx[0], triu_idx[1]]
+    return pt.specify_shape(packed, (*matrix.type.shape[:-2], n * (n - 1) // 2))
+
+
 def _expand_packed_lower(packed, n):
     """Batch-safe expansion of a (*, n(n+1)/2) packed lower-triangular vector to (*, n, n)."""
     tril_idx = pt.tril_indices(n, k=0)
@@ -1325,13 +1332,19 @@ class LKJCholeskyCov:
         matrix in the posterior trace. If `True`, they will automatically be named as
         `{name}_corr` and `{name}_stds` respectively. Effective only when
         `compute_corr=True`.
+    store_packed : bool, default=False
+        If `True`, store only the strict upper triangle of the correlation matrix in
+        ``f"{name}_corr"``. Summarize this variable in ArviZ instead of the full matrix,
+        whose constant diagonal produces NaN ``r_hat`` and ``ess``. Effective only when
+        `store_in_trace=True`.
 
     Returns
     -------
     chol :  TensorVariable
         If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
     corr : TensorVariable
-        If `compute_corr=True`. The correlations of the covariance matrix.
+        If `compute_corr=True`. The full `(*batch, n, n)` correlations of the
+        covariance matrix, usable in downstream math.
     stds : TensorVariable
         If `compute_corr=True`. The standard deviations of the covariance matrix.
     packed_chol : TensorVariable
@@ -1432,16 +1445,32 @@ class LKJCholeskyCov:
        http://math.stackexchange.com/q/130026
     """
 
-    def __new__(cls, name, eta, n, sd_dist, *, compute_corr=True, store_in_trace=True, **kwargs):
+    def __new__(
+        cls,
+        name,
+        eta,
+        n,
+        sd_dist,
+        *,
+        compute_corr=True,
+        store_in_trace=True,
+        store_packed=False,
+        **kwargs,
+    ):
         packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist, **kwargs)
+
         if not compute_corr:
             return packed_chol
-        else:
-            chol, corr, stds = cls.helper_deterministics(n, packed_chol)
-            if store_in_trace:
+
+        chol, corr, stds = cls.helper_deterministics(n, packed_chol)
+        if store_in_trace:
+            if store_packed:
+                pm.Deterministic(f"{name}_corr", _strict_upper_packed(corr, n))
+            else:
                 corr = pm.Deterministic(f"{name}_corr", corr)
-                stds = pm.Deterministic(f"{name}_stds", stds)
-            return chol, corr, stds
+            stds = pm.Deterministic(f"{name}_stds", stds)
+
+        return chol, corr, stds
 
     @classmethod
     def dist(cls, eta, n, sd_dist, *, compute_corr=True, **kwargs):
