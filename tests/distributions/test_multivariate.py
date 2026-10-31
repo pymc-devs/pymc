@@ -2449,6 +2449,123 @@ class TestLKJCholeskyCovRandom(BaseTestDistributionRandom):
 class TestLKJCholeskyCovDims:
     """Tests for the auto-dims API on `pm.LKJCholeskyCov`."""
 
+    def test_basic_dims_registers_packed_coords(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"]}
+        with pm.Model(coords=coords) as m:
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            chol, corr, stds = pm.LKJCholeskyCov(
+                "cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"), store_packed=True
+            )
+
+        assert chol.type.ndim == 2
+        assert corr.type.ndim == 2
+
+        assert "cov__packed" in m.coords
+        assert "cov__corr_packed" in m.coords
+        assert list(m.coords["cov__packed"]) == [
+            "a,a",
+            "b,a",
+            "b,b",
+            "c,a",
+            "c,b",
+            "c,c",
+        ]
+        assert list(m.coords["cov__corr_packed"]) == ["a,b", "a,c", "b,c"]
+
+        assert m.named_vars_to_dims["cov"] == ("cov__packed",)
+        assert m.named_vars_to_dims["cov_corr"] == ("cov__corr_packed",)
+        assert m.named_vars_to_dims["cov_stds"] == ("g",)
+
+    def test_inferencedata_pair_coord_selection(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"]}
+        with pm.Model(coords=coords):
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            pm.LKJCholeskyCov(
+                "cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"), store_packed=True
+            )
+            idata = pm.sample_prior_predictive(draws=30, random_seed=0)
+
+        ds = idata.prior
+        assert ds["cov_corr"].dims[-1] == "cov__corr_packed"
+        assert ds["cov_stds"].dims[-1] == "g"
+        assert list(ds.coords["cov__corr_packed"].values) == [
+            "a,b",
+            "a,c",
+            "b,c",
+        ]
+        sel = ds["cov_corr"].sel(cov__corr_packed="a,b")
+        assert sel.shape == (1, 30)
+
+    def test_batch_dims_preserved(self):
+        coords = {
+            "batch": ["s1", "s2"],
+            "g": ["a", "b", "c"],
+            "g_": ["a", "b", "c"],
+        }
+        with pm.Model(coords=coords) as m:
+            sd_dist = pm.Exponential.dist(1.0, shape=(2, 3))
+            pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("batch", "g", "g_"))
+
+        assert m.named_vars_to_dims["cov"] == ("batch", "cov__packed")
+        assert m.named_vars_to_dims["cov_corr"] == ("batch", "g", "g_")
+        assert m.named_vars_to_dims["cov_stds"] == ("batch", "g")
+
+    def test_packed_dims_label_the_packed_vector(self):
+        coords = {"tril": [f"t{i}" for i in range(6)]}
+        with pm.Model(coords=coords) as m:
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("tril",))
+
+        assert m.named_vars_to_dims["cov"] == ("tril",)
+        assert "cov_corr" not in m.named_vars_to_dims
+        assert m["cov_corr"].type.shape == (3, 3)
+
+    def test_batch_and_packed_dims_label_the_packed_vector(self):
+        coords = {"batch": ["s1", "s2"], "tril": [f"t{i}" for i in range(6)]}
+        with pm.Model(coords=coords) as m:
+            sd_dist = pm.Exponential.dist(1.0, shape=(2, 3))
+            pm.LKJCholeskyCov(
+                "cov", eta=2, n=3, sd_dist=sd_dist, dims=("batch", "tril"), compute_corr=False
+            )
+
+        assert m.named_vars_to_dims["cov"] == ("batch", "tril")
+
+    def test_single_matrix_length_dim_raises(self):
+        with pm.Model(coords={"g": ["a", "b", "c"]}):
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            with pytest.raises(ValueError, match="must end in one dim of length"):
+                pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("g",))
+
+    def test_missing_matrix_coord_raises(self):
+        with pm.Model(coords={"g": ["a", "b", "c"]}):
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            with pytest.raises(ValueError, match="not registered in the model"):
+                pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"))
+
+    def test_mismatched_matrix_coord_length_raises(self):
+        with pm.Model(coords={"g": ["a", "b", "c"], "g_": ["x", "y"]}):
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            with pytest.raises(ValueError, match="must end in one dim of length"):
+                pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"))
+
+    def test_incompatible_existing_packed_coord_raises(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"], "cov__corr_packed": ["x", "y", "z"]}
+        with pm.Model(coords=coords):
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            with pytest.raises(ValueError, match="Duplicate and incompatible coordinate"):
+                pm.LKJCholeskyCov(
+                    "cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"), store_packed=True
+                )
+
+    def test_default_stores_full_corr_matrix(self):
+        coords = {"g": ["a", "b", "c"], "g_": ["a", "b", "c"]}
+        with pm.Model(coords=coords) as m:
+            sd_dist = pm.Exponential.dist(1.0, shape=3)
+            pm.LKJCholeskyCov("cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g_"))
+
+        assert m.named_vars_to_dims["cov_corr"] == ("g", "g_")
+        assert "cov__corr_packed" not in m.coords
+
     def test_no_dims_stores_corr_as_strict_upper_packed(self):
         with pm.Model():
             sd_dist = pm.Exponential.dist(1.0, shape=3)
