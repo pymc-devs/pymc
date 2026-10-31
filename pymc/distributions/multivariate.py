@@ -64,6 +64,7 @@ from pymc.distributions.distribution import (
 from pymc.distributions.shape_utils import (
     _change_dist_size,
     change_dist_size,
+    convert_dims,
     get_support_shape,
     implicit_size_from_params,
     rv_size_is_none,
@@ -1281,6 +1282,106 @@ def _LKJCholeksyCovRV_logp(op, values, rng, n, eta, sd_dist, **kwargs):
     return norm + logp_lkj + logp_sd + det_invjac
 
 
+def _parse_matrix_dims(dims, n, *, context: str) -> tuple[tuple[str, ...], int]:
+    """Normalize and validate the `dims` of a matrix distribution, and resolve `n` to an int.
+
+    The last two dims label the rows and columns of the matrix, and earlier dims are batch dims.
+    Both matrix dims must already be registered in the model with length `n`.
+    """
+    dims = convert_dims(dims)
+    if len(dims) < 2:
+        raise ValueError(
+            f"{context} is a 2D distribution -- `dims` must include at least the two matrix "
+            f"dims (rows and columns). Got dims={dims!r}. If you want a symmetric labeling, "
+            f"register both coords with the same values and pass e.g. dims=('g', 'g__aux')."
+        )
+    try:
+        n_int = int(pt.get_scalar_constant_value(n))
+    except NotScalarConstantError:
+        raise ValueError(
+            f"{context} requires `n` to be a constant integer -- coord values and packed "
+            f"indices must be materialized at model-construction time."
+        )
+    model = pm.modelcontext(None)
+    for dim in dims[-2:]:
+        if dim not in model.coords:
+            raise ValueError(
+                f"{context}: matrix dim '{dim}' is not registered in the model. "
+                f"Pass `coords={{'{dim}': [...]}}` to `pm.Model` or call `model.add_coord`."
+            )
+        coord = model.coords[dim]
+        if coord is None or len(coord) != n_int:
+            raise ValueError(
+                f"{context}: matrix dim '{dim}' has length {len(coord) if coord else 'None'} "
+                f"but n={n_int}."
+            )
+    return dims, n_int
+
+
+def _dims_label_packed_vector(dims, n) -> bool:
+    """Decide whether `dims` label the packed Cholesky vector or the matrix rows and columns.
+
+    The packed vector has length n(n+1)/2 and each matrix axis has length n, so the registered
+    coord lengths decide. A non-constant `n` leaves `dims` on the packed vector.
+    """
+    try:
+        n_int = int(pt.get_scalar_constant_value(n))
+    except NotScalarConstantError:
+        return True
+
+    model = pm.modelcontext(None)
+    lengths = []
+    for dim in dims:
+        if dim not in model.dim_lengths:
+            raise ValueError(
+                f"LKJCholeskyCov: dim '{dim}' is not registered in the model. "
+                f"Pass `coords={{'{dim}': [...]}}` to `pm.Model` or call `model.add_coord`."
+            )
+        coord = model.coords[dim]
+        lengths.append(len(coord) if coord is not None else int(model.dim_lengths[dim].eval()))
+
+    packed_length = n_int * (n_int + 1) // 2
+    if lengths[-1] == packed_length:
+        return True
+    if len(lengths) >= 2 and lengths[-2] == lengths[-1] == n_int:
+        return False
+    raise ValueError(
+        f"LKJCholeskyCov `dims` must end in one dim of length n(n+1)/2={packed_length} labeling "
+        f"the packed Cholesky, or two dims of length n={n_int} labeling the matrix rows and "
+        f"columns. Got dims={dims!r} with lengths {lengths}."
+    )
+
+
+def _register_packed_pair_coord(
+    model, name: str, row_dim: str, col_dim: str, n: int, *, strict_upper: bool
+) -> None:
+    """Register a 1D coord labeling each packed entry as ``"{row_label},{col_label}"``."""
+    row_labels = model.coords[row_dim]
+    col_labels = model.coords[col_dim]
+    if strict_upper:
+        idx_rows, idx_cols = np.triu_indices(n, k=1)
+    else:
+        idx_rows, idx_cols = np.tril_indices(n, k=0)
+    labels = [f"{row_labels[i]},{col_labels[j]}" for i, j in zip(idx_rows, idx_cols)]
+    model.add_coord(name, labels)
+
+
+def _strict_upper_packed(matrix, n):
+    """Extract the strict upper triangle of a (*, n, n) tensor as (*, n(n-1)/2)."""
+    triu_idx = pt.triu_indices(n, k=1)
+    packed = matrix[..., triu_idx[0], triu_idx[1]]
+    return pt.specify_shape(packed, (*matrix.type.shape[:-2], n * (n - 1) // 2))
+
+
+def _expand_packed_lower(packed, n):
+    """Batch-safe expansion of a (*, n(n+1)/2) packed lower-triangular vector to (*, n, n)."""
+    tril_idx = pt.tril_indices(n, k=0)
+    out = pt.zeros((*packed.shape[:-1], n, n), dtype=packed.dtype)
+    out = out[..., tril_idx[0], tril_idx[1]].set(packed)
+    out.tag.lower_triangular = True
+    return out
+
+
 class LKJCholeskyCov:
     r"""Wrapper class for covariance matrix with LKJ distributed correlations.
 
@@ -1316,13 +1417,41 @@ class LKJCholeskyCov:
         matrix in the posterior trace. If `True`, they will automatically be named as
         `{name}_corr` and `{name}_stds` respectively. Effective only when
         `compute_corr=True`.
+    store_packed : bool, default=False
+        If `True`, store only the strict upper triangle of the correlation matrix in
+        ``f"{name}_corr"``. Summarize this variable in ArviZ instead of the full matrix,
+        whose constant diagonal produces NaN ``r_hat`` and ``ess``. Effective only when
+        `store_in_trace=True`.
+    dims : tuple of str, optional
+        Registered model dims, labeling either the packed Cholesky vector or the matrix.
+        The coord lengths decide which: if the last dim has length ``n * (n + 1) // 2``,
+        `dims` labels the packed Cholesky RV, with earlier dims as batch dims. If the
+        last two dims both have length `n`, they label the rows and columns of the
+        matrix, with earlier dims as batch dims. Any other lengths raise a ``ValueError``.
+        A sister column dim is not auto-generated for matrix dims; a typical symmetric
+        labeling is ``dims=("g", "g__aux")`` where both coords share the same values.
+        With matrix dims, packed coords of ``"{row_label},{col_label}"`` strings are
+        registered on the model:
+
+        - ``f"{name}__packed"`` -- every entry of the packed lower-triangular Cholesky
+          (diagonal included).
+        - ``f"{name}__corr_packed"`` -- the strict upper triangle of the correlation
+          matrix (diagonal dropped). Registered only with ``store_packed=True``.
+
+        With matrix dims, the variables in the trace get dims:
+
+        - ``f"{name}"`` (packed Cholesky RV): ``(*batch, f"{name}__packed")``
+        - ``f"{name}_stds"``: ``(*batch, dims[-2])``
+        - ``f"{name}_corr"``: ``(*batch, dims[-2], dims[-1])``, or
+          ``(*batch, f"{name}__corr_packed")`` with ``store_packed=True``
 
     Returns
     -------
     chol :  TensorVariable
         If `compute_corr=True`. The unpacked Cholesky covariance decomposition.
     corr : TensorVariable
-        If `compute_corr=True`. The correlations of the covariance matrix.
+        If `compute_corr=True`. The full `(*batch, n, n)` correlations of the
+        covariance matrix, usable in downstream math.
     stds : TensorVariable
         If `compute_corr=True`. The standard deviations of the covariance matrix.
     packed_chol : TensorVariable
@@ -1371,6 +1500,19 @@ class LKJCholeskyCov:
 
             # Or compute the covariance matrix
             cov = pt.dot(chol, chol.T)
+
+        With labeled dims for ergonomic post-estimation analysis::
+
+            coords = {"g": ["a", "b", "c"], "g__aux": ["a", "b", "c"]}
+            with pm.Model(coords=coords) as model:
+                sd_dist = pm.Exponential.dist(1.0, shape=3)
+                chol, corr, stds = pm.LKJCholeskyCov(
+                    "cov", eta=2, n=3, sd_dist=sd_dist, dims=("g", "g__aux"), store_packed=True
+                )
+                idata = pm.sample()
+
+            # Select a single correlation by its labeled pair:
+            idata.posterior["cov_corr"].sel(cov__corr_packed="a,b")
 
     **Implementation** In the unconstrained space all values of the cholesky factor
     are stored untransformed, except for the diagonal entries, where
@@ -1423,16 +1565,56 @@ class LKJCholeskyCov:
        http://math.stackexchange.com/q/130026
     """
 
-    def __new__(cls, name, eta, n, sd_dist, *, compute_corr=True, store_in_trace=True, **kwargs):
+    def __new__(
+        cls,
+        name,
+        eta,
+        n,
+        sd_dist,
+        *,
+        compute_corr=True,
+        store_in_trace=True,
+        store_packed=False,
+        **kwargs,
+    ):
+        dims = convert_dims(kwargs.pop("dims", None))
+
+        corr_dims = None
+        stds_dims = None
+        if dims is not None and _dims_label_packed_vector(dims, n):
+            kwargs["dims"] = dims
+        elif dims is not None:
+            dims, n_int = _parse_matrix_dims(dims, n, context="LKJCholeskyCov")
+            batch_dims, row_dim, col_dim = dims[:-2], dims[-2], dims[-1]
+            packed_dim_name = f"{name}__packed"
+            model = pm.modelcontext(None)
+            _register_packed_pair_coord(
+                model, packed_dim_name, row_dim, col_dim, n_int, strict_upper=False
+            )
+            kwargs["dims"] = (*batch_dims, packed_dim_name)
+            corr_dims = (*batch_dims, row_dim, col_dim)
+            stds_dims = (*batch_dims, row_dim)
+            if store_packed:
+                corr_packed_dim_name = f"{name}__corr_packed"
+                _register_packed_pair_coord(
+                    model, corr_packed_dim_name, row_dim, col_dim, n_int, strict_upper=True
+                )
+                corr_dims = (*batch_dims, corr_packed_dim_name)
+
         packed_chol = _LKJCholeskyCov(name, eta=eta, n=n, sd_dist=sd_dist, **kwargs)
+
         if not compute_corr:
             return packed_chol
-        else:
-            chol, corr, stds = cls.helper_deterministics(n, packed_chol)
-            if store_in_trace:
-                corr = pm.Deterministic(f"{name}_corr", corr)
-                stds = pm.Deterministic(f"{name}_stds", stds)
-            return chol, corr, stds
+
+        chol, corr, stds = cls.helper_deterministics(n, packed_chol)
+        if store_in_trace:
+            if store_packed:
+                pm.Deterministic(f"{name}_corr", _strict_upper_packed(corr, n), dims=corr_dims)
+            else:
+                corr = pm.Deterministic(f"{name}_corr", corr, dims=corr_dims)
+            stds = pm.Deterministic(f"{name}_stds", stds, dims=stds_dims)
+
+        return chol, corr, stds
 
     @classmethod
     def dist(cls, eta, n, sd_dist, *, compute_corr=True, **kwargs):
@@ -1445,13 +1627,11 @@ class LKJCholeskyCov:
 
     @classmethod
     def helper_deterministics(cls, n, packed_chol):
-        chol = pm.math.expand_packed_triangular(n, packed_chol, lower=True)
-        # compute covariance matrix
-        cov = pt.dot(chol, chol.T)
-        # extract standard deviations and rho
-        stds = pt.sqrt(pt.diag(cov))
-        inv_stds = 1 / stds
-        corr = inv_stds[None, :] * cov * inv_stds[:, None]
+        chol = _expand_packed_lower(packed_chol, n)
+        cov = chol @ chol.mT
+        stds = pt.sqrt(pt.diagonal(cov, axis1=-2, axis2=-1))
+        inv_stds = 1.0 / stds
+        corr = inv_stds[..., None, :] * cov * inv_stds[..., :, None]
         return chol, corr, stds
 
 
@@ -1569,11 +1749,23 @@ class LKJCorr(BoundedContinuous):
         The shape parameter (eta > 0) of the LKJ distribution. eta = 1
         implies a uniform distribution of the correlation matrices;
         larger values put more weight on matrices with few correlations.
+    dims : tuple of str, optional
+        When provided, must be a tuple of at least two registered model coord names.
+        The last two dims label the rows and columns of the matrix; earlier dims are
+        batch. Both matrix dims must already be registered in the model's coords with
+        length `n`. With ``store_packed=True``, a packed coord ``f"{name}__corr_packed"``
+        of ``"{row_label},{col_label}"`` strings labels the strict upper triangle of the
+        correlation matrix.
+    store_packed : bool, default=False
+        If `True`, add a Deterministic ``f"{name}_corr"`` holding the strict upper triangle
+        of the correlation matrix ``rv @ rv.mT``. Summarize this variable in ArviZ instead
+        of the RV, whose constant upper triangle produces NaN ``r_hat`` and ``ess``. When
+        combined with `dims`, `n` must be constant.
 
     Notes
     -----
     This is mainly useful if you want the standard deviations to be fixed, as
-    LKJCholsekyCov is optimized for the case where they come from a distribution.
+    LKJCholeskyCov is optimized for the case where they come from a distribution.
 
     Examples
     --------
@@ -1606,6 +1798,28 @@ class LKJCorr(BoundedContinuous):
 
     rv_type = LKJCorrRV
     rv_op = LKJCorrRV.rv_op
+
+    def __new__(cls, name, n, eta, *, store_packed=False, **kwargs):
+        dims = kwargs.get("dims", None)
+
+        corr_dims = None
+        if store_packed and dims is not None:
+            dims, n_int = _parse_matrix_dims(dims, n, context="LKJCorr")
+            batch_dims, row_dim, col_dim = dims[:-2], dims[-2], dims[-1]
+            corr_packed_dim_name = f"{name}__corr_packed"
+            model = pm.modelcontext(None)
+            _register_packed_pair_coord(
+                model, corr_packed_dim_name, row_dim, col_dim, n_int, strict_upper=True
+            )
+            corr_dims = (*batch_dims, corr_packed_dim_name)
+
+        rv = super().__new__(cls, name, n=n, eta=eta, **kwargs)
+
+        if store_packed:
+            corr_packed = _strict_upper_packed(rv @ rv.mT, n)
+            pm.Deterministic(f"{name}_corr", corr_packed, dims=corr_dims)
+
+        return rv
 
     @classmethod
     def dist(cls, n, eta, **kwargs):
