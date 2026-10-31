@@ -213,18 +213,11 @@ class CholeskyCorrTransform(Transform):
 
     def log_jac_det(self, unconstrained_vector: TensorLike, *inputs) -> TensorVariable:
         unconstrained_vector = pt.as_tensor_variable(unconstrained_vector)
-        n = self.n
-        dtype = unconstrained_vector.dtype
 
-        # Compute per-row sum of squares of the off-diagonal elements directly,
-        # without constructing the full normalized matrix.
-        sq = unconstrained_vector**2
-        row_sums_sq = pt.zeros((*unconstrained_vector.shape[:-1], n), dtype=dtype)
-        row_sums_sq = pt.inc_subtensor(row_sums_sq[..., self.tril_idxs[0]], sq)
-
-        # After setting diagonal to 1 and normalizing, diag_k = 1/sqrt(1 + row_sums_sq_k).
-        log_diag = pt.cast(-0.5, dtype) * pt.log1p(row_sums_sq)
-        coeffs = pt.arange(2, 2 + n, dtype=dtype)
+        # Reuse backward so the graph shares the normalized factor with the logp.
+        chol_corr_matrix = self.backward(unconstrained_vector)
+        log_diag = pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1))
+        coeffs = pt.arange(2, 2 + self.n, dtype=unconstrained_vector.dtype)
         return pt.sum(coeffs * log_diag, axis=-1)
 
 

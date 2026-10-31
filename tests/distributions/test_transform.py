@@ -753,6 +753,22 @@ class TestLJKCholeskyCorrTransform:
             autodiff_log_jac_det.eval({x: x_unconstrained}), computed_log_jac_det, atol=1e-6
         )
 
+    @pytest.mark.parametrize("n", [2, 4])
+    def test_log_jac_det_batched(self, n):
+        transform = tr.CholeskyCorrTransform(n=n)
+        m = n * (n - 1) // 2
+        x_unconstrained = np.random.default_rng(0).normal(size=(3, m)).astype(config.floatX)
+
+        computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
+
+        x = pt.tensor("x", shape=(m,))
+        lower_tri_vec = transform.backward(x)[pt.tril_indices(n, k=-1)]
+        jac = pt.jacobian(lower_tri_vec, x, vectorize=True)
+        _, autodiff_log_jac_det = pt.linalg.slogdet(jac)
+        expected = [autodiff_log_jac_det.eval({x: row}) for row in x_unconstrained]
+
+        np.testing.assert_allclose(computed_log_jac_det, expected, atol=1e-6)
+
     @pytest.mark.parametrize("n", [3, 5, 10])
     def test_backward_produces_valid_cholesky_corr(self, n):
         rng = np.random.default_rng()
