@@ -813,11 +813,12 @@ class CategoricalGibbsMetropolis(ArrayStep):
                 q.data[dim] = candidate_cat
                 log_probs[candidate_cat] = logp(q)
         probs = special.softmax(log_probs, axis=0)
-        prob_curr, probs[given_cat] = probs[given_cat], 0.0
-        probs /= 1.0 - prob_curr
-        proposed_cat = self.rng.choice(candidates, p=probs)
-        accept_ratio = (1.0 - prob_curr) / (1.0 - probs[proposed_cat])
-        if not np.isfinite(accept_ratio) or self.rng.uniform() >= accept_ratio:
+        probs[given_cat] = 0.0
+        # 1 - p_curr, summed so that it stays accurate when the current category is nearly certain
+        prob_not_curr = probs.sum()
+        proposed_cat = self.rng.choice(candidates, p=probs / prob_not_curr)
+        # Accept with probability min(1, (1 - p_curr) / (1 - p_proposed)) (Liu, 1996)
+        if self.rng.uniform() * (1.0 - probs[proposed_cat]) >= prob_not_curr:
             q.data[dim] = given_cat
             return logp_curr
         q.data[dim] = proposed_cat
