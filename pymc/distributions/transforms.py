@@ -20,6 +20,7 @@ import numpy as np
 import pytensor.tensor as pt
 
 from numpy.lib.array_utils import normalize_axis_tuple
+from pytensor.assumptions import assume
 from pytensor.graph import Op
 from pytensor.tensor import TensorLike, TensorVariable
 
@@ -150,7 +151,7 @@ class CholeskyCorrTransform(Transform):
     Unconstrained space: ``(n*(n-1)/2,)`` flat real vector packed in row-major
     strictly-lower-triangular order.
 
-    The transform composes three steps:
+    The transform composes two steps:
 
     1. Scatter the flat vector into the strictly lower-triangular positions of an
        ``(n, n)`` matrix and set the diagonal to 1.
@@ -177,6 +178,15 @@ class CholeskyCorrTransform(Transform):
     ndim_supp = 1
 
     def __init__(self, n, upper: bool = False):
+        """Create a CholeskyCorrTransform.
+
+        Parameters
+        ----------
+        n : int
+            Side length of the correlation matrix.
+        upper : bool, default False
+            Not supported. ``True`` raises ``NotImplementedError``.
+        """
         if upper:
             raise NotImplementedError("upper=True is not supported")
         self.n = n
@@ -199,17 +209,15 @@ class CholeskyCorrTransform(Transform):
         unconstrained_vector = pt.as_tensor_variable(unconstrained_vector)
         n = self.n
 
-        # Scatter into the strictly-lower-triangular positions of an (n, n) matrix.
         L = pt.zeros((*unconstrained_vector.shape[:-1], n, n), dtype=unconstrained_vector.dtype)
         L = L[..., self.tril_idxs[0], self.tril_idxs[1]].set(unconstrained_vector)
 
-        # Set diagonal to 1 (before normalization).
         diag_idx = pt.arange(n)
         L = L[..., diag_idx, diag_idx].set(1)
 
-        # Normalize each row to unit L2 norm.
         L = L / pt.sqrt(pt.sum(L**2, axis=-1, keepdims=True))
-        return L
+        # Declare L lower-triangular so cholesky(L @ L.mT) -> L is rewritten away.
+        return assume(L, lower_triangular=True)
 
     def log_jac_det(self, unconstrained_vector: TensorLike, *inputs) -> TensorVariable:
         unconstrained_vector = pt.as_tensor_variable(unconstrained_vector)
