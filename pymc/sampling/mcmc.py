@@ -719,6 +719,8 @@ def sample(
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
         Note that this argument is ignored when using fork multiprocessing start method.
+        With fork on macOS 15+, workers run Apple's Accelerate BLAS single-threaded, because
+        multithreaded Accelerate calls crash in forked processes.
     initvals : optional, dict, array of dict
         Dict or list of dicts with initial value strategies to use instead of the defaults from
         `Model.initial_values`. The keys should be names of transformed random variables.
