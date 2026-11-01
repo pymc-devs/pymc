@@ -18,6 +18,8 @@ Created on Mar 7, 2011.
 @author: johnsalvatier
 """
 
+import math
+
 from collections.abc import Iterable
 from functools import partial
 
@@ -139,20 +141,24 @@ def std_cdf(x):
 
 def normal_lcdf(mu, sigma, x):
     """Compute the log of the cumulative density function of the normal."""
+    # The same z as in the normal logp, so the two share it.
     z = (x - mu) / sigma
-    return pt.switch(
-        pt.lt(z, -1.0),
-        pt.log(pt.erfcx(-z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(z / pt.sqrt(2.0)) / 2.0),
-    )
+    return _std_normal_lccdf(-z)
 
 
 def normal_lccdf(mu, sigma, x):
-    z = (x - mu) / sigma
+    return _std_normal_lccdf((x - mu) / sigma)
+
+
+def _std_normal_lccdf(z):
+    # Switch evaluates both branches, so both come from one erfcx:
+    # erfc(|z| / sqrt(2)) = exp(-z**2 / 2) * erfcx(|z| / sqrt(2)).
+    # |z| as a switch, since abs has gradient 0 at z = 0.
+    u = pt.erfcx(pt.switch(pt.lt(z, 0.0), -z, z) / math.sqrt(2))
     return pt.switch(
-        pt.gt(z, 1.0),
-        pt.log(pt.erfcx(z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(-z / pt.sqrt(2.0)) / 2.0),
+        pt.lt(z, 0.0),
+        pt.log1p(-pt.exp(-pt.sqr(z) / 2.0) * u / 2.0),
+        pt.log(u) - pt.sqr(z) / 2.0 - math.log(2),
     )
 
 
