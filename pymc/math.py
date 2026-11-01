@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import math
 import warnings
 
 from functools import partial, reduce
@@ -447,11 +448,11 @@ def logdet(x):
 
 
 def probit(p):
-    return -sqrt(2.0) * erfcinv(2.0 * p)
+    return -math.sqrt(2) * erfcinv(2.0 * p)
 
 
 def invprobit(x):
-    return 0.5 * erfc(-x / sqrt(2.0))
+    return 0.5 * erfc(-x / math.sqrt(2))
 
 
 def expand_packed_triangular(n, packed, lower=True, diagonal_only=False):

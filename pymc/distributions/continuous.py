@@ -16,6 +16,7 @@
 
 """A collection of common probability distributions for stochastic nodes in PyMC."""
 
+import math
 import warnings
 
 import numpy as np
@@ -378,7 +379,7 @@ class Flat(Continuous):
 
     def logcdf(value):
         return pt.switch(
-            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, pt.log(0.5))
+            pt.eq(value, -np.inf), -np.inf, pt.switch(pt.eq(value, np.inf), 0, math.log(0.5))
         )
 
 
@@ -919,7 +920,7 @@ class HalfNormal(PositiveContinuous):
         logcdf = pt.switch(
             pt.lt(value, loc),
             -np.inf,
-            pt.log1p(-pt.erfc(z / pt.sqrt(2.0))),
+            pt.log1p(-pt.erfc(z / math.sqrt(2))),
         )
 
         return check_parameters(
@@ -1579,7 +1580,7 @@ class Laplace(Continuous):
 
         res = pt.switch(
             pt.le(value, mu),
-            pt.log(0.5) + y,
+            math.log(0.5) + y,
             pt.switch(
                 pt.gt(y, 1),
                 pt.log1p(-0.5 * pt.exp(-y)),
@@ -2066,7 +2067,7 @@ class SkewStudentT(Continuous):
 
         a_ = (a + 0.5) * pt.log(1 + x / pt.sqrt(a + b + x**2))
         b_ = (b + 0.5) * pt.log(1 - x / pt.sqrt(a + b + x**2))
-        c = (a + b - 1) * pt.log(2) + pt.special.betaln(a, b) + 0.5 * pt.log(a + b)
+        c = (a + b - 1) * math.log(2) + pt.special.betaln(a, b) + 0.5 * pt.log(a + b)
 
         res = a_ + b_ - c - pt.log(sigma)
 
@@ -2385,7 +2386,7 @@ class HalfCauchy(PositiveContinuous):
         return beta
 
     def logp(value, beta):
-        res = pt.log(2) + _logprob_helper(Cauchy.dist(alpha=0, beta=beta), value)
+        res = math.log(2) + _logprob_helper(Cauchy.dist(alpha=0, beta=beta), value)
         res = pt.switch(value >= 0, res, -np.inf)
         return check_parameters(
             res,
@@ -2938,7 +2939,7 @@ class HalfStudentT(PositiveContinuous):
 
     def logp(value, nu, sigma):
         res = (
-            pt.log(2)
+            math.log(2)
             + gammaln((nu + 1.0) / 2.0)
             - gammaln(nu / 2.0)
             - 0.5 * pt.log(nu * np.pi * sigma**2)
@@ -3288,7 +3289,7 @@ class SkewNormal(Continuous):
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = (
-            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / pt.sqrt(2)))
+            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / math.sqrt(2)))
             + (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0
         )
 
@@ -4032,7 +4033,7 @@ class Moyal(Continuous):
         return super().dist([mu, sigma], *args, **kwargs)
 
     def support_point(rv, size, mu, sigma):
-        mean = mu + sigma * (np.euler_gamma + pt.log(2))
+        mean = mu + sigma * (np.euler_gamma + math.log(2))
 
         if not rv_size_is_none(size):
             mean = pt.full(size, mean)

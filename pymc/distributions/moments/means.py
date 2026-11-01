@@ -14,6 +14,8 @@
 
 """Mean dispatcher for pymc random variables."""
 
+import math
+
 from functools import singledispatch
 
 import numpy as np
@@ -314,7 +316,7 @@ def matrix_normal_mean(op, rv, rng, size, mu, rowchol, colchol):
 
 @_mean.register(MoyalRV)
 def moyal_mean(op, rv, rng, size, mu, sigma):
-    return maybe_resize(mu + sigma * (np.euler_gamma + pt.log(2)), size)
+    return maybe_resize(mu + sigma * (np.euler_gamma + math.log(2)), size)
 
 
 @_mean.register(MultinomialRV)

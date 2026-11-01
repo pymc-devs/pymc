@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import math
 import warnings
 
 from functools import singledispatch
@@ -540,7 +541,7 @@ class CholeskyCovTransform(Transform):
         n = self.n
         log_diag = value[..., self.diag_idxs]
         coeffs = pt.arange(n + 1, 1, -1).astype(value.dtype)
-        return n * pt.log(2.0) + pt.sum(coeffs * log_diag, axis=-1)
+        return n * math.log(2) + pt.sum(coeffs * log_diag, axis=-1)
 
 
 Chain = ChainedTransform

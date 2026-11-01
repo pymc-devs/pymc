@@ -34,6 +34,8 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 
+import math
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -670,7 +672,7 @@ def test_cosh_rv_transform():
         (pt.log1mexp, lambda x: pt.log(1 - pt.exp(x))),
         (pt.log2, lambda x: pt.log(x) / pt.log(2)),
         (pt.log10, lambda x: pt.log(x) / pt.log(10)),
-        (pt.exp2, lambda x: pt.exp(pt.log(2) * x)),
+        (pt.exp2, lambda x: pt.exp(math.log(2) * x)),
         (pt.expm1, lambda x: pt.exp(x) - 1),
         (pt.sigmoid, lambda x: 1 / (1 + pt.exp(-x))),
         (pt.sigmoid, lambda x: pt.exp(x) / (1 + pt.exp(x))),

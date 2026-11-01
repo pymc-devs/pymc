@@ -34,6 +34,7 @@
 #   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #   SOFTWARE.
 import abc
+import math
 
 from collections.abc import Callable
 
@@ -442,9 +443,9 @@ def measurable_special_log_to_log(fgraph, node):
     if isinstance(node.op.scalar_op, Log1mexp):
         return [pt.log(1 - pt.exp(inp))]
     if isinstance(node.op.scalar_op, Log2):
-        return [pt.log(inp) / pt.log(2)]
+        return [pt.log(inp) / pt.constant(math.log(2), dtype=node.outputs[0].dtype)]
     if isinstance(node.op.scalar_op, Log10):
-        return [pt.log(inp) / pt.log(10)]
+        return [pt.log(inp) / pt.constant(math.log(10), dtype=node.outputs[0].dtype)]
 
 
 @node_rewriter([expm1, sigmoid, exp2])
@@ -455,7 +456,7 @@ def measurable_special_exp_to_exp(fgraph, node):
 
     [inp] = node.inputs
     if isinstance(node.op.scalar_op, Exp2):
-        return [pt.exp(pt.log(2) * inp)]
+        return [pt.exp(pt.constant(math.log(2), dtype=node.outputs[0].dtype) * inp)]
     if isinstance(node.op.scalar_op, Expm1):
         return [pt.add(pt.exp(inp), -1)]
     if isinstance(node.op.scalar_op, Sigmoid):

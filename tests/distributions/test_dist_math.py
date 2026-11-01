@@ -29,8 +29,11 @@ from pymc.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
+    log_diff_normal_cdf,
     logpow,
     multigammaln,
+    normal_lccdf,
+    normal_lcdf,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -147,6 +150,23 @@ def test_logpow_stabilization_reaches_logp():
 
     gamma = pm.logp(pm.Gamma.dist(alpha=0.5, beta=1.0), pt.exp(a))
     np.testing.assert_allclose(gamma.eval({a: -800.0}), 399.4276350736618)
+
+
+def test_normal_cdf_float64():
+    x = pt.dvector("x")
+    fn = function(
+        [x], [normal_lcdf(0, 1, x), normal_lccdf(0, 1, x), log_diff_normal_cdf(0, 1, x + 1, x)]
+    )
+    z = np.array([-5.0, -0.5, 0.5, 5.0])
+    lcdf, lccdf, ldiff = fn(z)
+    ndtr = scipy.special.ndtr
+    np.testing.assert_allclose(lcdf, scipy.special.log_ndtr(z), rtol=1e-13)
+    np.testing.assert_allclose(lccdf, scipy.special.log_ndtr(-z), rtol=1e-13)
+    np.testing.assert_allclose(
+        ldiff,
+        np.log(np.where(z < 0, ndtr(z + 1) - ndtr(z), ndtr(-z) - ndtr(-z - 1))),
+        rtol=1e-13,
+    )
 
 
 def test_multinomial_check_parameters():

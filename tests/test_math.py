@@ -16,6 +16,7 @@
 import numpy as np
 import pytensor.tensor as pt
 import pytest
+import scipy.special
 
 from pytensor.graph.basic import equal_computations
 
@@ -121,6 +122,10 @@ def test_kron_solve_lower():
 def test_probit():
     p = np.array([0.01, 0.25, 0.5, 0.75, 0.99])
     np.testing.assert_allclose(invprobit(probit(p)).eval(), p, atol=1e-5)
+    np.testing.assert_allclose(probit(p).eval(), scipy.special.ndtri(p), rtol=1e-13)
+
+    x = np.array([-5.0, -0.5, 0.5, 5.0])
+    np.testing.assert_allclose(invprobit(x).eval(), scipy.special.ndtr(x), rtol=1e-13)
 
 
 @pytest.mark.filterwarnings("error")

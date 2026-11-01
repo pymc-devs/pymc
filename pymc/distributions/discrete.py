@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import math
 import warnings
 
 import numpy as np
@@ -485,7 +486,7 @@ class DiscreteWeibull(Discrete):
         return super().dist([q, beta], **kwargs)
 
     def support_point(rv, size, q, beta):
-        median = pt.power(pt.log(0.5) / pt.log(q), 1 / beta) - 1
+        median = pt.power(math.log(0.5) / pt.log(q), 1 / beta) - 1
         if not rv_size_is_none(size):
             median = pt.full(size, median)
         return median

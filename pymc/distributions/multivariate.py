@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+import math
 import warnings
 
 from functools import partial, reduce
@@ -1071,7 +1072,7 @@ class Wishart(Continuous):
             (
                 (nu - p - 1) * log_det_X
                 - tr_term
-                - nu * p * pt.log(2)
+                - nu * p * math.log(2)
                 - nu * log_det_V
                 - 2 * multigammaln(nu / 2.0, p)
             )

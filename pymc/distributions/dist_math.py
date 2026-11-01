@@ -18,6 +18,8 @@ Created on Mar 7, 2011.
 @author: johnsalvatier
 """
 
+import math
+
 from collections.abc import Iterable
 from functools import partial
 
@@ -120,7 +122,7 @@ def betaln(x, y):
 
 def std_cdf(x):
     """Calculate the standard normal cumulative distribution function."""
-    return 0.5 + 0.5 * pt.erf(x / pt.sqrt(2.0))
+    return 0.5 + 0.5 * pt.erf(x / math.sqrt(2))
 
 
 def normal_lcdf(mu, sigma, x):
@@ -128,8 +130,8 @@ def normal_lcdf(mu, sigma, x):
     z = (x - mu) / sigma
     return pt.switch(
         pt.lt(z, -1.0),
-        pt.log(pt.erfcx(-z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(z / pt.sqrt(2.0)) / 2.0),
+        pt.log(pt.erfcx(-z / math.sqrt(2)) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(z / math.sqrt(2)) / 2.0),
     )
 
 
@@ -137,8 +139,8 @@ def normal_lccdf(mu, sigma, x):
     z = (x - mu) / sigma
     return pt.switch(
         pt.gt(z, 1.0),
-        pt.log(pt.erfcx(z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(-z / pt.sqrt(2.0)) / 2.0),
+        pt.log(pt.erfcx(z / math.sqrt(2)) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(-z / math.sqrt(2)) / 2.0),
     )
 
 
@@ -163,14 +165,14 @@ def log_diff_normal_cdf(mu, sigma, x, y):
     log (\\Phi(x) - \\Phi(y))
 
     """
-    x = (x - mu) / sigma / pt.sqrt(2.0)
-    y = (y - mu) / sigma / pt.sqrt(2.0)
+    x = (x - mu) / sigma / math.sqrt(2)
+    y = (y - mu) / sigma / math.sqrt(2)
 
     # To stabilize the computation, consider these three regions:
     # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
     # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
     # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
-    return pt.log(0.5) + pt.switch(
+    return math.log(0.5) + pt.switch(
         pt.gt(y, 0),
         -pt.square(y) + pt.log(pt.erfcx(y) - pt.exp(pt.square(y) - pt.square(x)) * pt.erfcx(x)),
         pt.switch(
