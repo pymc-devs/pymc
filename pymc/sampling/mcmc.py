@@ -696,6 +696,9 @@ def sample(
                 are also displayed.
 
             If True, the default is "split+stats" is used.
+    progressbar_theme : rich.theme.Theme or str, optional
+        Style of the progress bar. A ``Theme`` styles the terminal progress bar, and a string is
+        used as CSS for the progress bar in marimo notebooks.
     quiet : bool, default False
         If True, suppress all logging output and progress bars during sampling.
         This is useful when sampling in loops or when no output is desired.
