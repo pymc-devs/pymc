@@ -29,6 +29,7 @@ from pymc.backends.arviz import (
     DataTreeConverter,
     apply_function_over_dataset,
     dataset_to_point_list,
+    find_constants,
     predictions_to_inference_data,
     to_inference_data,
 )
@@ -482,8 +483,8 @@ class TestDataPyMC:
         assert inference_data.constant_data["beta_sigma"].ndim == 0
 
     @pytest.mark.parametrize("constant_in_generative_graph", [True, False])
-    def test_observed_data_also_constant(self, constant_in_generative_graph):
-        """Test that wen the same variable is used as constant data and observed data, it shows up in both groups."""
+    def test_observed_data_not_constant(self, constant_in_generative_graph):
+        """Test that observed data is only in observed_data, even if also used in the generative graph."""
         with pm.Model(coords={"trial": [0, 1, 2]}) as model:
             x = pm.Data("x", [1.0, 2.0, 3.0], dims=["trial"])
             sigma = pm.HalfNormal("sigma", 1)
@@ -497,13 +498,16 @@ class TestDataPyMC:
         test_dict = {
             "prior": ["sigma"],
             "observed_data": ["y"],
+            "~constant_data": [],
         }
-        if constant_in_generative_graph:
-            test_dict["constant_data"] = ["x"]
-        else:
-            test_dict["~constant_data"] = []
         fails = check_multiple_attrs(test_dict, inference_data)
         assert not fails
+
+    def test_discrete_observed_data_not_constant(self):
+        with pm.Model() as model:
+            y = pm.Data("y", [0, 1, 2, 1])
+            pm.Poisson("obs", pm.HalfNormal("lam"), observed=y)
+        assert find_constants(model) == {}
 
     def test_predictions_constant_data(self):
         with pm.Model():
