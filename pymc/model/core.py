@@ -1504,8 +1504,8 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         print_(f"point={point}\n")
 
         rvs_to_check = list(self.basic_RVs)
-        if fn in ("logp", "dlogp"):
-            rvs_to_check += [self.replace_rvs_by_values(p) for p in self.potentials]
+        if fn == "logp":
+            rvs_to_check += self.potentials
 
         found_problem = False
         for rv in rvs_to_check:
@@ -1554,7 +1554,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                 if not np.all(np.isfinite(rv_fn_eval)):
                     found_problem = True
                     debug_parameters(rv)
-                    if fn == "random" or rv is self.potentials:
+                    if fn == "random" or rv in self.potentials:
                         print_("This combination seems able to generate non-finite values")
                     else:
                         # Find which values are associated with non-finite evaluation
