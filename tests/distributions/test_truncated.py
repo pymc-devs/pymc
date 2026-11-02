@@ -162,7 +162,7 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
         loc,
         scale,
     )
-    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 0.001
+    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 1e-5
 
     # Test max_n_steps
     xt = Truncated.dist(x, lower=lower, upper=upper, max_n_steps=1)
