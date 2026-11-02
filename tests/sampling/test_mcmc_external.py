@@ -77,7 +77,7 @@ def test_external_nuts_sampler(nuts_sampler):
         reference_kwargs["nuts_sampler"] = "pymc"
         idata_reference = sample(**reference_kwargs)
 
-    assert "y" in idata1.constant_data
+    assert "y" not in idata1.constant_data
     assert "z" in idata1.constant_data
     assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
