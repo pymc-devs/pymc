@@ -131,6 +131,9 @@ class BaseHMC(GradientSharedStep):
             by the ``potential`` attribute.
         **pytensor_kwargs: passed to PyTensor functions
         """
+        if not 0 < target_accept < 1:
+            raise ValueError(f"target_accept must be in (0, 1), got {target_accept}")
+
         self._model = modelcontext(model)
 
         if vars is None:

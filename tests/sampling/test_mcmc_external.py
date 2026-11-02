@@ -110,6 +110,13 @@ def test_external_sampler_rejects_unknown_kwargs():
             sample(nuts_sampler="numpyro", jitter=False, chains=1, cores=1, progressbar=False)
 
 
+def test_external_sampler_rejects_invalid_target_accept():
+    with Model():
+        Normal("x")
+        with pytest.raises(ValueError, match="target_accept must be in"):
+            sample(nuts_sampler="numpyro", target_accept=1.5, chains=1, cores=1, progressbar=False)
+
+
 def test_jax_sampler_kwargs_routing():
     pytest.importorskip("numpyro")
 

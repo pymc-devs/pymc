@@ -402,6 +402,10 @@ def _sample_external_nuts(
     compile_kwargs = compile_kwargs.copy()
     idata_kwargs = {} if idata_kwargs is None else idata_kwargs.copy()
 
+    target_accept = nuts_kwargs.get("target_accept")
+    if target_accept is not None and not 0 < target_accept < 1:
+        raise ValueError(f"target_accept must be in (0, 1), got {target_accept}")
+
     if "backend" in nuts_kwargs:
         warnings.warn(
             "`backend` should be passed as a top-level argument to `pm.sample`, "
