@@ -2068,6 +2068,16 @@ class TestModelDebug:
         out, _ = capfd.readouterr()
         assert "value = 0.0 -> dlogp = nan" in out
 
+    def test_invalid_potential(self, capfd):
+        with pm.Model() as m:
+            a = pm.Normal("a")
+            pm.Potential("p", pt.log(a))
+        m.debug(point={"a": -1.0})
+
+        out, _ = capfd.readouterr()
+        assert "The variable p has the following parameters" in out
+        assert "This combination seems able to generate non-finite values" in out
+
 
 def test_model_logp_fast_compile():
     # Issue #5618
