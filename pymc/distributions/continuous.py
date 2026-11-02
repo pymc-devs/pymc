@@ -1498,7 +1498,7 @@ class Exponential(PositiveContinuous):
         )
 
     def icdf(value, mu):
-        res = -mu * pt.log(1 - value)
+        res = -mu * pt.log1p(-value)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,
@@ -2835,7 +2835,7 @@ class Weibull(PositiveContinuous):
         )
 
     def icdf(value, alpha, beta):
-        res = beta * (-pt.log(1 - value)) ** (1 / alpha)
+        res = beta * (-pt.log1p(-value)) ** (1 / alpha)
         res = check_icdf_value(res, value)
         return check_icdf_parameters(
             res,

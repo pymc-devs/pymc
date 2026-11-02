@@ -797,6 +797,16 @@ class TestMatchesScipy:
             lambda q, alpha, beta: st.exponweib.ppf(q, 1, alpha, scale=beta),
         )
 
+    def test_exponential_icdf_tiny_quantile(self):
+        q = 1e-20
+        npt.assert_allclose(icdf(pm.Exponential.dist(lam=1.0), q).eval(), st.expon.ppf(q))
+
+    def test_weibull_icdf_tiny_quantile(self):
+        q = 1e-20
+        npt.assert_allclose(
+            icdf(pm.Weibull.dist(alpha=2.0, beta=1.0), q).eval(), st.weibull_min.ppf(q, 2.0)
+        )
+
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
         check_logp(
