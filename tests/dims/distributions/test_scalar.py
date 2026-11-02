@@ -49,6 +49,7 @@ from pymc.dims import (
     TruncatedNormal,
     Uniform,
     VonMises,
+    Wald,
     Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
@@ -310,6 +311,20 @@ def test_inverse_gamma():
     with Model(coords=coords) as reference_model:
         regular_distributions.InverseGamma("w", alpha=1, beta=1, dims="a")
         regular_distributions.InverseGamma("x", mu=2, sigma=3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_wald():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Wald("x", mu=2, lam=3, dims="a")
+        Wald("y", lam=3, phi=1.5, alpha=1, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Wald("x", mu=2, lam=3, dims="a")
+        regular_distributions.Wald("y", lam=3, phi=1.5, alpha=1, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)
