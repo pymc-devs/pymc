@@ -1569,7 +1569,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                             f"Some of the{observed}values of variable {rv} are associated with a non-finite {fn}:"
                         )
                         mask = ~np.isfinite(rv_fn_eval)
-                        for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
+                        for value, fn_eval in zip(np.atleast_1d(values)[mask], rv_fn_eval[mask]):
                             print_(f" value = {value} -> {fn} = {fn_eval}")
                         print_()
 

@@ -2060,6 +2060,14 @@ class TestModelDebug:
         )
         assert "value = 0.53 -> logp = -inf" in out
 
+    def test_invalid_scalar_dlogp(self, capfd):
+        with pm.Model() as m:
+            pm.Normal("x", mu=0, sigma=0)
+        m.debug(fn="dlogp")
+
+        out, _ = capfd.readouterr()
+        assert "value = 0.0 -> dlogp = nan" in out
+
 
 def test_model_logp_fast_compile():
     # Issue #5618
