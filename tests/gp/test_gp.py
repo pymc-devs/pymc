@@ -295,6 +295,15 @@ class TestMarginalVsLatent:
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
 
+    def testLatentConditionalDenseXnew(self):
+        X = np.arange(99, 0, -1).reshape(-1, 1)
+        Xnew = np.linspace(100, 1, 500).reshape(-1, 1)
+        with pm.Model() as model:
+            gp = pm.gp.Latent(cov_func=pm.gp.cov.ExpQuad(1, ls=1))
+            gp.prior("f", X, reparameterize=False)
+            gp.conditional("p", Xnew, jitter=1e-4)
+        assert np.isfinite(model.compile_logp()(model.initial_point()))
+
     def testLatentMultioutput(self):
         n_outputs = 2
         rng = np.random.default_rng(123)
