@@ -271,8 +271,8 @@ def test_find_MAP_inferencedata(
     if compute_hessian:
         # Exact inverse Hessian of the loss at the optimum, never an optimizer's approximation
         mean = idata.fit.mean_vector.values
-        d2loss = normal_model.compile_d2logp(jacobian=False, negate_output=True)
-        H = d2loss({"mu": mean[0], "sigma_log__": mean[1]})
+        d2logp = normal_model.compile_d2logp(jacobian=False, negate_output=False)
+        H = -d2logp({"mu": mean[0], "sigma_log__": mean[1]})
         assert_allclose(idata.fit.covariance_matrix.values, np.linalg.inv(H), rtol=1e-6)
 
 

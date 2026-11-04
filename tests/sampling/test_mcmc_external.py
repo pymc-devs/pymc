@@ -103,6 +103,13 @@ def test_step_args():
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
 
 
+def test_external_sampler_rejects_unknown_kwargs():
+    with Model():
+        Normal("x")
+        with pytest.raises(TypeError, match=r"jitter.*nuts="):
+            sample(nuts_sampler="numpyro", jitter=False, chains=1, cores=1, progressbar=False)
+
+
 def test_jax_sampler_kwargs_routing():
     pytest.importorskip("numpyro")
 

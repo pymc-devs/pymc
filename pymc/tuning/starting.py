@@ -69,9 +69,9 @@ def _canonical_method(method: str) -> str:
             "A callable `method` is no longer supported. Pass the name of a "
             '`scipy.optimize.minimize` method or "basinhopping".'
         )
-    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+    from better_optimize.configuration import MINIMIZE_CONFIGS
 
-    methods = {k.lower(): k for k in MINIMIZE_MODE_KWARGS} | {"basinhopping": "basinhopping"}
+    methods = {k.lower(): k for k in MINIMIZE_CONFIGS} | {"basinhopping": "basinhopping"}
     try:
         return methods[method.lower()]
     except (KeyError, AttributeError):
@@ -404,10 +404,10 @@ def _fit_MAP(
     if do_basinhopping:
         method = _canonical_method(minimizer_kwargs.pop("method", "L-BFGS-B"))
 
-    from better_optimize.constants import MINIMIZE_MODE_KWARGS
+    from better_optimize.configuration import MINIMIZE_CONFIGS
 
     auto_grad = use_grad is None
-    if auto_grad and discrete and MINIMIZE_MODE_KWARGS[method]["uses_grad"]:
+    if auto_grad and discrete and MINIMIZE_CONFIGS[method].uses_grad:
         warnings.warn(
             "Discrete variables are being optimized, so gradients are not available. "
             f"Using the gradient-free method 'powell' instead of '{method}'.",

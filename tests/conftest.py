@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import os
 import warnings
 
 import numpy as np
@@ -18,6 +19,11 @@ import pytensor
 import pytest
 
 from numba.core.errors import NumbaPerformanceWarning, NumbaWarning
+
+# ZarrTrace stores object arrays with numcodecs.Pickle, which numcodecs>=0.15.2 refuses to
+# decode without this opt-in. It must be set before numcodecs is imported, and sampler
+# subprocesses inherit it. See https://github.com/pymc-devs/pymc/issues/7752
+os.environ.setdefault("NUMCODECS_ALLOW_UNSAFE_PICKLE_DECODE", "1")
 
 
 @pytest.fixture(scope="function", autouse=True)

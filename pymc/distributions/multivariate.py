@@ -1458,7 +1458,7 @@ class LKJCholeskyCov:
 class LKJCorrRV(SymbolicRandomVariable):
     name = "lkjcorr"
     extended_signature = "[rng],[size],(),()->[rng],(n,n)"
-    _print_name = ("LKJCorrRV", "\\operatorname{LKJCorrRV}")
+    _print_name = ("LKJCorr", "\\operatorname{LKJCorr}")
 
     def make_node(self, rng, size, n, eta):
         n = pt.as_tensor_variable(n)

@@ -225,7 +225,7 @@ def lift_loc_scale(fgraph, node):
             if (extra_scale_const == -1).all():
                 # There is no scale to lift, it's just a negated rv (happens in argmin(rv))
                 return None
-            # Scale is homogenously negative, make it positive, and return rv * -1 later so other rewrites can handle it
+            # Scale is homogeneously negative, make it positive, and return rv * -1 later so other rewrites can handle it
             extra_scale *= -1
         loc *= extra_scale
         scale *= extra_scale
@@ -331,7 +331,8 @@ def categorical_from_argmax(fgraph, node):
 
     # Normalize probs and create categorical
     probs /= probs.sum(-1, keepdims=True)
-    return [pt.random.categorical(probs, rng=rng, size=None)]
+    _, categorical_rv = pt.random.categorical(probs, rng=rng, size=None, return_next_rng=True)
+    return [categorical_rv]
 
 
 measurable_ir_rewrites_db.register("lift_loc_scale", lift_loc_scale, "basic", "lift_rv_args")

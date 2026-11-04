@@ -344,8 +344,10 @@ class TestMatchesScipy:
         check_logcdf(
             pm.Wald,
             Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: st.invgauss.logcdf(value, mu=mu, loc=alpha),
+            {"mu": Rplus, "lam": Rplus, "alpha": Rplus},
+            lambda value, mu, lam, alpha: st.invgauss.logcdf(
+                value, mu=mu / lam, scale=lam, loc=alpha
+            ),
         )
 
     @pytest.mark.parametrize(
@@ -607,6 +609,15 @@ class TestMatchesScipy:
             {"a": Rplus, "b": Rplus, "mu": R, "sigma": Rplusbig},
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
+
+    @pytest.mark.parametrize(
+        "dist, shape_params",
+        [(pm.StudentT, {"nu": 3}), (pm.SkewStudentT, {"a": 2, "b": 3})],
+    )
+    def test_studentt_logcdf_infinities(self, dist, shape_params):
+        value = pt.vector("value")
+        logcdf = pm.logcdf(dist.dist(**shape_params, mu=1, sigma=2), value)
+        npt.assert_array_equal(logcdf.eval({value: floatX([-np.inf, np.inf])}), [-np.inf, 0])
 
     def test_skewstudentt_icdf(self):
         check_icdf(
@@ -1012,6 +1023,13 @@ class TestMatchesScipy:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
+    def test_truncated_normal_logcdf_boundaries(self):
+        value = pt.dvector("value")
+        rv = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=2)
+        fn = pytensor.function([value], pm.logcdf(rv, value))
+        values = np.array([-2.0, -1.0, 0.0, 2.0, 3.0])
+        np.testing.assert_allclose(fn(values), st.truncnorm.logcdf(values, -1, 2))
+
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sigma, lower, upper):
             return st.truncnorm.logpdf(
@@ -1342,7 +1360,7 @@ class TestMoments:
     @pytest.mark.parametrize(
         "a, b, mu, sigma, size, expected",
         [
-            (1, 1, 0, 1, None, 0),
+            (0.5, 2, 2, 2, None, 2),
             (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
             (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
             (
@@ -1746,40 +1764,28 @@ class TestMoments:
     @pytest.mark.parametrize(
         "nu, sigma, size, expected",
         [
-            (1.0, 1.0, None, 1.5485724605511453),
-            (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+            (0.0, 1.0, None, 1.0),
+            (4.0, 2.0, None, 4.0),
+            (25.0, 1.0, None, 25.0),
+            (1.0, np.ones(5), None, np.ones(5)),
             (
                 np.arange(1, 6),
                 1.0,
                 None,
-                (
-                    1.5485724605511453,
-                    2.2723834280687427,
-                    3.1725772879007166,
-                    4.127193542536757,
-                    5.101069639492123,
-                ),
+                np.arange(1, 6),
             ),
             (
                 np.arange(1, 6),
                 np.ones(5),
                 (2, 5),
-                np.full(
-                    (2, 5),
-                    (
-                        1.5485724605511453,
-                        2.2723834280687427,
-                        3.1725772879007166,
-                        4.127193542536757,
-                        5.101069639492123,
-                    ),
-                ),
+                np.full((2, 5), np.arange(1, 6)),
             ),
         ],
     )
     def test_rice_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,
