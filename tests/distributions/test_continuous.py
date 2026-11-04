@@ -1023,6 +1023,49 @@ class TestMatchesScipy:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
 
+    @pytest.mark.skipif(
+        condition=(pytensor.config.floatX == "float32"), reason="float64 precision test"
+    )
+    def test_truncated_normal_float64_precision(self):
+        # The normal log-CDF helpers used to divide by a float32 sqrt(2), which
+        # left the logp of a 38-sigma truncation with a relative error of 1.5e-4
+        value = pt.dvector("value")
+        # values stay away from upper so that the logcdf is not a cancelled ~0
+        for lower, upper, values in [
+            (38.0, 40.0, [38.02, 38.1]),
+            (10.0, 12.0, [10.05, 10.5]),
+            (-3.0, 2.0, [-2.5, 0.3, 1.9]),
+        ]:
+            rv = pm.TruncatedNormal.dist(mu=0.0, sigma=1.0, lower=lower, upper=upper)
+            logp_fn = pytensor.function([value], pm.logp(rv, value))
+            logcdf_fn = pytensor.function([value], pm.logcdf(rv, value))
+            np.testing.assert_allclose(
+                logp_fn(values), st.truncnorm.logpdf(values, lower, upper), rtol=1e-11
+            )
+            np.testing.assert_allclose(
+                logcdf_fn(values), st.truncnorm.logcdf(values, lower, upper), rtol=1e-11
+            )
+
+    @pytest.mark.skipif(
+        condition=(pytensor.config.floatX == "float32"), reason="float64 precision test"
+    )
+    def test_half_normal_skew_normal_float64_precision(self):
+        value = pt.dvector("value")
+        values = np.array([0.5, 1.0, 3.0, 8.0])
+        rv = pm.HalfNormal.dist(sigma=2.0)
+        np.testing.assert_allclose(
+            pytensor.function([value], pm.logcdf(rv, value))(values),
+            st.halfnorm.logcdf(values, scale=2.0),
+            rtol=1e-12,
+        )
+        values = np.array([-2.0, -1.0, 0.5, 2.0])
+        rv = pm.SkewNormal.dist(mu=0.5, sigma=2.0, alpha=4.0)
+        np.testing.assert_allclose(
+            pytensor.function([value], pm.logp(rv, value))(values),
+            st.skewnorm.logpdf(values, 4.0, 0.5, 2.0),
+            rtol=1e-12,
+        )
+
     def test_truncated_normal_logcdf_boundaries(self):
         value = pt.dvector("value")
         rv = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=2)

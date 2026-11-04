@@ -29,8 +29,12 @@ from pymc.distributions.dist_math import (
     clipped_beta_rvs,
     factln,
     i0e,
+    log_diff_normal_cdf,
     logpow,
     multigammaln,
+    normal_lccdf,
+    normal_lcdf,
+    std_cdf,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -219,3 +223,49 @@ def test_multigamma():
         for x in xvals:
             if np.all(x > 0.5 * (p - 1)):
                 check_vals(multigammaln_, ref_multigammaln, x, p)
+
+
+@pytest.mark.skipif(config.floatX == "float32", reason="float64 precision test")
+def test_normal_cdf_helpers_float64_precision():
+    """Check the normal log-CDF helpers keep float64 precision in float64 graphs.
+
+    pt.sqrt(2.0) and pt.log(0.5) are float32 constants under PyTensor's default
+    autocasting, so dividing a float64 argument by them left every result with
+    float32 rounding (relative error of 3e-8 near zero, growing like z**2 in the
+    tails, and 1.5e-4 for a 38-sigma truncation).
+    """
+    mu, sigma = 0.5, 2.0
+    z = np.array([-38.0, -10.0, -5.0, -3.0, -1.0, -0.5, 0.0, 0.5, 1.0, 3.0, 5.0, 10.0, 38.0])
+    x = mu + sigma * z
+
+    lcdf = normal_lcdf(mu, sigma, x).eval()
+    lccdf = normal_lccdf(mu, sigma, x).eval()
+    assert lcdf.dtype == lccdf.dtype == np.float64
+    np.testing.assert_allclose(lcdf, scipy.special.log_ndtr(z), rtol=1e-12)
+    np.testing.assert_allclose(lccdf, scipy.special.log_ndtr(-z), rtol=1e-12)
+
+    # std_cdf is 0.5 + 0.5 * erf(z / sqrt(2)), which cancels in the lower tail
+    z_cdf = z[np.abs(z) <= 3.0]
+    cdf = std_cdf(z_cdf).eval()
+    assert cdf.dtype == np.float64
+    np.testing.assert_allclose(cdf, scipy.special.ndtr(z_cdf), rtol=1e-12)
+
+    # log(Phi(upper) - Phi(lower)) from the tail that does not cancel
+    def log_diff_ndtr(upper, lower):
+        if lower > 0:
+            a, b = scipy.special.log_ndtr(-lower), scipy.special.log_ndtr(-upper)
+        else:
+            a, b = scipy.special.log_ndtr(upper), scipy.special.log_ndtr(lower)
+        return a + np.log1p(-np.exp(b - a))
+
+    for upper, lower in [
+        (1.0, -1.0),
+        (0.5, -3.0),
+        (3.0, 0.5),
+        (12.0, 10.0),
+        (-10.0, -12.0),
+        (40.0, 38.0),
+    ]:
+        res = log_diff_normal_cdf(mu, sigma, mu + sigma * upper, mu + sigma * lower).eval()
+        assert res.dtype == np.float64
+        np.testing.assert_allclose(res, log_diff_ndtr(upper, lower), rtol=1e-12)

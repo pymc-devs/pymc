@@ -74,6 +74,7 @@ from pytensor.utils import lazy_scipy_module
 
 from pymc.distributions import transforms
 from pymc.distributions.dist_math import (
+    SQRT_2,
     SplineWrapper,
     check_icdf_parameters,
     check_icdf_value,
@@ -919,7 +920,7 @@ class HalfNormal(PositiveContinuous):
         logcdf = pt.switch(
             pt.lt(value, loc),
             -np.inf,
-            pt.log1p(-pt.erfc(z / pt.sqrt(2.0))),
+            pt.log1p(-pt.erfc(z / SQRT_2)),
         )
 
         return check_parameters(
@@ -3288,7 +3289,7 @@ class SkewNormal(Continuous):
         tau, _ = get_tau_sigma(sigma=sigma)
 
         res = (
-            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / pt.sqrt(2)))
+            pt.log(1 + pt.erf(((value - mu) * pt.sqrt(tau) * alpha) / SQRT_2))
             + (-tau * (value - mu) ** 2 + pt.log(tau / np.pi / 2.0)) / 2.0
         )
 

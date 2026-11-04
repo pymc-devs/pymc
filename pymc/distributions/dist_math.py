@@ -18,6 +18,8 @@ Created on Mar 7, 2011.
 @author: johnsalvatier
 """
 
+import math
+
 from collections.abc import Iterable
 from functools import partial
 
@@ -41,6 +43,11 @@ stats = lazy_scipy_module("stats")
 
 f = floatX
 c = -0.5 * np.log(2.0 * np.pi)
+# Python floats follow floatX when PyTensor converts them. pt.sqrt(2.0) and
+# pt.log(0.5) instead build float32 constants (2.0 and 0.5 autocast to the
+# narrowest exact dtype), which leaves float64 graphs with float32 rounding.
+SQRT_2 = math.sqrt(2.0)
+LOG_HALF = math.log(0.5)
 _beta_clip_values = {
     dtype: (np.nextafter(0, 1, dtype=dtype), np.nextafter(1, 0, dtype=dtype))
     for dtype in ["float16", "float32", "float64"]
@@ -120,7 +127,7 @@ def betaln(x, y):
 
 def std_cdf(x):
     """Calculate the standard normal cumulative distribution function."""
-    return 0.5 + 0.5 * pt.erf(x / pt.sqrt(2.0))
+    return 0.5 + 0.5 * pt.erf(x / SQRT_2)
 
 
 def normal_lcdf(mu, sigma, x):
@@ -128,8 +135,8 @@ def normal_lcdf(mu, sigma, x):
     z = (x - mu) / sigma
     return pt.switch(
         pt.lt(z, -1.0),
-        pt.log(pt.erfcx(-z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(z / pt.sqrt(2.0)) / 2.0),
+        pt.log(pt.erfcx(-z / SQRT_2) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(z / SQRT_2) / 2.0),
     )
 
 
@@ -137,8 +144,8 @@ def normal_lccdf(mu, sigma, x):
     z = (x - mu) / sigma
     return pt.switch(
         pt.gt(z, 1.0),
-        pt.log(pt.erfcx(z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(-z / pt.sqrt(2.0)) / 2.0),
+        pt.log(pt.erfcx(z / SQRT_2) / 2.0) - pt.sqr(z) / 2.0,
+        pt.log1p(-pt.erfc(-z / SQRT_2) / 2.0),
     )
 
 
@@ -163,14 +170,14 @@ def log_diff_normal_cdf(mu, sigma, x, y):
     log (\\Phi(x) - \\Phi(y))
 
     """
-    x = (x - mu) / sigma / pt.sqrt(2.0)
-    y = (y - mu) / sigma / pt.sqrt(2.0)
+    x = (x - mu) / sigma / SQRT_2
+    y = (y - mu) / sigma / SQRT_2
 
     # To stabilize the computation, consider these three regions:
     # 1) x > y > 0 => Use erf(x) = 1 - e^{-x^2} erfcx(x) and erf(y) =1 - e^{-y^2} erfcx(y)
     # 2) 0 > x > y => Use erf(x) = e^{-x^2} erfcx(-x) and erf(y) = e^{-y^2} erfcx(-y)
     # 3) x > 0 > y => Naive formula log( (erf(x) - erf(y)) / 2 ) works fine.
-    return pt.log(0.5) + pt.switch(
+    return LOG_HALF + pt.switch(
         pt.gt(y, 0),
         -pt.square(y) + pt.log(pt.erfcx(y) - pt.exp(pt.square(y) - pt.square(x)) * pt.erfcx(x)),
         pt.switch(
