@@ -459,6 +459,11 @@ class TestHSGPPeriodic(_BaseFixtures):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
+    def test_behavior_change_warning(self):
+        cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
+        with pytest.warns(UserWarning, match="`HSGPPeriodic` now matches the `Periodic` kernel"):
+            pm.gp.HSGPPeriodic(m=20, cov_func=cov_func)
+
     @pytest.mark.parametrize("ls", [0.2, 0.7, 2.0])
     def test_prior_covariance(self, ls):
         """The covariance implied by the basis and coefficients should match the full GP kernel."""

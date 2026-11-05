@@ -794,6 +794,14 @@ class HSGPPeriodic(Base):
                 "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
             )
 
+        warnings.warn(
+            "`HSGPPeriodic` now matches the `Periodic` kernel it approximates. Earlier versions "
+            "used the wrong coefficient scaling and lengthscale convention, so priors and "
+            "posteriors of existing models will differ. Check the priors of existing models "
+            "and reset them if needed. See https://github.com/pymc-devs/pymc/pull/8586.",
+            UserWarning,
+        )
+
         self._m = m
         self.scale = scale
         self._X_center = None
