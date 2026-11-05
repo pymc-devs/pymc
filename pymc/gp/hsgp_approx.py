@@ -20,6 +20,7 @@ from types import ModuleType
 from typing import Literal
 
 import numpy as np
+import pytensor
 import pytensor.tensor as pt
 
 import pymc as pm
@@ -220,7 +221,7 @@ def approx_hsgp_hyperparams(
 
     References
     ----------
-    - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
+    - Riutort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
     Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
     """
     if lengthscale_range[0] >= lengthscale_range[1]:
@@ -252,14 +253,14 @@ def approx_hsgp_hyperparams(
 
 
 def approx_hsgp_periodic_m(lengthscale_min: float) -> int:
-    """Use heuristics to recommend a minimum `m` for `HSGPPeriodic`, based on Ruitort-Mayol et. al.
+    """Use heuristics to recommend a minimum `m` for `HSGPPeriodic`, based on Riutort-Mayol et. al.
 
     Smaller lengthscales need more basis vectors. Use your prior on the lengthscale of the
     `Periodic` kernel as guidance, and pass in the smallest lengthscale you expect. There is no
     boundary factor `c` because the periodic basis does not depend on the range of `X`.
 
     The recommendation is ``m = ceil(1.86 / lengthscale_min) + 1``. This is the rule
-    ``J >= 3.72 / ell`` from Appendix B of Ruitort-Mayol et al. converted to the `Periodic`
+    ``J >= 3.72 / ell`` from Appendix B of Riutort-Mayol et al. converted to the `Periodic`
     kernel's lengthscale convention, which is half of theirs. One is added because `m` also
     counts the constant term.
 
@@ -280,7 +281,7 @@ def approx_hsgp_periodic_m(lengthscale_min: float) -> int:
 
     References
     ----------
-    - Ruitort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
+    - Riutort-Mayol, G., Anderson, M., Solin, A., Vehtari, A. (2022).
     Practical Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
     """
     if lengthscale_min <= 0:
@@ -710,7 +711,7 @@ class HSGPPeriodic(Base):
     Hilbert Space Gaussian process approximation for the Periodic covariance function.
 
     Note, this is not actually a Hilbert space approximation, but it comes from the same
-    paper (Ruitort-Mayol et al., 2022. See Appendix B) and follows the same spirit: using a basis
+    paper (Riutort-Mayol et al., 2022. See Appendix B) and follows the same spirit: using a basis
     approximation to a Gaussian process. In this case, the approximation is based on a series of
     stochastic resonators.
 
@@ -719,11 +720,17 @@ class HSGPPeriodic(Base):
 
     Smaller lengthscales need larger `m`. A good minimum is ``m = ceil(1.86 / ls) + 1``, where `ls`
     is the smallest lengthscale of the `Periodic` kernel you expect. `approx_hsgp_periodic_m`
-    computes this. See Ruitort-Mayol et al., Appendix B. Note, this approximation is only
+    computes this. See Riutort-Mayol et al., Appendix B. Note, this approximation is only
     implemented for the 1-D case.
 
     To work with the approximation in its "linearized" form, as a matrix of basis vectors and a
     vector of coefficients, see the method `prior_linearized`.
+
+    .. versionchanged:: 6.5.0
+        The approximation now matches the `Periodic` kernel. Earlier versions used the
+        coefficient variances as standard deviations, and the lengthscale convention of
+        Riutort-Mayol et al., which is half of the one `Periodic` uses. Priors and posteriors of
+        existing models will differ, so check their lengthscale and `scale` priors.
 
     Parameters
     ----------
@@ -764,7 +771,7 @@ class HSGPPeriodic(Base):
 
     References
     ----------
-    -   Ruitort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
+    -   Riutort-Mayol, G., and Anderson, M., and Solin, A., and Vehtari, A. (2022). Practical
         Hilbert Space Approximate Bayesian Gaussian Processes for Probabilistic Programming
     """
 
@@ -793,14 +800,6 @@ class HSGPPeriodic(Base):
             raise ValueError(
                 "HSGP approximation for `Periodic` kernel only implemented for 1-dimensional case."
             )
-
-        warnings.warn(
-            "`HSGPPeriodic` now matches the `Periodic` kernel it approximates. Earlier versions "
-            "used the wrong coefficient scaling and lengthscale convention, so priors and "
-            "posteriors of existing models will differ. Check the priors of existing models "
-            "and reset them if needed. See https://github.com/pymc-devs/pymc/pull/8586.",
-            UserWarning,
-        )
 
         self._m = m
         self.scale = scale
@@ -892,10 +891,14 @@ class HSGPPeriodic(Base):
         Xs, _ = self.cov_func._slice(Xs)
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
+        return (phi_cos, phi_sin), self._psd()
+
+    def _psd(self):
+        # the approximate psd gives variances, the basis coefficients need standard deviations.
+        # q2 underflows to 0 for large J; floor it so the sqrt gradient stays finite.
         J = pt.arange(0, self._m, 1)
-        # the approximate psd gives variances, the basis coefficients need standard deviations
-        psd = self.scale * pt.sqrt(self.cov_func.power_spectral_density_approx(J))
-        return (phi_cos, phi_sin), psd
+        q2 = self.cov_func.power_spectral_density_approx(J)
+        return self.scale * pt.sqrt(pt.maximum(q2, np.finfo(pytensor.config.floatX).tiny))
 
     def prior(  # type: ignore[override]
         self, name: str, X: TensorLike, dims: str | None = None, hsgp_coeffs_dims: str | None = None
@@ -946,9 +949,7 @@ class HSGPPeriodic(Base):
             Xnew - X_center, self.cov_func.period, self._m, tl=pt
         )
         m = self._m
-        J = pt.arange(0, m, 1)
-        # the approximate psd gives variances, the basis coefficients need standard deviations
-        psd = self.scale * pt.sqrt(self.cov_func.power_spectral_density_approx(J))
+        psd = self._psd()
 
         phi = phi_cos @ (psd * beta[:m]) + phi_sin[..., 1:] @ (psd[1:] * beta[m:])
         return self.mean_func(Xnew) + phi

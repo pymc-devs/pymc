@@ -867,7 +867,7 @@ class Periodic(Stationary):
             \tilde{q}_0^2 = \frac{\text{I}_0 (a)}{\exp(a)}
 
         where $\text{I}_j$ is the modified Bessel function of the first kind and
-        $a = (2\ell)^{-2}$. Ruitort-Mayol et al. (2022, Appendix B) use $a = \ell^{-2}$ because
+        $a = (2\ell)^{-2}$. Riutort-Mayol et al. (2022, Appendix B) use $a = \ell^{-2}$ because
         their kernel has 2 in the exponent instead of 0.5. The coefficients are variances, so
         they sum to one.
         """

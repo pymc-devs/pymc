@@ -459,11 +459,6 @@ class TestHSGPPeriodic(_BaseFixtures):
             cov_func = pm.gp.cov.Periodic(2, period=1, ls=[1, 2])
             pm.gp.HSGPPeriodic(m=500, scale=0.5, cov_func=cov_func)
 
-    def test_behavior_change_warning(self):
-        cov_func = pm.gp.cov.Periodic(1, period=1, ls=0.1)
-        with pytest.warns(UserWarning, match="`HSGPPeriodic` now matches the `Periodic` kernel"):
-            pm.gp.HSGPPeriodic(m=20, cov_func=cov_func)
-
     @pytest.mark.parametrize("ls", [0.2, 0.7, 2.0])
     def test_prior_covariance(self, ls):
         """The covariance implied by the basis and coefficients should match the full GP kernel."""
@@ -480,7 +475,7 @@ class TestHSGPPeriodic(_BaseFixtures):
 
     @pytest.mark.parametrize("ls", [0.05, 0.2, 0.7, 2.0])
     def test_approx_hsgp_periodic_m(self, ls):
-        """The recommended m should meet the accuracy criterion of Ruitort-Mayol et al., Appendix B."""
+        """The recommended m should meet the accuracy criterion of Riutort-Mayol et al., Appendix B."""
         m = approx_hsgp_periodic_m(ls)
         cov_func = pm.gp.cov.Periodic(1, period=1, ls=ls)
         tau = np.linspace(0, 1, 2001)
@@ -490,8 +485,23 @@ class TestHSGPPeriodic(_BaseFixtures):
         k_true = cov_func(np.array([[0.0]]), tau[:, None]).eval().flatten()
         assert trapezoid(np.abs(k_true - k_approx), tau) < 0.005 * trapezoid(k_true, tau)
 
+    def test_approx_hsgp_periodic_m_rejects_nonpositive(self):
         with pytest.raises(ValueError, match="must be positive"):
             approx_hsgp_periodic_m(0.0)
+
+    @pytest.mark.parametrize("ls", [0.5, 2.0, 5.0])
+    def test_psd_gradient_finite_large_m(self, ls):
+        """q2 underflows to 0 for large m; the sqrt gradient wrt ls must stay finite."""
+        X = np.linspace(0, 3, 20)[:, None]
+        with pm.Model() as model:
+            ls_var = pm.InverseGamma("ls", 2, 1)
+            cov_func = pm.gp.cov.Periodic(1, period=1.0, ls=ls_var)
+            hsgp = pm.gp.HSGPPeriodic(m=200, scale=1.0, cov_func=cov_func)
+            f = hsgp.prior("f", X=X)
+            pm.Normal("y", f, 0.1, observed=np.sin(2 * np.pi * X[:, 0]))
+        point = model.initial_point()
+        point["ls_log__"] = np.log(ls)
+        assert np.all(np.isfinite(model.compile_dlogp()(point)))
 
     @pytest.mark.parametrize("cov_func", [pm.gp.cov.Periodic(1, period=1, ls=1)])
     @pytest.mark.parametrize("eta", [100.0])
