@@ -10,6 +10,7 @@ dependencies:
 - blas
 - cachetools>=4.2.1,<7
 - cloudpickle
+- narwhals>=2.0
 - numpy>=1.25.0
 - pandas>=0.24.0
 - pip
@@ -23,6 +24,7 @@ dependencies:
 - zarr>=2.5.0,<3
 # Extra dependencies for dev, testing and docs build
 - ipython>=7.16
+- polars>=2.0.0
 - myst-nb<=1.0.0
 - numpydoc
 - polyagamma
