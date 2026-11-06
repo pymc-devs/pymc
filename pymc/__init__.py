@@ -58,6 +58,7 @@ from pymc.model.transform.conditioning import do, observe
 from pymc.model_graph import model_to_graphviz, model_to_mermaid, model_to_networkx
 from pymc.pytensorf import compile
 from pymc.sampling import *
+from pymc.sampling.samplers import blackjax, numpyro, nutpie
 from pymc.smc import *
 from pymc.stats.log_density import compute_log_likelihood
 from pymc.step_methods import *
