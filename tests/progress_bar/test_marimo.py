@@ -20,8 +20,12 @@ import pytest
 
 import pymc as pm
 
-from pymc.progress_bar import MCMCProgressBarManager, NutpieProgressBarManager
-from pymc.progress_bar.marimo_progress import MarimoProgressBackend
+from pymc.progress_bar import (
+    MCMCProgressBarManager,
+    NutpieProgressBarManager,
+    create_simple_progress,
+)
+from pymc.progress_bar.marimo_progress import MarimoProgressBackend, MarimoSimpleProgress
 
 
 class TestMarimoProgressBackend:
@@ -198,3 +202,33 @@ class TestMarimoProgressBackend:
         # Chain 0's row must be identical — elapsed and speed frozen
         html_after = backend._render_task_row(0, backend._task_state[0], [])
         assert html_at_finish == html_after
+
+
+class TestMarimoSimpleProgress:
+    @pytest.fixture(autouse=True)
+    def require_marimo(self):
+        pytest.importorskip("marimo")
+
+    def test_marimo_simple_progress_init_and_render(self):
+        with patch("pymc.progress_bar.progress.in_marimo_notebook", return_value=True):
+            progress = create_simple_progress(progressbar=True)
+            assert isinstance(progress, MarimoSimpleProgress)
+
+            progress.add_task("Fitting", completed=0, total=100, loss="Average Loss = 1.234")
+            html = progress._render_html()
+            assert "<th>Loss</th>" in html
+            assert "<td>Average Loss = 1.234</td>" in html
+
+            progress.update(task_id=0, loss="Average Loss = 0.567")
+            html_updated = progress._render_html()
+            assert "<td>Average Loss = 0.567</td>" in html_updated
+
+    def test_marimo_advi_fit_integration(self):
+        with (
+            patch("pymc.variational.inference.in_marimo_notebook", return_value=True),
+            patch("marimo.output.replace") as mock_replace,
+        ):
+            with pm.Model():
+                pm.Normal("x", 0, 1)
+                pm.fit(n=10, method="advi", progressbar=True)
+            assert mock_replace.called
