@@ -195,6 +195,24 @@ def test_weighted_covariance(ndim=10, seed=5432):
     assert np.allclose(cov_est2, cov_est0)
 
 
+@pytest.mark.parametrize("use_grads", [False, True])
+def test_diag_adapt_exp_sampling_state(use_grads):
+    # The variance estimators are only created after the discard window,
+    # so their state has to be readable once adaptation has started.
+    pot = quadpotential.QuadPotentialDiagAdaptExp(
+        2, np.zeros(2), alpha=0.02, use_grads=use_grads, discard_window=2
+    )
+    rng = np.random.default_rng(42)
+    for _ in range(10):
+        pot.update(rng.normal(size=2), rng.normal(size=2), tune=True)
+    assert pot._variance_estimator is not None
+
+    state = pot.sampling_state._variance_estimator
+    npt.assert_array_equal(state._mean, pot._variance_estimator._mean)
+    npt.assert_array_equal(state._variance, pot._variance_estimator._variance)
+    assert (pot.sampling_state._variance_estimator_grad is not None) == use_grads
+
+
 def test_full_adapt_sample_p():
     # ref: https://github.com/stan-dev/stan/pull/2672
     # Note: the Stan PR has an incorrect Wishart variance formula for diagonal

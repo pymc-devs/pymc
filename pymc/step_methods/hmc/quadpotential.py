@@ -452,7 +452,7 @@ class _WeightedVariance(WithSamplingState):
 class ExpWeightedVarianceState(DataClassState):
     _alpha: float
     _mean: np.ndarray
-    _var: np.ndarray
+    _variance: np.ndarray
 
 
 class _ExpWeightedVariance(WithSamplingState):
