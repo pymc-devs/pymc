@@ -31,6 +31,8 @@ from pymc.distributions.dist_math import (
     i0e,
     logpow,
     multigammaln,
+    normal_lccdf,
+    normal_lcdf,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -147,6 +149,22 @@ def test_logpow_stabilization_reaches_logp():
 
     gamma = pm.logp(pm.Gamma.dist(alpha=0.5, beta=1.0), pt.exp(a))
     np.testing.assert_allclose(gamma.eval({a: -800.0}), 399.4276350736618)
+
+
+@pytest.mark.parametrize("lower", [True, False])
+def test_normal_lcdf_lccdf(lower):
+    x = pt.dvector("x")
+    y = normal_lcdf(0, 1, x) if lower else normal_lccdf(0, 1, x)
+    fn = function([x], [y, pt.grad(y.sum(), x)])
+    z = np.array([-30.0, -10.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 10.0, 30.0])
+    value, grad = fn(z)
+
+    s = 1 if lower else -1
+    expected = scipy.special.log_ndtr(s * z)
+    np.testing.assert_allclose(value, expected, rtol=1e-13)
+    np.testing.assert_allclose(
+        grad, s * np.exp(-(z**2) / 2 - np.log(2 * np.pi) / 2 - expected), rtol=1e-12
+    )
 
 
 def test_multinomial_check_parameters():
