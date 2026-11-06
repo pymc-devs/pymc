@@ -99,8 +99,16 @@ class LaplaceProposal(Proposal):
 
 
 class PoissonProposal(Proposal):
+    """Centered Poisson increments with independent random signs.
+
+    Randomizing the signs makes the proposal symmetric about zero, as required
+    by Metropolis, while preserving the centered Poisson variance ``s``.
+    """
+
     def __call__(self, rng: np.random.Generator | None = None):
-        return (rng or nr).poisson(lam=self.s, size=np.size(self.s)) - self.s
+        rng = rng or nr
+        delta = rng.poisson(lam=self.s, size=np.size(self.s)) - self.s
+        return delta * rng.choice([-1, 1], size=np.size(self.s))
 
 
 class MultivariateNormalProposal(Proposal):
@@ -179,7 +187,7 @@ class Metropolis(ArrayStepShared):
         S: standard deviation or covariance matrix
             Some measure of variance to parameterize proposal distribution
         proposal_dist: function
-            Function that returns zero-mean deviates when parameterized with
+            Function that returns deviates symmetric about zero when parameterized with
             S (and n). Defaults to normal.
         scaling: scalar or array
             Initial scale factor for proposal. Defaults to 1.
@@ -874,7 +882,7 @@ class DEMetropolis(PopulationArrayStepShared):
     S: standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
-        Function that returns zero-mean deviates when parameterized with
+        Function that returns deviates symmetric about zero when parameterized with
         S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
@@ -1040,7 +1048,7 @@ class DEMetropolisZ(ArrayStepShared):
     S: standard deviation or covariance matrix
         Some measure of variance to parameterize proposal distribution
     proposal_dist: function
-        Function that returns zero-mean deviates when parameterized with
+        Function that returns deviates symmetric about zero when parameterized with
         S (and n). Defaults to NormalProposal(S).
     scaling: scalar or array
         Initial scale factor for epsilon. Defaults to 0.001
