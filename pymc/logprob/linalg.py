@@ -52,7 +52,10 @@ def logprob_measurable_matmul(op, values, l, r):  # noqa: E741
 
     _, log_abs_jac_det = pt.linalg.slogdet(A)
 
-    return x_logp - log_abs_jac_det
+    # The same linear map is applied independently to each column (left
+    # multiplication) or row (right multiplication).
+    n_repeats = x_value.shape[-1] if op.right_measurable else x_value.shape[-2]
+    return x_logp - n_repeats * log_abs_jac_det
 
 
 @node_rewriter(tracks=[_matmul])
