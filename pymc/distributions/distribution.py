@@ -68,6 +68,7 @@ __all__ = [
     "DiracDelta",
     "Discrete",
     "Distribution",
+    "Placeholder",
     "SymbolicRandomVariable",
 ]
 
@@ -777,6 +778,97 @@ class DiracDelta(Discrete):
             -np.inf,
             0,
         )
+
+
+def _placeholder_error_message(name: str | None) -> str:
+    var = f"Placeholder variable {name!r}" if name else "A Placeholder variable"
+    return (
+        f"{var} cannot be sampled or have its logp evaluated. "
+        "Placeholder variables have no distribution: their values must come from an existing "
+        "trace, for example via `pm.sample_posterior_predictive(idata)`, where the trace "
+        "contains a variable with the same name. "
+        "If you see this error during `sample_posterior_predictive`, check that the variable "
+        "name matches one in the trace and that it is not listed in `sample_vars`."
+    )
+
+
+class PlaceholderRV(RandomVariable):
+    name = "placeholder"
+    signature = "->()"
+    dtype = None
+    _print_name = ("Placeholder", "\\operatorname{Placeholder}")
+
+    def perform(self, node, inputs, outputs):
+        raise NotImplementedError(_placeholder_error_message(node.outputs[1].name))
+
+    @classmethod
+    def rng_fn(cls, rng, size):
+        raise NotImplementedError(_placeholder_error_message(None))
+
+
+placeholder = PlaceholderRV()
+
+
+class Placeholder(Distribution):
+    r"""
+    Placeholder for a variable whose values are taken from an existing trace.
+
+    A ``Placeholder`` has no probability distribution: it cannot be sampled
+    (:func:`~pymc.sample`, :func:`~pymc.sample_prior_predictive`) and its logp
+    cannot be evaluated. It is meant for predictive models, where some variables
+    are reused from the posterior of another model, and are filled in by
+    :func:`~pymc.sample_posterior_predictive` from the ``trace`` passed to it.
+
+    Using a ``Placeholder`` (instead of an arbitrary prior) makes it explicit which
+    variables are expected to come from the trace. If the name of a ``Placeholder``
+    does not match any variable in the trace, ``sample_posterior_predictive`` raises
+    an error instead of silently drawing values from a prior.
+
+    Parameters
+    ----------
+    dtype : str, default "floatX"
+        The dtype of the variable. Use an integer dtype for variables that were
+        discrete in the original model.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+
+        with pm.Model() as model:
+            mu = pm.Normal("mu")
+            sigma = pm.Exponential("sigma", 1)
+            pm.Normal("obs", mu, sigma, observed=np.random.normal(size=100))
+            idata = pm.sample()
+
+        # Predictive model that changes the mean, but reuses the posterior of sigma
+        with pm.Model() as predictive_model:
+            mu = pm.Normal("new_mu", mu=10, sigma=1)
+            sigma = pm.Placeholder("sigma")
+            pm.Normal("obs", mu, sigma)
+            idata_oos = pm.sample_posterior_predictive(idata, var_names=["obs"], predictions=True)
+    """
+
+    rv_op = placeholder
+
+    def __new__(cls, name, *args, observed=None, **kwargs):
+        if observed is not None:
+            raise ValueError("Placeholder variables cannot be observed.")
+        return super().__new__(cls, name, *args, **kwargs)
+
+    @classmethod
+    def dist(cls, *, dtype="floatX", **kwargs):
+        return super().dist([], dtype=dtype, **kwargs)
+
+    def support_point(rv, size):
+        # Only needed so that the initial point can be built. Any attempt to
+        # actually sample the variable fails when its logp is requested.
+        return pt.zeros(() if rv_size_is_none(size) else size, dtype=rv.dtype)
+
+    def logp(value):
+        raise NotImplementedError(_placeholder_error_message(value.name))
 
 
 class PartialObservedRV(SymbolicRandomVariable):
