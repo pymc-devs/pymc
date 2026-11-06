@@ -2126,7 +2126,8 @@ class CARRV(RandomVariable):
         z = rng.normal(size=mu.shape)
         samples = np.empty(z.shape)
         for idx in np.ndindex(mu.shape[:-1]):
-            samples[idx] = linalg.cho_solve_banded((L, False), z[idx]) + mu[idx][perm_array]
+            # With Q = L^T L, solving L x = z gives x ~ N(0, Q^-1)
+            samples[idx] = linalg.solve_banded((0, u - 1), L, z[idx]) + mu[idx][perm_array]
         samples = samples[..., inv_perm]
         return samples
 
