@@ -1223,12 +1223,12 @@ class MarginalKron(Base):
             Asq = pt.sum(pt.square(A), 0)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma
+                cov += sigma**2
         else:
             Asq = pt.dot(A.T, A)
             cov = Km - Asq
             if pred_noise:
-                cov += sigma * pt.identity_like(cov)
+                cov += sigma**2 * pt.identity_like(cov)
         return mu, cov
 
     def conditional(self, name, Xnew, pred_noise=False, diag=False, **kwargs):
