@@ -235,7 +235,11 @@ class RandomWalk(Distribution):
             shape=shape,
             dims=dims,
             observed=observed,
-            support_shape_offset=1,
+            # Only the steps dimension carries the +1 offset of the random
+            # walk; the innovation dimensions are support dimensions without
+            # an offset. Broadcasting a scalar 1 across all of them subtracts
+            # one from the innovation shape and breaks multivariate walks.
+            support_shape_offset=[1] + [0] * dist_ndim_supp,
             ndim_supp=dist_ndim_supp + 1,
         )
         if support_shape is not None:
