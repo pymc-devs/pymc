@@ -95,6 +95,10 @@ class DistributionMeta(ABCMeta):
     https://github.com/pymc-devs/pymc/issues/5308
     """
 
+    def __call__(cls, *args: Any, **kwargs: Any) -> TensorVariable:
+        """Instantiate a distribution, which returns a tensor variable."""
+        return super().__call__(*args, **kwargs)
+
     def __new__(cls, name, bases, clsdict):
         rv_op = clsdict.setdefault("rv_op", None)
         rv_type = clsdict.setdefault("rv_type", None)
