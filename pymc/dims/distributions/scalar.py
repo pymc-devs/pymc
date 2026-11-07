@@ -26,17 +26,20 @@ from pymc.dims.distributions.core import (
     UnitDimDistribution,
     copy_docstring,
 )
-from pymc.dims.distributions.transforms import IntervalTransform
+from pymc.dims.distributions.transforms import IntervalTransform, circular
 from pymc.distributions.continuous import Beta as RegularBeta
 from pymc.distributions.continuous import Gamma as RegularGamma
 from pymc.distributions.continuous import (
     HalfCauchyRV,
     HalfStudentTRV,
+    KumaraswamyRV,
     WeibullBetaRV,
     flat,
     halfflat,
     truncated_normal,
+    wald,
 )
+from pymc.distributions.continuous import Wald as RegularWald
 from pymc.distributions.discrete import NegativeBinomial as RegularNegativeBinomial
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.pytensorf import continuous_types, floatX
@@ -72,6 +75,31 @@ class HalfFlat(PositiveDimDistribution):
     @classmethod
     def dist(cls, **kwargs):
         return super().dist([], **kwargs)
+
+
+@copy_docstring(regular_dists.Triangular)
+class Triangular(DimDistribution):
+    def __new__(
+        cls, name, lower=0, upper=1, c=0.5, default_transform=UNSET, observed=None, **kwargs
+    ):
+        if observed is None and default_transform is UNSET:
+            default_transform = IntervalTransform(lower, upper)
+        return super().__new__(
+            cls,
+            name,
+            lower,
+            c,
+            upper,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    xrv_op = ptxr.triangular
+
+    @classmethod
+    def dist(cls, lower, c, upper, **kwargs):
+        return super().dist([lower, c, upper], **kwargs)
 
 
 @copy_docstring(regular_dists.Uniform)
@@ -149,6 +177,15 @@ class TruncatedNormal(DimDistribution):
         return super().dist([mu, sigma, lower, upper], **kwargs)
 
 
+@copy_docstring(regular_dists.Logistic)
+class Logistic(DimDistribution):
+    xrv_op = ptxr.logistic
+
+    @classmethod
+    def dist(cls, mu, s, **kwargs):
+        return super().dist([mu, s], **kwargs)
+
+
 @copy_docstring(regular_dists.LogNormal)
 class LogNormal(PositiveDimDistribution):
     xrv_op = ptxr.lognormal
@@ -185,6 +222,16 @@ class HalfStudentT(PositiveDimDistribution):
         return xop(nu, sigma, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
+@copy_docstring(regular_dists.VonMises)
+class VonMises(DimDistribution):
+    xrv_op = ptxr.vonmises
+    default_transform = circular
+
+    @classmethod
+    def dist(cls, mu, kappa, **kwargs):
+        return super().dist([mu, kappa], **kwargs)
+
+
 @copy_docstring(regular_dists.Cauchy)
 class Cauchy(DimDistribution):
     xrv_op = ptxr.cauchy
@@ -216,6 +263,21 @@ class Beta(UnitDimDistribution):
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, nu=None, **kwargs):
         alpha, beta = RegularBeta.get_alpha_beta(alpha=alpha, beta=beta, mu=mu, sigma=sigma, nu=nu)
         return super().dist([alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Kumaraswamy)
+class Kumaraswamy(UnitDimDistribution):
+    @classmethod
+    def dist(cls, a, b, **kwargs):
+        return super().dist([a, b], **kwargs)
+
+    @classmethod
+    def xrv_op(cls, a, b, core_dims, extra_dims=None, rng=None, **kwargs):
+        a = as_xtensor(a)
+        b = as_xtensor(b)
+        core_rv = KumaraswamyRV.rv_op(a=a.values, b=b.values).owner.op
+        xop = ptxr.as_xrv(core_rv)
+        return xop(a, b, core_dims=core_dims, extra_dims=extra_dims, rng=rng, **kwargs)
 
 
 @copy_docstring(regular_dists.Laplace)
@@ -264,6 +326,15 @@ class Gamma(PositiveDimDistribution):
         return super().dist([alpha, ptx.math.reciprocal(beta)], **kwargs)
 
 
+@copy_docstring(regular_dists.Gumbel)
+class Gumbel(DimDistribution):
+    xrv_op = ptxr.gumbel
+
+    @classmethod
+    def dist(cls, mu, beta, **kwargs):
+        return super().dist([mu, beta], **kwargs)
+
+
 @copy_docstring(regular_dists.InverseGamma)
 class InverseGamma(PositiveDimDistribution):
     xrv_op = ptxr.invgamma
@@ -284,6 +355,16 @@ class InverseGamma(PositiveDimDistribution):
                 "Incompatible parameterization. Either use alpha and (optionally) beta, or mu and sigma"
             )
         return super().dist([alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Wald)
+class Wald(PositiveDimDistribution):
+    xrv_op = ptxr.as_xrv(wald)
+
+    @classmethod
+    def dist(cls, mu=None, lam=None, *, phi=None, alpha=0.0, **kwargs):
+        mu, lam, phi = RegularWald.get_mu_lam_phi(mu=mu, lam=lam, phi=phi)
+        return super().dist([mu, lam, alpha], **kwargs)
 
 
 @copy_docstring(regular_dists.Weibull)
@@ -340,6 +421,72 @@ class NegativeBinomial(DimDistribution):
     def dist(cls, mu=None, alpha=None, *, p=None, n=None, **kwargs):
         n, p = RegularNegativeBinomial.get_n_p(mu=mu, alpha=alpha, p=p, n=n, math=ptx.math)
         return super().dist([n, p], **kwargs)
+
+
+@copy_docstring(regular_dists.BetaBinomial)
+class BetaBinomial(DimDistribution):
+    xrv_op = ptxr.betabinom
+
+    @classmethod
+    def dist(cls, n, alpha, beta, **kwargs):
+        # Match the regular BetaBinomial, which casts n to int
+        n = as_xtensor(n).astype("int64")
+        return super().dist([n, alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Bernoulli)
+class Bernoulli(DimDistribution):
+    xrv_op = ptxr.bernoulli
+
+    @classmethod
+    def dist(cls, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        if p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+        if logit_p is not None:
+            p = ptx.math.sigmoid(logit_p)
+        return super().dist([p], **kwargs)
+
+
+@copy_docstring(regular_dists.Binomial)
+class Binomial(DimDistribution):
+    xrv_op = ptxr.binomial
+
+    @classmethod
+    def dist(cls, n, p=None, logit_p=None, **kwargs):
+        if p is not None and logit_p is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
+        if p is None and logit_p is None:
+            raise ValueError("Incompatible parametrization. Must specify either p or logit_p.")
+        if logit_p is not None:
+            p = ptx.math.sigmoid(logit_p)
+        # Cast to int64 to match the dtype used by regular_dists.Binomial
+        n = ptx.math.cast(n, "int64")
+        return super().dist([n, p], **kwargs)
+
+
+@copy_docstring(regular_dists.Geometric)
+class Geometric(DimDistribution):
+    xrv_op = ptxr.geometric
+
+    @classmethod
+    def dist(cls, p, **kwargs):
+        return super().dist([p], **kwargs)
+
+
+@copy_docstring(regular_dists.HyperGeometric)
+class HyperGeometric(DimDistribution):
+    xrv_op = ptxr.hypergeometric
+
+    @classmethod
+    def dist(cls, N, k, n, **kwargs):
+        # Match the reference distribution, which casts the integer parameters to int64
+        # (as_xtensor would otherwise infer the smallest dtype, e.g. int8 for constants)
+        return super().dist(
+            [ptx.math.cast(k, "int64"), ptx.math.cast(N - k, "int64"), ptx.math.cast(n, "int64")],
+            **kwargs,
+        )
 
 
 @copy_docstring(regular_dists.DiracDelta)

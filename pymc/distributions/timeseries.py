@@ -537,7 +537,7 @@ class AR(Distribution):
         Whether the first element of rho should be used as a constant term in the AR
         process.
     init_dist : unnamed_distribution, optional
-        Scalar or vector distribution for initial values. Distributions should have shape (*shape[:-1], ar_order).
+        Scalar or vector distribution for initial values. Distributions should have shape ``(*shape[:-1], ar_order)``.
         If not, it will be automatically resized. Defaults to pm.Normal.dist(0, 100, shape=...).
 
         .. warning:: init_dist will be cloned, rendering it independent of the one passed as input.
@@ -781,7 +781,9 @@ class GARCH11RV(SymbolicRandomVariable):
 
 class GARCH11(Distribution):
     r"""
-    GARCH(1,1) with Normal innovations. The model is specified by.
+    GARCH(1,1) with Normal innovations.
+
+    The model is specified by:
 
     .. math::
         y_t \sim N(0, \sigma_t^2)
@@ -789,18 +791,18 @@ class GARCH11(Distribution):
     .. math::
         \sigma_t^2 = \omega + \alpha_1 * y_{t-1}^2 + \beta_1 * \sigma_{t-1}^2
 
-    where \sigma_t^2 (the error variance) follows a ARMA(1, 1) model.
+    where :math:`\sigma_t^2` is the conditional variance.
 
     Parameters
     ----------
     omega : tensor_like of float
-        omega > 0, mean variance
+        Constant variance term (omega > 0).
     alpha_1 : tensor_like of float
-        alpha_1 >= 0, autoregressive term coefficient
+        Autoregressive term coefficient (alpha_1 >= 0).
     beta_1 : tensor_like of float
-        beta_1 >= 0, alpha_1 + beta_1 < 1, moving average term coefficient
+        Moving average term coefficient (beta_1 >= 0, alpha_1 + beta_1 < 1).
     initial_vol : tensor_like of float
-        initial_vol >= 0, initial volatility, sigma_0
+        Initial volatility :math:`\sigma_0` (initial_vol >= 0).
     """
 
     rv_type = GARCH11RV

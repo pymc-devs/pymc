@@ -8,6 +8,8 @@ Implementations
 
    HSGP
    HSGPPeriodic
+   approx_hsgp_hyperparams
+   approx_hsgp_periodic_m
    Latent
    LatentKron
    Marginal

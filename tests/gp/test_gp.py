@@ -41,7 +41,11 @@ class TestMarginalVsMarginalApprox:
             self.gp = pm.gp.Marginal(mean_func=mean_func, cov_func=cov_func)
             sigma = pm.HalfNormal("sigma", sigma=100)
             self.gp.marginal_likelihood("lik", self.x[:, None], self.y, sigma)
-            self.map_full = pm.find_MAP(method="bfgs")  # bfgs seems to work much better than lbfgsb
+            # bfgs seems to work much better than lbfgsb
+            posterior = pm.find_MAP(
+                method="bfgs", jitter=False, return_inferencedata=True
+            ).posterior.isel(chain=0, draw=0)
+            self.map_full = {name: da.values for name, da in posterior.items()}
 
         self.x_new = np.linspace(-6, 6, 20)
 
@@ -71,7 +75,10 @@ class TestMarginalVsMarginalApprox:
             gp = pm.gp.MarginalApprox(mean_func=mean_func, cov_func=cov_func, approx=approx)
             sigma = pm.HalfNormal("sigma", sigma=100, initval=50.0)
             gp.marginal_likelihood("lik", self.x[:, None], self.x[:, None], self.y, sigma)
-            map_approx = pm.find_MAP(method="bfgs")
+            posterior = pm.find_MAP(
+                method="bfgs", jitter=False, return_inferencedata=True
+            ).posterior.isel(chain=0, draw=0)
+            map_approx = {name: da.values for name, da in posterior.items()}
 
         # Check MAP gets approximately correct result
         npt.assert_allclose(self.map_full["c"], map_approx["c"], atol=0.01, rtol=0.1)
@@ -287,6 +294,15 @@ class TestMarginalVsLatent:
         y_rotated = np.linalg.solve(chol, self.y - 0.5)
         latent_logp = model.compile_logp()({"f_rotated_": y_rotated, "p": self.pnew})
         npt.assert_allclose(latent_logp, self.logp, atol=5)
+
+    def testLatentConditionalDenseXnew(self):
+        X = np.arange(99, 0, -1).reshape(-1, 1)
+        Xnew = np.linspace(100, 1, 500).reshape(-1, 1)
+        with pm.Model() as model:
+            gp = pm.gp.Latent(cov_func=pm.gp.cov.ExpQuad(1, ls=1))
+            gp.prior("f", X, reparameterize=False)
+            gp.conditional("p", Xnew, jitter=1e-4)
+        assert np.isfinite(model.compile_logp()(model.initial_point()))
 
     def testLatentMultioutput(self):
         n_outputs = 2

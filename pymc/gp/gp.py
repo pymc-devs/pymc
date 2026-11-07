@@ -224,7 +224,7 @@ class Latent(Base):
         mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v).T
 
         Kss = self.cov_func(Xnew)
-        cov = Kss - pt.dot(pt.transpose(A), A)
+        cov = stabilize(Kss - pt.dot(pt.transpose(A), A), jitter)
 
         return mu, cov
 
@@ -363,7 +363,7 @@ class TP(Latent):
         Kss = self.cov_func(Xnew)
         L = cholesky(stabilize(Kxx, jitter))
         A = solve_lower(L, Kxs)
-        cov = Kss - pt.dot(pt.transpose(A), A)
+        cov = stabilize(Kss - pt.dot(pt.transpose(A), A), jitter)
         v = solve_lower(L, f - self.mean_func(X))
         mu = self.mean_func(Xnew) + pt.dot(pt.transpose(A), v)
         beta = pt.dot(v, v)
@@ -610,7 +610,7 @@ class Marginal(Base):
         R"""
         Return mean and covariance of the conditional distribution given a `point`.
 
-        The `point` might be the MAP estimate or a sample from a trace.
+        The `point` is a ``{name: value}`` dict, e.g. one draw of ``pm.find_MAP()`` or ``pm.sample()``.
 
         Parameters
         ----------
@@ -1270,7 +1270,7 @@ class MarginalKron(Base):
         R"""
         Return mean and covariance of the conditional distribution given a `point`.
 
-        The `point` might be the MAP estimate or a sample from a trace.
+        The `point` is a ``{name: value}`` dict, e.g. one draw of ``pm.find_MAP()`` or ``pm.sample()``.
 
         Parameters
         ----------

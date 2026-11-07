@@ -184,6 +184,10 @@ class Inference:
         for group in self.approx.groups:
             group.include_transformed = include_transformed
 
+        for p in self.approx.params:
+            if hasattr(p, "container") and not isinstance(p.container.storage[0], np.ndarray):
+                p.set_value(np.asarray(p.get_value()))
+
         return self.approx
 
     def _iterate_without_loss(self, s, n, step_func, progressbar, progressbar_theme, callbacks):

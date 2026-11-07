@@ -24,4 +24,4 @@ from pymc.gp.gp import (
     MarginalKron,
     MarginalSparse,
 )
-from pymc.gp.hsgp_approx import HSGP, HSGPPeriodic
+from pymc.gp.hsgp_approx import HSGP, HSGPPeriodic, approx_hsgp_hyperparams, approx_hsgp_periodic_m

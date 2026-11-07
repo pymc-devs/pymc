@@ -18,6 +18,7 @@ import scipy.special
 
 from pytensor import config, function
 from pytensor.tensor.random.basic import multinomial
+from pytensor.xtensor import as_xtensor
 from scipy import interpolate
 
 import pymc as pm
@@ -66,6 +67,17 @@ def test_check_parameters(conditions, succeeds):
 def test_check_parameters_shape():
     conditions = [True, pt.ones(10), pt.ones(5)]
     assert check_parameters(1, *conditions).eval().shape == ()
+
+
+def test_check_parameters_xtensor():
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+
+    ret = check_parameters(expr, expr > 0, msg="parameter check msg")
+    assert ret.dims == ("batch",)
+    np.testing.assert_array_equal(ret.eval(), [1.0, 2.0])
+
+    with pytest.raises(ParameterValueError, match="^parameter check msg*"):
+        check_parameters(expr, expr < 2, msg="parameter check msg").eval()
 
 
 class MultinomialA(Discrete):

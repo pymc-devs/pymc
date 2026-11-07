@@ -87,6 +87,37 @@ def convert_observed_data(data, *, dtype=None) -> np.ndarray | Variable:
 
 
 def convert_data(data, *, dtype=None) -> np.ndarray | Variable:
+    """Convert user data to an array or PyTensor variable with a PyMC dtype.
+
+    Parameters
+    ----------
+    data : array_like, pandas object, scipy sparse matrix or Variable
+        Data to convert. Nulls in pandas objects and NaNs in numpy arrays become masked
+        entries. Variables and sparse matrices are never masked.
+    dtype : data-type, optional
+        Anything :class:`numpy.dtype` accepts. If given, the converted data is cast
+        to it with NumPy's rules, which may be lossy, instead of the default
+        conversion described below.
+
+    Returns
+    -------
+    converted : ndarray, MaskedArray, sparse matrix or Variable
+        ``data`` cast to ``floatX`` if it has no ``dtype``. Otherwise floats go to ``floatX``,
+        integers to the matching ``intX`` (``int32`` when ``floatX`` is ``float64``), and other
+        dtypes are unchanged. A masked array with nothing masked comes back filled.
+        If ``dtype`` is given, the result has that dtype instead.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import numpy as np
+        from pymc.pytensorf import convert_data
+
+        convert_data([1, 2, 3])  # floatX array
+        convert_data(np.array([1, 2, 3]))  # intX array
+        convert_data(np.array([1.0, np.nan]))  # masked array, second entry masked
+    """
     ret: np.ndarray | Variable
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
@@ -786,7 +817,7 @@ def collect_default_updates(
             return None
 
         if len(rng_clients) > 1:
-            # Multiple clients are techincally fine if they are used in identical operations
+            # Multiple clients are technically fine if they are used in identical operations
             # We check if the default_update of each client would be the same
             all_updates = [
                 find_default_update(

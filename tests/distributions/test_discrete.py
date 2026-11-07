@@ -131,6 +131,14 @@ class TestMatchesScipy:
             with pytest.raises(ParameterValueError):
                 icdf(invalid_dist, np.array(1)).eval()
 
+    def test_discrete_unif_logcdf_at_lower(self):
+        value = np.array([0, 1, 2, 3, 4])
+        dist = pm.DiscreteUniform.dist(lower=1, upper=4)
+        np.testing.assert_allclose(
+            pm.logcdf(dist, value).eval(),
+            st.randint.logcdf(value, 1, 5),
+        )
+
     def test_geometric(self):
         check_logp(
             pm.Geometric,
@@ -154,6 +162,16 @@ class TestMatchesScipy:
             {"p": Unit},
             st.geom.ppf,
         )
+
+    def test_hypergeometric_logcdf_support_bounds(self):
+        value = pt.dscalar("value")
+        fn = pytensor.function(
+            [value],
+            [pm.logcdf(pm.HyperGeometric.dist(N=10, k=k, n=8), value) for k in (8, 2)],
+        )
+        for x in (-1, 0, 1.5, 2, 6, 7, 8, 9):
+            expected = [st.hypergeom.logcdf(np.floor(x), 10, k, 8) for k in (8, 2)]
+            np.testing.assert_allclose(fn(x), expected)
 
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
@@ -841,6 +859,17 @@ class TestBernoulliLogitP(BaseTestDistributionRandom):
     pymc_dist_params = {"logit_p": 1.0}
     expected_rv_op_params = {"p": sp.expit(1.0)}
     checks_to_run = ["check_pymc_params_match_rv_op"]
+
+    def test_saturated_logp_gradient(self):
+        with pm.Model() as model:
+            logits = pm.Flat("logits", shape=2)
+            observed = pm.Bernoulli("observed", logit_p=logits, observed=[0, 1])
+
+        point = {"logits": floatX([50.0, -50.0])}
+        logp_value = model.compile_logp(vars=[observed], sum=False)(point)[0]
+        gradient = model.compile_dlogp()(point)
+        np.testing.assert_allclose(logp_value, [-50, -50])
+        np.testing.assert_allclose(gradient, [-1, 1])
 
 
 class TestPoisson(BaseTestDistributionRandom):

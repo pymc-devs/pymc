@@ -52,6 +52,8 @@ def compute_log_likelihood(
         Whether to extend the original InferenceData or return a new one
     model : BaseModel, optional
     sample_dims : sequence of str, default ("chain", "draw")
+        Sample (batch) dimensions of the posterior dataset.
+        Use an empty sequence to evaluate a single point without sample dimensions.
     progressbar : bool, default True
     backend : str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
@@ -101,6 +103,8 @@ def compute_log_prior(
         Whether to extend the original InferenceData or return a new one
     model : BaseModel, optional
     sample_dims : sequence of str, default ("chain", "draw")
+        Sample (batch) dimensions of the posterior dataset.
+        Use an empty sequence to evaluate a single point without sample dimensions.
     progressbar : bool, default True
     backend : str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
@@ -156,6 +160,8 @@ def compute_log_density(
         or to compute the log density of the latent random variables (prior). This
         parameter determines the group that gets added to the returned `~arviz.InferenceData` object.
     sample_dims : sequence of str, default ("chain", "draw")
+        Sample (batch) dimensions of the posterior dataset.
+        Use an empty sequence to evaluate a single point without sample dimensions.
     progressbar : bool, default True
     backend : str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".

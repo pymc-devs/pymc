@@ -538,14 +538,14 @@ class MultiTrace:
         ----------
         stat_name : str
             Name of the stat to fetch.
-        sampler_idx : int or None
-            Index of the sampler to get the stat from.
         burn : int
             Draws to skip from the start.
         thin : int
             Stepsize for the slice.
         combine : bool
             If True, results from `chains` will be concatenated.
+        chains : int or sequence of int, optional
+            Chains to include. Defaults to all chains.
         squeeze : bool
             Return a single array element if the resulting list of
             values only has one element. If False, the result will

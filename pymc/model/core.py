@@ -900,7 +900,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
     def dim_lengths(self) -> dict[str, TensorVariable]:
         """The symbolic lengths of dimensions in the model.
 
-        The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
+        The values are typically instances of ``TensorVariable`` or a 0-d ``TensorSharedVariable``.
         """
         return self._dim_lengths
 
@@ -1510,8 +1510,8 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         print_(f"point={point}\n")
 
         rvs_to_check = list(self.basic_RVs)
-        if fn in ("logp", "dlogp"):
-            rvs_to_check += [self.replace_rvs_by_values(p) for p in self.potentials]
+        if fn == "logp":
+            rvs_to_check += self.potentials
 
         found_problem = False
         for rv in rvs_to_check:
@@ -1560,7 +1560,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                 if not np.all(np.isfinite(rv_fn_eval)):
                     found_problem = True
                     debug_parameters(rv)
-                    if fn == "random" or rv is self.potentials:
+                    if fn == "random" or rv in self.potentials:
                         print_("This combination seems able to generate non-finite values")
                     else:
                         # Find which values are associated with non-finite evaluation
@@ -1575,7 +1575,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                             f"Some of the{observed}values of variable {rv} are associated with a non-finite {fn}:"
                         )
                         mask = ~np.isfinite(rv_fn_eval)
-                        for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
+                        for value, fn_eval in zip(np.atleast_1d(values)[mask], rv_fn_eval[mask]):
                             print_(f" value = {value} -> {fn} = {fn_eval}")
                         print_()
 
@@ -1699,7 +1699,7 @@ class Model(BaseModel):
     coords : dict
         Xarray-like coordinate keys and values. These coordinates can be used
         to specify the shape of random variables and to label (but not specify)
-        the shape of Determinsitic, Potential and Data objects.
+        the shape of Deterministic, Potential and Data objects.
         Other than specifying the shape of random variables, coordinates have no
         effect on the model. They can't be used for label-based broadcasting or indexing.
         You must use numpy-like operations for those behaviors.
@@ -1773,21 +1773,21 @@ class Model(BaseModel):
         import pymc as pm
 
         with pm.Model(name="root") as root:
-            x = pm.Normal("x")  # Variable wil be named "root::x"
+            x = pm.Normal("x")  # Variable will be named "root::x"
 
             with pm.Model(name="first") as first:
                 # Variable will belong to root and first
-                y = pm.Normal("y", mu=x)  # Variable wil be named "root::first::y"
+                y = pm.Normal("y", mu=x)  # Variable will be named "root::first::y"
 
             # Can pass parent model explicitly
             with pm.Model(name="second", model=root) as second:
                 # Variable will belong to root and second
-                z = pm.Normal("z", mu=y)  # Variable wil be named "root::second::z"
+                z = pm.Normal("z", mu=y)  # Variable will be named "root::second::z"
 
             # Set None for standalone model
             with pm.Model(name="third", model=None) as third:
                 # Variable will belong to third only
-                w = pm.Normal("w")  # Variable wil be named "third::w"
+                w = pm.Normal("w")  # Variable will be named "third::w"
 
 
     Set `check_bounds` to False for models with only continuous variables and default transformers
@@ -2512,9 +2512,13 @@ def Point(*args, filter_model_vars=False, **kwargs) -> dict[str, np.ndarray]:
 def Deterministic(name, var, model=None, dims=None):
     """Create a named deterministic variable.
 
-    Deterministic nodes are only deterministic given all of their inputs, i.e.
-    they don't add randomness to the model.  They are generally used to record
-    an intermediary result.
+    Wrapping an expression in ``Deterministic`` is optional: ordinary symbolic
+    expressions already participate in the model. Use it to store an intermediate
+    result in the inference data, or to register an expression as a named target
+    for :func:`pymc.do` or :func:`pymc.observe`.
+
+    Deterministic nodes do not add randomness to the model; their values are
+    determined by their inputs.
 
     Parameters
     ----------
@@ -2547,10 +2551,9 @@ def Deterministic(name, var, model=None, dims=None):
             outcome = pm.Bernoulli("outcome", p, observed=outcomes)
 
 
-    but doesn't memorize the fact that the expression ``pm.math.invlogit(alpha *
-    x + intercept)`` has been affected to the variable ``p``.  If the quantity
-    ``p`` is important and one would like to track its value in the sampling
-    trace, then one can use a deterministic node:
+    Here ``p`` is a local Python name for an expression, not a named model
+    variable. To record its value in the sampling trace, register it with
+    ``Deterministic``:
 
     .. code-block:: python
 
@@ -2573,7 +2576,7 @@ def Deterministic(name, var, model=None, dims=None):
     the main computation graph, which can be optimized as though there was no
     Deterministic nodes.  Whereas the optimized graph can be evaluated thousands
     of times during a NUTS step, the Deterministic quantities are just
-    computeed once at the end of the step, with the final values of the other
+    computed once at the end of the step, with the final values of the other
     random variables.
     """
     model = modelcontext(model)
