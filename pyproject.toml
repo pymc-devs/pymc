@@ -49,6 +49,9 @@ dependencies = [
 nutpie = [
     "nutpie>=0.16.10,<1",
 ]
+zarr = [
+    "zarr>=3.1.0,<4",
+]
 
 [project.urls]
 repository = "http://github.com/pymc-devs/pymc"
