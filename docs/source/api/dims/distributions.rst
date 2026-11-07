@@ -42,6 +42,7 @@ Vector distributions
 
    Categorical
    MvNormal
+   WeightedZeroSumNormal
    ZeroSumNormal
 
 
