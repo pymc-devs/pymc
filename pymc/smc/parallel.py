@@ -17,19 +17,17 @@ import time
 
 from collections import namedtuple
 from collections.abc import Sequence
-from contextlib import nullcontext
 
 import cloudpickle
 import numpy as np
 
 from rich.theme import Theme
-from threadpoolctl import threadpool_limits
 
 from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
 from pymc.sampling.parallel import (
     ExceptionWithTraceback,
     ParallelSamplingError,
-    _make_accelerate_single_threaded,
+    _worker_blas_limits,
 )
 from pymc.smc.kernels import SMC_KERNEL
 from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
@@ -84,13 +82,7 @@ class _SMCProcess:
             self._start = cloudpickle.loads(self._start)
 
     def run(self):
-        if self._mp_start_method == "fork":
-            _make_accelerate_single_threaded()
-        with (
-            nullcontext()
-            if self._mp_start_method == "fork"
-            else threadpool_limits(limits=self._blas_cores)
-        ):
+        with _worker_blas_limits(self._mp_start_method, self._blas_cores):
             self._unpickle_objects()
 
             try:

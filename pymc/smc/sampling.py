@@ -92,8 +92,8 @@ def sample_smc(
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
         Note that this argument is ignored when using fork multiprocessing start method.
-        With fork on macOS 15+, workers run Apple's Accelerate BLAS single-threaded, because
-        multithreaded Accelerate calls crash in forked processes.
+        With fork on macOS 15+, each worker's sampling thread runs Apple's Accelerate BLAS
+        single-threaded instead, because multithreaded Accelerate calls crash in forked processes.
     compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
