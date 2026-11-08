@@ -91,9 +91,6 @@ def sample_smc(
         number of blas threads. If `blas_cores` is not divisible by `cores`, it might get rounded
         down. If set to None, this will keep the default behavior of whatever blas implementation
         is used at runtime.
-        Note that this argument is ignored when using fork multiprocessing start method.
-        With fork on macOS 15+, each worker's sampling thread runs Apple's Accelerate BLAS
-        single-threaded instead, because multithreaded Accelerate calls crash in forked processes.
     compute_convergence_checks : bool, default True
         Whether to compute sampler statistics like ``R hat`` and ``effective_n``.
         Defaults to ``True``.
@@ -113,7 +110,7 @@ def sample_smc(
         ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
     mp_ctx : multiprocessing.context or str, optional
         Multiprocessing context for parallel chains. Can be a context object or a string
-        ("fork", "spawn", or "forkserver"). If None, defaults to "fork" on macOS ARM and
+        ("fork", "spawn", or "forkserver"). If None, defaults to "spawn" on macOS ARM and
         "forkserver" on other macOS systems, and the system default elsewhere.
 
     **kernel_kwargs : dict, optional

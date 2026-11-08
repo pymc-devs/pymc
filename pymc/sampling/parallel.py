@@ -17,7 +17,6 @@ import ctypes
 import logging
 import multiprocessing
 import multiprocessing.sharedctypes
-import os
 import platform
 import time
 import traceback
@@ -86,42 +85,6 @@ def rebuild_exc(exc, tb):
     return exc
 
 
-# Apple's Accelerate multithreads BLAS and LAPACK calls through Grand Central Dispatch, which
-# is unusable in the child of a fork once the parent has used it: the child's next
-# multithreaded call segfaults. Since macOS 15, BLASSetThreading can make Accelerate
-# single-threaded (see vecLib.framework/Headers/thread_api.h in the macOS SDK).
-_ACCELERATE_PATH = "/System/Library/Frameworks/Accelerate.framework/Accelerate"
-_BLAS_THREADING_SINGLE_THREADED = 1
-
-
-def _loaded_accelerate_set_threading():
-    """Return BLASSetThreading of an already loaded Accelerate, else None (also before macOS 15).
-
-    RTLD_NOLOAD makes sure a forked worker never loads Accelerate after fork().
-    """
-    if platform.system() != "Darwin":
-        return None
-    try:
-        accelerate = ctypes.CDLL(_ACCELERATE_PATH, mode=os.RTLD_NOLOAD)
-    except OSError:
-        return None
-    return getattr(accelerate, "BLASSetThreading", None)
-
-
-def _worker_blas_limits(start_method: str, blas_cores: int | None):
-    """Return the BLAS threading context a sampling worker runs in.
-
-    Only non-fork workers get threadpool limits. A forked worker instead makes a loaded
-    Accelerate single-threaded for the calling thread (the setting is per thread), so
-    call this from the thread that samples, before it uses BLAS.
-    """
-    if start_method == "fork":
-        if (set_threading := _loaded_accelerate_set_threading()) is not None:
-            set_threading(_BLAS_THREADING_SINGLE_THREADED)
-        return nullcontext()
-    return threadpool_limits(limits=blas_cores)
-
-
 def _initialize_multiprocessing_context(
     mp_ctx: str | multiprocessing.context.BaseContext | None,
     *,
@@ -134,16 +97,9 @@ def _initialize_multiprocessing_context(
     if mp_ctx is None or isinstance(mp_ctx, str):
         # Closes issue https://github.com/pymc-devs/pymc/issues/3849
         # Related issue https://github.com/pymc-devs/pymc/issues/5339
+        # Forked workers crash in Apple's Accelerate BLAS on Apple silicon (#8372, #8377)
         if mp_ctx is None and platform.system() == "Darwin":
-            if platform.processor() == "arm":
-                mp_ctx = "fork"
-                if not quiet:
-                    logger.debug(
-                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
-                    )
-            else:
-                mp_ctx = "forkserver"
+            mp_ctx = "spawn" if platform.processor() == "arm" else "forkserver"
 
         mp_ctx = multiprocessing.get_context(mp_ctx)
 
@@ -234,7 +190,12 @@ class _Process:
                 raise ValueError(unpickle_error)
 
     def run(self):
-        with _worker_blas_limits(self._mp_start_method, self._blas_cores):
+        # Only apply threadpool_limits for non-fork methods.
+        with (
+            nullcontext()
+            if self._mp_start_method == "fork"
+            else threadpool_limits(limits=self._blas_cores)
+        ):
             try:
                 # We do not create this in __init__, as pickling this
                 # would destroy the shared memory.

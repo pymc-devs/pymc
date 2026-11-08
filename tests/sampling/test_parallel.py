@@ -78,41 +78,6 @@ class TestMpCtxJaxSwitch:
         assert not any("JAX backend" in str(x.message) for x in w)
 
 
-@pytest.mark.skipif(
-    ps._loaded_accelerate_set_threading() is None,
-    reason="Needs Accelerate loaded, on macOS 15 or later",
-)
-@pytest.mark.parametrize("sampler", ["nuts", "smc"])
-def test_sample_with_fork(sampler):
-    X = np.random.default_rng(0).normal(size=(5000, 50))
-    # Large enough for Accelerate to use its threads in the parent, after which
-    # multithreaded calls in forked workers segfault
-    X @ np.ones(50)
-    with pm.Model():
-        b = pm.Normal("b", shape=50)
-        pm.Normal("y", pm.math.dot(X, b), observed=np.zeros(5000))
-        if sampler == "nuts":
-            pm.sample(
-                tune=5,
-                draws=5,
-                chains=2,
-                cores=2,
-                mp_ctx="fork",
-                nuts_sampler="pymc",
-                compute_convergence_checks=False,
-                progressbar=False,
-            )
-        else:
-            pm.sample_smc(
-                draws=50,
-                chains=2,
-                cores=2,
-                mp_ctx="fork",
-                compute_convergence_checks=False,
-                progressbar=False,
-            )
-
-
 class NoUnpickle:
     def __getstate__(self):
         return self.__dict__.copy()
