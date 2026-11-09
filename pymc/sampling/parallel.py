@@ -97,16 +97,9 @@ def _initialize_multiprocessing_context(
     if mp_ctx is None or isinstance(mp_ctx, str):
         # Closes issue https://github.com/pymc-devs/pymc/issues/3849
         # Related issue https://github.com/pymc-devs/pymc/issues/5339
+        # Forked workers crash in Apple's Accelerate BLAS on Apple silicon (#8372, #8377)
         if mp_ctx is None and platform.system() == "Darwin":
-            if platform.processor() == "arm":
-                mp_ctx = "fork"
-                if not quiet:
-                    logger.debug(
-                        "mp_ctx is set to 'fork' for MacOS with ARM architecture. "
-                        + "This might cause unexpected behavior with JAX, which is inherently multithreaded."
-                    )
-            else:
-                mp_ctx = "forkserver"
+            mp_ctx = "spawn" if platform.processor() == "arm" else "forkserver"
 
         mp_ctx = multiprocessing.get_context(mp_ctx)
 

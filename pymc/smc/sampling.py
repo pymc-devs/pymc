@@ -112,7 +112,7 @@ def sample_smc(
         ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
     mp_ctx : multiprocessing.context or str, optional
         Multiprocessing context for parallel chains. Can be a context object or a string
-        ("fork", "spawn", or "forkserver"). If None, defaults to "fork" on macOS ARM and
+        ("fork", "spawn", or "forkserver"). If None, defaults to "spawn" on macOS ARM and
         "forkserver" on other macOS systems, and the system default elsewhere.
 
     **kernel_kwargs : dict, optional
