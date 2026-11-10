@@ -185,6 +185,7 @@ def determine_coords(
 
     # If value is a df, we also interpret the columns as coords:
     if hasattr(value, "columns"):
+        dim_name = None
         if dims is not None:
             dim_name = dims[1]
         if dim_name is None and value.columns.name is not None:
@@ -193,10 +194,11 @@ def determine_coords(
             coords[dim_name] = value.columns
 
     if isinstance(value, xr.DataArray):
-        if dims is not None:
-            for dim in dims:
-                dim_name = dim
-                # str is applied because dim entries may be None
+        dim_names = tuple(dims) if dims is not None else value.dims
+        for dim in dim_names:
+            dim_name = dim
+            # str is applied because dim entries may be None
+            if str(dim_name) not in coords:
                 coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
@@ -212,8 +214,14 @@ def determine_coords(
                 coords[dim] = range(size)
 
     if dims is None:
-        # TODO: Also determine dim names from the index
-        new_dims: Sequence[str] | Sequence[None] = [None] * np.ndim(value)
+        if isinstance(value, xr.DataArray):
+            new_dims = tuple(value.dims)
+        elif isinstance(value, pd.DataFrame):
+            new_dims = (value.index.name, value.columns.name)
+        elif isinstance(value, pd.Series):
+            new_dims = (value.index.name,)
+        else:
+            new_dims = tuple(None for _ in range(np.ndim(value)))
     else:
         new_dims = dims
     return coords, new_dims
