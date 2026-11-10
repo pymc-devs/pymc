@@ -173,6 +173,58 @@ class TestMatchesScipy:
             expected = [st.hypergeom.logcdf(np.floor(x), 10, k, 8) for k in (8, 2)]
             np.testing.assert_allclose(fn(x), expected)
 
+    @pytest.mark.parametrize(
+        "value, N, k, n",
+        [
+            (2, 20, [[10], [15]], 5),
+            (2, 20, [10, 15], 5),
+            ([0, 2, 4], 20, 10, 5),
+            (
+                np.array([-np.inf, -1, 0, 1.5, 2, 6, 8, np.inf])[:, None],
+                [10, 20, 30],
+                [8, 15, 5],
+                [8, 5, 10],
+            ),
+        ],
+        ids=["column", "row", "vector-value", "broadcast-support-bounds"],
+    )
+    def test_hypergeometric_logcdf_batched(self, value, N, k, n):
+        N, k, n = (np.asarray(param) for param in (N, k, n))
+        value_var = pt.tensor(dtype="float64", shape=np.shape(value))
+        fn = pytensor.function(
+            [value_var], pm.logcdf(pm.HyperGeometric.dist(N=N, k=k, n=n), value_var)
+        )
+        expected = st.hypergeom.logcdf(np.floor(value), N, k, n)
+        actual = fn(value)
+        assert actual.shape == expected.shape
+        np.testing.assert_allclose(actual, expected, atol=1e-12)
+
+    @pytest.mark.parametrize(
+        "value, n, alpha, beta",
+        [
+            (3, 10, [[0.5], [2.0], [5.0]], [[0.5], [2.0], [1.0]]),
+            (3, 10, [0.5, 2.0, 5.0], [0.5, 2.0, 1.0]),
+            ([0, 3, 7], 10, 2.0, 3.0),
+            (
+                np.array([-np.inf, -1, 0, 1.5, 3, 7, 10, np.inf])[:, None],
+                [0, 5, 10],
+                [0.5, 2.0, 5.0],
+                [0.5, 2.0, 1.0],
+            ),
+        ],
+        ids=["column", "row", "vector-value", "broadcast-support-bounds"],
+    )
+    def test_beta_binomial_logcdf_batched(self, value, n, alpha, beta):
+        alpha, beta = np.asarray(alpha, dtype="float64"), np.asarray(beta, dtype="float64")
+        value_var = pt.tensor(dtype="float64", shape=np.shape(value))
+        fn = pytensor.function(
+            [value_var], pm.logcdf(pm.BetaBinomial.dist(n=n, alpha=alpha, beta=beta), value_var)
+        )
+        expected = st.betabinom.logcdf(value, n, alpha, beta)
+        actual = fn(value)
+        assert actual.shape == expected.shape
+        np.testing.assert_allclose(actual, expected, atol=1e-12)
+
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
             original_res = st.hypergeom.logcdf(value, N, k, n)
