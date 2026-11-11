@@ -1018,6 +1018,84 @@ class TestMatchesScipy:
 
                 check_logp(TestedInterpolated, R, {}, ref_pdf)
 
+    @pytest.mark.parametrize(
+        "pdf_points, reference",
+        [
+            ([1, 1, 1], lambda q: 2 * q),
+            ([0, 1, 2], lambda q: 2 * np.sqrt(q)),
+            ([2, 1, 0], lambda q: 2 * (1 - np.sqrt(1 - q))),
+            ([0, 1, 0], lambda q: st.triang.ppf(q, c=0.5, scale=2)),
+        ],
+    )
+    @pytest.mark.parametrize("size", [None, (2, 3)])
+    def test_interpolated_icdf(self, pdf_points, reference, size):
+        rv = pm.Interpolated.dist(
+            floatX(np.array([0.0, 1.0, 2.0])), floatX(np.array(pdf_points)), size=size
+        )
+        q = floatX(np.array([[0.0, 0.01, 0.25], [0.5, 0.99, 1.0]]))
+        npt.assert_allclose(pm.icdf(rv, q).eval(), reference(q), rtol=1e-6, atol=1e-6)
+
+    def test_interpolated_icdf_plateaus(self):
+        rv = pm.Interpolated.dist(
+            floatX(np.array([0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0])),
+            floatX(np.array([0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0])),
+        )
+        q = floatX(np.array([0.0, 0.125, 0.5, 0.875, 1.0]))
+        npt.assert_allclose(pm.icdf(rv, q).eval(), [0, 1 + np.sqrt(0.5), 3, 6 - np.sqrt(0.5), 6])
+
+    def test_interpolated_icdf_invalid_value(self):
+        rv = pm.Interpolated.dist(floatX(np.array([0.0, 1.0])), floatX(np.array([1.0, 1.0])))
+        q = floatX(np.array([-np.inf, -0.1, 1.1, np.inf, np.nan]))
+        assert np.isnan(pm.icdf(rv, q).eval()).all()
+
+    def test_interpolated_icdf_small_slope(self):
+        # The direct quadratic formula loses accuracy for nearly flat density.
+        rv = pm.Interpolated.dist(
+            floatX(np.array([0.0, 1.0])), floatX(np.array([1.0, 1.0 + 1e-10]))
+        )
+        q = floatX(np.array([1e-10, 0.1, 0.9]))
+        npt.assert_allclose(pm.icdf(rv, q).eval(), q, rtol=1e-6)
+
+    def test_interpolated_icdf_gradient(self):
+        rv = pm.Interpolated.dist(
+            floatX(np.array([0.0, 1.0, 2.0])), floatX(np.array([0.0, 1.0, 0.0]))
+        )
+        q = pt.vector("q", dtype=pytensor.config.floatX)
+        quantile = pm.icdf(rv, q)
+        fn = pytensor.function([q], [quantile, pt.grad(quantile.sum(), q)])
+        values, gradient = fn(floatX(np.array([0.01, 0.25, 0.75, 0.99])))
+        npt.assert_allclose(gradient, 1 / np.exp(pm.logp(rv, values).eval()), rtol=1e-6)
+
+    @pytest.mark.parametrize("width", [1e-25, 1e25])
+    @pytest.mark.parametrize(
+        "pdf, reference",
+        [
+            ([1.0, 1.0], lambda q: q),
+            ([0.0, 1.0], np.sqrt),
+            ([1.0, 0.0], lambda q: 1 - np.sqrt(1 - q)),
+        ],
+    )
+    def test_interpolated_icdf_support_scale(self, width, pdf, reference):
+        rv = pm.Interpolated.dist(floatX(np.array([0.0, width])), floatX(np.array(pdf)))
+        q = floatX(np.array([0.01, 0.25, 0.5, 0.99]))
+        npt.assert_allclose(pm.icdf(rv, q).eval() / width, reference(q), rtol=1e-5)
+
+    def test_interpolated_icdf_uneven_grid(self):
+        from scipy.interpolate import InterpolatedUnivariateSpline
+        from scipy.optimize import brentq
+
+        x = floatX(np.array([-3.0, -1.0, 0.0, 0.2, 5.0]))
+        pdf = floatX(np.array([0.5, 0.0, 4.0, 1.0, 0.0]))
+        # Independently integrate the density, then invert with root finding.
+        cdf = InterpolatedUnivariateSpline(x, pdf, k=1).antiderivative()
+        normalizer = cdf(x[-1]) - cdf(x[0])
+        q = floatX(np.array([0.001, 0.1, 0.25, 0.5, 0.99]))
+        expected = [
+            brentq(lambda value: (cdf(value) - cdf(x[0])) / normalizer - p, x[0], x[-1]) for p in q
+        ]
+        rv = pm.Interpolated.dist(x, pdf)
+        npt.assert_allclose(pm.icdf(rv, q).eval(), expected, rtol=1e-5, atol=1e-6)
+
     @pytest.mark.parametrize("transform", [pm.util.UNSET, None])
     def test_interpolated_transform(self, transform):
         # Issue: https://github.com/pymc-devs/pymc/issues/5048
@@ -2597,4 +2675,4 @@ class TestInterpolated(BaseTestDistributionRandom):
                     {},
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
-                )
+        )
