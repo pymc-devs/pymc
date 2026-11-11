@@ -2569,7 +2569,7 @@ class StickBreakingWeights(SimplexContinuous):
         logp = pt.switch(
             pt.or_(
                 pt.any(
-                    pt.and_(pt.le(value, 0), pt.ge(value, 1)),
+                    pt.or_(pt.le(value, 0), pt.ge(value, 1)),
                     axis=-1,
                 ),
                 pt.or_(
