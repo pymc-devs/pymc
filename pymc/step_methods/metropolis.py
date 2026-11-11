@@ -321,7 +321,7 @@ class Metropolis(ArrayStepShared):
 
         stats = {
             "scaling": np.mean(self.scaling),
-            "accept": np.exp(special.logsumexp(self.accept_rate_iter) - log_N),
+            "accept": np.exp(special.logsumexp(np.minimum(self.accept_rate_iter, 0)) - log_N),
             "accepted": np.mean(self.accepted_iter),
         }
 
