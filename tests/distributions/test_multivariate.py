@@ -2178,6 +2178,20 @@ class TestWishart(BaseTestDistributionRandom):
             assert tuple(x.shape.eval()) == expected_shape
             assert x.eval().shape == expected_shape
 
+    def test_real_nu_logp_and_sampling(self):
+        """Wishart allows real degrees of freedom nu > p - 1 without truncation (GH8619)."""
+        X = np.array([[3.0, 0.2], [0.2, 2.0]])
+        V = np.eye(2)
+        nu = 2.7
+        logp_val = float(pm.logp(pm.Wishart.dist(nu=nu, V=V), X).eval())
+        expected_logp = float(st.wishart.logpdf(X, nu, V))
+        np.testing.assert_allclose(logp_val, expected_logp, rtol=1e-7)
+
+        # Sampling with non-integer nu should produce valid symmetric positive definite matrices
+        draw = pm.draw(pm.Wishart.dist(nu=nu, V=V), random_seed=42)
+        assert np.allclose(draw, draw.T)
+        assert np.all(np.linalg.eigvalsh(draw) > 0)
+
 
 class TestWishartV(BaseTestDistributionRandom):
     pymc_dist = pm.Wishart
