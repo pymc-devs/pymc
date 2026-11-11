@@ -54,9 +54,30 @@ class DifferentialEquation(Op):
     t0 : float
         Time corresponding to the initial condition
 
+    Returns
+    -------
+    ode_op : DifferentialEquation
+        A callable PyTensor Op. Calling this object in a model evaluates the ODE
+        system forward simulation:
+
+        ``ode_op(y0, theta, return_sens=False)``
+
+        Arguments:
+        - **y0** (*tensor_like*): Initial state vector with length ``n_states`` (one value per state variable).
+        - **theta** (*tensor_like*): Parameter vector with length ``n_theta`` in the order expected by ``func``.
+        - **return_sens** (*bool*, optional): Whether to also return sensitivities. Defaults to ``False``.
+
+        The returned forward solution has shape ``(len(times), n_states)``, representing
+        the simulated system states evaluated at each specified time point.
+
     Examples
     --------
     .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+        from pymc.ode import DifferentialEquation
+
 
         def odefunc(y, t, p):
             # Logistic differential equation
@@ -66,6 +87,15 @@ class DifferentialEquation(Op):
         times = np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
+
+        # Call the ODE op inside a PyMC model with initial state y0 and parameters theta:
+        with pm.Model() as model:
+            # y0 has length n_states=1; theta has length n_theta=1
+            y0 = pm.Normal("y0", mu=0.1, sigma=0.05, shape=1)
+            theta = pm.HalfNormal("theta", sigma=1.0, shape=1)
+
+            # forward solution has shape (len(times), n_states) = (9, 1)
+            forward = ode_model(y0=y0, theta=theta)
 
     """
 
