@@ -3896,6 +3896,18 @@ class Interpolated(BoundedContinuous):
     pdf_points : array_like
         Probability density function evaluated on lattice ``x_points``. Must
         be non-symbolic.
+
+    Examples
+    --------
+    Quantiles of a triangular density defined by three lattice points:
+
+    .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+
+        dist = pm.Interpolated.dist(np.array([0, 1, 2]), np.array([0, 1, 0]))
+        quantiles = pm.icdf(dist, [0.25, 0.5, 0.75]).eval()
     """
 
     rv_op = interpolated
@@ -3948,6 +3960,33 @@ class Interpolated(BoundedContinuous):
         Z = pt.constant(Z)
 
         return pt.log(interp_op(value) / Z)
+
+    def icdf(value, x_points, pdf_points, cdf_points):
+        # The points are constants shared by all draws. Size broadcasting may
+        # prepend singleton dimensions to them.
+        x_points = pt.squeeze(x_points)
+        pdf_points = pt.squeeze(pdf_points)
+        cdf_points = pt.squeeze(cdf_points)
+        index = pt.clip(pt.searchsorted(cdf_points, value) - 1, 0, x_points.shape[0] - 2)
+        x = x_points[index]
+        left_pdf, right_pdf = pdf_points[index], pdf_points[index + 1]
+        scale = pt.maximum(left_pdf, right_pdf)
+        scale = pt.switch(pt.eq(scale, 0), 1, scale)
+        left_pdf, right_pdf = left_pdf / scale, right_pdf / scale
+        mass = cdf_points[index + 1] - cdf_points[index]
+        fraction = (value - cdf_points[index]) / pt.switch(pt.eq(mass, 0), 1, mass)
+        # Invert the integral within this segment. Scaling density and distance
+        # keeps the quadratic root accurate for very wide or narrow supports.
+        # Rationalizing the root avoids cancellation for nearly flat density.
+        root = pt.sqrt(pt.maximum((1 - fraction) * left_pdf**2 + fraction * right_pdf**2, 0))
+        denominator = left_pdf + root
+        offset = (
+            fraction * (left_pdf + right_pdf) / pt.switch(pt.eq(denominator, 0), 1, denominator)
+        )
+        res = x + offset * (x_points[index + 1] - x)
+        res = pt.switch(pt.eq(value, 0), x_points[0], res)
+        res = pt.switch(pt.eq(value, 1), x_points[-1], res)
+        return check_icdf_value(res, value)
 
 
 @_default_transform.register(Interpolated)
