@@ -2675,4 +2675,4 @@ class TestInterpolated(BaseTestDistributionRandom):
                     {},
                     extra_args={"rng": pytensor.shared(rng)},
                     ref_rand=ref_rand,
-        )
+                )
