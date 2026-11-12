@@ -58,17 +58,20 @@ class DifferentialEquation(Op):
     -------
     ode_op : DifferentialEquation
         A callable PyTensor Op. Calling this object in a model evaluates the ODE
-        system forward simulation:
+        system:
 
         ``ode_op(y0, theta, return_sens=False)``
 
         Arguments:
+
         - **y0** (*tensor_like*): Initial state vector with length ``n_states`` (one value per state variable).
         - **theta** (*tensor_like*): Parameter vector with length ``n_theta`` in the order expected by ``func``.
         - **return_sens** (*bool*, optional): Whether to also return sensitivities. Defaults to ``False``.
 
-        The returned forward solution has shape ``(len(times), n_states)``, representing
-        the simulated system states evaluated at each specified time point.
+        The returned solution has shape ``(len(times), n_states)``: one row per entry
+        in ``times`` and one column per state. The initial value at ``t0`` is not included.
+        When the solution is stored with ``pm.Deterministic``, sampled values have shape
+        ``(chain, draw, len(times), n_states)``.
 
     Examples
     --------
@@ -94,8 +97,12 @@ class DifferentialEquation(Op):
             y0 = pm.Normal("y0", mu=0.1, sigma=0.05, shape=1)
             theta = pm.HalfNormal("theta", sigma=1.0, shape=1)
 
-            # forward solution has shape (len(times), n_states) = (9, 1)
-            forward = ode_model(y0=y0, theta=theta)
+            # ode_solution has shape (len(times), n_states) = (9, 1)
+            ode_solution = pm.Deterministic("ode_solution", ode_model(y0=y0, theta=theta))
+            prior = pm.sample_prior_predictive(draws=4, random_seed=42)
+
+        # stored draws have chain and draw axes in front
+        print(prior.prior["ode_solution"].shape)  # (1, 4, 9, 1)
 
     """
 
