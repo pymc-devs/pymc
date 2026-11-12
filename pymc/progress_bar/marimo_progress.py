@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 from collections.abc import Callable
+from html import escape
 from time import perf_counter
 from typing import Any, Self
 
@@ -275,6 +276,7 @@ class MarimoSimpleProgress:
         self.description = ""
         self.total = 0
         self.completed = 0
+        self.loss: str | None = None
         self._css_theme = DEFAULT_CSS if theme is None else theme
 
         self._mo_replace: Callable[[object], None] | None = None
@@ -302,13 +304,14 @@ class MarimoSimpleProgress:
     ) -> int:
         """Add a task (interface compatibility with CustomProgress).
 
-        Kwargs are ignored since MarimoSimpleProgress
-        only supports a single task initialized at construction.
+        Kwargs like loss are stored when provided.
         """
         self.description = description
         self.completed = completed
         if total is not None:
             self.total = total
+        if "loss" in kwargs:
+            self.loss = kwargs["loss"]
         self._render()
         return self._task_id
 
@@ -343,12 +346,15 @@ class MarimoSimpleProgress:
         completed : int, optional
             Set completed count
         **kwargs
-            Additional arguments ignored for compatibility
+            Additional arguments stored when provided (e.g. loss)
         """
         if completed is not None:
             self.completed = completed
+        if "loss" in kwargs:
+            self.loss = kwargs["loss"]
+            refresh = True
         if refresh:
-            self._render()
+            self._render(force=True)
 
     def _render(self, force: bool = False) -> None:
         """Render HTML progress to marimo output."""
@@ -391,12 +397,16 @@ class MarimoSimpleProgress:
         if pct >= 100:
             bar_class += " finished"
 
+        loss_header = "<th>Loss</th>" if self.loss is not None else ""
+        loss_cell = f"<td>{escape(str(self.loss))}</td>" if self.loss is not None else ""
+
         return f"""<style>{self._css_theme}</style>
 <table class="pymc-progress-table">
-<thead><tr><th>Progress</th><th>Samples</th><th>Speed</th><th>Elapsed</th><th>Remaining</th></tr></thead>
+<thead><tr><th>Progress</th><th>Samples</th>{loss_header}<th>Speed</th><th>Elapsed</th><th>Remaining</th></tr></thead>
 <tbody><tr>
 <td><div class="pymc-progress-bar-container"><div class="{bar_class}" style="width: {pct:.1f}%"></div></div></td>
 <td>{self.completed}/{self.total} ({pct:.0f}%)</td>
+{loss_cell}
 <td>{speed_str}</td>
 <td>{elapsed_str}</td>
 <td>{remaining_str}</td>
