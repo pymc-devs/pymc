@@ -114,6 +114,11 @@ def _warn(name: str, new_path: str) -> None:
 
 def resolve(name: str):
     """Resolve a removed root-namespace symbol or raise ``AttributeError``."""
+    if name.startswith("__") and name.endswith("__"):
+        # Not a relocated symbol. Without this, `from pymc import *` looks up `__all__`
+        # and finds `pymc.stats.__all__` through the fallback below.
+        raise AttributeError(f"module 'pymc' has no attribute {name!r}")
+
     target_module = _RELOCATED.get(name)
     if target_module is not None:
         module = importlib.import_module(target_module)
