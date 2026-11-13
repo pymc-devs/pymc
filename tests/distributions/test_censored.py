@@ -20,9 +20,45 @@ import pymc as pm
 
 from pymc import logcdf, logp
 from pymc.distributions.shape_utils import change_dist_size
+from pymc.pytensorf import floatX
 
 
 class TestCensored:
+    def test_batched_beta_binomial_logp_and_gradient(self):
+        n = np.array([2, 10, 5])
+        beta = np.array([0.5, 2.0, 3.0])
+        lower = np.array([1, 3, 2])
+        data = np.array([1, 5, 2])
+
+        with pm.Model() as model:
+            alpha = pm.HalfNormal("alpha", sigma=3)
+            observed = pm.Censored(
+                "observed",
+                pm.BetaBinomial.dist(n=n, alpha=alpha, beta=beta),
+                lower=lower,
+                upper=None,
+                observed=data,
+            )
+
+        def expected_logp(log_alpha):
+            alpha = np.exp(log_alpha)
+            likelihood = np.where(
+                data == lower,
+                sp.stats.betabinom.logcdf(lower, n, alpha, beta),
+                sp.stats.betabinom.logpmf(data, n, alpha, beta),
+            )
+            return sp.stats.halfnorm.logpdf(alpha, scale=3) + log_alpha + likelihood.sum()
+
+        log_alpha = 0.7
+        point = {"alpha_log__": floatX(log_alpha)}
+        step = 1e-5
+        expected_gradient = (expected_logp(log_alpha + step) - expected_logp(log_alpha - step)) / (
+            2 * step
+        )
+        np.testing.assert_allclose(model.compile_logp()(point), expected_logp(log_alpha), rtol=1e-6)
+        np.testing.assert_allclose(model.compile_dlogp()(point), [expected_gradient], rtol=1e-6)
+        assert model.compile_logp(vars=[observed], sum=False)(point)[0].shape == data.shape
+
     @pytest.mark.parametrize("censored", (False, True))
     def test_censored_workflow(self, censored):
         # Based on pymc-examples/censored_data
