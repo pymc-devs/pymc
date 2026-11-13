@@ -32,7 +32,7 @@ class MeasurableMatMul(MeasurableBlockwise):
 
 
 @_logprob.register(MeasurableMatMul)
-def logprob_measurable_matmul(op, values, l, r):  # noqa: E741
+def logprob_measurable_matmul(op, values, l, r, **kwargs):  # noqa: E741
     [y_value] = values
     if op.right_measurable:
         A, x = l, r

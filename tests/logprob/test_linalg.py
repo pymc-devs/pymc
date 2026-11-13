@@ -83,3 +83,42 @@ def test_broadcasted_matmul_fails():
     y = A @ x
     with pytest.raises(NotImplementedError):
         logp(y, y.type())
+
+
+@pytest.mark.parametrize("side", ["left", "right"])
+@pytest.mark.parametrize("observed", [False, True])
+def test_matmul_custom_dist_model_logp(side, observed):
+    from scipy import stats
+
+    import pymc as pm
+
+    # Unit determinant keeps this independent of the matrix Jacobian
+    # multiplicity issue. The map still changes the covariance.
+    matrix = np.array([[1.0, 0.3], [0.0, 1.0]])
+    value = np.array([[0.4, -0.2, 0.7], [1.1, 0.5, -0.3]])
+    shape = value.shape if side == "left" else value.T.shape
+
+    def dist(mu, size):
+        x = Normal.dist(mu=mu, sigma=1.0, shape=shape)
+        return matrix @ x if side == "left" else x @ matrix.T
+
+    with pm.Model() as model:
+        mu = Normal("mu", 0.0, 1.0)
+        pm.CustomDist(
+            "y",
+            mu,
+            dist=dist,
+            observed=(value if side == "left" else value.T) if observed else None,
+        )
+
+    point = {"mu": 0.2}
+    if not observed:
+        point["y"] = value if side == "left" else value.T
+    whitened = np.linalg.solve(matrix, value)
+    expected = stats.norm.logpdf(point["mu"]) + stats.norm.logpdf(whitened, point["mu"]).sum()
+    expected_grad = -point["mu"] + (whitened - point["mu"]).sum()
+    for jacobian in (False, True):
+        np.testing.assert_allclose(model.compile_logp(jacobian=jacobian)(point), expected)
+        np.testing.assert_allclose(
+            model.compile_dlogp(vars=[mu], jacobian=jacobian)(point), [expected_grad]
+        )
