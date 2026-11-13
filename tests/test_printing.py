@@ -568,3 +568,36 @@ def test_model_table():
  beta_subject_penalty =  Potential(f(beta_subject))      subject[20]
 """
     assert [s.strip() for s in table_txt.splitlines()] == [s.strip() for s in expected.splitlines()]
+
+
+def test_model_table_truncate_rv():
+    def many_params_dist(mu, a, b, c, d, e, size=None):
+        return pm.Normal.dist(mu, a + b + c + d + e, size=size)
+
+    with pm.Model() as model:
+        alpha_1 = pm.Normal("alpha_1")
+        alpha_2 = pm.Normal("alpha_2")
+        alpha_3 = pm.Normal("alpha_3")
+        alpha_4 = pm.Normal("alpha_4")
+        alpha_5 = pm.HalfNormal("alpha_5")
+        alpha_6 = pm.HalfNormal("alpha_6")
+        pm.CustomDist(
+            "x", alpha_1, alpha_2, alpha_3, alpha_4, alpha_5, alpha_6, dist=many_params_dist
+        )
+
+    # Not truncated by default, nor by the deterministic-only option
+    for kwargs in ({}, {"truncate_deterministic": 10}):
+        table_txt = table_to_text(model_table(model, parameter_count=False, **kwargs), width=200)
+        assert "alpha_5, alpha_6)" in table_txt
+        assert "..." not in table_txt
+
+    table_txt = table_to_text(model_table(model, parameter_count=False, truncate_rv=30), width=200)
+    assert "CustomDist_x(alpha_1, alpha_2, alpha_3, ...)" in table_txt
+    assert "alpha_4" not in table_txt.split("CustomDist_x")[1]
+    # Short expressions are left alone
+    assert "Normal(0, 1)" in table_txt
+
+    # The option is exposed in the Model method
+    assert table_to_text(model.table(parameter_count=False, truncate_rv=30), width=200) == (
+        table_txt
+    )
