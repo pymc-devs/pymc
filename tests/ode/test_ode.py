@@ -49,6 +49,36 @@ def test_simulate():
     np.testing.assert_allclose(y, simulated_y, rtol=1e-5)
 
 
+def logistic_ode(y, t, p):
+    return [p[0] * y[0] * (1 - y[0] / p[1])]
+
+
+def test_pullback_matches_finite_differences():
+    ode_model = DifferentialEquation(
+        func=logistic_ode, times=np.linspace(0.5, 3, 6), n_states=1, n_theta=2
+    )
+    pytensor.gradient.verify_grad(
+        ode_model,
+        [np.array([0.3]), np.array([1.2, 2.0])],
+        rng=np.random.default_rng(42),
+        abs_tol=1e-4,
+        rel_tol=1e-4,
+    )
+
+
+@pytest.mark.parametrize("include_states", [True, False], ids=["states_and_sens", "sens_only"])
+def test_pullback_through_sensitivities_not_implemented(include_states):
+    ode_model = DifferentialEquation(
+        func=logistic_ode, times=np.linspace(0.5, 3, 6), n_states=1, n_theta=2
+    )
+    theta = pt.vector("theta")
+    states, sens = ode_model(y0=[0.3], theta=theta, return_sens=True)
+    cost = sens.sum() + states.sum() if include_states else sens.sum()
+
+    with pytest.raises(pytensor.gradient.NullTypeGradError, match="second-order sensitivities"):
+        pytensor.grad(cost, theta)
+
+
 class TestSensitivityInitialCondition:
     t = np.arange(0, 12, 0.25).reshape(-1, 1)
 
