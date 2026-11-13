@@ -12,14 +12,22 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
+from copy import copy
+
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import scipy
 
+from pytensor.compile import optdb
+from pytensor.compile.inner_function import HasInnerFunction
+from pytensor.compile.rewriting import rewrite_inner_graph
 from pytensor.gradient import DisconnectedType, grad_not_implemented
 from pytensor.graph.basic import Apply
+from pytensor.graph.fg import FrozenFunctionGraph
 from pytensor.graph.op import Op
+from pytensor.graph.rewriting.basic import graph_rewriter
+from pytensor.tensor.optimize import rewrite_optimize_inner_graph
 from pytensor.tensor.type import TensorType
 
 from pymc.exceptions import ShapeError
@@ -28,7 +36,7 @@ from pymc.ode import utils
 floatX = pytensor.config.floatX
 
 
-class DifferentialEquation(Op):
+class DifferentialEquation(HasInnerFunction, Op):
     r"""
     Specify an ordinary differential equation.
 
@@ -67,7 +75,7 @@ class DifferentialEquation(Op):
 
     """
 
-    __props__ = ("func", "times", "n_states", "n_theta", "t0")
+    __props__ = ("times", "n_states", "n_theta", "t0")
 
     def __init__(self, func, times, *, n_states, n_theta, t0=0):
         if not callable(func):
@@ -77,7 +85,6 @@ class DifferentialEquation(Op):
         if n_theta <= 0:
             raise ValueError("Argument n_theta must be positive.")
 
-        self.func = func
         self.t0 = t0
         self.times = tuple(times)
         self.n_times = len(times)
@@ -85,9 +92,37 @@ class DifferentialEquation(Op):
         self.n_theta = n_theta
         self.n_p = n_states + n_theta
 
+        self.fgraph = utils.make_augmented_system(
+            func, n_states=self.n_states, n_theta=self.n_theta
+        )
+        self._fn = None
+
         self._augmented_times = np.insert(times, 0, t0).astype(floatX)
-        self._augmented_func = utils.augment_system(func, self.n_states, self.n_theta)
         self._sens_ic = utils.make_sens_ic(self.n_states, self.n_theta, floatX)
+
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return False
+        return self.fgraph == other.fgraph and self._props() == other._props()
+
+    def __hash__(self):
+        return hash((type(self), self.fgraph, self._props()))
+
+    def clone_with_inner_graph(self, inner_fgraph):
+        clone_op = copy(self)
+        clone_op._fn = None
+        clone_op.fgraph = (
+            inner_fgraph if isinstance(inner_fgraph, FrozenFunctionGraph) else inner_fgraph.freeze()
+        )
+        return clone_op
+
+    def clone(self):
+        return self
+
+    def prepare_node(self, node, storage_map, compute_map, impl):
+        self.fn
 
     def _system(self, Y, t, p):
         r"""Solve both ODE and sensitivities.
@@ -97,13 +132,15 @@ class DifferentialEquation(Op):
         Parameters
         ----------
         Y : array
-            augmented state vector (n_states + n_states + n_theta)
+            augmented state vector (n_states + n_states * n_p)
         t : float
             current time
         p : array
             parameter vector (y0, theta)
         """
-        dydt, ddt_dydp = self._augmented_func(Y[: self.n_states], t, p, Y[self.n_states :])
+        # The inner function trusts its inputs, and odeint passes the time as a python float
+        t = np.asarray(t, dtype="float64")
+        dydt, ddt_dydp = self.fn(Y[: self.n_states], t, p, Y[self.n_states :])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
 
@@ -111,9 +148,10 @@ class DifferentialEquation(Op):
         # Initial condition comprised of state initial conditions and raveled sensitivity matrix
         s0 = np.concatenate([y0, self._sens_ic])
 
-        # perform the integration
+        p = np.concatenate([y0, theta]).astype("float64")
+
         sol = scipy.integrate.odeint(
-            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([y0, theta]),)
+            func=self._system, y0=s0, t=self._augmented_times, args=(p,)
         ).astype(floatX)
         # The solution
         y = sol[1:, : self.n_states]
@@ -181,3 +219,21 @@ class DifferentialEquation(Op):
         # sens is (n_times, n_states, n_p) and states_grad is (n_times, n_states)
         input_grad = pt.tensordot(states_grad, sens, axes=[[0, 1], [0, 1]])
         return [input_grad[: self.n_states], input_grad[self.n_states :]]
+
+
+@graph_rewriter
+def ode_inner_graph(fgraph):
+    rewrite_inner_graph(
+        fgraph,
+        match=lambda op: isinstance(op, DifferentialEquation),
+        rewrite=rewrite_optimize_inner_graph,
+    )
+
+
+optdb.register(
+    "ode_inner_graph",
+    ode_inner_graph,
+    "minimum_compile",
+    "compile_inner_graph",
+    position=49.6,
+)

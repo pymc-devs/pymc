@@ -327,9 +327,18 @@ class TestDiffEqModel:
         op_other = DifferentialEquation(
             func=ode_func, t0=0, times=np.linspace(0, 2, 16), n_states=1, n_theta=1
         )
+        op_same_rhs = DifferentialEquation(
+            func=lambda y, t, p: np.exp(-t) - p[0] * y[0], t0=0, times=t, n_states=1, n_theta=1
+        )
+        op_other_rhs = DifferentialEquation(
+            func=lambda y, t, p: np.exp(-t) + p[0] * y[0], t0=0, times=t, n_states=1, n_theta=1
+        )
 
         assert op_1 == op_2
+        assert hash(op_1) == hash(op_2)
         assert op_1 != op_other
+        assert op_1 == op_same_rhs
+        assert op_1 != op_other_rhs
         return
 
     def test_scalar_ode_1_param(self):

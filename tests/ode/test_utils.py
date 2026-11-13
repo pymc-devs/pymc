@@ -13,9 +13,10 @@
 #   limitations under the License.
 
 import numpy as np
+import pytensor
 import scipy.integrate as ode
 
-from pymc.ode.utils import augment_system
+from pymc.ode.utils import make_augmented_system
 
 
 def test_gradients():
@@ -26,7 +27,10 @@ def test_gradients():
         return np.exp(-t) - p[0] * y[0]
 
     # Computation of graidients with PyTensor
-    augmented_ode_func = augment_system(ode_func, n_states=1, n_theta=1)
+    augmented_system_graph = make_augmented_system(ode_func, n_states=1, n_theta=1).unfreeze()
+    augmented_ode_func = pytensor.function(
+        augmented_system_graph.inputs, augmented_system_graph.outputs, on_unused_input="ignore"
+    )
 
     # This is the new system, ODE + Sensitivities, which will be integrated
     def augmented_system(Y, t, p):
