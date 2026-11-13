@@ -44,6 +44,8 @@ from pymc import logp
 from pymc.logprob.basic import conditional_logp
 from pymc.testing import assert_no_rvs
 
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 @pytest.mark.parametrize(
     "size, axis",
@@ -58,7 +60,10 @@ from pymc.testing import assert_no_rvs
     ],
 )
 def test_normal_cumsum(size, axis):
-    rv = pt.random.normal(0, 1, size=size).cumsum(axis)
+    _, rv = pt.random.normal(
+        0, 1, size=size, rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
+    rv = rv.cumsum(axis)
     vv = rv.clone()
     logprob = logp(rv, vv)
     assert_no_rvs(logprob)
@@ -82,7 +87,10 @@ def test_normal_cumsum(size, axis):
     ],
 )
 def test_bernoulli_cumsum(size, axis):
-    rv = pt.random.bernoulli(0.9, size=size).cumsum(axis)
+    _, rv = pt.random.bernoulli(
+        0.9, size=size, rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
+    rv = rv.cumsum(axis)
     vv = rv.clone()
     logprob = logp(rv, vv)
     assert_no_rvs(logprob)
@@ -95,7 +103,10 @@ def test_bernoulli_cumsum(size, axis):
 
 def test_destructive_cumsum_fails():
     """Test that a cumsum that mixes dimensions fails"""
-    x_rv = pt.random.normal(size=(2, 2, 2)).cumsum()
+    _, x_rv = pt.random.normal(
+        size=(2, 2, 2), rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
+    x_rv = x_rv.cumsum()
     x_vv = x_rv.clone()
     with pytest.raises(RuntimeError, match="could not be derived"):
         conditional_logp({x_rv: x_vv})
@@ -103,9 +114,13 @@ def test_destructive_cumsum_fails():
 
 def test_deterministic_cumsum():
     """Test that deterministic cumsum is not affected"""
-    x_rv = pt.random.normal(1, 1, size=5)
+    _, x_rv = pt.random.normal(
+        1, 1, size=5, rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
     cumsum_x_rv = pt.cumsum(x_rv)
-    y_rv = pt.random.normal(cumsum_x_rv, 1)
+    _, y_rv = pt.random.normal(
+        cumsum_x_rv, 1, rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
 
     x_vv = x_rv.clone()
     y_vv = y_rv.clone()
