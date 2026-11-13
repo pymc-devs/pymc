@@ -141,3 +141,14 @@ def test_eager_import_heavy_dependencies():
         f"`import pymc` eagerly loaded heavy modules: {loaded}. "
         "These should be deferred to first use.\n" + "\n".join(lines[1:])
     )
+
+
+def test_star_import_binds_root_namespace():
+    """`from pymc import *` imports the public names of the root namespace.
+
+    The root namespace has no ``__all__``, so star-import must not resolve it through the
+    relocated-symbol fallback (which would find ``pymc.stats.__all__``).
+    """
+    namespace = {}
+    exec("from pymc import *", namespace)
+    assert {"Normal", "Model", "sample"} <= namespace.keys()
