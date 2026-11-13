@@ -338,6 +338,37 @@ class TestStepMetropolis(StepMethodTester):
             self.check_stat(check, idata)
             self.check_stat_dtype(idata, step)
 
+    @pytest.mark.parametrize("proposal", ["uniform", "proportional"])
+    def test_categorical_gibbs_stationary_distribution(self, proposal):
+        p = np.array([0.1, 0.1, 0.8])
+        with pm.Model() as model:
+            x = pm.Categorical("x", p, size=50)
+            b = pm.Bernoulli("b", 0.3, size=50)
+            step = CategoricalGibbsMetropolis([x, b], proposal=proposal, rng=SEED)
+
+        point = model.initial_point()
+        x_draws, b_draws = [], []
+        for _ in range(400):
+            point, _ = step.step(point)
+            x_draws.append(point["x"])
+            b_draws.append(point["b"])
+        x_freqs = np.bincount(np.ravel(x_draws), minlength=3) / np.size(x_draws)
+        npt.assert_allclose(x_freqs, p, atol=0.02)
+        npt.assert_allclose(np.mean(b_draws), 0.3, atol=0.02)
+
+    def test_categorical_gibbs_proportional_nearly_certain(self):
+        # Here 1 - p_curr computed by subtraction has a relative error of about 2e-5,
+        # enough for proposal probabilities normalized by it to fail rng.choice's sum check
+        p = np.array([1e-12, 1e-12, 1 - 2e-12])
+        with pm.Model() as model:
+            x = pm.Categorical("x", p, size=10)
+            step = CategoricalGibbsMetropolis([x], proposal="proportional", rng=SEED)
+
+        point = model.initial_point()
+        for _ in range(10):
+            point, _ = step.step(point)
+        npt.assert_array_equal(point["x"], 2)
+
     @pytest.mark.parametrize(
         "step_fn, draws",
         [
