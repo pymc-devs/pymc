@@ -539,7 +539,9 @@ def adagrad(loss_or_grads=None, params=None, learning_rate=1.0, epsilon=1e-6):
     return updates
 
 
-def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10):
+def adagrad_window(
+    loss_or_grads=None, params=None, learning_rate=0.001, epsilon=0.1, n_win=10, max_step_ratio=10
+):
     """Return a function that returns parameter updates.
 
     Instead of accumulated estimate, uses running window.
@@ -556,6 +558,9 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         Offset to avoid zero-division in the normalizer of adagrad.
     n_win: int
         Number of past steps to calculate scales of parameter gradients.
+    max_step_ratio: float
+        Maximum update step as a multiple of ``learning_rate`` once the
+        current gradient is excluded from its own normalizer.
 
     Returns
     -------
@@ -571,6 +576,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
     for param, grad in zip(params, grads):
         i = pytensor.shared(pm.pytensorf.floatX(0))
         i_int = i.astype("int32")
+        t = pytensor.shared(0)
         value = param.get_value(borrow=True)
         accu = pytensor.shared(np.zeros((*value.shape, n_win), dtype=value.dtype))
 
@@ -579,9 +585,16 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         i_new = pt.switch((i + 1) < n_win, i + 1, 0)
         updates[accu] = accu_new
         updates[i] = i_new
+        updates[t] = t + 1
 
         accu_sum = accu_new.sum(axis=-1)
-        updates[param] = param - (learning_rate * grad / pt.sqrt(accu_sum + epsilon))
+        stock_step = learning_rate * grad / pt.sqrt(accu_sum + epsilon)
+        excl_sum = pt.maximum(accu_sum - grad**2, 0)
+        excl_step = learning_rate * grad / pt.sqrt(excl_sum + epsilon)
+        excl_step = pt.clip(
+            excl_step, -max_step_ratio * learning_rate, max_step_ratio * learning_rate
+        )
+        updates[param] = param - pt.switch(t < n_win, stock_step, excl_step)
     return updates
 
 
