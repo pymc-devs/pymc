@@ -98,6 +98,29 @@ class OverheadSuite:
             )
 
 
+class DiscreteGibbsSuite:
+    """Gibbs sweep over many discrete latents next to an expensive term that does not depend on them."""
+
+    params = (pm.BinaryGibbsMetropolis, pm.CategoricalGibbsMetropolis)
+    param_names = ["step"]
+    timer = timeit.default_timer
+
+    def setup(self, step):
+        rng = np.random.default_rng(0)
+        X = rng.normal(size=(20_000, 50))
+        with pm.Model() as self.model:
+            w = pm.Normal("w", 0, 1, size=50)
+            pm.Normal("big_obs", X @ w, 1, observed=X @ rng.normal(size=50))
+            z = pm.Bernoulli("z", 0.5, size=200)
+            pm.Normal("y", pt.switch(z, 1.0, -1.0), 1, observed=rng.normal(size=200))
+            self.step = step([z], rng=rng)
+        self.point = self.model.initial_point()
+        self.step.step(self.point)
+
+    def time_sweep(self, step):
+        self.step.step(self.point)
+
+
 class ExampleSuite:
     """Implements examples to keep up with benchmarking them."""
 

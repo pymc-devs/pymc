@@ -1202,6 +1202,103 @@ def test_compile_fn():
     np.testing.assert_allclose(result_compute, result_expect)
 
 
+class TestDependentLogp:
+    @staticmethod
+    def make_model():
+        with pm.Model() as m:
+            mu = pm.Normal("mu")
+            sigma = pm.HalfNormal("sigma")
+            x = pm.Normal("x", mu, sigma, size=3)
+            x_shift = pm.Deterministic("x_shift", x + 1)
+            pm.Normal("y", x_shift, 1, observed=[0.1, -0.2, 0.3])
+            pm.Potential("x_pot", -(x**2).sum())
+            p = pm.Beta("p", 2, 2)
+            z = pm.Bernoulli("z", p, size=2)
+            pm.Potential("z_pot", pt.switch(pt.eq(z.sum(), 2), -1.0, 0.0))
+            pm.Normal("other", 0, 1)
+        return m
+
+    @staticmethod
+    def random_point(m, rng):
+        point = m.initial_point()
+        for name, value in point.items():
+            if name == "z":
+                point[name] = rng.integers(2, size=value.shape).astype(value.dtype)
+            else:
+                point[name] = rng.normal(size=value.shape).astype(value.dtype)
+        return point
+
+    @pytest.mark.parametrize(
+        "vars, expected_terms",
+        [
+            (["mu"], ["mu", "x"]),
+            (["sigma"], ["sigma", "x"]),
+            (["x"], ["x", "y", "x_pot"]),
+            (["p"], ["p", "z"]),
+            (["z"], ["z", "z_pot"]),
+            (["other"], ["other"]),
+            (["mu", "z"], ["mu", "x", "z", "z_pot"]),
+        ],
+    )
+    def test_included_terms(self, vars, expected_terms):
+        m = self.make_model()
+        dependent_logps = m.dependent_logp([m[name] for name in vars], sum=False)
+        expected_logps = m.logp(vars=[m[name] for name in expected_terms], sum=False)
+        assert len(dependent_logps) == len(expected_terms)
+
+        point = self.random_point(m, np.random.default_rng(42))
+        fn = m.compile_fn(
+            dependent_logps + expected_logps, inputs=m.value_vars, on_unused_input="ignore"
+        )
+        results = fn(point)
+        n = len(expected_terms)
+        for dependent_res, expected_res in zip(results[:n], results[n:]):
+            np.testing.assert_allclose(dependent_res, expected_res)
+
+    def test_value_var_input(self):
+        m = self.make_model()
+        point = self.random_point(m, np.random.default_rng(1))
+        from_rv = m.dependent_logp(m["sigma"])
+        from_value = m.dependent_logp([m.rvs_to_values[m["sigma"]]])
+        fn = m.compile_fn([from_rv, from_value], inputs=m.value_vars, on_unused_input="ignore")
+        np.testing.assert_allclose(*fn(point))
+
+    def test_unknown_var_raises(self):
+        m = self.make_model()
+        with pytest.raises(ValueError, match="not random variables in the model"):
+            m.dependent_logp([m["x_shift"]])
+
+    @pytest.mark.parametrize("jacobian", [True, False])
+    @pytest.mark.parametrize(
+        "vars", [["mu"], ["sigma"], ["x"], ["p"], ["z"], ["other"], ["mu", "z"]]
+    )
+    def test_difference_matches_full_logp(self, vars, jacobian):
+        m = self.make_model()
+        value_names = [m.rvs_to_values[m[name]].name for name in vars]
+        full_logp = m.compile_logp(jacobian=jacobian)
+        dependent_logp = m.compile_fn(
+            m.dependent_logp([m[name] for name in vars], jacobian=jacobian),
+            inputs=m.value_vars,
+            on_unused_input="ignore",
+        )
+
+        rng = np.random.default_rng(sum(map(ord, "".join(vars))))
+        for _ in range(3):
+            old = self.random_point(m, rng)
+            proposal = self.random_point(m, rng)
+            new = old | {name: proposal[name] for name in value_names}
+            np.testing.assert_allclose(
+                dependent_logp(new) - dependent_logp(old),
+                full_logp(new) - full_logp(old),
+                rtol=1e-6,
+                atol=1e-8,
+            )
+
+    def test_frozen_model_caches_graph(self):
+        fm = freeze_model(self.make_model())
+        assert fm.dependent_logp([fm["x"]]) is fm.dependent_logp([fm["x"]])
+
+
 class TestFrozenModelCaching:
     def test_unfrozen_model_does_not_cache(self):
         with pm.Model() as m:
