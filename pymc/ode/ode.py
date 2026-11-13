@@ -54,27 +54,38 @@ class DifferentialEquation(Op):
     t0 : float
         Time corresponding to the initial condition
 
-    Returns
-    -------
-    ode_op : DifferentialEquation
-        A callable PyTensor Op. Calling this object in a model evaluates the ODE
-        system:
+    Notes
+    -----
+    A ``DifferentialEquation`` instance is a callable PyTensor Op. Calling it in
+    a model evaluates the ODE system:
 
-        ``ode_op(y0, theta, return_sens=False)``
+    .. code-block:: python
 
-        Arguments:
+        solution = ode_model(y0, theta, return_sens=False)
 
-        - **y0** (*tensor_like*): Initial state vector with length ``n_states`` (one value per state variable).
-        - **theta** (*tensor_like*): Parameter vector with length ``n_theta`` in the order expected by ``func``.
-        - **return_sens** (*bool*, optional): Whether to also return sensitivities. Defaults to ``False``.
+    Arguments:
 
-        The returned solution has shape ``(len(times), n_states)``: one row per entry
-        in ``times`` and one column per state. The initial value at ``t0`` is not included.
-        When the solution is stored with ``pm.Deterministic``, sampled values have shape
-        ``(chain, draw, len(times), n_states)``.
+    - **y0** (*tensor_like*): Initial state vector with length ``n_states`` (one value per state variable).
+    - **theta** (*tensor_like*): Parameter vector with length ``n_theta`` in the order expected by ``func``.
+    - **return_sens** (*bool*, optional): Whether to also return sensitivities. Defaults to ``False``.
+
+    The returned solution has shape ``(len(times), n_states)``: one row per entry
+    in ``times`` and one column per state. The initial value at ``t0`` is not included.
+    When the solution is stored with ``pm.Deterministic``, sampled values have shape
+    ``(chain, draw, len(times), n_states)``.
 
     Examples
     --------
+    The logistic differential equation, with priors on the initial state and growth rate:
+
+    .. math::
+
+        \begin{aligned}
+        y_0 &\sim \mathrm{LogNormal}(\log(0.1),\ 0.5) \\
+        \theta &\sim \mathrm{HalfNormal}(1) \\
+        \dfrac{dy}{dt} &= \theta \, y \, (1 - y) \quad y(t_0) = y_0
+        \end{aligned}
+
     .. code-block:: python
 
         import numpy as np
@@ -93,15 +104,12 @@ class DifferentialEquation(Op):
 
         # Call the ODE op inside a PyMC model with initial state y0 and parameters theta:
         with pm.Model() as model:
-            # y0 has length n_states=1; theta has length n_theta=1
-            y0 = pm.Normal("y0", mu=0.1, sigma=0.05, shape=1)
+            y0 = pm.LogNormal("y0", mu=np.log(0.1), sigma=0.5, shape=1)
             theta = pm.HalfNormal("theta", sigma=1.0, shape=1)
 
-            # ode_solution has shape (len(times), n_states) = (9, 1)
             ode_solution = pm.Deterministic("ode_solution", ode_model(y0=y0, theta=theta))
             prior = pm.sample_prior_predictive(draws=4, random_seed=42)
 
-        # stored draws have chain and draw axes in front
         print(prior.prior["ode_solution"].shape)  # (1, 4, 9, 1)
 
     """
