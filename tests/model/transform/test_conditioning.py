@@ -22,7 +22,7 @@ from pytensor.graph import Constant
 import pymc as pm
 
 from pymc import sample_posterior_predictive, set_data
-from pymc.distributions.transforms import logodds
+from pymc.distributions.transforms import log, logodds
 from pymc.model.transform.conditioning import (
     change_value_transforms,
     do,
@@ -385,3 +385,19 @@ def test_remove_value_transforms():
     new_p = new_m["p"]
     new_q = new_m["q"]
     assert new_m.rvs_to_transforms == {new_p: logodds, new_q: None}
+
+
+def test_remove_and_change_value_transforms_name_with_underscores():
+    # The default LKJCorr transform is named "cholesky_corr", which contains an underscore
+    with pm.Model() as base_m:
+        pm.LKJCorr("corr", n=3, eta=2.0)
+        pm.HalfNormal("sigma", default_transform=pm.distributions.transforms.log_exp_m1)
+    assert {v.name for v in base_m.value_vars} == {"corr_cholesky_corr__", "sigma_log_exp_m1__"}
+
+    new_m = remove_value_transforms(base_m)
+    assert {v.name for v in new_m.value_vars} == {"corr", "sigma"}
+    # The logp function inputs match the initial point keys
+    assert np.isfinite(new_m.compile_logp()(new_m.initial_point()))
+
+    new_m = change_value_transforms(base_m, {"sigma": log})
+    assert {v.name for v in new_m.value_vars} == {"corr_cholesky_corr__", "sigma_log__"}
