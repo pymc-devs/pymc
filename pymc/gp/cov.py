@@ -180,6 +180,9 @@ class Covariance(BaseCovariance):
         return len(self.active_dims)
 
     def _slice(self, X, Xs=None):
+        X = pt.as_tensor_variable(X)
+        if Xs is not None:
+            Xs = pt.as_tensor_variable(Xs)
         xdims = X.shape[-1]
         if isinstance(xdims, Variable):
             [xdims] = constant_fold([xdims], raise_not_constant=False)
@@ -192,9 +195,9 @@ class Covariance(BaseCovariance):
                 " the number of columns to use. Ignore otherwise.",
                 UserWarning,
             )
-        X = pt.as_tensor_variable(X[:, self.active_dims])
+        X = X[:, self.active_dims]
         if Xs is not None:
-            Xs = pt.as_tensor_variable(Xs[:, self.active_dims])
+            Xs = Xs[:, self.active_dims]
         return X, Xs
 
 
