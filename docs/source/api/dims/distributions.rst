@@ -25,6 +25,7 @@ Scalar distributions
    Laplace
    Gamma
    InverseGamma
+   Wald
    Weibull
    Poisson
    NegativeBinomial

@@ -153,15 +153,14 @@ def find_observations(model: BaseModel) -> dict[str, Var]:
 
 def find_constants(model: BaseModel) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
-    model_vars = model.basic_RVs + model.deterministics + model.potentials
-    value_vars = set(model.rvs_to_values.values())
+    # Observed data belongs only to observed_data, even if it is also used elsewhere in the model.
+    # Discrete observed values reach their data through a Cast, so check all ancestors.
+    observed_data = set(ancestors([model.rvs_to_values[rv] for rv in model.observed_RVs]))
 
     constant_data = {}
     for var in model.data_vars:
-        if var in value_vars:
-            # An observed value variable could also be part of the generative graph
-            if var not in ancestors(model_vars):
-                continue
+        if var in observed_data:
+            continue
 
         if isinstance(var, SharedVariable):
             var_value = var.get_value()
@@ -784,10 +783,7 @@ def dataset_to_point_list(
         vn: da.values.reshape((stacked_size, *da.shape[num_sample_dims:]))
         for vn, da in transposed_dict.items()
     }
-    points = [
-        {vn: stacked_dict[vn][i, ...] for vn in var_names}
-        for i in range(np.prod([len(coords) for coords in stacked_dims.values()]))
-    ]
+    points = [{vn: stacked_dict[vn][i, ...] for vn in var_names} for i in range(stacked_size)]
     # use the list of points
     return cast(list[dict[str, np.ndarray]], points), stacked_dims
 
@@ -835,7 +831,7 @@ def apply_function_over_dataset(
         out_trace,
         inference_library=pymc,
         dims=dims,
-        coords=coords,
+        coords={**coords, **stacked_dims},
         sample_dims=list(sample_dims),
         skip_event_dims=True,
     )

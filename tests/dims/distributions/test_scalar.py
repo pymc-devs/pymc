@@ -19,25 +19,37 @@ from pytensor.xtensor import as_xtensor
 from pymc import Model
 from pymc import distributions as regular_distributions
 from pymc.dims import (
+    Bernoulli,
     Beta,
+    BetaBinomial,
+    Binomial,
     Cauchy,
     DiracDelta,
     Exponential,
     Flat,
     Gamma,
+    Geometric,
+    Gumbel,
     HalfCauchy,
     HalfFlat,
     HalfNormal,
     HalfStudentT,
+    HyperGeometric,
     InverseGamma,
+    Kumaraswamy,
     Laplace,
+    Logistic,
     LogNormal,
     NegativeBinomial,
     Normal,
+    Pareto,
     Poisson,
     StudentT,
+    Triangular,
     TruncatedNormal,
     Uniform,
+    VonMises,
+    Wald,
     Weibull,
 )
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
@@ -304,6 +316,20 @@ def test_inverse_gamma():
     assert_equivalent_logp_graph(model, reference_model)
 
 
+def test_wald():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Wald("x", mu=2, lam=3, dims="a")
+        Wald("y", lam=3, phi=1.5, alpha=1, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Wald("x", mu=2, lam=3, dims="a")
+        regular_distributions.Wald("y", lam=3, phi=1.5, alpha=1, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
 def test_weibull():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
@@ -311,6 +337,149 @@ def test_weibull():
 
     with Model(coords=coords) as reference_model:
         regular_distributions.Weibull("x", alpha=1, beta=2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_pareto():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Pareto("x", alpha=2, m=5, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Pareto("x", alpha=2, m=5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_gumbel():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Gumbel("x", mu=0.5, beta=1.2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Gumbel("x", mu=0.5, beta=1.2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_logistic():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Logistic("x", mu=0.5, s=1.2, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Logistic("x", mu=0.5, s=1.2, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_vonmises():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        VonMises("x", mu=0.5, kappa=2.0, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.VonMises("x", mu=0.5, kappa=2.0, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_triangular():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Triangular("x", lower=0, upper=1, c=0.4, dims="a")
+        Triangular("y", dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Triangular("x", lower=0, upper=1, c=0.4, dims="a")
+        regular_distributions.Triangular("y", dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_bernoulli():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Bernoulli("x", p=0.3, dims="a")
+        Bernoulli("y", logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Can't specify both p and logit_p"):
+            Bernoulli("z", p=0.3, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Must specify either p or logit_p"):
+            Bernoulli("w", dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Bernoulli("x", p=0.3, dims="a")
+        regular_distributions.Bernoulli("y", logit_p=-0.5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_betabinom():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        BetaBinomial("x", n=10, alpha=2, beta=3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.BetaBinomial("x", n=10, alpha=2, beta=3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_binomial():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Binomial("x", n=10, p=0.3, dims="a")
+        Binomial("y", n=10, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Can't specify both p and logit_p"):
+            Binomial("z", n=10, p=0.3, logit_p=-0.5, dims="a")
+        with pytest.raises(ValueError, match="Must specify either p or logit_p"):
+            Binomial("w", n=10, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Binomial("x", n=10, p=0.3, dims="a")
+        regular_distributions.Binomial("y", n=10, logit_p=-0.5, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_geometric():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Geometric("x", p=0.3, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Geometric("x", p=0.3, dims="a")
+
+    assert_equivalent_random_graph(model, reference_model)
+    assert_equivalent_logp_graph(model, reference_model)
+
+
+def test_hypergeometric():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        HyperGeometric("x", N=50, k=20, n=10, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.HyperGeometric("x", N=50, k=20, n=10, dims="a")
+
+
+def test_kumaraswamy():
+    coords = {"a": range(3)}
+    with Model(coords=coords) as model:
+        Kumaraswamy("x", a=2, b=5, dims="a")
+
+    with Model(coords=coords) as reference_model:
+        regular_distributions.Kumaraswamy("x", a=2, b=5, dims="a")
 
     assert_equivalent_random_graph(model, reference_model)
     assert_equivalent_logp_graph(model, reference_model)

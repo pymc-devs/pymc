@@ -228,3 +228,11 @@ def test_nuts_step_legacy_value_grad_function():
     new_ip, _ = nuts.step(ip)
     assert np.all(new_ip["x"] != ip["x"])
     assert np.all(new_ip["y"] != ip["y"])
+
+
+@pytest.mark.parametrize("target_accept", [0, 1, 1.5])
+def test_nuts_rejects_invalid_target_accept(target_accept):
+    with pm.Model():
+        pm.Normal("x")
+        with pytest.raises(ValueError, match="target_accept must be in"):
+            pm.NUTS(target_accept=target_accept)

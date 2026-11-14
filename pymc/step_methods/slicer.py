@@ -32,18 +32,13 @@ from pymc.vartypes import continuous_types
 
 __all__ = ["Slice"]
 
-LOOP_ERR_MSG = "max slicer iters %d exceeded"
-
-
-dataclass_state
-
 
 @dataclass_state
 class SliceState(StepMethodState):
     w: np.ndarray
     tune: bool
     n_tunes: float
-    iter_limit: float
+    max_steps: int
 
 
 class Slice(ArrayStepShared):
@@ -60,12 +55,23 @@ class Slice(ArrayStepShared):
         Flag for tuning.
     model : Model, optional
         Optional model for sampling step. It will be taken from the context if not provided.
-    iter_limit : int, default np.inf
-        Maximum number of iterations for the slice sampler.
+    max_steps : int, default 100
+        Maximum interval width as a multiple of ``w``. Must be a positive integer.
+        At most ``max_steps - 1`` stepping-out expansions are performed per coordinate,
+        randomly divided between the left and right endpoints. Sampling and shrinkage
+        proceed when this budget is exhausted, even if an endpoint is still inside
+        the slice. The budget applies during both tuning and sampling. Set to 1 to
+        disable stepping out.
     rng: RandomGenerator
         An object that can produce be used to produce the step method's
         :py:class:`~numpy.random.Generator` object. Refer to
         :py:func:`pymc.util.get_random_generator` for more information.
+
+    References
+    ----------
+    .. [1] Neal, R. M. (2003). Slice sampling. The Annals of Statistics, 31(3),
+       705-767. Stepping-out and shrinkage procedures in Figures 3 and 5.
+       https://doi.org/10.1214/aos/1056562461
 
     """
 
@@ -85,7 +91,7 @@ class Slice(ArrayStepShared):
         w=1.0,
         tune=True,
         model=None,
-        iter_limit=np.inf,
+        max_steps: int = 100,
         rng=None,
         initial_point: PointType | None = None,
         compile_kwargs: dict | None = None,
@@ -95,7 +101,9 @@ class Slice(ArrayStepShared):
         self.w = np.asarray(w).copy()
         self.tune = tune
         self.n_tunes = 0.0
-        self.iter_limit = iter_limit
+        if not isinstance(max_steps, int | np.integer) or max_steps < 1:
+            raise ValueError("max_steps must be a positive integer")
+        self.max_steps = int(max_steps)
 
         if vars is None:
             vars = model.continuous_value_vars
@@ -138,21 +146,22 @@ class Slice(ArrayStepShared):
             ql[i] = q[i] - self.rng.uniform() * wi  # q[i] + r * w
             qr[i] = ql[i] + wi  # Equivalent to q[i] + (1-r) * w
 
+            # Randomly split the expansion budget (Neal, 2003, Figure 3).
+            # This random allocation is required for a reversible transition.
+            max_steps_left = self.rng.integers(self.max_steps)
+            max_steps_right = self.max_steps - 1 - max_steps_left
+
             # Stepping out procedure
             cnt = 0
-            while y <= logp(ql):  # changed lt to leq  for locally uniform posteriors
+            while cnt < max_steps_left and y <= logp(ql):
                 ql[i] -= wi
                 cnt += 1
-                if cnt > self.iter_limit:
-                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             nstep_out += cnt
 
             cnt = 0
-            while y <= logp(qr):
+            while cnt < max_steps_right and y <= logp(qr):
                 qr[i] += wi
                 cnt += 1
-                if cnt > self.iter_limit:
-                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             nstep_out += cnt
 
             cnt = 0
@@ -165,13 +174,10 @@ class Slice(ArrayStepShared):
                     ql[i] = q[i]
                 q[i] = self.rng.uniform(ql[i], qr[i])
                 cnt += 1
-                if cnt > self.iter_limit:
-                    raise RuntimeError(LOOP_ERR_MSG % self.iter_limit)
             nstep_in += cnt
 
             if self.tune:
-                # I was under impression from MacKays lectures that slice width can be tuned without
-                # breaking markovianness. Can we do it regardless of self.tune?(@madanh)
+                # Update the mean interval width during tuning only.
                 self.w[i] = wi * (self.n_tunes / (self.n_tunes + 1)) + (qr[i] - ql[i]) / (
                     self.n_tunes + 1
                 )

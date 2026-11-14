@@ -19,8 +19,6 @@ from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
-import blackjax
-import jax
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -33,7 +31,10 @@ from pytensor.graph import graph_inputs
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
-from pymc.sampling.jax import (
+
+jax = pytest.importorskip("jax")
+
+from pymc.sampling.jax import (  # noqa: E402
     _blackjax_inference_loop,
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
@@ -45,7 +46,7 @@ from pymc.sampling.jax import (
 )
 
 MCMC = pytest.importorskip("numpyro.infer").MCMC
-pytest.importorskip("blackjax")
+blackjax = pytest.importorskip("blackjax")
 
 
 @pytest.mark.parametrize(

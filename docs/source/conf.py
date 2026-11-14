@@ -299,11 +299,12 @@ todo_include_todos = False
 # intersphinx configuration to ease linking arviz docs
 intersphinx_mapping = {
     "arviz": ("https://python.arviz.org/en/latest/", None),
+    "arviz_base": ("https://python.arviz.org/projects/base/en/latest/", None),
     "arviz_plots": ("https://python.arviz.org/projects/plots/en/latest/", None),
     "arviz_stats": ("https://python.arviz.org/projects/stats/en/latest/", None),
     "pytensor": ("https://pytensor.readthedocs.io/en/latest/", None),
     "home": ("https://www.pymc.io", None),
-    "pmx": ("https://www.pymc.io/projects/experimental/en/latest", None),
+    "pmx": ("https://www.pymc.io/projects/extras/en/latest", None),
     "numpy": ("https://numpy.org/doc/stable/", None),
     "nb": ("https://www.pymc.io/projects/examples/en/latest/", None),
     "myst": ("https://myst-parser.readthedocs.io/en/latest", None),

@@ -16,6 +16,7 @@ import warnings
 
 import numpy as np
 import numpy.testing as npt
+import pytensor
 import pytest
 
 import pymc as pm
@@ -88,3 +89,11 @@ def test_nuts_tuning():
     ss_tuned = idata.warmup_sample_stats["step_size"][0, -1]
     ss_posterior = idata.sample_stats["step_size"][0, :]
     np.testing.assert_array_equal(ss_posterior, ss_tuned)
+
+
+def test_default_potential_uses_sampler_dtype():
+    with pytensor.config.change_flags(floatX="float32"):
+        with pm.Model():
+            pm.Normal("x")
+            step = pm.NUTS(dtype="float64", casting="safe")
+    assert step.potential.dtype == "float64"

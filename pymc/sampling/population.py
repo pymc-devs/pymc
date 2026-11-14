@@ -24,9 +24,6 @@ from typing import TypeAlias
 import cloudpickle
 import numpy as np
 
-from rich.progress import BarColumn, TextColumn, TimeElapsedColumn, TimeRemainingColumn
-
-from pymc.backends import _ZarrChainBase
 from pymc.backends.base import BaseTrace
 from pymc.initial_point import PointType
 from pymc.model import Model, modelcontext
@@ -38,7 +35,6 @@ from pymc.step_methods.arraystep import (
     PopulationArrayStepShared,
     StatsType,
 )
-from pymc.step_methods.compound import StepMethodState
 from pymc.step_methods.metropolis import DEMetropolis
 
 __all__ = ()
@@ -105,13 +101,14 @@ def _sample_population(
         tune=tune,
         model=model,
         rngs=rngs,
-        progressbar=progressbar,
     )
 
+    # Start the display only after workers have been created, so forked workers
+    # cannot inherit Rich's refresh-thread locks or redirected output streams.
     with CustomProgress(disable=not progressbar) as progress:
         task = progress.add_task("[red]Sampling...", total=draws)
         for _ in sampling:
-            progress.update(task)
+            progress.update(task, advance=1)
 
     return
 
@@ -151,7 +148,7 @@ def warn_population_size(
 class PopulationStepper:
     """Wraps population of step methods to step them in parallel with single or multiprocessing."""
 
-    def __init__(self, steppers, parallelize: bool, progressbar: bool = True):
+    def __init__(self, steppers, parallelize: bool):
         """Use multiprocessing to parallelize chains.
 
         Falls back to sequential evaluation if multiprocessing fails.
@@ -165,15 +162,12 @@ class PopulationStepper:
             A collection of independent step methods, one for each chain.
         parallelize : bool
             Indicates if parallelization via multiprocessing is desired.
-        progressbar : bool
-            Should we display a progress bar showing relative progress?
         """
         self.nchains = len(steppers)
         self.is_parallelized = False
         self._primary_ends = []
         self._processes = []
         self._steppers = steppers
-        self._progress = None
         if parallelize:
             try:
                 # configure a child process for each stepper
@@ -182,35 +176,23 @@ class PopulationStepper:
                 )
                 import multiprocessing
 
-                with CustomProgress(
-                    "[progress.description]{task.description}",
-                    BarColumn(),
-                    "[progress.percentage]{task.percentage:>3.0f}%",
-                    TimeRemainingColumn(),
-                    TextColumn("/"),
-                    TimeElapsedColumn(),
-                    disable=not progressbar,
-                ) as self._progress:
-                    for c, stepper in enumerate(steppers):
-                        #     enumerate(progress_bar(steppers)) if progressbar else enumerate(steppers)
-                        # ):
-                        task = self._progress.add_task(description=f"Chain {c}")
-                        secondary_end, primary_end = multiprocessing.Pipe()
-                        stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
-                        process = multiprocessing.Process(
-                            target=self.__class__._run_secondary,
-                            args=(c, stepper_dumps, secondary_end, task, self._progress),
-                            name=f"ChainWalker{c}",
-                        )
-                        # we want the child process to exit if the parent is terminated
-                        process.daemon = True
-                        # Starting the process might fail and takes time.
-                        # By doing it in the constructor, the sampling progress bar
-                        # will not be confused by the process start.
-                        process.start()
-                        self._primary_ends.append(primary_end)
-                        self._processes.append(process)
-                    self.is_parallelized = True
+                for c, stepper in enumerate(steppers):
+                    secondary_end, primary_end = multiprocessing.Pipe()
+                    stepper_dumps = cloudpickle.dumps(stepper, protocol=4)
+                    process = multiprocessing.Process(
+                        target=self.__class__._run_secondary,
+                        args=(c, stepper_dumps, secondary_end),
+                        name=f"ChainWalker{c}",
+                    )
+                    # we want the child process to exit if the parent is terminated
+                    process.daemon = True
+                    # Starting the process might fail and takes time.
+                    # By doing it in the constructor, the sampling progress bar
+                    # will not be confused by the process start.
+                    process.start()
+                    self._primary_ends.append(primary_end)
+                    self._processes.append(process)
+                self.is_parallelized = True
             except Exception:
                 _log.info(
                     "Population parallelization failed. "
@@ -240,21 +222,17 @@ class PopulationStepper:
         return
 
     @staticmethod
-    def _run_secondary(c, stepper_dumps, secondary_end, task, progress):
+    def _run_secondary(c, stepper_dumps, secondary_end):
         """Perform stepping of a chain from a separate process.
 
         Parameters
         ----------
         c : int
             number of this chain
-        stepper : BlockedStep
-            a step method such as CompoundStep
+        stepper_dumps : bytes
+            A step method such as CompoundStep, serialized with cloudpickle.
         secondary_end : multiprocessing.connection.PipeConnection
             This is our connection to the main process
-        task : progress.Task
-            The progress task for this chain
-        progress : progress.Progress
-            The progress bar
         """
         try:
             stepper = cloudpickle.loads(stepper_dumps)
@@ -270,9 +248,6 @@ class PopulationStepper:
                 # receiving a None is the signal to exit
                 if incoming is None:
                     break
-                elif incoming == "sampling_state":
-                    secondary_end.send((c, stepper.sampling_state))
-                    continue
                 tune_stop, population = incoming
                 if tune_stop:
                     stepper.stop_tuning()
@@ -282,7 +257,6 @@ class PopulationStepper:
                 for popstep in population_steppers:
                     popstep.population = population
                 update = stepper.step(population[c])
-                progress.advance(task)
                 secondary_end.send(update)
         except Exception:
             _log.exception(f"ChainWalker{c}")
@@ -317,14 +291,6 @@ class PopulationStepper:
                 updates.append(self._steppers[c].step(population[c]))
         return updates
 
-    def request_sampling_state(self, chain) -> StepMethodState:
-        if self.is_parallelized:
-            self._primary_ends[chain].send(("sampling_state",))
-            _, sampling_state = self._primary_ends[chain].recv()
-        else:
-            sampling_state = self._steppers[chain].sampling_state
-        return sampling_state
-
 
 def _prepare_iter_population(
     *,
@@ -336,7 +302,6 @@ def _prepare_iter_population(
     tune: int,
     rngs: Sequence[np.random.Generator],
     model=None,
-    progressbar=True,
 ) -> Iterator[int]:
     """Prepare a PopulationStepper and traces for population sampling.
 
@@ -360,8 +325,6 @@ def _prepare_iter_population(
     rngs: sequence of random Generators
         A list of :py:class:`~numpy.random.Generator` objects, one for each chain
     model : Model (optional if in ``with`` context)
-    progressbar : bool
-        ``progressbar`` argument for the ``PopulationStepper``, (defaults to True)
 
     Returns
     -------
@@ -405,7 +368,7 @@ def _prepare_iter_population(
         steppers.append(chainstep)
 
     # 3. configure the PopulationStepper (expensive call)
-    popstep = PopulationStepper(steppers, parallelize, progressbar=progressbar)
+    popstep = PopulationStepper(steppers, parallelize)
 
     # Because the preparations above are expensive, the actual iterator is
     # in another method. This way the progbar will not be disturbed.
@@ -459,11 +422,8 @@ def _iter_population(
                 # apply the update to the points and record to the traces
                 for c, strace in enumerate(traces):
                     points[c], stats = updates[c]
-                    flushed = strace.record(points[c], stats, in_warmup=i < tune)
+                    strace.record(points[c], stats, in_warmup=i < tune)
                     log_warning_stats(stats)
-                    if flushed and isinstance(strace, _ZarrChainBase):
-                        sampling_state = popstep.request_sampling_state(c)
-                        strace.store_sampling_state(sampling_state)
                 # yield the state of all chains in parallel
                 yield i
     except KeyboardInterrupt:

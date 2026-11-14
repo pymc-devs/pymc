@@ -82,6 +82,7 @@ def compute_deterministics(
         Model to use. If None, use context model.
     sample_dims : sequence of str, default ("chain", "draw")
         Sample (batch) dimensions of the dataset over which to compute the deterministics.
+        Use an empty sequence to evaluate a single point without sample dimensions.
     merge_dataset : bool, default False
         Whether to include the values of the original dataset in the returned one.
 
@@ -95,8 +96,6 @@ def compute_deterministics(
         Cannot be combined with ``merge_dataset``.
     progressbar : bool, default True
         Whether to display a progress bar in the command line.
-    progressbar_theme : Theme, optional
-        Custom theme for the progress bar.
     backend: str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     compile_kwargs: dict, optional

@@ -344,8 +344,10 @@ class TestMatchesScipy:
         check_logcdf(
             pm.Wald,
             Rplus,
-            {"mu": Rplus, "alpha": Rplus},
-            lambda value, mu, alpha: st.invgauss.logcdf(value, mu=mu, loc=alpha),
+            {"mu": Rplus, "lam": Rplus, "alpha": Rplus},
+            lambda value, mu, lam, alpha: st.invgauss.logcdf(
+                value, mu=mu / lam, scale=lam, loc=alpha
+            ),
         )
 
     @pytest.mark.parametrize(
@@ -608,6 +610,15 @@ class TestMatchesScipy:
             lambda value, a, b, mu, sigma: st.jf_skew_t.logcdf(value, a, b, mu, sigma),
         )
 
+    @pytest.mark.parametrize(
+        "dist, shape_params",
+        [(pm.StudentT, {"nu": 3}), (pm.SkewStudentT, {"a": 2, "b": 3})],
+    )
+    def test_studentt_logcdf_infinities(self, dist, shape_params):
+        value = pt.vector("value")
+        logcdf = pm.logcdf(dist.dist(**shape_params, mu=1, sigma=2), value)
+        npt.assert_array_equal(logcdf.eval({value: floatX([-np.inf, np.inf])}), [-np.inf, 0])
+
     def test_skewstudentt_icdf(self):
         check_icdf(
             pm.SkewStudentT,
@@ -786,6 +797,16 @@ class TestMatchesScipy:
             lambda q, alpha, beta: st.exponweib.ppf(q, 1, alpha, scale=beta),
         )
 
+    def test_exponential_icdf_tiny_quantile(self):
+        q = 1e-20
+        npt.assert_allclose(icdf(pm.Exponential.dist(lam=1.0), q).eval(), st.expon.ppf(q))
+
+    def test_weibull_icdf_tiny_quantile(self):
+        q = 1e-20
+        npt.assert_allclose(
+            icdf(pm.Weibull.dist(alpha=2.0, beta=1.0), q).eval(), st.weibull_min.ppf(q, 2.0)
+        )
+
     def test_half_studentt(self):
         # this is only testing for nu=1 (halfcauchy)
         check_logp(
@@ -847,6 +868,16 @@ class TestMatchesScipy:
             Circ,
             {"mu": R, "kappa": Rplus},
             lambda value, mu, kappa: floatX(st.vonmises.logpdf(value, kappa, loc=mu)),
+        )
+
+    @pytest.mark.skipif(condition=(pytensor.config.floatX == "float32"), reason="Fails on float32")
+    @pytest.mark.parametrize("kappa", [100.0, np.float64(1000.0)])
+    def test_vonmises_large_kappa(self, kappa):
+        value = np.array([-0.1, 0.0, 0.1])
+        npt.assert_allclose(
+            logp(pm.VonMises.dist(mu=0.0, kappa=kappa), value).eval(),
+            st.vonmises.logpdf(value, kappa),
+            rtol=1e-6,
         )
 
     def test_gumbel(self):
@@ -1001,6 +1032,13 @@ class TestMatchesScipy:
         else:
             assert not np.isfinite(m.compile_logp()({"x": -1.0}))
             assert not np.isfinite(m.compile_logp()({"x": 11.0}))
+
+    def test_truncated_normal_logcdf_boundaries(self):
+        value = pt.dvector("value")
+        rv = pm.TruncatedNormal.dist(mu=0, sigma=1, lower=-1, upper=2)
+        fn = pytensor.function([value], pm.logcdf(rv, value))
+        values = np.array([-2.0, -1.0, 0.0, 2.0, 3.0])
+        np.testing.assert_allclose(fn(values), st.truncnorm.logcdf(values, -1, 2))
 
     def test_truncated_normal(self):
         def scipy_logp(value, mu, sigma, lower, upper):
@@ -1332,7 +1370,7 @@ class TestMoments:
     @pytest.mark.parametrize(
         "a, b, mu, sigma, size, expected",
         [
-            (1, 1, 0, 1, None, 0),
+            (0.5, 2, 2, 2, None, 2),
             (np.ones(5), np.ones(5), 0, 1, None, np.zeros(5)),
             (10, 10, np.arange(5), np.arange(1, 6), None, np.arange(5)),
             (
@@ -1495,6 +1533,20 @@ class TestMoments:
     def test_wald_support_point(self, mu, lam, phi, size, expected):
         with pm.Model() as model:
             pm.Wald("x", mu=mu, lam=lam, phi=phi, size=size)
+        assert_support_point_is_expected(model, expected)
+
+    @pytest.mark.parametrize(
+        "mu, lam, alpha, size, expected",
+        [
+            (2, 1, 3, None, 5),
+            (1, 1, np.arange(3), (2, 3), np.full((2, 3), 1 + np.arange(3))),
+        ],
+    )
+    def test_wald_support_point_with_alpha(self, mu, lam, alpha, size, expected):
+        # `alpha` shifts the support, so the support point has to shift with it,
+        # otherwise it can land outside the distribution's own support.
+        with pm.Model() as model:
+            pm.Wald("x", mu=mu, lam=lam, alpha=alpha, size=size)
         assert_support_point_is_expected(model, expected)
 
     @pytest.mark.parametrize(
@@ -1722,40 +1774,28 @@ class TestMoments:
     @pytest.mark.parametrize(
         "nu, sigma, size, expected",
         [
-            (1.0, 1.0, None, 1.5485724605511453),
-            (1.0, np.ones(5), None, np.full(5, 1.5485724605511453)),
+            (0.0, 1.0, None, 1.0),
+            (4.0, 2.0, None, 4.0),
+            (25.0, 1.0, None, 25.0),
+            (1.0, np.ones(5), None, np.ones(5)),
             (
                 np.arange(1, 6),
                 1.0,
                 None,
-                (
-                    1.5485724605511453,
-                    2.2723834280687427,
-                    3.1725772879007166,
-                    4.127193542536757,
-                    5.101069639492123,
-                ),
+                np.arange(1, 6),
             ),
             (
                 np.arange(1, 6),
                 np.ones(5),
                 (2, 5),
-                np.full(
-                    (2, 5),
-                    (
-                        1.5485724605511453,
-                        2.2723834280687427,
-                        3.1725772879007166,
-                        4.127193542536757,
-                        5.101069639492123,
-                    ),
-                ),
+                np.full((2, 5), np.arange(1, 6)),
             ),
         ],
     )
     def test_rice_support_point(self, nu, sigma, size, expected):
         with pm.Model() as model:
             pm.Rice("x", nu=nu, sigma=sigma, size=size)
+        assert_support_point_is_expected(model, expected)
 
     @pytest.mark.skipif(
         condition=_polyagamma_not_installed,

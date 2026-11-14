@@ -87,6 +87,32 @@ def convert_observed_data(data) -> np.ndarray | Variable:
 
 
 def convert_data(data) -> np.ndarray | Variable:
+    """Convert user data to an array or PyTensor variable with a PyMC dtype.
+
+    Parameters
+    ----------
+    data : array_like, pandas object, scipy sparse matrix or Variable
+        Data to convert. Nulls in pandas objects and NaNs in numpy arrays become masked
+        entries. Variables and sparse matrices are never masked.
+
+    Returns
+    -------
+    converted : ndarray, MaskedArray, sparse matrix or Variable
+        ``data`` cast to ``floatX`` if it has no ``dtype``. Otherwise floats go to ``floatX``,
+        integers to the matching ``intX`` (``int32`` when ``floatX`` is ``float64``), and other
+        dtypes are unchanged. A masked array with nothing masked comes back filled.
+
+    Examples
+    --------
+    .. code-block:: python
+
+        import numpy as np
+        from pymc.pytensorf import convert_data
+
+        convert_data([1, 2, 3])  # floatX array
+        convert_data(np.array([1, 2, 3]))  # intX array
+        convert_data(np.array([1.0, np.nan]))  # masked array, second entry masked
+    """
     ret: np.ndarray | Variable
     if hasattr(data, "to_numpy") and hasattr(data, "isnull"):
         # typically, but not limited to pandas objects
@@ -432,6 +458,14 @@ def make_shared_replacements(point, vars, model):
     Returns
     -------
     Dict of variable -> new shared variable
+
+    Notes
+    -----
+    A fresh shared variable per call means the compiled graph differs for every step method
+    instance, so these functions can never be served from a frozen model's compilation cache.
+    Making the shared variables depend only on the model, and swapping in per-instance ones
+    with ``Function.copy`` afterwards (as :meth:`ValueGradFunction.copy` does), would let
+    these steps reuse a cached graph as well.
     """
     vars_set = set(vars)
     return {
@@ -774,7 +808,7 @@ def collect_default_updates(
             return None
 
         if len(rng_clients) > 1:
-            # Multiple clients are techincally fine if they are used in identical operations
+            # Multiple clients are technically fine if they are used in identical operations
             # We check if the default_update of each client would be the same
             all_updates = [
                 find_default_update(

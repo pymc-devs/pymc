@@ -291,7 +291,7 @@ def compile_forward_sampling_function(
     Concretely, this function can be used to compile a function to sample from the
     posterior predictive distribution of a model that has variables that are conditioned
     on ``Data`` instances. The variables that depend on the mutable data that have changed
-    will be considered volatile, and as such, they wont be included as inputs into the compiled
+    will be considered volatile, and as such, they won't be included as inputs into the compiled
     function. This means that if they have values stored in the posterior, these values will be
     ignored and new values will be computed (in the case of deterministics and potentials) or
     sampled (in the case of random variables).
@@ -672,7 +672,7 @@ def sample_posterior_predictive(
     Parameters
     ----------
     trace : backend, list, Dataset, DataTree, or MultiTrace
-        Trace generated from MCMC sampling, or a list of dicts (eg. points or from :func:`~pymc.find_MAP`),
+        Trace generated from MCMC sampling or :func:`~pymc.find_MAP`, or a list of dicts (eg. points),
         or :class:`xarray.Dataset` (eg. DataTree.posterior or DataTree.prior)
     model : BaseModel (optional if in ``with`` context)
         Model to be used to generate the posterior predictive samples. It will

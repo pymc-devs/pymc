@@ -104,8 +104,7 @@ def make_initial_point_fns_per_chain(
         # One strategy for all chains
         # Only one function compilation is needed.
         ipfns = [
-            make_initial_point_fn(
-                model=model,
+            model._make_initial_point(
                 overrides=overrides,
                 jitter_rvs=jitter_rvs,
                 return_transformed=True,
@@ -113,8 +112,7 @@ def make_initial_point_fns_per_chain(
         ] * chains
     elif len(overrides) == chains:
         ipfns = [
-            make_initial_point_fn(
-                model=model,
+            model._make_initial_point(
                 jitter_rvs=jitter_rvs,
                 overrides=chain_overrides,
                 return_transformed=True,
@@ -232,8 +230,8 @@ def make_initial_point_expression(
     ----------
     free_rvs : list
         Tensors of free random variables in the model.
-    rvs_to_values : dict
-        Mapping of free random variable tensors to value variable tensors.
+    rvs_to_transforms : dict
+        Mapping of free random variable tensors to their transforms.
     initval_strategies : dict
         Mapping of free random variable tensors to initial value strategies.
         For example the `Model.initial_values` dictionary.

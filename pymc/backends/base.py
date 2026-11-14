@@ -34,7 +34,6 @@ import pytensor
 
 from pymc.backends.report import SamplerReport
 from pymc.model import modelcontext
-from pymc.pytensorf import compile
 from pymc.util import get_var_name
 
 logger = logging.getLogger(__name__)
@@ -183,12 +182,14 @@ class BaseTrace(IBaseTrace):
 
         if fn is None:
             # borrow=True avoids deepcopy when inputs=output which is the case for untransformed value variables
-            fn = compile(
+            # Routed through the model so the compilation is reused on frozen models.
+            fn = model.compile_fn(
+                outs=[pytensor.Out(v, borrow=True) for v in vars],
                 inputs=[pytensor.In(v, borrow=True) for v in model.value_vars],
-                outputs=[pytensor.Out(v, borrow=True) for v in vars],
+                point_fn=False,
                 on_unused_input="ignore",
+                trust_input=True,
             )
-            fn.trust_input = True
 
         # Get variable shapes. Most backends will need this
         # information.
@@ -537,14 +538,14 @@ class MultiTrace:
         ----------
         stat_name : str
             Name of the stat to fetch.
-        sampler_idx : int or None
-            Index of the sampler to get the stat from.
         burn : int
             Draws to skip from the start.
         thin : int
             Stepsize for the slice.
         combine : bool
             If True, results from `chains` will be concatenated.
+        chains : int or sequence of int, optional
+            Chains to include. Defaults to all chains.
         squeeze : bool
             Return a single array element if the resulting list of
             values only has one element. If False, the result will

@@ -289,7 +289,7 @@ def find_invalid_scalar_params(
 
     Returns
     -------
-    Invalid paramemeter values:
+    Invalid parameter values:
         Dictionary mapping each parameter, to a lower and upper invalid values (out of domain).
         If no lower or upper invalid values exist, None is returned for that entry.
     """
@@ -688,7 +688,7 @@ def check_icdf(
         are compared between pymc and scipy methods. If n_samples is below the
         total number of combinations, a random subset is evaluated. Setting
         n_samples = -1, will return all possible combinations. Defaults to 100
-    skip_paradomain_outside_edge_test : Bool
+    skip_paramdomain_outside_edge_test : bool
         Whether to run test 2., which checks that pymc distribution icdf
         returns nan for invalid parameter values outside the supported domain edge
 

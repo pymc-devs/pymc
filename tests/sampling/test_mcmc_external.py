@@ -34,10 +34,12 @@ from pymc import (
     Model,
     Normal,
     Potential,
+    fit,
     sample,
 )
 from pymc.exceptions import SamplingError
 from pymc.progress_bar import NutpieProgressBarManager
+from pymc.pytensorf import floatX
 
 pytestmark = pytest.mark.filterwarnings(
     "error",
@@ -75,7 +77,7 @@ def test_external_nuts_sampler(nuts_sampler):
         reference_kwargs["nuts_sampler"] = "pymc"
         idata_reference = sample(**reference_kwargs)
 
-    assert "y" in idata1.constant_data
+    assert "y" not in idata1.constant_data
     assert "z" in idata1.constant_data
     assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
@@ -94,11 +96,25 @@ def test_step_args():
             nuts_sampler="numpyro",
             target_accept=0.5,
             nuts={"max_tree_depth": 10},
-            random_seed=1411,
+            random_seed=6,
             progressbar=False,
         )
 
     npt.assert_almost_equal(idata.sample_stats.acceptance_rate.mean(), 0.5, decimal=1)
+
+
+def test_external_sampler_rejects_unknown_kwargs():
+    with Model():
+        Normal("x")
+        with pytest.raises(TypeError, match=r"jitter.*nuts="):
+            sample(nuts_sampler="numpyro", jitter=False, chains=1, cores=1, progressbar=False)
+
+
+def test_external_sampler_rejects_invalid_target_accept():
+    with Model():
+        Normal("x")
+        with pytest.raises(ValueError, match="target_accept must be in"):
+            sample(nuts_sampler="numpyro", target_accept=1.5, chains=1, cores=1, progressbar=False)
 
 
 def test_jax_sampler_kwargs_routing():
@@ -507,3 +523,20 @@ class TestExternalSamplerLogging:
 
         pymc_logs = [r for r in caplog.records if r.name.startswith("pymc")]
         assert pymc_logs == []
+
+
+@pytest.mark.parametrize("method", ["advi", "fullrank_advi"])
+def test_fit_jax_backend(method):
+    pytest.importorskip("jax")
+    rng = np.random.default_rng(0)
+    y = floatX(rng.normal(size=20))
+    with Model(), warnings.catch_warnings():
+        warnings.filterwarnings("ignore", "The RandomType SharedVariables", UserWarning)
+        mu = Normal("mu", 0, 1)
+        sigma = HalfNormal("sigma", 1)
+        Normal("y", mu, sigma, observed=y)
+        approx = fit(n=2, method=method, backend="jax", progressbar=False)
+    for p in approx.params:
+        assert isinstance(p.container.storage[0], np.ndarray)
+    idata = approx.sample(2)
+    assert idata.posterior["mu"].shape == (1, 2)

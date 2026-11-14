@@ -33,7 +33,7 @@ from pymc.distributions.discrete import OrderedLogistic, OrderedProbit
 from pymc.exceptions import ImputationWarning
 from pymc.logprob.basic import icdf, logcdf, logp
 from pymc.logprob.utils import ParameterValueError
-from pymc.pytensorf import floatX
+from pymc.pytensorf import floatX, rewrite_pregrad
 from pymc.testing import (
     BaseTestDistributionRandom,
     Bool,
@@ -131,6 +131,14 @@ class TestMatchesScipy:
             with pytest.raises(ParameterValueError):
                 icdf(invalid_dist, np.array(1)).eval()
 
+    def test_discrete_unif_logcdf_at_lower(self):
+        value = np.array([0, 1, 2, 3, 4])
+        dist = pm.DiscreteUniform.dist(lower=1, upper=4)
+        np.testing.assert_allclose(
+            pm.logcdf(dist, value).eval(),
+            st.randint.logcdf(value, 1, 5),
+        )
+
     def test_geometric(self):
         check_logp(
             pm.Geometric,
@@ -154,6 +162,16 @@ class TestMatchesScipy:
             {"p": Unit},
             st.geom.ppf,
         )
+
+    def test_hypergeometric_logcdf_support_bounds(self):
+        value = pt.dscalar("value")
+        fn = pytensor.function(
+            [value],
+            [pm.logcdf(pm.HyperGeometric.dist(N=10, k=k, n=8), value) for k in (8, 2)],
+        )
+        for x in (-1, 0, 1.5, 2, 6, 7, 8, 9):
+            expected = [st.hypergeom.logcdf(np.floor(x), 10, k, 8) for k in (8, 2)]
+            np.testing.assert_allclose(fn(x), expected)
 
     def test_hypergeometric(self):
         def modified_scipy_hypergeom_logcdf(value, N, k, n):
@@ -772,16 +790,43 @@ def test_negative_binomial_logp_large_n():
     np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e18}), -1.9634457319257537)
     np.testing.assert_allclose(logp_expr.eval({mu: 5.0, n: 1e20}), -1.9634457319257537)
 
+    # a tiny mu saturates p = n / (mu + n) at 1.0, so the Poisson branch must recover
+    # log(mu) from the log-space terms for logp and dlogp to stay usable
+    a = pt.dscalar("a")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=1e12), 3)
+    np.testing.assert_allclose(logp_expr.eval({a: -300.0}), -901.7917594692281)
 
-@pytest.mark.xfail(
-    reason="Needs a log(a + exp(x)) -> log(a) + log1pexp(x - log(a)) stabilization in "
-    "PyTensor, since logp only ever sees p = n / (mu + n)"
-)
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: -300.0}), 3.0)
+
+
 def test_negative_binomial_logp_stable_when_mu_overflows():
+    """get_n_p builds p = sigmoid(log(n) - log(mu)), so with mu = exp(a) the log
+    cancels and the logp reduces to softplus terms in a, keeping logp and dlogp
+    finite when exp(a) overflows.
+
+    A constant alpha and a log-transformed alpha (the shape a positive alpha RV takes
+    in the logp graph) are both checked.
+    """
     a = pt.dscalar("a")
     logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=2.0), 3)
 
     np.testing.assert_allclose(logp_expr.eval({a: 710.0}), -1417.2274112777604)
+    np.testing.assert_allclose(logp_expr.eval({a: 5000.0}), -9997.22741127776)
+
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 710.0}), -2.0)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 5000.0}), -2.0)
+
+    b = pt.dscalar("b")
+    logp_expr = pm.logp(pm.NegativeBinomial.dist(mu=pt.exp(a), alpha=pt.exp(b)), 3)
+
+    np.testing.assert_allclose(logp_expr.eval({a: 710.0, b: 0.7}), -1426.9536421881814)
+    np.testing.assert_allclose(logp_expr.eval({a: 5000.0, b: 0.7}), -10065.952757236526)
+
+    dlogp_expr = pt.grad(rewrite_pregrad(logp_expr), a)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 710.0, b: 0.7}), -2.0137527074704766)
+    np.testing.assert_allclose(dlogp_expr.eval({a: 5000.0, b: 0.7}), -2.0137527074704766)
 
 
 class TestNegativeBinomialMuSigma(BaseTestDistributionRandom):
@@ -814,6 +859,17 @@ class TestBernoulliLogitP(BaseTestDistributionRandom):
     pymc_dist_params = {"logit_p": 1.0}
     expected_rv_op_params = {"p": sp.expit(1.0)}
     checks_to_run = ["check_pymc_params_match_rv_op"]
+
+    def test_saturated_logp_gradient(self):
+        with pm.Model() as model:
+            logits = pm.Flat("logits", shape=2)
+            observed = pm.Bernoulli("observed", logit_p=logits, observed=[0, 1])
+
+        point = {"logits": floatX([50.0, -50.0])}
+        logp_value = model.compile_logp(vars=[observed], sum=False)(point)[0]
+        gradient = model.compile_dlogp()(point)
+        np.testing.assert_allclose(logp_value, [-50, -50])
+        np.testing.assert_allclose(gradient, [-1, 1])
 
 
 class TestPoisson(BaseTestDistributionRandom):

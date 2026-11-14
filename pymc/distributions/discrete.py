@@ -360,10 +360,11 @@ class Bernoulli(Discrete):
         return pt.switch(p < 0.5, 0, 1)
 
     def logp(value, p):
+        # Spell log(1 - p) so sigmoid stabilization rewrites can recognize it.
         res = pt.switch(
             pt.or_(pt.lt(value, 0), pt.gt(value, 1)),
             -np.inf,
-            pt.switch(value, pt.log(p), pt.log1p(-p)),
+            pt.switch(value, pt.log(p), pt.log(1 - p)),
         )
 
         return check_parameters(
@@ -699,7 +700,7 @@ class NegativeBinomial(Discrete):
         return super().dist([n, p], *args, **kwargs)
 
     @classmethod
-    def get_n_p(cls, mu=None, alpha=None, p=None, n=None):
+    def get_n_p(cls, mu=None, alpha=None, p=None, n=None, math=pt):
         if n is None:
             if alpha is not None:
                 n = alpha
@@ -710,7 +711,9 @@ class NegativeBinomial(Discrete):
 
         if p is None:
             if mu is not None:
-                p = n / (mu + n)
+                # n / (mu + n) in logit space, so a mu = exp(x) that overflows still
+                # yields finite logp and dlogp: log(mu) cancels back to x
+                p = math.sigmoid(math.log(n) - math.log(mu))
             else:
                 raise ValueError("Incompatible parametrization. Must specify either mu or p.")
         elif mu is not None:
@@ -725,7 +728,10 @@ class NegativeBinomial(Discrete):
         return mu
 
     def logp(value, n, p):
-        mu = n * (1 - p) / p
+        # (1 - p) / p in log space: a p = sigmoid(w) that saturates at 1.0 carries no
+        # information, while the rewritten log terms still see w. Spelled log(1 - p)
+        # because the sigmoid stabilization rewrites do not recognize log1p(-p)
+        mu = n * pt.exp(pt.log(1 - p) - pt.log(p))
 
         # binomln subtracts gammaln(value + n) - gammaln(n), whose difference falls below
         # their shared ulp once n is large, so fall back on the Poisson(mu) limit there.
@@ -956,16 +962,17 @@ class HyperGeometric(Discrete):
             )
 
         N = good + bad
-        # TODO: Use lower upper in locgdf for smarter logsumexp?
-        safe_lower = pt.switch(pt.lt(value, 0), value, 0)
+        lower = pt.maximum(0, n - bad)
+        upper = pt.minimum(good, n)
+        safe_value = pt.clip(pt.floor(value), lower, upper)
 
         res = pt.switch(
-            pt.lt(value, 0),
+            pt.lt(value, lower),
             -np.inf,
             pt.switch(
-                pt.lt(value, n),
+                pt.lt(value, upper),
                 pt.logsumexp(
-                    HyperGeometric.logp(pt.arange(safe_lower, value + 1), good, bad, n),
+                    HyperGeometric.logp(pt.arange(lower, safe_value + 1), good, bad, n),
                     keepdims=False,
                 ),
                 0,
@@ -1066,11 +1073,11 @@ class DiscreteUniform(Discrete):
 
     def logcdf(value, lower, upper):
         res = pt.switch(
-            pt.le(value, lower),
+            pt.lt(value, lower),
             -np.inf,
             pt.switch(
                 pt.lt(value, upper),
-                pt.log(pt.minimum(pt.floor(value), upper) - lower + 1) - pt.log(upper - lower + 1),
+                pt.log(pt.floor(value) - lower + 1) - pt.log(upper - lower + 1),
                 0,
             ),
         )
@@ -1171,7 +1178,7 @@ class Categorical(Discrete):
 
     @staticmethod
     def _safe_index_value_p(value, p):
-        # Find the probabily of the given value by indexing in p,
+        # Find the probability of the given value by indexing in p,
         # after handling broadcasting and invalid values.
 
         # In the standard case p has one more dimension than value
@@ -1232,7 +1239,7 @@ class OrderedLogistic:
     R"""Ordered Logistic distribution.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are
@@ -1331,7 +1338,7 @@ class OrderedProbit:
     Ordered Probit distributions.
 
     Useful for regression on ordinal data values whose values range
-    from 1 to K as a function of some predictor, :math:`\eta`. The
+    from 0 to K-1 as a function of some predictor, :math:`\eta`. The
     cutpoints, :math:`c`, separate which ranges of :math:`\eta` are
     mapped to which of the K observed dependent variables. The number
     of cutpoints is K - 1. It is recommended that the cutpoints are

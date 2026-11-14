@@ -375,10 +375,10 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
             [var] = model_var.owner.inputs
             model.data_vars.append(var)
         else:
-            raise TypeError(f"Unexpected ModelVar type {type(model_var)}")
+            raise TypeError(f"Unexpected ModelVar type {type(op)}")
 
         var.name = op.name
-        dims = list(op.dims) if op.dims else None
+        dims = tuple(op.dims) if op.dims else None
         model.add_named_variable(var, dims=dims)
 
     return model

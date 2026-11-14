@@ -14,12 +14,12 @@
 
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
 import pytest
 
+from pytensor.graph.basic import equal_computations
+
 from pymc.math import (
-    LogDet,
     cartesian,
     expand_packed_triangular,
     invprobit,
@@ -32,7 +32,8 @@ from pymc.math import (
     probit,
 )
 from pymc.pytensorf import floatX
-from tests.helpers import verify_grad
+
+pytestmark = pytest.mark.filterwarnings("error")
 
 
 def test_kronecker():
@@ -154,31 +155,9 @@ def test_logdiffexp():
     )
 
 
-class TestLogDet:
-    def setup_method(self):
-        np.random.seed(899853)
-        self.op_class = LogDet
-        self.op = logdet
-
-    def validate(self, input_mat):
-        x = pytensor.tensor.matrix()
-        f = pytensor.function([x], self.op(x))
-        out = f(input_mat)
-        svd_diag = np.linalg.svd(input_mat, compute_uv=False)
-        numpy_out = np.sum(np.log(np.abs(svd_diag)))
-
-        # Compare the result computed to the expected value.
-        np.allclose(numpy_out, out)
-
-        # Test gradient:
-        verify_grad(self.op, [input_mat])
-
-    def test_basic(self):
-        # Calls validate with different params
-        test_case_1 = np.random.randn(3, 3) / np.sqrt(3)
-        test_case_2 = np.random.randn(10, 10) / np.sqrt(10)
-        self.validate(test_case_1.astype(pytensor.config.floatX))
-        self.validate(test_case_2.astype(pytensor.config.floatX))
+def test_logdet():
+    x = pt.matrix("x")
+    assert equal_computations([logdet(x)], [pt.linalg.slogdet(x)[1]])
 
 
 def test_expand_packed_triangular():

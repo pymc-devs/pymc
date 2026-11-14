@@ -69,9 +69,11 @@ def sample_smc(
         independent chains. Defaults to 2000.
     kernel : SMC_kernel, optional
         SMC kernel used. Defaults to :class:`pymc.smc.smc.IMH` (Independent Metropolis Hastings)
-    start : dict or array of dict, optional
-        Starting point in parameter space. It should be a list of dict with length `chains`.
-        When None (default) the starting point is sampled from the prior distribution.
+    start : dict or list of dict, optional
+        Initial particle population. Each dict maps every value variable name (e.g.
+        ``"sigma_log__"``, on the transformed scale) to an array of shape ``(draws, *shape)``.
+        A single dict is reused for every chain, and a list must have one dict per chain.
+        When None (default) the population is drawn from the prior.
     model : Model (optional if in ``with`` context).
     random_seed :  int, array_like of int, RandomState or numpy_Generator, optional
         Random seed(s) used by the sampling steps. If a list, tuple or array of ints
@@ -110,7 +112,7 @@ def sample_smc(
         ``compile_kwargs["mode"]`` cannot be combined with ``backend``.
     mp_ctx : multiprocessing.context or str, optional
         Multiprocessing context for parallel chains. Can be a context object or a string
-        ("fork", "spawn", or "forkserver"). If None, defaults to "fork" on macOS ARM and
+        ("fork", "spawn", or "forkserver"). If None, defaults to "spawn" on macOS ARM and
         "forkserver" on other macOS systems, and the system default elsewhere.
 
     **kernel_kwargs : dict, optional

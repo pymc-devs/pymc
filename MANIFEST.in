@@ -1,4 +1,3 @@
-include requirements.txt
 include *.md *.rst
 include scripts/*.sh
 include LICENSE

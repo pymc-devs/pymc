@@ -838,7 +838,7 @@ class Group(WithMemoization):
         -------
         tensor
         """
-        return pt.matrix(name)
+        return pt.matrix(name, shape=(None, self.ddim))
 
     def _input_type(self, name):
         R"""*Dev* - input type with given name. The correct type depends on `self.batched`.
@@ -861,9 +861,6 @@ class Group(WithMemoization):
         if self.group is None:
             # delayed init
             self.group = group
-        self.symbolic_initial = self._initial_type(
-            self.__class__.__name__ + "_symbolic_initial_tensor"
-        )
         self.input = self._input_type(self.__class__.__name__ + "_symbolic_input")
         # I do some staff that is not supported by standard __init__
         # so I have to to it by myself
@@ -892,6 +889,9 @@ class Group(WithMemoization):
                 dtype,
             )
             start_idx += size
+        self.symbolic_initial = self._initial_type(
+            self.__class__.__name__ + "_symbolic_initial_tensor"
+        )
 
     def _finalize_init(self):
         """*Dev* - clean up after init."""

@@ -132,7 +132,8 @@ def test_observe_dims():
         x = pm.Normal("x", dims="test_dim")
 
     m_new = observe(m_old, {x: np.arange(5, dtype=config.floatX)})
-    assert m_new.named_vars_to_dims["x"] == ["test_dim"]
+    assert m_new.named_vars_to_dims["x"] == ("test_dim",)
+    assert m_new.named_vars_to_dims == m_old.named_vars_to_dims
 
 
 def test_do():
@@ -229,13 +230,15 @@ def test_do_dims():
         m,
         {"x": np.zeros(10, dtype=config.floatX)},
     )
-    assert do_m.named_vars_to_dims["x"] == ["test_dim"]
+    assert do_m.named_vars_to_dims["x"] == ("test_dim",)
+    assert do_m.named_vars_to_dims == m.named_vars_to_dims
 
     do_m = do(
         m,
         {"y": np.zeros(10, dtype=config.floatX)},
     )
-    assert do_m.named_vars_to_dims["y"] == ["test_dim"]
+    assert do_m.named_vars_to_dims["y"] == ("test_dim",)
+    assert do_m.named_vars_to_dims == m.named_vars_to_dims
 
 
 @pytest.mark.parametrize("prune", (False, True))
@@ -334,15 +337,19 @@ def test_change_value_transforms():
         new_p = transformed_p["p"]
         assert transformed_p.rvs_to_transforms[new_p] == logodds
         assert transformed_p.rvs_to_values[new_p].name == "p_logodds__"
-        mean_q = pm.find_MAP(progressbar=False)
+        mean_q = (
+            pm.find_MAP(progressbar=False, jitter=False, return_inferencedata=True)
+            .posterior["p"]
+            .item()
+        )
 
     with change_value_transforms(transformed_p, {"p": None}) as untransformed_p:
         new_p = untransformed_p["p"]
         assert untransformed_p.rvs_to_transforms[new_p] is None
         assert untransformed_p.rvs_to_values[new_p].name == "p"
-        std_q = ((1 / pm.find_hessian(mean_q, vars=[new_p])) ** 0.5)[0]
+        std_q = ((1 / pm.find_hessian({"p": mean_q}, vars=[new_p])) ** 0.5)[0]
 
-    np.testing.assert_allclose(np.round(mean_q["p"], 2), 0.67)
+    np.testing.assert_allclose(np.round(mean_q, 2), 0.67)
     np.testing.assert_allclose(np.round(std_q[0], 2), 0.16)
 
 
