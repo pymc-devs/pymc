@@ -93,7 +93,13 @@ def get_scaling(total_size: Sequence[Variable], shape: TensorVariable) -> Tensor
     if len(shape) == 0:  # type: ignore[arg-type]
         coef = total_size[0] if not NoneConst.equals(total_size[0]) else 1.0
     else:
-        coefs = [t / shape[i] for i, t in enumerate(total_size) if not NoneConst.equals(t)]
+        # Cast before dividing: an int64 / int64 division yields a float64
+        # intermediate, which breaks strict float32 mode.
+        coefs = [
+            pt.cast(t, config.floatX) / pt.cast(shape[i], config.floatX)
+            for i, t in enumerate(total_size)
+            if not NoneConst.equals(t)
+        ]
         coef = pt.prod(coefs)
 
     return pt.cast(coef, dtype=config.floatX)
