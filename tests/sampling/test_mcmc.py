@@ -253,6 +253,28 @@ class TestSample:
                     )
                 assert callback.called
 
+    @pytest.mark.parametrize("cores", [1, 2])
+    def test_callback_draw_is_last(self, cores):
+        is_last = {}
+
+        def callback(trace, draw):
+            is_last.setdefault(draw.chain, []).append(draw.is_last)
+
+        with self.model:
+            with warnings.catch_warnings():
+                warnings.filterwarnings("ignore", ".*number of samples.*", UserWarning)
+                pm.sample(
+                    5,
+                    tune=3,
+                    chains=2,
+                    step=self.step,
+                    cores=cores,
+                    random_seed=20160911,
+                    callback=callback,
+                )
+        # Only the last draw of each chain (tuning included) is flagged
+        assert is_last == {0: [False] * 7 + [True], 1: [False] * 7 + [True]}
+
     def test_callback_can_cancel(self):
         trace_cancel_length = 5
 
