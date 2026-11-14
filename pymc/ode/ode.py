@@ -54,9 +54,44 @@ class DifferentialEquation(Op):
     t0 : float
         Time corresponding to the initial condition
 
+    Notes
+    -----
+    A ``DifferentialEquation`` instance is a callable PyTensor Op. Calling it in
+    a model evaluates the ODE system:
+
+    .. code-block:: python
+
+        solution = ode_model(y0, theta, return_sens=False)
+
+    Arguments:
+
+    - **y0** (*tensor_like*): Initial state vector with length ``n_states`` (one value per state variable).
+    - **theta** (*tensor_like*): Parameter vector with length ``n_theta`` in the order expected by ``func``.
+    - **return_sens** (*bool*, optional): Whether to also return sensitivities. Defaults to ``False``.
+
+    The returned solution has shape ``(len(times), n_states)``: one row per entry
+    in ``times`` and one column per state. The initial value at ``t0`` is not included.
+    When the solution is stored with ``pm.Deterministic``, sampled values have shape
+    ``(chain, draw, len(times), n_states)``.
+
     Examples
     --------
+    The logistic differential equation, with priors on the initial state and growth rate:
+
+    .. math::
+
+        \begin{aligned}
+        y_0 &\sim \mathrm{LogNormal}(\log(0.1),\ 0.5) \\
+        \theta &\sim \mathrm{HalfNormal}(1) \\
+        \dfrac{dy}{dt} &= \theta \, y \, (1 - y) \quad y(t_0) = y_0
+        \end{aligned}
+
     .. code-block:: python
+
+        import numpy as np
+        import pymc as pm
+        from pymc.ode import DifferentialEquation
+
 
         def odefunc(y, t, p):
             # Logistic differential equation
@@ -66,6 +101,16 @@ class DifferentialEquation(Op):
         times = np.arange(0.5, 5, 0.5)
 
         ode_model = DifferentialEquation(func=odefunc, times=times, n_states=1, n_theta=1, t0=0)
+
+        # Call the ODE op inside a PyMC model with initial state y0 and parameters theta:
+        with pm.Model() as model:
+            y0 = pm.LogNormal("y0", mu=np.log(0.1), sigma=0.5, shape=1)
+            theta = pm.HalfNormal("theta", sigma=1.0, shape=1)
+
+            ode_solution = pm.Deterministic("ode_solution", ode_model(y0=y0, theta=theta))
+            prior = pm.sample_prior_predictive(draws=4, random_seed=42)
+
+        print(prior.prior["ode_solution"].shape)  # (1, 4, 9, 1)
 
     """
 
