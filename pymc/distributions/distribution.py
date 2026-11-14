@@ -383,17 +383,23 @@ class SymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
         super().__init__(*args, **kwargs)
 
     def make_node(self, *inputs):
-        # If we try to build the RV with a different size type (vector -> None or None -> vector)
-        # We need to rebuild the Op with new size type in the inner graph
+        # If we try to build the RV with input types that don't match the inner graph
+        # (such as a different size type, or params with other dimensionality)
+        # we need to rebuild the Op with an updated inner graph
         if self.extended_signature is not None:
             (rng_arg_idxs, size_arg_idx, param_idxs), _ = self.get_input_output_type_idxs(
                 self.extended_signature
             )
             if size_arg_idx is not None and len(rng_arg_idxs) == 1:
-                new_size_type = normalize_size_param(inputs[size_arg_idx]).type
-                if not self.input_types[size_arg_idx].is_super(new_size_type):
-                    params = [inputs[idx] for idx in param_idxs]
-                    size = inputs[size_arg_idx]
+                inputs = list(inputs)
+                size = inputs[size_arg_idx] = normalize_size_param(inputs[size_arg_idx])
+                params = [as_tensor_variable(inputs[idx]) for idx in param_idxs]
+                for idx, param in zip(param_idxs, params):
+                    inputs[idx] = param
+                if not self.input_types[size_arg_idx].is_super(size.type) or any(
+                    not self.input_types[idx].is_super(param.type)
+                    for idx, param in zip(param_idxs, params)
+                ):
                     rng = inputs[rng_arg_idxs[0]]
                     return self.rebuild_rv(*params, size=size, rng=rng).owner
 

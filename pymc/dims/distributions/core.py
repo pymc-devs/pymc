@@ -16,16 +16,20 @@ from itertools import chain
 from typing import Any, cast
 
 import numpy as np
-import pytensor.tensor as pt
 
+from pytensor.compile.builders import OpFromGraph
 from pytensor.graph import node_rewriter
 from pytensor.graph.basic import Variable
+from pytensor.graph.rewriting.basic import in2out
 from pytensor.tensor import TensorVariable
 from pytensor.tensor import expand_dims as pt_expand_dims
 from pytensor.tensor.elemwise import DimShuffle
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
+from pytensor.tensor.random.type import RandomType
+from pytensor.tensor.rewriting.ofg import inline_ofg_node
 from pytensor.xtensor import as_xtensor
-from pytensor.xtensor.basic import XTensorFromTensor, xtensor_from_tensor
+from pytensor.xtensor.basic import TensorFromXTensor, XTensorFromTensor, xtensor_from_tensor
+from pytensor.xtensor.random import shared_rng
 from pytensor.xtensor.shape import Transpose
 from pytensor.xtensor.type import XTensorVariable
 from pytensor.xtensor.vectorization import XRV
@@ -35,10 +39,94 @@ from pymc.dims.distributions.transforms import DimTransform, log_odds_transform,
 from pymc.distributions.distribution import _support_point, support_point
 from pymc.distributions.shape_utils import DimsWithEllipsis, convert_dims_with_ellipsis
 from pymc.logprob.abstract import MeasurableOp, _icdf, _logccdf, _logcdf, _logprob
-from pymc.logprob.rewriting import measurable_ir_rewrites_db
+from pymc.logprob.rewriting import logprob_rewrites_db, measurable_ir_rewrites_db
 from pymc.logprob.tensor import MeasurableDimShuffle
 from pymc.logprob.utils import filter_measurable_variables
 from pymc.util import UNSET
+
+
+class DimSymbolicRandomVariable(MeasurableOp, RNGConsumerOp, OpFromGraph):
+    """Base class for dims distributions defined by an inner xtensor graph.
+
+    The xtensor counterpart of :class:`~pymc.distributions.distribution.SymbolicRandomVariable`,
+    for dims distributions that need an Op to dispatch logp/logcdf/support_point
+    on, such as CustomDist and factory distributions like Censored or Truncated.
+
+    It operates on XTensorVariables with named dims. Like a RandomVariable, the
+    Op has a single RNG input (the last input) and its outputs are the random
+    variable and the final RNG state. The inner graph must pipe the RNG through
+    its random operations, or pass it through unchanged if it has none.
+
+    The Op is inlined away wherever the demarcation is not needed: at compile
+    time (``is_inline``) and during logprob inference when the logp is derived
+    automatically from the inner graph (``inline_logprob``).
+    """
+
+    inline_logprob = False
+    rv_op: Callable | None = None
+    """Constructor of the variable, with signature (*params, extra_dims, rng),
+    that returns (next_rng, rv) like the pytensor XRV constructors.
+
+    Like in SymbolicRandomVariable, it is defined on the Op subclass: as a
+    classmethod, or as a staticmethod closure on dynamically created subclasses
+    when it requires build-time state (as in CustomDist).
+    """
+
+    def __init__(self, *args, extra_dims: Sequence[str] = (), **kwargs):
+        # The inputs must be (*params, *extra_dim_lengths, rng)
+        self.extra_dims = tuple(extra_dims)
+        kwargs.setdefault("inline", True)
+        kwargs.setdefault("on_unused_input", "ignore")
+        super().__init__(*args, **kwargs)
+        rng_inputs = [inp for inp in self.inner_inputs if isinstance(inp.type, RandomType)]
+        if len(rng_inputs) != 1 or self.inner_inputs[-1] is not rng_inputs[0]:
+            raise ValueError(f"{type(self).__name__} requires a single RNG as the last input")
+        if len(self.inner_outputs) != 2 or not isinstance(self.inner_outputs[-1].type, RandomType):
+            raise ValueError(f"{type(self).__name__} requires (rv, next_rng) as outputs")
+
+    @property
+    def n_params(self) -> int:
+        return len(self.inner_inputs) - len(self.extra_dims) - 1
+
+    def update(self, node) -> dict[Variable, Variable]:
+        [rng_input] = [inp for inp in node.inputs if isinstance(inp.type, RandomType)]
+        return {rng_input: node.outputs[1]}
+
+    def rebuild_with_extra_dims(self, node, extra_dims: dict[str, Any]) -> XTensorVariable:
+        """Recreate the variable of this node with additional extra batch dims.
+
+        Used by `expand_dist_dims` when factory distributions need to add dims
+        to their components. A fresh RNG is used, so the new and old variables
+        are not correlated.
+        """
+        if self.rv_op is None:
+            raise NotImplementedError(
+                f"{type(self).__name__} does not define rv_op and cannot be rebuilt"
+            )
+        n_params = self.n_params
+        params = node.inputs[:n_params]
+        old_extra_dims = dict(
+            zip(self.extra_dims, node.inputs[n_params : n_params + len(self.extra_dims)])
+        )
+        _next_rng, rv = self.rv_op(*params, extra_dims={**extra_dims, **old_extra_dims})
+        return rv
+
+
+@node_rewriter([DimSymbolicRandomVariable])
+def inline_dim_symbolic_rv(fgraph, node):
+    """Expand a DimSymbolicRandomVariable when obtaining the logp graph if `inline_logprob` is True."""
+    if not node.op.inline_logprob:
+        return None
+    return inline_ofg_node(node)
+
+
+# Registered before pre-canonicalization, like inline_SymbolicRandomVariable
+logprob_rewrites_db.register(
+    "inline_DimSymbolicRandomVariable",
+    in2out(inline_dim_symbolic_rv),
+    "basic",
+    position=-20,
+)
 
 
 @_support_point.register(DimShuffle)
@@ -173,6 +261,70 @@ def measurable_xtensor_from_tensor_icdf(op, value, rv):
 
 measurable_ir_rewrites_db.register(
     "measurable_xtensor_from_tensor", find_measurable_xtensor_from_tensor, "basic", "xtensor"
+)
+
+
+class MeasurableTensorFromXTensor(MeasurableOp, TensorFromXTensor):
+    """Bridge that lets tensor-level measurable machinery see through the type boundary.
+
+    Needed when a measurable xtensor variable (e.g. a DimSymbolicRandomVariable
+    that is not inlined) is consumed by lowered tensor operations, like the clip
+    of a Censored distribution.
+    """
+
+    # Some logprob implementations use the name of the base RV Op
+    name = None
+
+
+@node_rewriter([TensorFromXTensor])
+def find_measurable_tensor_from_xtensor(fgraph, node) -> list[TensorVariable] | None:
+    if isinstance(node.op, MeasurableTensorFromXTensor):
+        return None
+    if not filter_measurable_variables(node.inputs):
+        return None
+    return [cast(TensorVariable, MeasurableTensorFromXTensor()(*node.inputs))]
+
+
+def _lower_logp_term(term, x_dims: tuple[str, ...]) -> TensorVariable:
+    # Order the xtensor logp term by the positional layout of the value
+    if isinstance(term, XTensorVariable):
+        term = term.transpose(*(dim for dim in x_dims if dim in term.type.dims)).values
+    return term
+
+
+@_logprob.register(MeasurableTensorFromXTensor)
+def measurable_tensor_from_xtensor_logprob(op, values, x, **kwargs):
+    [value] = values
+    value_xt = xtensor_from_tensor(value, dims=x.type.dims)
+    logp = _logprob(x.owner.op, (value_xt,), *x.owner.inputs, **kwargs)
+    if isinstance(logp, tuple | list):
+        [logp] = logp
+    return _lower_logp_term(logp, x.type.dims)
+
+
+@_logcdf.register(MeasurableTensorFromXTensor)
+def measurable_tensor_from_xtensor_logcdf(op, value, x, **kwargs):
+    value_xt = xtensor_from_tensor(value, dims=x.type.dims)
+    logcdf = _logcdf(x.owner.op, value_xt, *x.owner.inputs, **kwargs)
+    return _lower_logp_term(logcdf, x.type.dims)
+
+
+@_logccdf.register(MeasurableTensorFromXTensor)
+def measurable_tensor_from_xtensor_logccdf(op, value, x, **kwargs):
+    value_xt = xtensor_from_tensor(value, dims=x.type.dims)
+    logccdf = _logccdf(x.owner.op, value_xt, *x.owner.inputs, **kwargs)
+    return _lower_logp_term(logccdf, x.type.dims)
+
+
+@_icdf.register(MeasurableTensorFromXTensor)
+def measurable_tensor_from_xtensor_icdf(op, value, x, **kwargs):
+    value_xt = xtensor_from_tensor(value, dims=x.type.dims)
+    icdf = _icdf(x.owner.op, value_xt, *x.owner.inputs, **kwargs)
+    return _lower_logp_term(icdf, x.type.dims)
+
+
+measurable_ir_rewrites_db.register(
+    "measurable_tensor_from_xtensor", find_measurable_tensor_from_xtensor, "basic", "xtensor"
 )
 
 
@@ -324,7 +476,7 @@ class DimDistribution:
                 dim: length for dim, length in dim_lengths.items() if dim not in implied_dims
             }
         if kwargs.get("rng") is None:
-            kwargs["rng"] = pt.random.shared_rng(seed=None)
+            kwargs["rng"] = shared_rng(seed=None)
         _, rv = cls.xrv_op(
             *dist_params,
             extra_dims=extra_dims,
@@ -372,11 +524,13 @@ def expand_dist_dims(dist: XTensorVariable, extra_dims: dict[str, Any]) -> XTens
             new_dist_op = type(dist.owner.op)(**dist_props)
             _old_rng, *params_and_dim_lengths = dist.owner.inputs
             # We don't propagate the old RNG, because we don't want the new and old dists to be correlated
-            new_rng = pt.random.shared_rng(seed=None)
+            new_rng = shared_rng(seed=None)
             return new_dist_op(new_rng, *extra_dims.values(), *params_and_dim_lengths)
         case Transpose():
             return expand_dist_dims(dist.owner.inputs[0], extra_dims=extra_dims).transpose(
                 ..., *dist.dims
             )
+        case DimSymbolicRandomVariable():
+            return op.rebuild_with_extra_dims(dist.owner, extra_dims)
         case _:
             raise NotImplementedError(f"expand_dist_dims not implemented for {dist} with op {op}")
