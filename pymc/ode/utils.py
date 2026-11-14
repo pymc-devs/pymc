@@ -13,8 +13,9 @@
 #   limitations under the License.
 
 import numpy as np
-import pytensor
 import pytensor.tensor as pt
+
+from pytensor.graph.fg import FrozenFunctionGraph
 
 
 def make_sens_ic(n_states, n_theta, floatX):
@@ -58,13 +59,13 @@ def make_sens_ic(n_states, n_theta, floatX):
     return dydp
 
 
-def augment_system(ode_func, n_states, n_theta):
+def make_augmented_system(ode_func, n_states, n_theta):
     """
     Create augmented system.
 
     Take a function which specifies a set of differential equations and return
-    a compiled function which allows for computation of gradients of the
-    differential equation's solution with respect to the parameters.
+    the frozen graph of the system augmented with the time derivatives of its
+    sensitivities with respect to the parameters.
 
     Uses float64 even if floatX=float32, because the scipy integrator always uses float64.
 
@@ -79,23 +80,26 @@ def augment_system(ode_func, n_states, n_theta):
 
     Returns
     -------
-    system: function
-        Augemted system of differential equations.
+    system: FrozenFunctionGraph
+        Augmented system of differential equations, with inputs ``(y, t, p, dydp)``
+        and outputs ``(dydt, ddt_dydp)``.
     """
+    n_p = n_states + n_theta
+
     # Present state of the system
     t_y = pt.vector("y", dtype="float64", shape=(n_states,))
     # Parameter(s).  Should be vector to allow for generaliztion to multiparameter
     # systems of ODEs.  Is m dimensional because it includes all initial conditions as well as ode parameters
-    t_p = pt.vector("p", dtype="float64")
+    t_p = pt.vector("p", dtype="float64", shape=(n_p,))
     # Time.  Allow for non-autonomous systems of ODEs to be analyzed
     t_t = pt.scalar("t", dtype="float64")
 
     # Present state of the gradients:
     # Will always be 0 unless the parameter is the initial condition
     # Entry i,j is partial of y[i] wrt to p[j]
-    dydp_vec = pt.vector("dydp", dtype="float64")
+    dydp_vec = pt.vector("dydp", dtype="float64", shape=(n_states * n_p,))
 
-    dydp = dydp_vec.reshape((n_states, n_states + n_theta))
+    dydp = dydp_vec.reshape((n_states, n_p))
 
     # Get symbolic representation of the ODEs by passing tensors for y, t and theta
     yhat = ode_func(t_y, t_t, t_p[n_states:])
@@ -114,17 +118,13 @@ def augment_system(ode_func, n_states, n_theta):
         )
 
     # Now compute gradients
-    J = pt.jacobian(t_yhat, t_y)
+    J = pt.jacobian(t_yhat, t_y, vectorize=True)
 
     Jdfdy = pt.dot(J, dydp)
 
-    grad_f = pt.jacobian(t_yhat, t_p)
+    grad_f = pt.jacobian(t_yhat, t_p, vectorize=True)
 
     # This is the time derivative of dydp
     ddt_dydp = (Jdfdy + grad_f).flatten()
 
-    system = pytensor.function(
-        inputs=[t_y, t_t, t_p, dydp_vec], outputs=[t_yhat, ddt_dydp], on_unused_input="ignore"
-    )
-
-    return system
+    return FrozenFunctionGraph.from_io([t_y, t_t, t_p, dydp_vec], [t_yhat, ddt_dydp])

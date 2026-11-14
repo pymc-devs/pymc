@@ -12,25 +12,31 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 
-import logging
+from copy import copy
 
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
 import scipy
 
+from pytensor.compile import optdb
+from pytensor.compile.inner_function import HasInnerFunction
+from pytensor.compile.rewriting import rewrite_inner_graph
+from pytensor.gradient import DisconnectedType, grad_not_implemented
 from pytensor.graph.basic import Apply
+from pytensor.graph.fg import FrozenFunctionGraph
 from pytensor.graph.op import Op
+from pytensor.graph.rewriting.basic import graph_rewriter
+from pytensor.tensor.optimize import rewrite_optimize_inner_graph
 from pytensor.tensor.type import TensorType
 
 from pymc.exceptions import ShapeError
 from pymc.ode import utils
 
-_log = logging.getLogger(__name__)
 floatX = pytensor.config.floatX
 
 
-class DifferentialEquation(Op):
+class DifferentialEquation(HasInnerFunction, Op):
     r"""
     Specify an ordinary differential equation.
 
@@ -69,17 +75,7 @@ class DifferentialEquation(Op):
 
     """
 
-    _itypes = [
-        TensorType(floatX, (False,)),  # y0 as 1D floatX vector
-        TensorType(floatX, (False,)),  # theta as 1D floatX vector
-    ]
-    _otypes = [
-        TensorType(floatX, (False, False)),  # model states as floatX of shape (T, S)
-        TensorType(
-            floatX, (False, False, False)
-        ),  # sensitivities as floatX of shape (T, S, len(y0) + len(theta))
-    ]
-    __props__ = ("func", "times", "n_states", "n_theta", "t0")
+    __props__ = ("times", "n_states", "n_theta", "t0")
 
     def __init__(self, func, times, *, n_states, n_theta, t0=0):
         if not callable(func):
@@ -89,8 +85,6 @@ class DifferentialEquation(Op):
         if n_theta <= 0:
             raise ValueError("Argument n_theta must be positive.")
 
-        # Public
-        self.func = func
         self.t0 = t0
         self.times = tuple(times)
         self.n_times = len(times)
@@ -98,14 +92,37 @@ class DifferentialEquation(Op):
         self.n_theta = n_theta
         self.n_p = n_states + n_theta
 
-        # Private
+        self.fgraph = utils.make_augmented_system(
+            func, n_states=self.n_states, n_theta=self.n_theta
+        )
+        self._fn = None
+
         self._augmented_times = np.insert(times, 0, t0).astype(floatX)
-        self._augmented_func = utils.augment_system(func, self.n_states, self.n_theta)
         self._sens_ic = utils.make_sens_ic(self.n_states, self.n_theta, floatX)
 
-        # Cache symbolic sensitivities by the hash of inputs
-        self._apply_nodes = {}
-        self._output_sensitivities = {}
+    def __eq__(self, other):
+        if self is other:
+            return True
+        if type(self) is not type(other):
+            return False
+        return self.fgraph == other.fgraph and self._props() == other._props()
+
+    def __hash__(self):
+        return hash((type(self), self.fgraph, self._props()))
+
+    def clone_with_inner_graph(self, inner_fgraph):
+        clone_op = copy(self)
+        clone_op._fn = None
+        clone_op.fgraph = (
+            inner_fgraph if isinstance(inner_fgraph, FrozenFunctionGraph) else inner_fgraph.freeze()
+        )
+        return clone_op
+
+    def clone(self):
+        return self
+
+    def prepare_node(self, node, storage_map, compute_map, impl):
+        self.fn
 
     def _system(self, Y, t, p):
         r"""Solve both ODE and sensitivities.
@@ -115,13 +132,15 @@ class DifferentialEquation(Op):
         Parameters
         ----------
         Y : array
-            augmented state vector (n_states + n_states + n_theta)
+            augmented state vector (n_states + n_states * n_p)
         t : float
             current time
         p : array
             parameter vector (y0, theta)
         """
-        dydt, ddt_dydp = self._augmented_func(Y[: self.n_states], t, p, Y[self.n_states :])
+        # The inner function trusts its inputs, and odeint passes the time as a python float
+        t = np.asarray(t, dtype="float64")
+        dydt, ddt_dydp = self.fn(Y[: self.n_states], t, p, Y[self.n_states :])
         derivatives = np.concatenate([dydt, ddt_dydp])
         return derivatives
 
@@ -129,9 +148,10 @@ class DifferentialEquation(Op):
         # Initial condition comprised of state initial conditions and raveled sensitivity matrix
         s0 = np.concatenate([y0, self._sens_ic])
 
-        # perform the integration
+        p = np.concatenate([y0, theta]).astype("float64")
+
         sol = scipy.integrate.odeint(
-            func=self._system, y0=s0, t=self._augmented_times, args=(np.concatenate([y0, theta]),)
+            func=self._system, y0=s0, t=self._augmented_times, args=(p,)
         ).astype(floatX)
         # The solution
         y = sol[1:, : self.n_states]
@@ -142,16 +162,6 @@ class DifferentialEquation(Op):
         return y, sens
 
     def make_node(self, y0, theta):
-        inputs = (y0, theta)
-        _log.debug(f"make_node for inputs {hash(inputs)}")
-        states = self._otypes[0]()
-        sens = self._otypes[1]()
-
-        # store symbolic output in dictionary such that it can be accessed in the grad method
-        self._output_sensitivities[hash(inputs)] = sens
-        return Apply(self, inputs, (states, sens))
-
-    def __call__(self, y0, theta, return_sens=False, **kwargs):
         if isinstance(y0, list | tuple) and not len(y0) == self.n_states:
             raise ShapeError("Length of y0 is wrong.", actual=(len(y0),), expected=(self.n_states,))
         if isinstance(theta, list | tuple) and not len(theta) == self.n_theta:
@@ -159,50 +169,71 @@ class DifferentialEquation(Op):
                 "Length of theta is wrong.", actual=(len(theta),), expected=(self.n_theta,)
             )
 
-        # convert inputs to tensors (and check their types)
         y0 = pt.cast(pt.as_tensor_variable(y0), floatX)
         theta = pt.cast(pt.as_tensor_variable(theta), floatX)
         inputs = [y0, theta]
-        for i, (input_val, itype) in enumerate(zip(inputs, self._itypes)):
-            if not itype.is_super(input_val.type):
+
+        input_type = TensorType(dtype=floatX, shape=(None,))
+        for i, input_val in enumerate(inputs):
+            if not input_type.is_super(input_val.type):
                 raise ValueError(
-                    f"Input {i} of type {input_val.type} does not have the expected type of {itype}"
+                    f"Input {i} of type {input_val.type} does not have the expected type of {input_type}"
                 )
 
-        # use default implementation to prepare symbolic outputs (via make_node)
+        states = pt.tensor(dtype=floatX, shape=(self.n_times, self.n_states))
+        sens = pt.tensor(dtype=floatX, shape=(self.n_times, self.n_states, self.n_p))
+        return Apply(self, inputs, [states, sens])
+
+    def __call__(self, y0, theta, return_sens=False, **kwargs):
         states, sens = super().__call__(y0, theta, **kwargs)
 
         if return_sens:
             return states, sens
         return states
 
-    def perform(self, node, inputs_storage, output_storage):
-        y0, theta = inputs_storage[0], inputs_storage[1]
+    def perform(self, node, inputs, outputs):
+        y0, theta = inputs
         # simulate states and sensitivities in one forward pass
-        output_storage[0][0], output_storage[1][0] = self._simulate(y0, theta)
+        outputs[0][0], outputs[1][0] = self._simulate(y0, theta)
 
     def infer_shape(self, node, input_shapes):
         s_y0, s_theta = input_shapes
         output_shapes = [(self.n_times, self.n_states), (self.n_times, self.n_states, self.n_p)]
         return output_shapes
 
-    def grad(self, inputs, output_grads):
-        _log.debug(f"grad w.r.t. inputs {hash(tuple(inputs))}")
+    def pullback(self, inputs, outputs, output_grads):
+        _, sens = outputs
+        states_grad, sens_grad = output_grads
 
-        # fetch symbolic sensitivity output node from cache
-        ihash = hash(tuple(inputs))
-        if ihash in self._output_sensitivities:
-            sens = self._output_sensitivities[ihash]
-        else:
-            _log.debug("No cached sensitivities found!")
-            _, sens = self.__call__(*inputs, return_sens=True)
-        ograds = output_grads[0]
+        if not isinstance(sens_grad.type, DisconnectedType):
+            return [
+                grad_not_implemented(
+                    self,
+                    i,
+                    input_val,
+                    "Gradients through the sensitivities output require second-order sensitivities.",
+                )
+                for i, input_val in enumerate(inputs)
+            ]
 
-        # for each parameter, multiply sensitivities with the output gradient and sum the result
-        # sens is (n_times, n_states, n_p)
-        # ograds is (n_times, n_states)
-        grads = [pt.sum(sens[:, :, p] * ograds) for p in range(self.n_p)]
+        # sens is (n_times, n_states, n_p) and states_grad is (n_times, n_states)
+        input_grad = pt.tensordot(states_grad, sens, axes=[[0, 1], [0, 1]])
+        return [input_grad[: self.n_states], input_grad[self.n_states :]]
 
-        # return separate gradient tensors for y0 and theta inputs
-        result = pt.stack(grads[: self.n_states]), pt.stack(grads[self.n_states :])
-        return result
+
+@graph_rewriter
+def ode_inner_graph(fgraph):
+    rewrite_inner_graph(
+        fgraph,
+        match=lambda op: isinstance(op, DifferentialEquation),
+        rewrite=rewrite_optimize_inner_graph,
+    )
+
+
+optdb.register(
+    "ode_inner_graph",
+    ode_inner_graph,
+    "minimum_compile",
+    "compile_inner_graph",
+    position=49.6,
+)
