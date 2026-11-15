@@ -900,7 +900,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
     def dim_lengths(self) -> dict[str, TensorVariable]:
         """The symbolic lengths of dimensions in the model.
 
-        The values are typically instances of ``TensorVariable`` or ``ScalarSharedVariable``.
+        The values are typically instances of ``TensorVariable`` or a 0-d ``TensorSharedVariable``.
         """
         return self._dim_lengths
 
@@ -1504,8 +1504,8 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         print_(f"point={point}\n")
 
         rvs_to_check = list(self.basic_RVs)
-        if fn in ("logp", "dlogp"):
-            rvs_to_check += [self.replace_rvs_by_values(p) for p in self.potentials]
+        if fn == "logp":
+            rvs_to_check += self.potentials
 
         found_problem = False
         for rv in rvs_to_check:
@@ -1554,7 +1554,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                 if not np.all(np.isfinite(rv_fn_eval)):
                     found_problem = True
                     debug_parameters(rv)
-                    if fn == "random" or rv is self.potentials:
+                    if fn == "random" or rv in self.potentials:
                         print_("This combination seems able to generate non-finite values")
                     else:
                         # Find which values are associated with non-finite evaluation
@@ -1569,7 +1569,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                             f"Some of the{observed}values of variable {rv} are associated with a non-finite {fn}:"
                         )
                         mask = ~np.isfinite(rv_fn_eval)
-                        for value, fn_eval in zip(values[mask], rv_fn_eval[mask]):
+                        for value, fn_eval in zip(np.atleast_1d(values)[mask], rv_fn_eval[mask]):
                             print_(f" value = {value} -> {fn} = {fn_eval}")
                         print_()
 

@@ -18,6 +18,7 @@ import scipy.special
 
 from pytensor import config, function
 from pytensor.tensor.random.basic import multinomial
+from pytensor.xtensor import as_xtensor
 from scipy import interpolate
 
 import pymc as pm
@@ -31,6 +32,8 @@ from pymc.distributions.dist_math import (
     i0e,
     logpow,
     multigammaln,
+    normal_lccdf,
+    normal_lcdf,
 )
 from pymc.logprob.utils import ParameterValueError
 from pymc.pytensorf import floatX
@@ -66,6 +69,17 @@ def test_check_parameters(conditions, succeeds):
 def test_check_parameters_shape():
     conditions = [True, pt.ones(10), pt.ones(5)]
     assert check_parameters(1, *conditions).eval().shape == ()
+
+
+def test_check_parameters_xtensor():
+    expr = as_xtensor(np.array([1.0, 2.0]), dims=("batch",))
+
+    ret = check_parameters(expr, expr > 0, msg="parameter check msg")
+    assert ret.dims == ("batch",)
+    np.testing.assert_array_equal(ret.eval(), [1.0, 2.0])
+
+    with pytest.raises(ParameterValueError, match="^parameter check msg*"):
+        check_parameters(expr, expr < 2, msg="parameter check msg").eval()
 
 
 class MultinomialA(Discrete):
@@ -147,6 +161,22 @@ def test_logpow_stabilization_reaches_logp():
 
     gamma = pm.logp(pm.Gamma.dist(alpha=0.5, beta=1.0), pt.exp(a))
     np.testing.assert_allclose(gamma.eval({a: -800.0}), 399.4276350736618)
+
+
+@pytest.mark.parametrize("lower", [True, False])
+def test_normal_lcdf_lccdf(lower):
+    x = pt.dvector("x")
+    y = normal_lcdf(0, 1, x) if lower else normal_lccdf(0, 1, x)
+    fn = function([x], [y, pt.grad(y.sum(), x)])
+    z = np.array([-30.0, -10.0, -1.5, -1.0, -0.5, 0.0, 0.5, 1.0, 1.5, 10.0, 30.0])
+    value, grad = fn(z)
+
+    s = 1 if lower else -1
+    expected = scipy.special.log_ndtr(s * z)
+    np.testing.assert_allclose(value, expected, rtol=1e-13)
+    np.testing.assert_allclose(
+        grad, s * np.exp(-(z**2) / 2 - np.log(2 * np.pi) / 2 - expected), rtol=1e-12
+    )
 
 
 def test_multinomial_check_parameters():

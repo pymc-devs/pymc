@@ -77,7 +77,7 @@ def test_external_nuts_sampler(nuts_sampler):
         reference_kwargs["nuts_sampler"] = "pymc"
         idata_reference = sample(**reference_kwargs)
 
-    assert "y" in idata1.constant_data
+    assert "y" not in idata1.constant_data
     assert "z" in idata1.constant_data
     assert "L" in idata1.observed_data
     assert idata1.posterior.chain.size == 2
@@ -108,6 +108,13 @@ def test_external_sampler_rejects_unknown_kwargs():
         Normal("x")
         with pytest.raises(TypeError, match=r"jitter.*nuts="):
             sample(nuts_sampler="numpyro", jitter=False, chains=1, cores=1, progressbar=False)
+
+
+def test_external_sampler_rejects_invalid_target_accept():
+    with Model():
+        Normal("x")
+        with pytest.raises(ValueError, match="target_accept must be in"):
+            sample(nuts_sampler="numpyro", target_accept=1.5, chains=1, cores=1, progressbar=False)
 
 
 def test_jax_sampler_kwargs_routing():

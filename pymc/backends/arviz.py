@@ -153,15 +153,14 @@ def find_observations(model: BaseModel) -> dict[str, Var]:
 
 def find_constants(model: BaseModel) -> dict[str, Var]:
     """If there are constants available, return them as a dictionary."""
-    model_vars = model.basic_RVs + model.deterministics + model.potentials
-    value_vars = set(model.rvs_to_values.values())
+    # Observed data belongs only to observed_data, even if it is also used elsewhere in the model.
+    # Discrete observed values reach their data through a Cast, so check all ancestors.
+    observed_data = set(ancestors([model.rvs_to_values[rv] for rv in model.observed_RVs]))
 
     constant_data = {}
     for var in model.data_vars:
-        if var in value_vars:
-            # An observed value variable could also be part of the generative graph
-            if var not in ancestors(model_vars):
-                continue
+        if var in observed_data:
+            continue
 
         if isinstance(var, SharedVariable):
             var_value = var.get_value()

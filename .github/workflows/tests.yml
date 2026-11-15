@@ -366,7 +366,7 @@ jobs:
         os: [windows-2022]
         python-version: ["3.14"]
         test-subset:
-          - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py
+          - tests/sampling/test_mcmc.py tests/ode/test_ode.py tests/ode/test_utils.py tests/distributions/test_transform.py tests/variational/test_inference.py
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:

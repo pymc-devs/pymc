@@ -1138,7 +1138,7 @@ class TestSamplePPC:
             pp = pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
         assert pp.predictions["y"].shape == (1, 25, 2)
 
-        # In this case y_data is part of the generative graph, so we must set it to a compatible value
+        # y_data is also used in the generative graph, but as observed data it stays out of predictions_constant_data
         with pm.Model(coords={"trial": range(5), "feature": range(3)}) as m:
             x_data = pm.Data("x_data", np.random.normal(size=(5, 3)), dims=("trial", "feat"))
             y_data = pm.Data("y_data", np.random.normal(size=(5,)), dims=("trial",))
@@ -1152,13 +1152,9 @@ class TestSamplePPC:
 
         with m:
             pm.set_data({"x_data": new_x_data}, coords=new_coords)
-            with pytest.raises(ValueError, match="conflicting sizes for dimension 'trial'"):
-                pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
-
-        new_y_data = np.random.normal(size=(2,))
-        with m:
-            pm.set_data({"y_data": new_y_data})
+            pp = pm.sample_posterior_predictive(fake_idata, predictions=True, progressbar=False)
         assert pp.predictions["y"].shape == (1, 25, 2)
+        assert "y_data" not in pp.predictions_constant_data
 
 
 @pytest.fixture(scope="class")

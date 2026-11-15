@@ -25,7 +25,7 @@ import pytest
 import scipy.special
 
 from pytensor import shared
-from pytensor.compile.ops import as_op
+from pytensor.compile.ops import wrap_py
 from xarray import DataTree
 
 import pymc as pm
@@ -921,7 +921,7 @@ class TestAssignStepMethods:
             itypes = [pt.dscalar] if is_64 else [pt.fscalar]
             otypes = [pt.dscalar] if is_64 else [pt.fscalar]
 
-            @as_op(itypes, otypes)
+            @wrap_py(itypes=itypes, otypes=otypes)
             def kill_grad(x):
                 return x
 

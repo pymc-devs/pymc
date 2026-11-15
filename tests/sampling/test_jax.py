@@ -19,7 +19,6 @@ from collections.abc import Callable
 from typing import Any
 from unittest import mock
 
-import jax
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -32,7 +31,10 @@ from pytensor.graph import graph_inputs
 import pymc as pm
 
 from pymc.exceptions import ImputationWarning
-from pymc.sampling.jax import (
+
+jax = pytest.importorskip("jax")
+
+from pymc.sampling.jax import (  # noqa: E402
     _get_batched_jittered_initial_points,
     _get_log_likelihood,
     _replace_shared_variables,

@@ -37,7 +37,9 @@ from pymc.distributions.continuous import (
     flat,
     halfflat,
     truncated_normal,
+    wald,
 )
+from pymc.distributions.continuous import Wald as RegularWald
 from pymc.distributions.discrete import NegativeBinomial as RegularNegativeBinomial
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.pytensorf import continuous_types, floatX
@@ -353,6 +355,16 @@ class InverseGamma(PositiveDimDistribution):
                 "Incompatible parameterization. Either use alpha and (optionally) beta, or mu and sigma"
             )
         return super().dist([alpha, beta], **kwargs)
+
+
+@copy_docstring(regular_dists.Wald)
+class Wald(PositiveDimDistribution):
+    xrv_op = ptxr.as_xrv(wald)
+
+    @classmethod
+    def dist(cls, mu=None, lam=None, *, phi=None, alpha=0.0, **kwargs):
+        mu, lam, phi = RegularWald.get_mu_lam_phi(mu=mu, lam=lam, phi=phi)
+        return super().dist([mu, lam, alpha], **kwargs)
 
 
 @copy_docstring(regular_dists.Weibull)

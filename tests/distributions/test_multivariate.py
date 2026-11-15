@@ -369,6 +369,21 @@ class TestMatchesScipy:
             ref_logp(value, mu, cov),
         )
 
+    def test_matrixnormal_batched_value(self):
+        rng = np.random.default_rng(1983)
+        mu = floatX(rng.normal(size=(2, 3)))
+        rowcov = floatX(np.eye(2) + 0.2)
+        colcov = floatX(np.eye(3) + 0.3)
+        value = floatX(rng.normal(size=(2, 4, 2, 3)))
+        dist = pm.MatrixNormal.dist(mu=mu, rowcov=rowcov, colcov=colcov, size=(2, 4))
+
+        ref_logp = np.vectorize(matrix_normal_logpdf_cov, signature="(m,n),(m,n),(m,m),(n,n)->()")
+        np.testing.assert_allclose(
+            pm.logp(dist, value).eval(),
+            ref_logp(value, mu, rowcov, colcov),
+            rtol=select_by_precision(float64=1e-10, float32=1e-5),
+        )
+
     @pytest.mark.parametrize("n", [1, 2, 3])
     def test_matrixnormal(self, n):
         mat_scale = 1e3  # To reduce logp magnitude
@@ -2233,7 +2248,7 @@ class TestMatrixNormal(BaseTestDistributionRandom):
                 colcov=np.eye(3),
             )
             with pytest.raises(ValueError):
-                logp(matrixnormal, pytensor.tensor.ones((3, 3, 3)))
+                logp(matrixnormal, pytensor.tensor.ones(3))
 
     def check_random_variable_prior(self):
         """

@@ -55,3 +55,4 @@ pixi.lock
 
 .jupyter/
 .claude/
+.coverage

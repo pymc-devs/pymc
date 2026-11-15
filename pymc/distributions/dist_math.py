@@ -18,6 +18,8 @@ Created on Mar 7, 2011.
 @author: johnsalvatier
 """
 
+import math
+
 from collections.abc import Iterable
 from functools import partial
 
@@ -31,6 +33,8 @@ from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
 from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.utils import lazy_scipy_module
+from pytensor.xtensor.basic import xtensor_from_tensor
+from pytensor.xtensor.type import XTensorVariable
 
 from pymc.distributions.shape_utils import to_tuple
 from pymc.logprob.utils import CheckParameterValue
@@ -61,14 +65,26 @@ def check_parameters(
     When the flag `can_be_replaced_by_ninf` is True (default), PyMC is allowed to replace the
     assertion by a switch(condition, expr, -inf). This is used for logp graphs!
 
+    If `expr` is an XTensorVariable, the result keeps its dims.
+
     Note that check_parameter should not be used to enforce the logic of the
     expression under the normal parameter support as it can be disabled by the user via
     check_bounds = False in pm.Model()
     """
-    # pt.all does not accept True/False, but accepts np.array(True)/np.array(False)
-    conditions_ = [
-        cond if (cond is not True and cond is not False) else np.array(cond) for cond in conditions
-    ]
+    if isinstance(expr, XTensorVariable):
+        checked = check_parameters(
+            expr.values, *conditions, msg=msg, can_be_replaced_by_ninf=can_be_replaced_by_ninf
+        )
+        return xtensor_from_tensor(checked, dims=expr.dims)
+
+    conditions_ = []
+    for cond in conditions:
+        # pt.all does not accept True/False, but accepts np.array(True)/np.array(False)
+        if cond is True or cond is False:
+            cond = np.array(cond)
+        elif isinstance(cond, XTensorVariable):
+            cond = cond.values
+        conditions_.append(cond)
     all_true_scalar = pt.all([pt.all(cond) for cond in conditions_])
 
     return CheckParameterValue(msg, can_be_replaced_by_ninf)(expr, all_true_scalar)
@@ -125,20 +141,24 @@ def std_cdf(x):
 
 def normal_lcdf(mu, sigma, x):
     """Compute the log of the cumulative density function of the normal."""
+    # The same z as in the normal logp, so the two share it.
     z = (x - mu) / sigma
-    return pt.switch(
-        pt.lt(z, -1.0),
-        pt.log(pt.erfcx(-z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(z / pt.sqrt(2.0)) / 2.0),
-    )
+    return _std_normal_lccdf(-z)
 
 
 def normal_lccdf(mu, sigma, x):
-    z = (x - mu) / sigma
+    return _std_normal_lccdf((x - mu) / sigma)
+
+
+def _std_normal_lccdf(z):
+    # Switch evaluates both branches, so both come from one erfcx:
+    # erfc(|z| / sqrt(2)) = exp(-z**2 / 2) * erfcx(|z| / sqrt(2)).
+    # |z| as a switch, since abs has gradient 0 at z = 0.
+    u = pt.erfcx(pt.switch(pt.lt(z, 0.0), -z, z) / math.sqrt(2))
     return pt.switch(
-        pt.gt(z, 1.0),
-        pt.log(pt.erfcx(z / pt.sqrt(2.0)) / 2.0) - pt.sqr(z) / 2.0,
-        pt.log1p(-pt.erfc(-z / pt.sqrt(2.0)) / 2.0),
+        pt.lt(z, 0.0),
+        pt.log1p(-pt.exp(-pt.sqr(z) / 2.0) * u / 2.0),
+        pt.log(u) - pt.sqr(z) / 2.0 - math.log(2),
     )
 
 

@@ -18,8 +18,6 @@ import pytensor
 import pytensor.tensor as pt
 import pytest
 
-from scipy.special import iv
-
 import pymc as pm
 
 from pymc.math import cartesian, kronecker
@@ -669,23 +667,18 @@ class TestPeriodic:
         Kd = cov(X, diag=True).eval()
         npt.assert_allclose(np.diag(K), Kd, atol=1e-5)
 
-    def test_psd(self):
-        # compare to simple 1d formula
-        ell = 2.0
-        P = 0.1
-        m = 5
+    @pytest.mark.parametrize("ell", [0.3, 1.0, 2.0])
+    def test_psd(self, ell):
+        # the cosine series with these coefficients should reproduce the kernel
+        P = 0.7
+        J = np.arange(0, 100, 1)
+        cov = pm.gp.cov.Periodic(1, period=P, ls=ell)
+        q2 = cov.power_spectral_density_approx(J).eval()
 
-        a = 1 / np.square(ell)
-        J = np.arange(0, m, 1)
-        true_1d_psd = np.where(J > 0, 2, 1) * iv(J, a) / np.exp(a)
-
-        test_1d_psd = (
-            pm.gp.cov.Periodic(1, period=P, ls=ell)
-            .power_spectral_density_approx(J)
-            .flatten()
-            .eval()
-        )
-        npt.assert_allclose(true_1d_psd, test_1d_psd, atol=1e-5)
+        tau = np.linspace(0, 2, 50)
+        approx_K = np.cos(2 * np.pi / P * J[None, :] * tau[:, None]) @ q2
+        true_K = cov(np.array([[0.0]]), tau[:, None]).eval().flatten()
+        npt.assert_allclose(approx_K, true_K, atol=1e-10)
 
 
 class TestLinear:

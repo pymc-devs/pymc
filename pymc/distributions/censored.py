@@ -101,10 +101,12 @@ class Censored(Distribution):
 
         .. warning:: dist will be cloned, rendering it independent of the one passed as input.
 
-    lower : float or None
-        Lower (left) censoring point. If `None` the distribution will not be left censored
-    upper : float or None
-        Upper (right) censoring point. If `None`, the distribution will not be right censored.
+    lower : tensor_like of float, optional
+        Lower (left) censoring point, broadcast against ``dist``. An entry of ``-np.inf`` leaves
+        that entry uncensored. Default is ``-np.inf``.
+    upper : tensor_like of float, optional
+        Upper (right) censoring point, broadcast against ``dist``. An entry of ``np.inf`` leaves
+        that entry uncensored. Default is ``np.inf``.
 
     Warnings
     --------
@@ -123,6 +125,16 @@ class Censored(Distribution):
         with pm.Model():
             normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0)
             censored_normal = pm.Censored("censored_normal", normal_dist, lower=-1, upper=1)
+
+    Censoring bounds can differ per entry:
+
+    .. code-block:: python
+
+        with pm.Model():
+            normal_dist = pm.Normal.dist(mu=0.0, sigma=1.0, shape=2)
+            censored_normal = pm.Censored(
+                "censored_normal", normal_dist, lower=[-1.0, -np.inf], upper=[1.0, 0.0]
+            )
     """
 
     rv_type = CensoredRV

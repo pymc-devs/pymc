@@ -62,7 +62,7 @@ def simple_model_data(use_minibatch):
     sigma = 3.0
     mu = -5.0
 
-    data = sigma * np.random.randn(n) + mu
+    data = floatX(sigma * np.random.randn(n) + mu)
     d = n / sigma**2 + 1 / sigma0**2
     mu_post = (n * np.mean(data) / sigma**2 + mu0 / sigma0**2) / d
     if use_minibatch:
@@ -453,12 +453,12 @@ def test_fit_data_coords(hierarchical_model, hierarchical_model_data):
 
 def test_sample_posterior_after_minibatch():
     with pm.Model(coords={"obs_id": [0, 1, 2]}) as model:
-        x = pm.Data("x", [1.0, 2.0, 3.0], dims="obs_id")
-        y = pm.Data("y", [1.0, 2.0, 3.0], dims="obs_id")
+        x = pm.Data("x", floatX([1.0, 2.0, 3.0]), dims="obs_id")
+        y = pm.Data("y", floatX([1.0, 2.0, 3.0]), dims="obs_id")
         x_mini, y_mini = pm.Minibatch(x, y, batch_size=2)
         beta = pm.Normal("beta", 0, 10.0)
         y_hat = pm.Deterministic("y_hat", beta * x_mini, dims="obs_id")
-        pm.Normal("obs", y_hat, np.sqrt(1e-2), observed=y_mini, total_size=3, dims="obs_id")
+        pm.Normal("obs", y_hat, floatX(np.sqrt(1e-2)), observed=y_mini, total_size=3, dims="obs_id")
         approx = pm.fit(
             10,
             method="advi",
@@ -490,8 +490,8 @@ def test_multiple_minibatch_variables():
     https://discourse.pymc.io/t/verifying-that-minibatch-is-actually-randomly-sampling/14308
     """
     true_weights = np.array([-5, 5] * 5)
-    feature = np.repeat(np.eye(10), 10_000, axis=0)
-    y = feature @ true_weights
+    feature = floatX(np.repeat(np.eye(10), 10_000, axis=0))
+    y = floatX(feature @ true_weights)
 
     with pm.Model() as model:
         minibatch_feature, minibatch_y = pm.Minibatch(feature, y, batch_size=1)
@@ -523,7 +523,7 @@ class TestUntransformedData:
         with pm.Model():
             pm.HalfNormal("sigma", sigma=5.0)
             pm.Normal("mu", 0, 1)
-            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            pm.Normal("y", floatX(rng.normal(size=3)), observed=floatX(rng.normal(size=3)))
             fitted = pm.fit(100, method="advi", progressbar=False, random_seed=42)
 
         s = fitted.state
@@ -539,7 +539,7 @@ class TestUntransformedData:
         with pm.Model():
             pm.HalfNormal("sigma", sigma=5.0)
             pm.Normal("mu", 0, 1)
-            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            pm.Normal("y", floatX(rng.normal(size=3)), observed=floatX(rng.normal(size=3)))
             fitted = pm.fit(100, method="fullrank_advi", progressbar=False, random_seed=42)
 
         s = fitted.state
@@ -552,7 +552,7 @@ class TestUntransformedData:
         rng = np.random.default_rng(42)
         with pm.Model():
             pm.Normal("mu", 0, 1)
-            pm.Normal("y", rng.normal(size=10), observed=rng.normal(size=10))
+            pm.Normal("y", floatX(rng.normal(size=10)), observed=floatX(rng.normal(size=10)))
             inference = pm.SVGD(n_particles=50, random_seed=42)
             fitted = inference.fit(100, progressbar=False)
 
@@ -588,7 +588,7 @@ class TestUntransformedData:
         with pm.Model():
             pm.HalfNormal("sigma", sigma=5.0)
             pm.Normal("mu", 0, 1)
-            pm.Normal("y", rng.normal(size=3), observed=rng.normal(size=3))
+            pm.Normal("y", floatX(rng.normal(size=3)), observed=floatX(rng.normal(size=3)))
             inference = pm.ADVI(random_seed=42)
             fitted = inference.fit(50, callbacks=[callback], progressbar=False)
 
@@ -611,7 +611,7 @@ class TestUntransformedData:
     def test_state_dirichlet(self):
         """State works with Dirichlet (simplex transform changes dimensionality)."""
         with pm.Model():
-            pm.Dirichlet("p", a=[1, 2, 3])
+            pm.Dirichlet("p", a=floatX([1, 2, 3]))
             fitted = pm.fit(50, method="advi", progressbar=False, random_seed=42)
 
         s = fitted.state
@@ -654,7 +654,7 @@ class TestUntransformedData:
     def test_state_include_transformed_dirichlet(self):
         """include_transformed=True with Dirichlet (dimensionality-changing transform)."""
         with pm.Model():
-            pm.Dirichlet("p", a=[1, 2, 3])
+            pm.Dirichlet("p", a=floatX([1, 2, 3]))
             fitted = pm.fit(
                 50,
                 method="advi",

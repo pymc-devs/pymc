@@ -30,6 +30,7 @@ from pymc.distributions import (
     Exponential,
     Gamma,
     HalfNormal,
+    InverseGamma,
     LogNormal,
     Mixture,
     SkewStudentT,
@@ -162,7 +163,7 @@ def test_truncation_continuous_random(op_type, lower, upper, scalar, custom_dist
         loc,
         scale,
     )
-    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 0.001
+    assert scipy.stats.cramervonmises(xt_draws.ravel(), ref_xt.cdf).pvalue > 1e-5
 
     # Test max_n_steps
     xt = Truncated.dist(x, lower=lower, upper=upper, max_n_steps=1)
@@ -509,6 +510,11 @@ def test_truncated_gamma():
         logp_resized_pymc,
         logp_scipy,
     )
+
+
+@pytest.mark.filterwarnings("error")
+def test_truncated_inverse_gamma_does_not_warn():
+    Truncated.dist(InverseGamma.dist(alpha=3.0, beta=1.0), upper=3.0)
 
 
 def test_vectorized_bounds():

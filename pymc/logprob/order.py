@@ -331,7 +331,8 @@ def categorical_from_argmax(fgraph, node):
 
     # Normalize probs and create categorical
     probs /= probs.sum(-1, keepdims=True)
-    return [pt.random.categorical(probs, rng=rng, size=None)]
+    _, categorical_rv = pt.random.categorical(probs, rng=rng, size=None, return_next_rng=True)
+    return [categorical_rv]
 
 
 measurable_ir_rewrites_db.register("lift_loc_scale", lift_loc_scale, "basic", "lift_rv_args")
