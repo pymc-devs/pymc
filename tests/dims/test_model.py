@@ -46,6 +46,39 @@ def test_data():
     np.testing.assert_allclose(pm.draw(x_data), x_np * 2)
 
 
+@pytest.mark.parametrize(
+    "library, constructor",
+    [
+        ("pandas", lambda lib, x: lib.DataFrame(x)),
+        ("polars", lambda lib, x: lib.DataFrame(x)),
+        ("polars", lambda lib, x: lib.DataFrame(x).lazy()),
+    ],
+    ids=["pandas", "polars", "polars_lazy"],
+)
+def test_data_dataframe(library, constructor):
+    lib = pytest.importorskip(library)
+    x_np = np.arange(6.0).reshape(3, 2)
+    with pm.Model(coords={"a": range(3), "b": range(2)}) as m:
+        x_data = pmd.Data("x", constructor(lib, x_np), dims=("a", "b"))
+    assert isinstance(x_data, XTensorSharedVariable)
+    assert x_data.type.dims == ("a", "b")
+    np.testing.assert_array_equal(x_data.get_value(), x_np)
+
+    with m:
+        pm.set_data({"x": constructor(lib, x_np * 2)})
+    np.testing.assert_array_equal(x_data.get_value(), x_np * 2)
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_data_series(library):
+    lib = pytest.importorskip(library)
+    x_np = np.array([1.0, 2.0, 3.0])
+    with pm.Model(coords={"a": range(3)}):
+        x_data = pmd.Data("x", lib.Series(x_np), dims="a")
+    assert x_data.type.dims == ("a",)
+    np.testing.assert_array_equal(x_data.get_value(), x_np)
+
+
 def test_simple_model():
     coords = {"a": range(3), "b": range(5)}
 
