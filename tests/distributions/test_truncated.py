@@ -33,6 +33,7 @@ from pymc.distributions import (
     InverseGamma,
     LogNormal,
     Mixture,
+    Poisson,
     SkewStudentT,
     StudentT,
     TruncatedNormal,
@@ -437,7 +438,11 @@ def test_truncated_transform_logp():
         # Moment of truncated dist can be used
         (icdf_normal(0, 1), -1, 2, None, 0),
         # Moment of truncated dist cannot be used, both bounds are finite
-        (icdf_normal(3, 1), -1, 2, (2,), np.full((2,), 3 / 2)),
+        (icdf_normal(3, 1), -1, 2, (2,), np.full((2,), 1 / 2)),
+        # Both bounds are finite and strictly positive
+        (icdf_normal(0, 1), 10, 20, (2,), np.full((2,), 15.0)),
+        # Both bounds are finite and strictly negative
+        (icdf_normal(0, 1), -20, -10, (2,), np.full((2,), -15.0)),
         # Moment of truncated dist cannot be used, lower bound is finite
         (icdf_normal(-3, 1), -1, None, (2, 3), np.full((2, 3), 0)),
         # Moment of truncated dist can be used for 1st and 3rd mus, upper bound is finite
@@ -448,6 +453,14 @@ def test_truncated_support_point(truncated_dist, lower, upper, shape, expected):
     with Model() as model:
         Truncated("x", dist=truncated_dist, lower=lower, upper=upper, shape=shape)
     assert_support_point_is_expected(model, expected)
+
+
+def test_truncated_discrete_support_point():
+    with Model() as model:
+        Truncated("x", dist=Poisson.dist(mu=12), lower=14, upper=20)
+    assert_support_point_is_expected(model, 17)
+    ip = model.initial_point()
+    assert np.isfinite(model.compile_logp()(ip))
 
 
 def test_truncated_inference():
