@@ -149,6 +149,7 @@ class TestMax:
         x_max_logprob = logp(x_max, x_max_value)
 
         assert_no_rvs(x_max_logprob)
+        assert x_max_logprob.ndim == 0
 
         test_value = value
 
@@ -187,6 +188,7 @@ class TestMax:
         x_min_logprob = logp(x_min, x_min_value)
 
         assert_no_rvs(x_min_logprob)
+        assert x_min_logprob.ndim == 0
 
         test_value = value
 
@@ -220,6 +222,8 @@ class TestMax:
         x_max_value = pt.scalar("x_max_value", dtype=x.type.dtype)
         x_max_logprob = logp(x_max, x_max_value)
 
+        assert x_max_logprob.ndim == 0
+
         test_value = value
 
         n = size
@@ -241,6 +245,8 @@ class TestMax:
         x_min = pt.min(x, axis=axis)
         x_min_value = pt.scalar("x_min_value", dtype=x.type.dtype)
         x_min_logprob = logp(x_min, x_min_value)
+
+        assert x_min_logprob.ndim == 0
 
         sf_before = 1 - sp.poisson(lam).cdf(test_value - 1)
         sf = 1 - sp.poisson(lam).cdf(test_value)
