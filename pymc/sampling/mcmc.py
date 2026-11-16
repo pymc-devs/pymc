@@ -1558,6 +1558,8 @@ def _iter_sample(
     step.setup_chain(rng, tune, draws - tune)
 
     point = start
+    if isinstance(trace, _ZarrChainBase):
+        trace.link_stepper(step)
 
     try:
         step.tune = bool(tune)
@@ -1581,7 +1583,15 @@ def _iter_sample(
 
             yield stats
 
-    finally:
+    except (KeyboardInterrupt, BaseException):
+        if isinstance(trace, _ZarrChainBase):
+            trace.record_sampling_state(step=step)
+        trace.close()
+        raise
+
+    else:
+        if isinstance(trace, _ZarrChainBase):
+            trace.record_sampling_state(step=step)
         trace.close()
 
 
