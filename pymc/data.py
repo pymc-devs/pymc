@@ -269,9 +269,9 @@ def Data(
         and dimension names should be if there is an index in ``value``.
         Only pandas and xarray inputs carry such an index.
 
-        .. deprecated:: 6.4.0
-            Pass coordinate values explicitly via ``coords`` or
-            :class:`pymc.Model` instead. This argument will be removed in PyMC 7.0.
+        .. deprecated::
+            ``infer_dims_and_coords`` is deprecated and will be removed in a future release.
+            Pass coordinate values explicitly via ``coords`` or :class:`pymc.Model` instead.
     model : Model, optional
         Model in which to register the container. Defaults to the current context.
     **kwargs : dict, optional

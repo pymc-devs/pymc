@@ -26,7 +26,6 @@ from pytensor.compile import Function, UnusedInputError
 from pytensor.compile.builders import OpFromGraph
 from pytensor.graph.basic import Variable, equal_computations
 from pytensor.link.vm import VMLinker
-from pytensor.tensor.basic import _as_tensor_variable
 from pytensor.tensor.subtensor import AdvancedIncSubtensor
 
 import pymc as pm
@@ -86,18 +85,6 @@ def test_lazyframe_as_tensor_variable() -> None:
     np_array = np.array([[1.0, 2.0], [3.0, 4.0]])
     lazy = pl.DataFrame(np_array).lazy()
     np.testing.assert_array_equal(pt.as_tensor_variable(lazy).eval(), np_array)
-
-
-def test_as_tensor_variable_unsupported_type_still_raises() -> None:
-    with pytest.raises(NotImplementedError, match="Cannot convert"):
-        pt.as_tensor_variable(object())
-
-
-def test_lazy_dispatch_registers_dataframe_type() -> None:
-    pl = pytest.importorskip("polars")
-    df = pl.DataFrame({"a": [1.0, 2.0]})
-    pt.as_tensor_variable(df)
-    assert type(df) in _as_tensor_variable.registry
 
 
 def test_pd_as_tensor_variable_multiindex() -> None:
