@@ -218,6 +218,8 @@ def find_MAP(
         Add U(-1, 1) jitter to the initial point of the optimized variables, as ``pymc.sample``
         does. This avoids getting stuck at saddle points of the default initial point (e.g.
         products of zero-centered variables). Set ``random_seed`` for reproducible results.
+        As in ``pymc.sample``, ``initvals`` are jittered too; pass ``jitter=False`` to start
+        exactly there.
     jitter_max_retries : int
         Maximum number of attempts at drawing a jittered initial point with finite log-probability.
     random_seed : int, array-like of int, or Generator, optional
@@ -232,7 +234,7 @@ def find_MAP(
         This needs ``n`` Hessian-vector products and an ``n x n`` matrix, so it is expensive for
         large models.
     return_inferencedata : bool, default True
-        If True, return an :class:`arviz.InferenceData` with the MAP point as a single-draw
+        If True, return a :class:`xarray.DataTree` with the MAP point as a single-draw
         ``posterior`` (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data``
         groups). If False, return a ``dict`` mapping variable names to values, transformed ones
         included.
@@ -257,7 +259,7 @@ def find_MAP(
 
     Returns
     -------
-    arviz.InferenceData or dict
+    xarray.DataTree or dict
         MAP estimate, see ``return_inferencedata``.
     """
     if not return_inferencedata:
