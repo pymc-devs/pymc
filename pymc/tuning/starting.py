@@ -60,8 +60,6 @@ if TYPE_CHECKING:  # better_optimize and scipy.optimize are heavy; import on fir
 
 __all__ = ["find_MAP"]
 
-_LEGACY_KWARGS = {"start": "initvals", "seed": "random_seed", "maxeval": "maxiter"}
-
 
 def _canonical_method(method: str) -> str:
     if callable(method):
@@ -182,12 +180,12 @@ def find_MAP(
     use_hess: bool | None = None,
     use_hessp: bool | None = None,
     initvals: StartDict | None = None,
-    jitter: bool | None = None,
+    jitter: bool = True,
     jitter_max_retries: int = 10,
     random_seed: RandomState = None,
     progressbar: bool | ProgressBarOptions = True,
     compute_hessian: bool = False,
-    return_inferencedata: bool = False,
+    return_inferencedata: bool = True,
     idata_kwargs: dict[str, Any] | None = None,
     model: Model | None = None,
     backend: str | None = None,
@@ -216,12 +214,10 @@ def find_MAP(
     initvals : dict, optional
         Initial values for (transformed) variables, overriding the model defaults. Partial
         initialization is permitted, as in :func:`pymc.sample`.
-    jitter : bool, optional
+    jitter : bool, default True
         Add U(-1, 1) jitter to the initial point of the optimized variables, as ``pymc.sample``
         does. This avoids getting stuck at saddle points of the default initial point (e.g.
         products of zero-centered variables). Set ``random_seed`` for reproducible results.
-        Not jittering is the current default, with a ``FutureWarning``; a future release will
-        jitter by default.
     jitter_max_retries : int
         Maximum number of attempts at drawing a jittered initial point with finite log-probability.
     random_seed : int, array-like of int, or Generator, optional
@@ -235,15 +231,14 @@ def find_MAP(
         taken over the optimized (unconstrained) value variables, as ``fit.covariance_matrix``.
         This needs ``n`` Hessian-vector products and an ``n x n`` matrix, so it is expensive for
         large models.
-    return_inferencedata : bool, default False
+    return_inferencedata : bool, default True
         If True, return an :class:`arviz.InferenceData` with the MAP point as a single-draw
         ``posterior`` (plus ``fit``, ``optimizer_result``, ``observed_data`` and ``constant_data``
         groups). If False, return a ``dict`` mapping variable names to values, transformed ones
         included.
 
         .. deprecated::
-            The ``dict`` return is deprecated: a future release will default to True, and
-            later remove the option.
+            The ``dict`` return is deprecated and will be removed in a future release.
     idata_kwargs : dict, optional
         Keyword arguments for :func:`pymc.to_inference_data`, e.g. ``include_transformed=True`` to
         also return transformed (unconstrained) values such as ``sigma_log__``.
@@ -265,55 +260,13 @@ def find_MAP(
     arviz.InferenceData or dict
         MAP estimate, see ``return_inferencedata``.
     """
-    if isinstance(method, dict):
-        optimizer_kwargs["start"], method = method, "L-BFGS-B"
-    explicit = {"initvals": initvals, "random_seed": random_seed}
-    for old, new in _LEGACY_KWARGS.items():
-        if old in optimizer_kwargs:
-            if new in optimizer_kwargs or explicit.get(new) is not None:
-                raise ValueError(f"Cannot pass both `{old}` and `{new}`; `{old}` is deprecated.")
-            warnings.warn(
-                f"`{old}` is deprecated, use `{new}` instead.", FutureWarning, stacklevel=2
-            )
-            optimizer_kwargs[new] = optimizer_kwargs.pop(old)
-    initvals = optimizer_kwargs.pop("initvals", initvals)
-    random_seed = optimizer_kwargs.pop("random_seed", random_seed)
-    return_raw = optimizer_kwargs.pop("return_raw", False)
-    if return_raw:
-        warnings.warn(
-            "`return_raw` is deprecated. The optimizer result is stored in the `optimizer_result` "
-            "group of the returned InferenceData.",
-            FutureWarning,
-            stacklevel=2,
-        )
-    if optimizer_kwargs.pop("progressbar_theme", None) is not None:
-        warnings.warn("`progressbar_theme` is ignored by find_MAP.", FutureWarning, stacklevel=2)
-    idata_kwargs = {} if idata_kwargs is None else dict(idata_kwargs)
-    if "include_transformed" in optimizer_kwargs:
-        if "include_transformed" in idata_kwargs:
-            raise ValueError("Pass `include_transformed` only via `idata_kwargs`.")
-        warnings.warn(
-            "`include_transformed` is deprecated, pass it via `idata_kwargs` as in `pymc.sample`.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        idata_kwargs["include_transformed"] = optimizer_kwargs.pop("include_transformed")
-
     if not return_inferencedata:
         warnings.warn(
-            "`find_MAP` will return an `InferenceData` instead of a dict in a future release. "
-            "Pass `return_inferencedata=True` to adopt the new behavior now.",
+            "The `dict` return of `find_MAP` is deprecated and will be removed in a future release. "
+            "Use the default `return_inferencedata=True`.",
             FutureWarning,
             stacklevel=2,
         )
-    if jitter is None:
-        warnings.warn(
-            "`find_MAP` will jitter its initial point by default in a future release. Pass "
-            "`jitter=True` to adopt that now, or `jitter=False` to keep the current behavior.",
-            FutureWarning,
-            stacklevel=2,
-        )
-        jitter = False
     fit = _fit_MAP(
         method,
         vars=vars,
@@ -331,12 +284,10 @@ def find_MAP(
         compile_kwargs=compile_kwargs,
         **optimizer_kwargs,
     )
-    out = (
-        _map_to_inference_data(fit, idata_kwargs)
-        if return_inferencedata
-        else fit.as_point(idata_kwargs.get("include_transformed", True))
-    )
-    return (out, fit.res) if return_raw else out  # type: ignore[return-value]
+    idata_kwargs = idata_kwargs or {}
+    if return_inferencedata:
+        return _map_to_inference_data(fit, idata_kwargs)
+    return fit.as_point(idata_kwargs.get("include_transformed", True))
 
 
 class _MAPFit(NamedTuple):

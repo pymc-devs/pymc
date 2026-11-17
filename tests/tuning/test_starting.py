@@ -14,8 +14,6 @@
 import re
 import warnings
 
-from functools import partial
-
 import numpy as np
 import pytensor
 import pytensor.tensor as pt
@@ -24,6 +22,7 @@ import xarray as xr
 
 from numpy.testing import assert_allclose
 from scipy.optimize import LbfgsInvHessProduct, OptimizeResult
+from xarray import DataTree
 
 import pymc as pm
 
@@ -31,12 +30,9 @@ from pymc.exceptions import ImputationWarning, SamplingError
 from pymc.model.transform.optimization import freeze_model
 from pymc.step_methods.metropolis import tune
 from pymc.testing import fast_unstable_sampling_mode, select_by_precision
-from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset
+from pymc.tuning.starting import _find_MAP_point, _optimizer_result_to_dataset, find_MAP
 from tests import models
 from tests.models import non_normal, simple_arbitrary_det, simple_model
-
-# The future defaults; the current, deprecated ones are tested through `pm.find_MAP`
-find_MAP = partial(pm.find_MAP, return_inferencedata=True, jitter=True)
 
 
 @pytest.fixture(autouse=True)
@@ -308,7 +304,7 @@ def test_find_MAP_return_inferencedata_consistent(normal_model):
     kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
     idata_kwargs = {"include_transformed": True}
     idata = find_MAP(idata_kwargs=idata_kwargs, **kwargs)
-    with pytest.warns(FutureWarning, match="will return an `InferenceData`"):
+    with pytest.warns(FutureWarning, match="`dict` return of `find_MAP` is deprecated"):
         point = find_MAP(return_inferencedata=False, idata_kwargs=idata_kwargs, **kwargs)
     assert set(point) == {"mu", "sigma", "sigma_log__"}
     internal = _find_MAP_point(
@@ -404,9 +400,6 @@ def test_find_MAP_jitter_escapes_saddle():
 
     stuck = map_point(model=m, jitter=False)
     assert_allclose([stuck["w"], stuck["z"]], 0.0)
-    with pytest.warns(FutureWarning, match="will jitter its initial point"):
-        default = pm.find_MAP(model=m, return_inferencedata=True, progressbar=False).posterior
-    assert_allclose([default["w"], default["z"]], 0.0)  # no jitter by default, for now
     r1 = map_point(model=m, random_seed=11)
     r2 = map_point(model=m, random_seed=11)
     assert_allclose(r1["w"] * r1["z"], 1.0, atol=0.05)
@@ -437,14 +430,12 @@ def test_find_MAP_unknown_method(normal_model):
         find_MAP(method=lambda *args, **kwargs: None, model=normal_model, progressbar=False)
 
 
-def test_find_MAP_deprecated_defaults(normal_model):
-    with (
-        pytest.warns(FutureWarning, match="will return an `InferenceData`"),
-        pytest.warns(FutureWarning, match="will jitter its initial point"),
-    ):
-        point = pm.find_MAP(model=normal_model, progressbar=False)
-    # the old behavior: a dict, transformed values included
-    assert set(point) == {"mu", "sigma", "sigma_log__"}
+def test_find_MAP_defaults(normal_model):
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        idata = find_MAP(model=normal_model, progressbar=False)
+    assert isinstance(idata, DataTree)
+    assert set(idata.posterior) == {"mu", "sigma"}
 
 
 def test_find_MAP_initvals_variable_keys(normal_model):
@@ -459,42 +450,23 @@ def test_find_MAP_initvals_variable_keys(normal_model):
 
 
 @pytest.mark.parametrize(
-    "legacy, new",
+    "removed",
     [
-        ({"start": {"mu": 1.0}}, {"initvals": {"mu": 2.0}}),
-        ({"seed": 1}, {"random_seed": 2}),
-        ({"maxeval": 10}, {"maxiter": 20}),
+        {"start": {"mu": 1.0}},
+        {"seed": 1},
+        {"maxeval": 10},
+        {"return_raw": True},
+        {"progressbar_theme": "default"},
+        {"include_transformed": True},
     ],
 )
-def test_find_MAP_legacy_and_new_kwargs_conflict(normal_model, legacy, new):
-    with pytest.raises(ValueError, match="Cannot pass both"):
-        find_MAP(model=normal_model, progressbar=False, **legacy, **new)
+def test_find_MAP_removed_kwargs_raise(normal_model, removed):
+    with pytest.raises(TypeError):
+        find_MAP(model=normal_model, progressbar=False, **removed)
 
 
-def test_find_MAP_legacy_kwargs(normal_model):
-    kwargs = {"model": normal_model, "progressbar": False, "random_seed": 1}
-    with pytest.warns(FutureWarning, match="`start` is deprecated"):
-        r1 = map_point({"mu": 1.0}, **kwargs)
-    with pytest.warns(FutureWarning, match="`start` is deprecated"):
-        r2 = map_point(start={"mu": 1.0}, **kwargs)
-    assert_allclose(r1["mu"], r2["mu"])
-    with pytest.warns(FutureWarning, match="`seed` is deprecated"):
-        find_MAP(seed=1, model=normal_model, progressbar=False)
-    with pytest.warns(FutureWarning, match="`maxeval` is deprecated"):
-        find_MAP(maxeval=10, **kwargs)
-    with pytest.warns(FutureWarning, match="`return_raw` is deprecated"):
-        idata, res = find_MAP(return_raw=True, **kwargs)
-    with pytest.warns(FutureWarning, match="`progressbar_theme` is ignored"):
-        find_MAP(progressbar_theme="default", **kwargs)
-    with pytest.warns(FutureWarning, match="`include_transformed` is deprecated"):
-        legacy = find_MAP(include_transformed=True, **kwargs)
-    assert "sigma_log__" in legacy.posterior
-    with pytest.raises(ValueError, match="only via `idata_kwargs`"):
-        find_MAP(include_transformed=True, idata_kwargs={"include_transformed": False}, **kwargs)
-    # pm.sample's string progress bar options are accepted
-    find_MAP(**{**kwargs, "progressbar": "split+stats"})
-    assert isinstance(res, OptimizeResult)
-    assert set(idata.posterior) == {"mu", "sigma"}
+def test_find_MAP_progressbar_string_options(normal_model):
+    find_MAP(model=normal_model, progressbar="split+stats")
 
 
 class TestOptimizerResultToDataset:
