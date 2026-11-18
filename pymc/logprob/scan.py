@@ -444,6 +444,12 @@ def find_measurable_scans(fgraph, node):
     if not valued_outputs:
         return None
 
+    # Every random output must be valued. Otherwise the logp would depend on a hidden variable
+    # that we cannot isolate, e.g., a random walk state that is not observed.
+    random_outputs = {oo_var for _, oo_var, _ in get_random_outer_outputs(scan_args)}
+    if not random_outputs.issubset(valued_outputs):
+        return None
+
     valued_output_idxs = [node.outputs.index(out) for out in valued_outputs]
 
     # Make inner graph measurable
