@@ -563,6 +563,29 @@ def test_scan_multiple_output_types():
     )
 
 
+def test_scan_unvalued_random_output():
+    """Test that a scan with unvalued random outputs is not converted to a MeasurableScan.
+
+    Regression test for https://github.com/pymc-devs/pymc/issues/7780
+    """
+
+    def step(trend_tm1):
+        trend_t = pt.random.normal(trend_tm1)
+        y_t = pt.random.normal(trend_t)
+        return trend_t, y_t
+
+    _trend, ys = pytensor.scan(
+        fn=step,
+        outputs_info=[pt.zeros(()), None],
+        n_steps=10,
+        return_updates=False,
+    )
+
+    ys_value = ys.clone()
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        conditional_logp({ys: ys_value})
+
+
 def test_generative_graph_unchanged():
     # Regression test where creating the IR would overwrite the original Scan inner fgraph
 
