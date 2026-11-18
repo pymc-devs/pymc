@@ -51,6 +51,7 @@ import pymc.logprob.censoring
 import pymc.logprob.arithmetic
 import pymc.logprob.cumsum
 import pymc.logprob.checks
+import pymc.logprob.gaussian
 import pymc.logprob.linalg
 import pymc.logprob.mixture
 import pymc.logprob.order
