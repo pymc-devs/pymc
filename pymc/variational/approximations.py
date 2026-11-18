@@ -89,7 +89,7 @@ class MeanFieldGroup(Group):
             for name, slice_, *_ in self.ordering.values():
                 sigma = start_sigma.get(name)
                 if sigma is not None:
-                    rho1[slice_] = np.log(np.expm1(np.abs(sigma)))
+                    rho1[slice_] = np.log(np.expm1(np.abs(sigma))).ravel()
         rho = rho1
 
         return {

@@ -171,3 +171,18 @@ def test_seeding_advi_fit():
             random_seed=42, n=10, method="advi", obj_optimizer=pm.adagrad_window, progressbar=False
         )
         np.testing.assert_allclose(approx1.mean.eval(), approx2.mean.eval())
+
+
+@pytest.mark.parametrize("shape", [(), (3,), (2, 3), (2, 1, 3)])
+@pytest.mark.parametrize("scalar_sigma", [False, True])
+def test_advi_start_sigma_shape(shape, scalar_sigma):
+    sigma = floatX(
+        0.2 if scalar_sigma else np.arange(np.prod(shape, dtype=int)).reshape(shape) / 10 + 0.2
+    )
+    with pm.Model():
+        pm.Normal("beta", shape=shape)
+        advi = pm.ADVI(start_sigma={"beta": sigma})
+
+    np.testing.assert_allclose(
+        advi.approx.std.eval(), np.broadcast_to(sigma, shape).ravel(), rtol=1e-6
+    )
