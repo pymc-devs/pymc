@@ -330,6 +330,51 @@ class TestDiracDelta:
                 assert pm.DiracDelta.dist(2.0).dtype == floatX
 
 
+class TestPlaceholder:
+    def test_shape_and_dtype(self):
+        with pm.Model(coords={"group": range(3)}):
+            scalar = pm.Placeholder("scalar")
+            with_dims = pm.Placeholder("with_dims", dims="group")
+            with_shape = pm.Placeholder("with_shape", shape=(2, 4))
+            discrete = pm.Placeholder("discrete", dtype="int64")
+
+        assert scalar.type.ndim == 0
+        assert scalar.dtype == pytensor.config.floatX
+        assert tuple(with_dims.shape.eval(mode="FAST_COMPILE")) == (3,)
+        assert with_shape.type.shape == (2, 4)
+        assert discrete.dtype == "int64"
+        assert scalar.str_repr() == "scalar ~ Placeholder()"
+
+    def test_observed_not_allowed(self):
+        with pm.Model():
+            with pytest.raises(ValueError, match="cannot be observed"):
+                pm.Placeholder("x", observed=np.zeros(3))
+
+    def test_logp_raises(self):
+        with pm.Model() as m:
+            x = pm.Placeholder("x")
+            pm.Normal("y", x, 1)
+
+        with pytest.raises(NotImplementedError, match="Placeholder variable 'x' cannot be sampled"):
+            m.logp()
+        with pytest.raises(NotImplementedError, match="Placeholder variable cannot be sampled"):
+            logp(x, 0.0)
+
+    def test_sample_raises(self):
+        with pm.Model():
+            x = pm.Placeholder("x")
+            pm.Normal("y", x, 1)
+            with pytest.raises(
+                NotImplementedError, match="Placeholder variable 'x' cannot be sampled"
+            ):
+                pm.sample(draws=10, tune=10, chains=1, progressbar=False)
+
+    def test_draw_raises(self):
+        x = pm.Placeholder.dist()
+        with pytest.raises(NotImplementedError, match="Placeholder variable cannot be sampled"):
+            pm.draw(x, mode="FAST_COMPILE")
+
+
 class TestPartialObservedRV:
     @pytest.mark.parametrize("symbolic_rv", (False, True))
     def test_univariate(self, symbolic_rv):
