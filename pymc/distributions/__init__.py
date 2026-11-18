@@ -84,6 +84,7 @@ from pymc.distributions.mixture import (
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
+    ZeroOneInflatedBeta,
 )
 from pymc.distributions.multivariate import (
     CAR,
@@ -204,5 +205,6 @@ __all__ = [
     "ZeroInflatedBinomial",
     "ZeroInflatedNegativeBinomial",
     "ZeroInflatedPoisson",
+    "ZeroOneInflatedBeta",
     "ZeroSumNormal",
 ]
