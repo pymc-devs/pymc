@@ -777,9 +777,11 @@ def test_step_args():
         idata_default = pm.sample(draws=200, tune=200, random_seed=1410)
         idata0 = pm.sample(draws=200, tune=200, target_accept=0.5, random_seed=1410)
         idata1 = pm.sample(draws=200, tune=200, nuts={"target_accept": 0.5}, random_seed=1410 * 2)
+        nuts_kwargs = {"max_treedepth": 10}
         idata2 = pm.sample(
-            draws=200, tune=200, target_accept=0.5, nuts={"max_treedepth": 10}, random_seed=1410
+            draws=200, tune=200, target_accept=0.5, nuts=nuts_kwargs, random_seed=1410
         )
+        assert nuts_kwargs == {"max_treedepth": 10}
 
         with pytest.raises(ValueError, match="`target_accept` was defined twice."):
             pm.sample(target_accept=0.5, nuts={"target_accept": 0.95}, random_seed=1410)
