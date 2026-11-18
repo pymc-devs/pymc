@@ -28,7 +28,11 @@ from pytensor.tensor.random.op import RandomVariable
 from pytensor.tensor.random.type import RandomType
 
 from pymc.distributions.continuous import TruncatedNormal, bounded_cont_transform
-from pymc.distributions.dist_math import check_parameters
+from pymc.distributions.dist_math import (
+    check_icdf_parameters,
+    check_icdf_value,
+    check_parameters,
+)
 from pymc.distributions.distribution import (
     Distribution,
     SymbolicRandomVariable,
@@ -43,7 +47,7 @@ from pymc.distributions.shape_utils import (
 )
 from pymc.distributions.transforms import _default_transform
 from pymc.exceptions import TruncationError
-from pymc.logprob.abstract import _logcdf, _logprob
+from pymc.logprob.abstract import _icdf, _logcdf, _logprob
 from pymc.logprob.basic import icdf, logccdf, logcdf, logp
 from pymc.math import logdiffexp
 from pymc.pytensorf import collect_default_updates
@@ -494,6 +498,52 @@ def truncated_logcdf(op: TruncatedRV, value, *inputs):
         )
 
     return logcdf_trunc
+
+
+@_icdf.register(TruncatedRV)
+def truncated_icdf(op: TruncatedRV, value, *inputs):
+    *rv_inputs, lower, upper = inputs
+
+    base_rv = op.base_rv_op.make_node(*rv_inputs).default_output()
+    lower_logcdf, upper_logcdf = TruncatedRV._create_logcdf_exprs(base_rv, value, lower, upper)
+
+    is_lower_bounded = not (isinstance(lower, TensorConstant) and np.all(np.isneginf(lower.value)))
+    is_upper_bounded = not (isinstance(upper, TensorConstant) and np.all(np.isinf(upper.value)))
+
+    lognorm = 0
+    if is_lower_bounded and is_upper_bounded:
+        lognorm = logdiffexp(upper_logcdf, lower_logcdf)
+    elif is_lower_bounded:
+        lognorm = TruncatedRV._create_lower_logccdf_expr(base_rv, value, lower)
+    elif is_upper_bounded:
+        lognorm = upper_logcdf
+
+    # base_cdf(lower) + value * (base_cdf(upper) - base_cdf(lower)) in logspace,
+    # the same expression `rv_op` uses for inverse-CDF sampling
+    log_base_q = pt.log(value) + lognorm
+    if is_lower_bounded:
+        log_base_q = pt.logaddexp(lower_logcdf, log_base_q)
+        # Pin value = 1 to the boundary exactly and clip any roundoff overshoot
+        log_base_q_max = upper_logcdf if is_upper_bounded else 0.0
+        log_base_q = pt.switch(
+            pt.eq(value, 1),
+            log_base_q_max,
+            pt.minimum(log_base_q, log_base_q_max),
+        )
+
+    res = icdf(base_rv, pt.exp(log_base_q), warn_rvs=False)
+
+    # The base icdf check on the rescaled quantile cannot catch value > 1 when upper is bounded
+    res = check_icdf_value(res, value)
+
+    if is_lower_bounded and is_upper_bounded:
+        res = check_icdf_parameters(
+            res,
+            pt.le(lower, upper),
+            msg="lower_bound <= upper_bound",
+        )
+
+    return res
 
 
 @_truncated.register(NormalRV)
