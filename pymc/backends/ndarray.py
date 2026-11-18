@@ -163,7 +163,7 @@ class NDArray(base.BaseTrace):
         # iter_sample).
 
         # Only the first `draw_idx` value are valid because of preallocation
-        idx = slice(*idx.indices(len(self)))
+        start, stop, step = idx.indices(len(self))
 
         sliced = type(self)(
             model=self.model,
@@ -173,9 +173,11 @@ class NDArray(base.BaseTrace):
             var_dtypes=self.var_dtypes,
         )
         sliced.chain = self.chain
-        sliced.samples = {varname: values[idx] for varname, values in self.samples.items()}
+        sliced.samples = {
+            varname: values[: len(self)][idx] for varname, values in self.samples.items()
+        }
         sliced.sampler_vars = self.sampler_vars
-        sliced.draw_idx = (idx.stop - idx.start) // idx.step
+        sliced.draw_idx = len(range(start, stop, step))
 
         if self._stats is None:
             return sliced
@@ -184,7 +186,7 @@ class NDArray(base.BaseTrace):
             var_sliced: dict[str, np.ndarray] = {}
             sliced._stats.append(var_sliced)
             for key, vals in vars.items():
-                var_sliced[key] = vals[idx]
+                var_sliced[key] = vals[: len(self)][idx]
 
         return sliced
 

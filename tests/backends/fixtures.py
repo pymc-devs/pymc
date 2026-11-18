@@ -350,7 +350,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
         assert len(result) == self.draws
 
         result = self.mtrace[::2]
-        assert len(result) == self.draws // 2
+        assert len(result) == len(np.arange(self.draws)[::2])
 
     def test_get_slice_neg_step(self):
         if hasattr(self, "skip_test_get_slice_neg_step"):
@@ -360,7 +360,7 @@ class SelectionTestCase(ModelBackendSampledTestCase):
         assert len(result) == self.draws
 
         result = self.mtrace[::-2]
-        assert len(result) == self.draws // 2
+        assert len(result) == len(np.arange(self.draws)[::-2])
 
     def test_get_neg_slice(self):
         expected = []
