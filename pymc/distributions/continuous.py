@@ -2533,6 +2533,15 @@ class Gamma(PositiveContinuous):
         )
         return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
 
+    def logccdf(value, alpha, scale):
+        beta = pt.reciprocal(scale)
+        res = pt.switch(
+            pt.le(value, 0),
+            0.0,
+            pt.log(pt.gammaincc(alpha, beta * value)),
+        )
+        return check_parameters(res, 0 < alpha, 0 < beta, msg="alpha > 0, beta > 0")
+
     def icdf(value, alpha, scale):
         res = scale * gammaincinv(alpha, value)
         res = check_icdf_value(res, value)
