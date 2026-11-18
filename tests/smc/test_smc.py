@@ -14,6 +14,8 @@
 import logging
 import warnings
 
+from unittest import mock
+
 import numpy as np
 import pytensor.tensor as pt
 import pytest
@@ -326,3 +328,33 @@ def test_smc_with_custom_op():
         trace = pm.sample_smc(10, cores=2, chains=2)
 
     assert trace is not None
+
+
+@pytest.mark.parametrize("cores", [1, 2])
+def test_smc_compiles_trace_fn_once(cores):
+    # Regression test for https://github.com/pymc-devs/pymc/issues/8347
+    with pm.Model() as model:
+        x = pm.Normal("x", mu=0, sigma=1, shape=2)
+        pm.Normal("y", mu=x.sum(), sigma=1, observed=0.3)
+
+    compile_fn = pm.Model.compile_fn
+    trace_fn_modes = []
+
+    def spy(self, *args, **kwargs):
+        if kwargs.get("trust_input") and kwargs.get("point_fn") is False:
+            trace_fn_modes.append(kwargs.get("mode"))
+        return compile_fn(self, *args, **kwargs)
+
+    with mock.patch.object(pm.Model, "compile_fn", spy):
+        idata = pm.sample_smc(
+            draws=10,
+            chains=3,
+            cores=cores,
+            model=model,
+            compile_kwargs={"mode": "FAST_COMPILE"},
+            progressbar=False,
+            random_seed=1,
+        )
+
+    assert trace_fn_modes == ["FAST_COMPILE"]
+    assert idata.posterior["x"].shape == (3, 10, 2)
