@@ -40,7 +40,7 @@ from pymc.model.transform.basic import (
     prune_vars_detached_from_observed,
 )
 from pymc.pytensorf import replace_vars_in_graphs, rvs_in_graph, toposort_replace
-from pymc.util import get_transformed_name, get_untransformed_name
+from pymc.util import get_transformed_name
 
 
 def observe(
@@ -297,15 +297,10 @@ def change_value_transforms(
         rv, value = node.inputs
 
         new_value = rv.type()
-        try:
-            untransformed_name = get_untransformed_name(value.name)
-        except ValueError:
-            untransformed_name = value.name
-        if transform:
-            new_name = get_transformed_name(untransformed_name, transform)
-        else:
-            new_name = untransformed_name
-        new_value.name = new_name
+        # Use the variable name instead of parsing the value name,
+        # as transform names may contain underscores (e.g. ``cholesky_corr``)
+        rv_name = node.op.name
+        new_value.name = get_transformed_name(rv_name, transform) if transform else rv_name
 
         new_dummy_rv = model_free_rv(rv, new_value, transform, node.op.name, *node.op.dims)
         replacements[dummy_rv] = new_dummy_rv

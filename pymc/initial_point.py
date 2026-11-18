@@ -37,7 +37,7 @@ from pymc.pytensorf import (
     reseed_rngs,
     toposort_replace,
 )
-from pymc.util import get_transformed_name, get_untransformed_name, is_transformed_name
+from pymc.util import get_transformed_name
 
 StartDict = dict[Variable | str, np.ndarray | Variable | str]
 PointType = dict[str, np.ndarray]
@@ -55,11 +55,18 @@ def convert_str_to_rv_dict(
 
     TODO: Deprecate this functionality and only accept TensorVariables as keys.
     """
+    # Look up transformed value variables by name instead of parsing the name,
+    # as transform names may contain underscores (e.g. ``cholesky_corr``)
+    transformed_value_names = {
+        model.rvs_to_values[rv].name: rv
+        for rv, transform in model.rvs_to_transforms.items()
+        if transform is not None
+    }
     initvals = {}
     for key, initval in start.items():
         if isinstance(key, str):
-            if is_transformed_name(key):
-                rv = model[get_untransformed_name(key)]
+            if key in transformed_value_names:
+                rv = transformed_value_names[key]
                 initvals[rv] = model.rvs_to_transforms[rv].backward(initval, *rv.owner.inputs)
             else:
                 initvals[model[key]] = initval
