@@ -722,6 +722,64 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         logp_scalar.name = logp_scalar_name
         return logp_scalar
 
+    def dependent_logp(
+        self,
+        vars: Variable | Sequence[Variable],
+        jacobian: bool = True,
+        sum: bool = True,
+    ) -> Variable | list[Variable]:
+        """Log-probability of the model terms that depend on ``vars``.
+
+        This includes the logp terms of ``vars`` and of every other random variable or
+        Potential whose logp graph depends on the value variables of ``vars``, such as
+        their observed and unobserved children. The terms left out are constant when only
+        ``vars`` change, so the difference of this graph between two such points is the
+        same as for :meth:`logp`.
+
+        Parameters
+        ----------
+        vars : list of random variables
+            Free random variables (or their value variables) of the model.
+        jacobian : bool
+            Whether to include jacobian terms in logprob graph. Defaults to True.
+        sum : bool
+            Whether to sum all logp terms or return elemwise logp for each variable.
+            Defaults to True.
+
+        Returns
+        -------
+        Logp graph(s)
+            When ``sum=False``, the included terms follow the order of
+            ``free_RVs + observed_RVs + potentials``.
+
+        Examples
+        --------
+        .. code-block:: python
+
+            import numpy as np
+            import pymc as pm
+
+            with pm.Model() as m:
+                mu = pm.Normal("mu")
+                z = pm.Bernoulli("z", 0.5, size=10)
+                pm.Normal("y", mu + z, 1, observed=np.zeros(10))
+                sigma = pm.HalfNormal("sigma")
+                pm.Normal("other", 0, sigma, observed=np.zeros(10_000))
+
+            # Terms of z and y. The terms of mu, sigma and other do not depend on z.
+            logp_z = m.dependent_logp([z])
+        """
+        value_vars = set(get_value_vars_from_user_vars(vars, self))
+        terms = self.free_RVs + self.observed_RVs + self.potentials
+        term_logps = cast(list[Variable], self.logp(vars=terms, jacobian=jacobian, sum=False))
+        dependent_terms = [
+            term
+            for term, term_logp in zip(terms, term_logps)
+            if self.rvs_to_values.get(term) in value_vars
+            or not value_vars.isdisjoint(graph_inputs([term_logp]))
+        ]
+        return self.logp(vars=dependent_terms, jacobian=jacobian, sum=sum)
+
     def dlogp(
         self,
         vars: Variable | Sequence[Variable] | None = None,
@@ -2252,6 +2310,7 @@ class FrozenModel(BaseModel):
     # Cached graphs and compiled functions. Seeding happens outside the cached calls, so
     # every entry is seed-independent.
     logp = locally_cachedmethod(BaseModel.logp)
+    dependent_logp = locally_cachedmethod(BaseModel.dependent_logp)
     dlogp = locally_cachedmethod(BaseModel.dlogp)
     d2logp = locally_cachedmethod(BaseModel.d2logp)
     # The initial point only seeds the runtime-settable extra variables, so it is not part
