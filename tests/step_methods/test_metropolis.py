@@ -173,6 +173,28 @@ class TestDEMetropolis:
             with pytest.raises(ValueError):
                 DEMetropolis(tune="foo")
 
+    @pytest.mark.parametrize("step_cls", [DEMetropolis, DEMetropolisZ])
+    def test_subset_vars_array_sizes(self, step_cls):
+        """S and default lamb must match the passed vars, not all model value vars."""
+        with pm.Model() as model:
+            a = pm.Normal("a", size=3)
+            pm.Normal("c")
+            step = step_cls([a], tune=None, rng=SEED)
+        assert step.proposal_dist.s.shape == (3,)
+        assert step.lamb == pytest.approx(2.38 / np.sqrt(2 * 3))
+
+    def test_subset_vars_demc_z_sample(self):
+        with pm.Model():
+            a = pm.Normal("a", size=3)
+            pm.Normal("c")
+            pm.sample(
+                step=DEMetropolisZ([a], tune=None, rng=SEED),
+                draws=10,
+                tune=10,
+                chains=1,
+                progressbar=False,
+            )
+
 
 class TestDEMetropolisZ:
     def test_tuning_lambda_sequential(self):

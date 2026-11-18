@@ -932,12 +932,13 @@ class DEMetropolis(PopulationArrayStepShared):
         model = pm.modelcontext(model)
         if initial_point is None:
             initial_point = model.initial_point()
-        initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.continuous_value_vars
         else:
             vars = get_value_vars_from_user_vars(vars, model)
+
+        initial_values_size = sum(initial_point[n.name].size for n in vars)
 
         if S is None:
             S = np.ones(initial_values_size)
@@ -1102,12 +1103,13 @@ class DEMetropolisZ(ArrayStepShared):
         model = pm.modelcontext(model)
         if initial_point is None:
             initial_point = model.initial_point()
-        initial_values_size = sum(initial_point[n.name].size for n in model.value_vars)
 
         if vars is None:
             vars = model.continuous_value_vars
         else:
             vars = get_value_vars_from_user_vars(vars, model)
+
+        initial_values_size = sum(initial_point[n.name].size for n in vars)
 
         if S is None:
             S = np.ones(initial_values_size)
