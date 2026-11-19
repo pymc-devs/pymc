@@ -696,12 +696,28 @@ def test_invalid_jacobian_broadcast_raises():
 
 
 class TestLJKCholeskyCorrTransform:
-    def _get_test_values(self):
+    def _get_test_values(self, upper=False):
         x_unconstrained = np.array([2.0, 2.0, 1.0], dtype=config.floatX)
-        x_constrained = np.array(
-            [[1.0, 0.0, 0.0], [0.70710678, 0.70710678, 0.0], [0.66666667, 0.66666667, 0.33333333]],
-            dtype=config.floatX,
-        )
+        if upper:
+            # Not the transpose of the lower factor: the spiral fill order
+            # differs between the upper and lower cases.
+            x_constrained = np.array(
+                [
+                    [0.33333333, 0.66666667, 0.66666667],
+                    [0.0, 0.70710678, 0.70710678],
+                    [0.0, 0.0, 1.0],
+                ],
+                dtype=config.floatX,
+            )
+        else:
+            x_constrained = np.array(
+                [
+                    [1.0, 0.0, 0.0],
+                    [0.70710678, 0.70710678, 0.0],
+                    [0.66666667, 0.66666667, 0.33333333],
+                ],
+                dtype=config.floatX,
+            )
         return x_unconstrained, x_constrained
 
     @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
@@ -737,9 +753,10 @@ class TestLJKCholeskyCorrTransform:
             x_unconstrained,
         )
 
-    def test_forward(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
-        x_unconstrained, x_constrained = self._get_test_values()
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_forward(self, upper):
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+        x_unconstrained, x_constrained = self._get_test_values(upper=upper)
 
         np.testing.assert_allclose(
             transform.forward(x_constrained).eval(),
@@ -747,9 +764,10 @@ class TestLJKCholeskyCorrTransform:
             atol=1e-6,
         )
 
-    def test_backward(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
-        x_unconstrained, x_constrained = self._get_test_values()
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_backward(self, upper):
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+        x_unconstrained, x_constrained = self._get_test_values(upper=upper)
 
         np.testing.assert_allclose(
             transform.backward(x_unconstrained).eval(),
@@ -757,9 +775,24 @@ class TestLJKCholeskyCorrTransform:
             atol=1e-6,
         )
 
-    def test_transform_round_trip(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
-        x_unconstrained, x_constrained = self._get_test_values()
+    def test_backward_upper_returns_upper_triangular_factor(self):
+        # Regression test for #8555: upper=True used to return a lower-triangular
+        # factor with the correlations in the strictly lower part.
+        transform = tr.CholeskyCorrTransform(n=3, upper=True)
+        factor = transform.backward(np.array([0.2, -0.4, 0.8])).eval()
+
+        assert np.allclose(factor[np.tril_indices(3, k=-1)], 0.0)
+        assert not np.allclose(factor[np.triu_indices(3, k=1)], 0.0)
+        np.testing.assert_allclose(
+            factor[np.triu_indices(3, k=1)],
+            [0.18257419, -0.36514837, 0.62469505],
+            atol=1e-6,
+        )
+
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_transform_round_trip(self, upper):
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+        x_unconstrained, x_constrained = self._get_test_values(upper=upper)
 
         constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
         unconstrained_reconstructed = transform.forward(transform.backward(x_unconstrained)).eval()
@@ -767,15 +800,17 @@ class TestLJKCholeskyCorrTransform:
         np.testing.assert_allclose(x_unconstrained, unconstrained_reconstructed, atol=1e-6)
         np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
 
-    def test_log_jac_det(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
-        x_unconstrained, _x_constrained = self._get_test_values()
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_log_jac_det(self, upper):
+        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+        x_unconstrained, _x_constrained = self._get_test_values(upper=upper)
 
         computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
 
         x = pt.tensor("x", shape=(3,))
-        lower_tri_vec = transform.backward(x)[pt.tril_indices(x.shape[0], k=-1)].ravel()
-        jac = pt.jacobian(lower_tri_vec, x, vectorize=True)
+        indices = pt.triu_indices(3, k=1) if upper else pt.tril_indices(3, k=-1)
+        tri_vec = transform.backward(x)[indices].ravel()
+        jac = pt.jacobian(tri_vec, x, vectorize=True)
         _, autodiff_log_jac_det = pt.linalg.slogdet(jac)
 
         np.testing.assert_allclose(
@@ -783,12 +818,13 @@ class TestLJKCholeskyCorrTransform:
         )
 
     @pytest.mark.parametrize("n", [3, 5, 10])
-    def test_backward_produces_valid_cholesky_corr(self, n):
+    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
+    def test_backward_produces_valid_cholesky_corr(self, n, upper):
         rng = np.random.default_rng()
         n_samples = 5
         n_tril = n * (n - 1) // 2
 
-        transform = tr.CholeskyCorrTransform(n=n, upper=False)
+        transform = tr.CholeskyCorrTransform(n=n, upper=upper)
         x_unconstrained = rng.normal(size=(n_samples, n_tril))
 
         chol_L = transform.backward(x_unconstrained).eval()

@@ -361,7 +361,12 @@ class CholeskyCorrTransform(Transform):
         unconstrained_matrix = chol_corr_matrix / diag
 
         # Remove the first row and last column before inverting the fill_triangular_spiral
-        # transformation.
+        # transformation (lower case), or the last row and first column (upper case),
+        # to recover the (n - 1) x (n - 1) filled block.
+        if self.upper:
+            return self._inverse_fill_triangular_spiral(
+                unconstrained_matrix[..., :-1, 1:], unit_diag=True
+            )
         return self._inverse_fill_triangular_spiral(
             unconstrained_matrix[..., 1:, :-1], unit_diag=True
         )
@@ -385,9 +390,15 @@ class CholeskyCorrTransform(Transform):
         unconstrained_vector = pt.as_tensor(unconstrained_vector)
         chol_corr_matrix = self._fill_triangular_spiral(unconstrained_vector, unit_diag=True)
 
-        # Pad zeros on the top row and right column.
+        # Pad zeros to embed the (n - 1) x (n - 1) filled block into an n x n
+        # matrix: the lower-triangular block sits at the bottom left (pad the
+        # top row and right column), the upper-triangular block at the top
+        # right (pad the bottom row and left column).
         ndim = chol_corr_matrix.ndim
-        paddings = [*([(0, 0)] * (ndim - 2)), [1, 0], [0, 1]]
+        if self.upper:
+            paddings = [*([(0, 0)] * (ndim - 2)), [0, 1], [1, 0]]
+        else:
+            paddings = [*([(0, 0)] * (ndim - 2)), [1, 0], [0, 1]]
         chol_corr_matrix = pt.pad(chol_corr_matrix, paddings)
 
         diag_idx = pt.arange(self.n)
@@ -419,10 +430,17 @@ class CholeskyCorrTransform(Transform):
         n = self.n
         input_dtype = unconstrained_vector.dtype
 
+        # Each row i contributes (k_i + 2) * log(diag_i), where k_i is the
+        # number of free entries in that row: k_i = i for a lower-triangular
+        # factor and k_i = n - 1 - i for an upper-triangular one.
+        if self.upper:
+            weights = pt.arange(n + 1, 1, -1, dtype=input_dtype)
+        else:
+            weights = pt.arange(2, 2 + n, dtype=input_dtype)
+
         # TODO: tfp has a negative sign here; verify if it is needed
         return pt.sum(
-            pt.arange(2, 2 + n, dtype=input_dtype)
-            * pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)),
+            weights * pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)),
             axis=-1,
         )
 
