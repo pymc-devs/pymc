@@ -14,18 +14,18 @@ It is ordered top down: the implementation plan, what the refactor gains (includ
 
 ## Implementation order and milestones
 
-The milestones are ordered by dependency, and each one leaves `main` releasable. **`pymc.sample` stays backwards compatible throughout:** existing code keeps working unchanged at every milestone.
+The milestones are ordered by dependency, and each one leaves `main` releasable. **`pymc.sample` stays blocking and synchronous throughout, and keeps returning its results as it does today.** Most of its current arguments are absorbed by components. They keep working, with a deprecation warning, until they are removed; see [Backwards compatibility](#backwards-compatibility).
 
 | Milestone | Scope | Depends on | Exit criteria |
 |---|---|---|---|
 | **M0** Contracts | A `pymc.sampling.api` module with the dataclasses and ABCs in this document, and `API_VERSION = 1`. No behaviour change. | — | The types import, and this document matches them. |
 | **M1** Canonical loop | `InlineSampler`; the phase and schedule machinery; a `LegacyStep` adapter so every existing `BlockedStep` runs in the new loop; conformance kit v0 (contract, purity, resumability, invariance). | M0 | All existing step methods sample through `InlineSampler` via `LegacyStep`. A ported random-walk Metropolis passes the kit. |
 | **M2** HMC split *(optional)* | NUTS and HMC ported as stateless steps. `DualAveraging`, `WindowedDiag`, `WindowedFull`, … extracted from `QuadPotential*`. `InitStrategy`, plus translation of the `init=` strings. | M1 | Posterior regression tests match legacy NUTS. Every legacy `init` string maps to an `(InitStrategy, Schedule)` pair. |
-| **M3** Output and monitoring | `DrawBatch` and bundle `postprocess`. The Storage and Monitor contracts, finalized here. Storage adapters for the zarr and ndarray backends. Monitor objects: a progress bar matching today's, a logging monitor, and the adapter that keeps `callback=` working. | M1 | Steps run through `LegacyStep` produce the same `DataTree` on the old and new output paths. Today's progress bar and `callback=` behave as before. |
-| **M4** Process sampler and non-blocking API | `ProcessSampler` with free-running workers; `RunHandle` with pause, resume, stop, cancel and checkpoint; resume from storage; `start_sampling` and `sample_async`. `pymc.sample` is routed through the new stack, with its signature, defaults and blocking behaviour unchanged. | M3; M2 if included | The existing test suite passes unchanged on the new stack. A run resumed after `stop()` is bitwise identical to an uninterrupted one (same machine and backend). |
-| **M5** Plugins and external samplers | The entry-point registry with its security rules; nutpie, numpyro and blackjax as loop-level `Sampler`s; the new `sampler=` argument, with `nuts_sampler=` kept as an alias; sampler conformance checks. | M3, M4 | `nuts_sampler="nutpie"` and `sampler="nutpie"` produce the same run. The three adapters pass the kit. |
+| **M3** Output and monitoring | `DrawBatch` and bundle `postprocess`. The `Storage` and `Monitor` base classes and their contracts, finalized here. Two storages: in-memory (`DataTreeStorage`, the default) and zarr (`ZarrStorage`); both persist the sampler state. Monitors: a progress bar matching today's, a `FileMonitor` that is the default in non-interactive sessions, and the adapter that keeps `callback=` working during its deprecation. | M1 | Steps run through `LegacyStep` produce the same `DataTree` on the old and new output paths. Both storages pass the kit's storage checks, including the checkpoint round trip. Without a terminal (a batch job), the default monitor writes progress to a file. |
+| **M4** Process sampler and non-blocking API | `ProcessSampler` with free-running workers; `RunHandle` with pause, resume, stop, cancel and checkpoint; resume from storage, including after a crash; `start_sampling` and `sample_async`. `pymc.sample` is routed through the new stack: still blocking, still returning a `DataTree`, with the superseded arguments translated under a deprecation warning. | M3; M2 if included | The test suite passes on the new stack. With legacy steps and the same seed, the new stack reproduces today's draws. A run resumed after `stop()`, or after its process was killed, is bitwise identical to an uninterrupted one (same machine and backend). |
+| **M5** Plugins and external samplers | The entry-point registry with its security rules; adapters for nutpie, numpyro and blackjax, each providing its library's `Step`s and `Sampler`; `nuts_sampler=` deprecated in favour of `sampler=`; sampler conformance checks. | M3, M4 | The deprecated `nuts_sampler="nutpie"` and `sampler="nutpie"` produce the same run. The three adapters pass the kit. |
 | **M6** Population tier | `Comm` (inline and process), consistent cuts, SMC, ChEES, and DEMetropolis moved off `PopulationStepper`. | M4 | SMC and DEMetropolis results match legacy. Runs with 1, 2 and 3 shards agree. |
-| *Not included, but made possible for the future* | A thread-based sampler (free-threaded Python); loops lowered to JAX or numba; mixing chain and population steps in one compound. | — | — |
+| *Not included, but made possible for the future* | A thread-based sampler (free-threaded Python); loops lowered to JAX or numba; mixing chain and population steps in one compound; steps that change the model during a run; automatic, model-tuned step assignment. | — | — |
 
 **If M2 is left out**, NUTS and HMC keep their adaptation inside `QuadPotential*` and run through `LegacyStep`. `LegacyStep` maps the end of the warmup phase to today's `stop_tuning()`. The `init=` strings keep going through today's `init_nuts`. Everything else still works, because M3–M6 don't depend on M2. What waits for M2 is composable adaptation for HMC: custom schedules and adapters, and `InitStrategy` objects passed to `init=`.
 
@@ -120,7 +120,7 @@ In the new design, initialization strategies, adapters and phases are separate o
 - an adapter reads a signal the step doesn't emit.
 - adaptation is left running during recorded draws without a validity guarantee.
 
-### 3. Validated step arguments
+### 3. Validated arguments
 
 Each step declares:
 
@@ -129,15 +129,17 @@ Each step declares:
 - the parameters it exposes for tuning.
 - the space it works in: transformed or not, gradient-based or not, continuous or discrete.
 
+Steps and samplers take their configuration as typed constructor arguments, and **a setting that the chosen step or sampler can't use raises**. It is never ignored, and never only warned about. Examples: `cores=4` with `InlineSampler`, a custom schedule with a sampler that runs its own warmup, `backend="jax"` with a sampler that only compiles with numba.
+
 A mismatch is an error at setup, not NaNs or divergences halfway through a run.
 
-### 4. A `pymc.sample` that stops growing, without breaking anyone
+### 4. A `pymc.sample` that stops growing
 
-Every existing argument keeps working, with the same defaults and the same results. New functionality arrives as components (`step`, `init`, `schedule`, `sampler`, `storage`, `monitor`) instead of more keyword arguments, and the existing arguments are translated into those components internally. Advanced users get the full power of the components. The plan is to eventually remove older arguments through deprecation and deletion cycles.
+New functionality arrives as components (`step`, `init`, `schedule`, `sampler`, `storage`, `monitor`) instead of more keyword arguments. The existing arguments that a component supersedes are deprecated: during the deprecation period they are translated into components with a warning naming the replacement, and then they are removed. What stays is a small set of settings that every step and sampler shares, such as `draws`, `chains` and `random_seed`.
 
-### 5. Non-blocking sampling, with `pymc.sample` unchanged
+### 5. Non-blocking sampling, with `pymc.sample` still blocking
 
-`pymc.sample` keeps its current behaviour: it blocks until sampling finishes and returns the same result as today.
+`pymc.sample` keeps its current behaviour: it blocks until sampling finishes and returns the same kind of result as today, a `DataTree`.
 
 The non-blocking alternative is `start_sampling`. It takes the same arguments and immediately returns a `RunHandle`, which offers progress, pause, resume, graceful stop, cancel and checkpoint. `sample_async` awaits the same handle.
 
@@ -145,9 +147,9 @@ One handle type covers both PyMC's samplers and external ones, and each sampler 
 
 ### 6. Better monitoring, and resumable sampling
 
-Step states are explicit, serializable and self-contained, RNG included, so storage can checkpoint a run and resume it later.
+Step states are explicit, serializable and self-contained, RNG included. Every storage persists them, so a run can be resumed later: after a deliberate stop, from a returned `DataTree`, or after a crash, from the last checkpoint in durable storage.
 
-Monitors receive typed events and declared statistics instead of per-step callbacks. Progress display, logging and early-stopping rules (for example, stop at an ESS target) all become pluggable.
+Monitors receive typed events and declared statistics instead of per-step callbacks. Progress display, logging and early-stopping rules (for example, stop at an ESS target) all become pluggable. In a non-interactive session, such as a batch job, the default monitor writes progress to a file instead of drawing a progress bar nobody sees.
 
 ### 7. Cross-chain methods as first-class citizens
 
@@ -158,6 +160,8 @@ ChEES-style pooled adaptation, SMC, ensemble samplers and tempering share one po
 - Thread-based samplers. v1 parallelism is process-based; see [Threads: not supported in v1](#threads-not-supported-in-v1).
 - Compound steps that mix chain-level and population-level steps.
 - Loops lowered to JAX or numba. The design leaves room for them; see the last section.
+- Steps that change the model during a run. The contracts don't rule them out; see [Models that change during a run](#models-that-change-during-a-run).
+- **Automatic, model-tuned step assignment.** This would be an expert system that recognizes patterns in a model (conjugate priors, rewritable structure, blocks with a specialized Gibbs update) and builds a step tuned to that model. Users compose steps by hand, as they do today. Such a system would sit where `assign_steps` sits and return an ordinary `CompoundStep`, so nothing downstream would change.
 
 ## How the pieces fit
 
@@ -166,7 +170,7 @@ ChEES-style pooled adaptation, SMC, ensemble samplers and tempering share one po
                                 │  pymc.sample (blocking) / start_sampling / sample_async
                                 ▼
 ┌──────────────────────── setup, in the calling process ────────────────────────┐
-│ existing arguments ──► components (Step, InitStrategy, Schedule, Sampler, ...) │
+│ arguments ──► components (Step, InitStrategy, Schedule, Sampler, Storage, ...) │
 │ Model ──model_transform──► Step.Bundle.build ──► CompiledBundle (+ModelSpace)  │
 │ InitStrategy ──► starting positions + Approximation (the "hint")               │
 │ Step.default_params(bundle, hint) ──► one StepState per chain                  │
@@ -194,18 +198,28 @@ Sampler.start(spec, storage, monitor) ──► RunHandle  (progress, pause, sto
 | `Sampler` | Runs the loop: inline, in processes, or inside an external library | PyMC; extension authors |
 | `RunHandle` | The user's view of a running sampler | sampler |
 | `DrawBatch` | The common output format every sampler emits | sampler |
-| `Storage`, `Monitor` | Where draws go; how progress is reported | PyMC, users |
+| `Storage`, `Monitor` | Where draws and checkpoints go; how progress is reported | PyMC, users |
 
 ## `pymc.sample`
 
 ### Backwards compatibility
 
-- `pymc.sample` keeps its full current signature, its defaults and its return types: a `DataTree`, or a `MultiTrace` with `return_inferencedata=False`. It blocks until sampling finishes, as today.
-- **New arguments are added alongside the existing ones:** `sampler`, `schedule`, `storage`, `monitor` and `model_transform`. Two existing arguments also accept the new component types: `step` takes a `Step`, and `init` takes an `InitStrategy`.
+**What stays the same**
+
+- **`pymc.sample` is blocking and synchronous.** It returns when sampling has finished, with no event loop or handle involved, and Ctrl+C stops the run as it does today.
+- **It returns the same kind of result as today:** a `DataTree`, produced by the default storage. Whether it should instead return the run's `Storage` object, which converts to a `DataTree`, is decided when storage is prototyped in M3 (see [Open questions](#open-questions)). Either way, every storage subclasses one `Storage` base class and meets one contract, so code that consumes the result doesn't depend on which storage produced it.
+
+**What changes**
+
+- **Arguments that a component supersedes are deprecated.** Examples: `nuts_sampler` (now `sampler`), `trace` and `idata_kwargs` (now `storage`), `callback` (now `monitor`), and step keyword arguments such as `target_accept` (now the step's constructor). [What happens to each existing argument](#what-happens-to-each-existing-argument) lists them all.
+- **During the deprecation period**, one translation function turns them into components and emits a `FutureWarning` naming the replacement. After that they are removed.
+- **`return_inferencedata=False` and `MultiTrace` go away** together with the arguments that select them.
+
+**What is checked**
+
 - **Adding the new names can't break existing code.** Today an unrecognised keyword ends up in `step_kwargs`, and `assign_step_methods` raises `ValueError` for it (`pymc/sampling/mcmc.py:239-250`). So no working code passes any of the new names.
-- **Every call goes through one translation function**, which turns the arguments into components and then follows the same path as `start_sampling`.
-- **Disagreement is an error.** Passing an existing argument together with the component that supersedes it fails when they disagree, for example `cores=4` with `sampler=ProcessSampler(cores=2)`.
-- **No deprecations are planned as part of this work.** Whether any argument should be deprecated later is listed under open questions.
+- **Disagreement is an error.** Passing an argument together with the component that supersedes it fails when they disagree, for example `cores=4` with `sampler=ProcessSampler(cores=2)`.
+- **A setting the chosen step or sampler can't use raises** (see [Validated arguments](#3-validated-arguments)). The translation function decides once which component each setting goes to, so a sampler's `check_supports` only has to reject what that sampler can't honour.
 
 ### Signature
 
@@ -213,40 +227,25 @@ Sampler.start(spec, storage, monitor) ──► RunHandle  (progress, pause, sto
 def sample(
     draws: int = 1000,
     *,
-    tune: int = 1000,
+    tune: int | None = None,                   # None → each step's default, as today
     chains: int | None = None,
-    cores: int | None = None,
+    cores: int | None = None,                  # shorthand for the default ProcessSampler(cores=...)
     random_seed: RandomState = None,
-    progressbar: bool | ProgressBarOptions = True,
-    progressbar_theme: Theme | None = default_progress_theme,
-    quiet: bool = False,
-    step: Step | BlockedStep | Sequence[Step | BlockedStep] | None = None,   # now also takes a Step
-    var_names: Sequence[str] | None = None,
-    nuts_sampler: Literal["pymc", "nutpie", "numpyro", "blackjax"] | None = None,  # alias for sampler=
-    initvals: StartDict | Sequence[StartDict | None] | None = None,
-    init: str | InitStrategy = "auto",                                        # now also takes an InitStrategy
-    jitter_max_retries: int = 10,
-    n_init: int = 200_000,
-    trace: TraceOrBackend | None = None,
-    discard_tuned_samples: bool = True,
-    compute_convergence_checks: bool = True,
-    keep_warning_stat: bool = False,
-    return_inferencedata: bool = True,
-    idata_kwargs: dict[str, Any] | None = None,
-    nuts_sampler_kwargs: dict[str, Any] | None = None,
-    callback=None,
-    mp_ctx=None,
+    progressbar: bool = True,                  # shorthand: False selects a silent monitor
     model: Model | None = None,
-    blas_cores: int | None | Literal["auto"] = "auto",
-    compile_kwargs: dict | None = None,
-    # new
+    step: Step | BlockedStep | Sequence[Step | BlockedStep] | None = None,  # legacy steps run via LegacyStep
     sampler: Sampler | str | None = None,
+    initvals: StartDict | Sequence[StartDict | None] | None = None,
+    init: InitStrategy | None = None,          # None → step.default_init(); strings are deprecated
     schedule: Schedule | None = None,
     storage: Storage | None = None,
-    monitor: Monitor | None = None,
+    monitor: Monitor | Sequence[Monitor] | None = None,
     model_transform: Callable[[Model], Model] | None = None,
-    **kwargs,                                   # still forwarded to step methods, as today
-) -> DataTree | MultiTrace:
+    backend: str | None = None,                # PyTensor backend of the compiled bundle
+    compile_kwargs: dict | None = None,
+    **deprecated,                              # superseded arguments: translated with a FutureWarning;
+                                               # any other name raises TypeError
+) -> DataTree:                                 # or the run's Storage; decided in M3
     return start_sampling(...same arguments...).result()     # blocks; re-raises errors; Ctrl+C → stop()
 
 
@@ -254,12 +253,14 @@ def start_sampling(...same arguments...) -> RunHandle:          # the non-blocki
     ...
 
 
-async def sample_async(...same arguments...) -> DataTree | MultiTrace:
+async def sample_async(...same arguments...) -> DataTree:
     return await start_sampling(...same arguments...).wait_async()
 ```
 
 - **`sample` is exactly `start_sampling(...).result()`.** There is one implementation, so the blocking and non-blocking paths can't drift apart.
-- **`draws` and `tune` only feed `step.default_schedule(tune, draws)`.** Passing an explicit `schedule` together with non-default `draws` or `tune` is an error; they are never silently ignored.
+- **`draws` and `tune` only feed `step.default_schedule(tune, draws)`.** `tune=None` resolves to each step's own default, as `get_default_tune_steps` does today (`pymc/sampling/mcmc.py:128`). Passing an explicit `schedule` together with `draws` or `tune` is an error; they are never silently ignored.
+- **`backend` and `compile_kwargs` become compile options once**, through `resolve_backend_compile_kwargs` (`pymc/pytensorf.py:918`) as today, and go to `Bundle.build`. An external sampler that compiles the model itself declares which backends it accepts, and raises for any other.
+- **`cores` and `progressbar` are kept as shorthands** because nearly every call uses them. Whether they stay permanently is an open question.
 
 ### Body
 
@@ -268,7 +269,8 @@ def start_sampling(draws=1000, *, model=None, step=None, sampler=None, init="aut
                    storage=None, monitor=None, model_transform=None, **arguments) -> RunHandle:
     model = modelcontext(model)
 
-    # 0. Translate the existing arguments into components; raise if they disagree with explicit ones
+    # 0. Turn shorthands and deprecated arguments (with a FutureWarning) into components;
+    #    raise on conflicts with explicit components
     c = components_from_arguments(model, draws=draws, step=step, sampler=sampler, init=init,
                                   schedule=schedule, storage=storage, monitor=monitor, **arguments)
 
@@ -285,27 +287,26 @@ def start_sampling(draws=1000, *, model=None, step=None, sampler=None, init="aut
     if step is None:
         step = sampler.default_step(model) if sampler else assign_steps(model)     # competence
     sampler = sampler or step.default_sampler()
-    sampler.check_supports(step)
+    sampler.check_supports(step, c.settings)      # raises for a step or a shared setting it can't use
 
     # 3. Compile once, in this process
     bundle = step.Bundle.build(model, step.vars, transform=model_transform,
-                              compile_kwargs=c.compile_kwargs)
+                              compile_kwargs=c.compile_kwargs)   # backend= already folded in
     check_space(step.requirements, bundle.space)
 
     # 4. Initialization
     chains = c.chains or sampler.default_chains()
-    seeds = np.random.SeedSequence(c.random_seed).spawn(chains + 1)  # one stream per chain, one for init
+    rngs = get_random_generator(c.random_seed).spawn(chains)   # one stream per chain, derived as today
     init = c.init or step.default_init()
     init_bundle = bundle if isinstance(bundle, init.Bundle) else init.Bundle.build(model, transform=model_transform)
-    init_result = init(init_bundle, chains, rng=np.random.default_rng(seeds[-1]))
+    init_result = init(init_bundle, chains, rngs=rngs, initvals=c.initvals)
     params = step.default_params(bundle, init_result.approximation)
-    states = {ch: step.State.new(position=init_result.positions[ch], params=params,
-                                rng=np.random.default_rng(seeds[ch]))
+    states = {ch: step.State.new(position=init_result.positions[ch], params=params, rng=rngs[ch])
               for ch in range(chains)}
 
     # 5. Schedule
     schedule = c.schedule or step.default_schedule(tune=c.tune, draws=c.draws)
-    check_schedule(schedule, step, sampler.capabilities)  # targets, signals, validity
+    check_schedule(schedule, step, init, sampler.capabilities)  # targets, signals, validity, hints
 
     # 6. Output, then start
     storage = c.storage or default_storage(model, bundle.space)
@@ -316,30 +317,39 @@ def start_sampling(draws=1000, *, model=None, step=None, sampler=None, init="aut
     return sampler.start(spec, storage, monitor)
 ```
 
-The flow is the same for PyMC's steps and for external libraries. An external loop-level library provides a *descriptor step*, such as `NutpieNUTS(target_accept=0.9)`. It declares a bundle type and a default schedule, but only its own sampler can run it; see [Plugins: external steps and samplers](#plugins-external-steps-and-samplers). So `pm.sample(step=NutpieNUTS())`, `pm.sample(sampler="nutpie")` and today's `pm.sample(nuts_sampler="nutpie")` all resolve to the same run.
+**Seeds are derived exactly as today** (`pymc/sampling/mcmc.py:921`). Initialization takes its seeds from each chain's generator before the chain starts, and the chain then continues on that same generator. Strategies that need a single stream for all chains, such as ADVI, use the first chain's generator, as `init_nuts` does today. This is what lets legacy steps on the new stack reproduce today's draws for the same seed, which is an exit criterion of M4.
 
-### How existing arguments are translated
+The flow is the same for PyMC's steps and for external libraries. An external library provides its own `Step`s and its own `Sampler`, under the same two contracts, and keeps them separate: the step carries the algorithm's settings, and the sampler the loop's. For example, `NutpieNUTS(target_accept=0.9)` is a step that only `NutpieSampler` can run, so its `default_sampler()` returns a `NutpieSampler`; see [Plugins: external steps and samplers](#plugins-external-steps-and-samplers). So `pm.sample(step=NutpieNUTS())`, `pm.sample(sampler="nutpie")` and the deprecated `pm.sample(nuts_sampler="nutpie")` all resolve to the same run.
 
-| Existing argument | Translated into |
-|---|---|
-| `draws`, `tune` | the default schedule, `step.default_schedule(tune, draws)` |
-| `chains`, `random_seed`, `compile_kwargs` | used as today |
-| `step`, `**kwargs` (`target_accept`, `nuts={...}`) | the `Step`; legacy `BlockedStep`s are wrapped in `LegacyStep` |
-| `nuts_sampler`, `nuts_sampler_kwargs` | `sampler="nutpie"`, i.e. `NutpieSampler(**nuts_sampler_kwargs)` |
-| `init`, `n_init`, `jitter_max_retries`, `initvals` | an `InitStrategy` plus the matching schedule (table below) |
-| `cores`, `mp_ctx`, `blas_cores` | `ProcessSampler(cores=..., mp_ctx=..., blas_cores=...)` |
-| `progressbar`, `progressbar_theme`, `quiet`, `callback` | the default monitor |
-| `trace`, `var_names`, `discard_tuned_samples`, `keep_warning_stat`, `return_inferencedata`, `idata_kwargs` | the default storage |
-| `compute_convergence_checks` | a post-run report on the monitor |
+### What happens to each existing argument
 
-With M2, each `init` string becomes an `(InitStrategy, Schedule)` pair, as in the table below. NUTS always also gets `DualAveraging` for the step size. Without M2, the strings keep going through today's `init_nuts`.
+| Existing argument | Status | Becomes |
+|---|---|---|
+| `draws`, `tune` | kept | the default schedule, `step.default_schedule(tune, draws)` |
+| `chains`, `random_seed`, `model`, `initvals`, `backend`, `compile_kwargs` | kept | settings shared by every step and sampler |
+| `step` | kept | the `Step`; legacy `BlockedStep`s are wrapped in `LegacyStep` |
+| `cores` | kept, as a shorthand | `ProcessSampler(cores=...)` by default; any other sampler must declare that it honours `cores`, or it raises |
+| `progressbar` | kept, as a shorthand | `False` selects a silent monitor |
+| `init` | kept; strings deprecated | an `InitStrategy`; a string becomes an `(InitStrategy, Schedule)` pair (table below) |
+| `**kwargs` for steps (`target_accept`, `nuts={...}`) | deprecated | the step's constructor: `step=pm.NUTS(target_accept=0.9)` |
+| `n_init`, `jitter_max_retries` | deprecated | the init strategy's arguments: `ADVI(n=...)`, `Jitter(max_retries=...)` |
+| `nuts_sampler`, `nuts_sampler_kwargs` | deprecated | `sampler="nutpie"`; the adapter splits `nuts_sampler_kwargs` between its step (`NutpieNUTS(...)`) and its sampler (`NutpieSampler(...)`) |
+| `mp_ctx`, `blas_cores` | deprecated | `ProcessSampler(mp_ctx=..., blas_cores=...)` |
+| `progressbar_theme`, `quiet`, `callback` | deprecated | monitors: `ProgressBarMonitor(theme=...)`, `CallbackMonitor(fn)`, … |
+| `compute_convergence_checks` | deprecated | whether the monitors' final report includes convergence checks |
+| `trace`, `var_names`, `discard_tuned_samples`, `keep_warning_stat`, `idata_kwargs` | deprecated | the storage: `ZarrStorage(...)` in place of `trace=ZarrTrace(...)`, otherwise `DataTreeStorage(var_names=..., ...)` |
+| `return_inferencedata` | deprecated, then removed along with `MultiTrace` | — |
+
+The translation has a few known pitfalls, each of which gets its own test: array-like `random_seed` values, `tune=None` resolving to each step's default, and forwarding `backend` to external samplers.
+
+With M2, each deprecated `init` string becomes an `(InitStrategy, Schedule)` pair, as in the table below. NUTS always also gets `DualAveraging` for the step size. Without M2, the strings keep going through today's `init_nuts` until they are removed.
 
 | `init=` today | `InitStrategy` | Metric adaptation in the tuning phase |
 |---|---|---|
 | `"adapt_diag"` | `InitialPoint()` | `WindowedDiag()` (today's foreground/background window scheme) |
 | `"jitter+adapt_diag"` (`"auto"`) | `Jitter(max_retries=10)` | `WindowedDiag()` |
 | `"jitter+adapt_diag_grad"` | `Jitter()` | `WindowedDiagGrad()` (today's `QuadPotentialDiagAdaptExp`) |
-| `"advi+adapt_diag"` | `ADVI(n=200_000)` | `WindowedDiag()`, seeded from the ADVI hint |
+| `"advi+adapt_diag"` | `ADVI(n=200_000)` | `WindowedDiag(from_hint=True)`, seeded from the ADVI approximation |
 | `"advi"`, `"advi_map"` | `ADVI()`, `MAP() >> ADVI()` | none: a fixed diagonal metric from the hint |
 | `"map"`, `"jitter+map"` | `MAP()`, `MAP(jitter=True)` | none: a fixed dense metric from the Hessian at the MAP |
 | `"adapt_full"`, `"jitter+adapt_full"` | `InitialPoint()`, `Jitter()` | `WindowedFull()` |
@@ -347,11 +357,11 @@ With M2, each `init` string becomes an `(InitStrategy, Schedule)` pair, as in th
 ### Blocking, non-blocking and resuming
 
 ```python
-# Unchanged: blocks until done and returns the same result as today
-idata = pm.sample(1000, tune=1000, chains=4, target_accept=0.9)
+# As today: blocks until done and returns a DataTree
+idata = pm.sample(1000, tune=1000, chains=4, step=pm.NUTS(target_accept=0.9))
 
 # The non-blocking alternative: same arguments, returns immediately
-handle = pm.start_sampling(1000, chains=4, storage=ZarrStorage("run.zarr"))
+handle = pm.start_sampling(1000, chains=4, storage=ZarrStorage("run.zarr", checkpoint_every=100))
 handle.progress()        # per chain: iteration, phase, selected stats
 handle.pause(); handle.resume()
 handle.stop()            # graceful: stops at a consistent point, keeps draws, saves states
@@ -360,8 +370,12 @@ idata = handle.result()  # blocks; re-raises worker errors
 # From a coroutine, e.g. in a Jupyter cell or a web server
 idata = await pm.sample_async(1000, chains=4)
 
-# Later, possibly in a new Python process: continue where the run stopped
+# Later, possibly in a new Python process, even after a crash: continue from the last checkpoint
 idata = pm.sample(storage=ZarrStorage("run.zarr"))
+
+# The returned DataTree carries the sampler state too, so a stopped run continues from its result,
+# also after it was saved to disk and loaded again
+idata = pm.sample(storage=DataTreeStorage.from_datatree(idata))
 ```
 
 ## Steps
@@ -432,7 +446,7 @@ Third-party code, such as pymc-extras and user-defined steps, subclasses these c
 
 A parallel hierarchy avoids both problems:
 
-- **Existing steps keep working unchanged** through `LegacyStep` (M1), which meets the backwards-compatibility requirement.
+- **Existing steps keep working unchanged** through `LegacyStep` (M1), including user-defined and pymc-extras steps, while they are ported.
 - **Steps are ported one at a time:** random-walk Metropolis in M1, then NUTS and HMC in the optional M2.
 - **The numerical cores are reused, not rewritten:** proposal distributions, `metrop_select`, the leapfrog integrator and NUTS tree building, the slice logic, `competence`, and the `stats_dtypes_shapes` declarations, which become `stats`. The one structural change inside them is that the integrator receives the metric as a parameter instead of holding a stateful potential.
 - **The old classes are retired on their own schedule**, once their replacements exist.
@@ -492,11 +506,14 @@ class Requirements:
     space: Literal["unconstrained", "any"] = "any"
     gradient: bool = False
     values: Literal["continuous", "discrete", "any"] = "any"
+    sampler: str | None = None          # set when only one sampler can run this step, e.g. "nutpie"
 ```
 
 **Rules**
 
 1. The step object holds configuration only (`target_accept`, `max_treedepth`, …). It never caches anything computed during sampling. It must be picklable and cheap to copy. That makes it a coordinator, not a container of state.
+   - Configuration is typed: one constructor argument per setting, named as the algorithm's library names it.
+   - A setting, or a combination of settings, that the step can't use raises in the constructor.
 2. `transition` is a pure function of `(state, bundle)`; the one exception is advancing the state's RNG (see [RNG and ownership](#rng-and-ownership)).
 3. **A step doesn't know whether it is tuning.** It only sees `state.params`. Whether those params are still being adapted is the adapters' business, and whether draws count as warmup is the phase's.
 4. `init` fills the caches derived from the position (log density, gradient). It is idempotent, so it serves fresh and resumed states alike.
@@ -634,7 +651,7 @@ class StepState(Generic[ParamsT]):
 @dataclass(frozen=True)
 class HMCParams:
     step_size: float
-    metric: Metric                          # DiagMetric | DenseMetric | LowRankMetric
+    metric: Metric                          # an open protocol; see "Parameters and signals"
 
 
 @dataclass(frozen=True)
@@ -667,11 +684,15 @@ Independent streams per chain plus one process per chain already give correct pa
 
 ### Serialization, checkpoints and resume
 
-- Every state must round-trip through `pickle`. Storage persists states at checkpoints; the `_sampling_state` group of `ZarrTrace` already exists for this.
+- Every state must round-trip through `pickle`.
 - A checkpoint holds three things: the step states, the position in the schedule (phase index and progress within the phase), and the adapter states. Without the adapter states, a run stopped during warmup couldn't resume.
-- Resuming means loading a checkpoint, building a fresh bundle, and calling `init` on each state.
-- The bundle fingerprint stored in the state detects a changed model or changed data. In that case resume fails, unless the user explicitly accepts the change.
+- **Every storage persists checkpoints.** This is part of the `Storage` contract, not a feature of some backends (see [Storage](#storage)).
+  - Durable storage, such as zarr, writes them as the run goes, so a run can be resumed after a crash, from its last checkpoint. The `_sampling_state` group of `ZarrTrace` already exists for this.
+  - In-memory storage keeps the latest checkpoint and puts it in a group of the returned `DataTree`, so a stopped run can be resumed from its result, including after the result has been saved to disk.
+- Resuming means loading a checkpoint, discarding any draws stored after it, building a fresh bundle, and calling `init` on each state. Because the RNG is part of the state, the resumed draws are the ones an uninterrupted run would have produced.
+- The bundle fingerprint stored in the state detects a changed model or changed data. In that case resume fails, unless the user explicitly accepts the change. The fingerprint is compared only when resuming, never during a run.
 - For population steps, the checkpoint holds the whole `PopulationState`, captured at a consistent cut.
+- **Loading a checkpoint unpickles it**, so resuming from a file runs code from that file. Only files from trusted sources should be resumed. A structured encoding (arrays, plus JSON for parameters and the RNG state) can later replace pickle for PyMC's own states.
 
 ## Compiled bundles
 
@@ -691,7 +712,7 @@ class CompiledBundle(ABC):
               transform: Callable[[Model], Model] | None = None,
               compile_kwargs: dict | None = None) -> Self: ...
 
-    def postprocess(self, positions: np.ndarray) -> dict[str, np.ndarray]: ...  # unravel, untransform, deterministics
+    def postprocess(self, batch: DrawBatch) -> DrawBatch: ...   # unravel, untransform, deterministics
     def clone(self) -> Self: ...          # independent function storage; default: Function.copy() on every field
 ```
 
@@ -744,8 +765,8 @@ What this enables:
 
 ### Built once, in the calling process
 
-- `build` runs in the calling process. It applies `model_transform` first, so model mutation never happens inside steps or workers. Examples: `remove_value_transforms`, `do`, `observe`, freezing data, reparameterizations.
-- The backend (C, numba, JAX) is chosen through `compile_kwargs` at this point. Steps don't take a `backend` argument.
+- `build` runs in the calling process. It applies `model_transform` first, so static changes to the model happen once, before any worker starts. Examples: `remove_value_transforms`, `do`, `observe`, freezing data, reparameterizations.
+- The PyTensor backend (C, numba, JAX) is chosen at this point, through `pymc.sample`'s `backend=` or `compile_kwargs`. PyMC's steps don't take a `backend` argument.
 - Each bundle is pickled once per worker. Unpickling rebuilds the compiled functions, at a cost that depends on the backend:
   - C loads from its compile cache, which is cheap.
   - numba may re-JIT unless its cache is warm.
@@ -756,9 +777,26 @@ What this enables:
 ### Rules for the callables' arguments
 
 1. Every per-call input is an explicit argument: the position, other blocks' values (`cond`), β, a batch of particles. This replaces how `ArrayStepShared` conditions on other blocks today, through `shared[var].set_value(...)`, which is hidden mutable state.
-2. Model data is fixed for the lifetime of a bundle. Changing data means building a new bundle; the fingerprint changes, and `init` recomputes the caches.
+2. In PyMC's bundles, model data is fixed for the lifetime of the bundle. Changing data means building a new bundle; the fingerprint changes, and `init` recomputes the caches. This is a property of PyMC's bundles, not a requirement of the contract; see the next section.
 3. Randomness enters only through the state's RNG.
 4. Callables never cross a process boundary on every step. The bundle travels once; states travel at the start and at checkpoints; each step sends only small records.
+
+### Models that change during a run
+
+No step or sampler that PyMC ships changes the model while it samples. Trans-dimensional samplers (reversible jump, birth–death), samplers that add or remove mixture components, and samplers that rewrite the model as they learn about it are not planned. **The contracts must not rule them out**, though, so that someone else can build one without fighting the framework.
+
+Such a step stays stateless, as follows:
+
+- **The bundle may hold the `pymc.Model` itself** and compile from it on demand, keeping compiled functions in a cache keyed by the model's current structure.
+- **What changes goes in the state**: which components exist, the current dimension. It reaches the bundle's callables as an explicit argument, just as `cond` and β do.
+- The state remains the only thing that evolves. Memoized compilation inside the bundle can't be observed from outside it, so `transition` is still a pure function of `(state, bundle)`.
+
+The contracts promise the following, so that such an extension keeps working:
+
+- **Samplers treat a bundle as opaque**, apart from `space`, `fingerprint`, `postprocess`, `clone` and pickling. They never assume that `functions` is fixed, or that it was compiled before the run started.
+- **The fingerprint identifies the bundle's starting model**, and is compared only on resume.
+- **Shapes may vary.** A state's `position` has no fixed length in the contract; `ModelSpace` describes the starting point; `Stat` shapes can have `None` dimensions. `postprocess` receives the whole `DrawBatch`, so a bundle can read the current structure from the batch's stats.
+- **A storage that can't store varying shapes raises** (`StorageCapabilities.variable_shapes`), instead of truncating or padding.
 
 ### Threads: not supported in v1
 
@@ -785,16 +823,20 @@ class InitResult:
 
 class InitStrategy(ABC):
     Bundle: ClassVar[type[CompiledBundle]]
+    provides_approximation: ClassVar[bool] = False      # True for ADVI, Pathfinder, MAP (Laplace)
 
-    def __call__(self, bundle, chains: int, rng: np.random.Generator,
+    def __call__(self, bundle, chains: int, rngs: Sequence[np.random.Generator],
+                 initvals: StartDict | Sequence[StartDict | None] | None = None,
                  previous: InitResult | None = None) -> InitResult: ...
 
     def __rshift__(self, other: "InitStrategy") -> "InitStrategy": ...    # pipeline
 ```
 
-- **Strategies:** `InitialPoint()`, `InitialValues(initvals)`, `Jitter(scale, max_retries)`, `MAP()`, `ADVI(n)`, `Pathfinder(num_paths)`, or a short run of another step.
+- **Strategies:** `InitialPoint()`, `Jitter(scale, max_retries)`, `MAP()`, `ADVI(n)`, `Pathfinder(num_paths)`, or a short run of another step. Each starts from `initvals` where they are given, and from the model's initial point otherwise.
 - **Pipelines:** in `Pathfinder(num_paths=4) >> Jitter(0.1)`, each stage receives the previous stage's result.
-- **Hand-off to adaptation:** the approximation is how initialization passes information to adaptation. `step.default_params(bundle, hint)` and `adapter.init(current, hint)` both read it. Today's `"advi+adapt_diag"` becomes `init=ADVI()` plus a metric adapter seeded from the hint.
+- **Randomness:** one generator per chain, the same ones the chains then use (see [Body](#body)).
+- **Hand-off to adaptation:** the approximation is how initialization passes information to adaptation. `step.default_params(bundle, hint)` and `adapter.init(current, hint)` both read it. Today's `"advi+adapt_diag"` becomes `init=ADVI()` plus `WindowedDiag(from_hint=True)`.
+- **Declared output:** each strategy declares whether it provides an approximation of the posterior or only starting positions. A pipeline provides one if any stage does and the later stages pass it on, as `Jitter` does. `check_schedule` uses the declaration: an adapter that needs the hint is rejected at setup when initialization can't provide one. For example, `init=Jitter()` with `WindowedDiag(from_hint=True)` fails with "Jitter provides starting points only; WindowedDiag(from_hint=True) needs an approximation, for example from ADVI(), Pathfinder() or MAP()". This follows the `returns_posterior` flag of Jesse Grabowski's [inference-configuration sketch](https://gist.github.com/jessegrabowski/9918bb7b4cd7cc6243a39183b826b71f).
 
 ## Adaptation and schedules
 
@@ -815,6 +857,15 @@ class HMCSignals:                # offered to adapters after each step; not stor
     grad: np.ndarray
 ```
 
+**`Metric` is an open protocol**, not a closed set of classes. A metric maps the integrator's coordinates `z` to the bundle's coordinates `x`. The map is linear for diagonal, dense and low-rank metrics, and nonlinear for a learned transport map, as in nutpie's normalizing-flow adaptation. A new kind of preconditioning is therefore a new `Metric` plus the `Adapter` that fits it, with no change to the step.
+
+```python
+class Metric(Protocol):
+    def forward(self, z: np.ndarray) -> tuple[np.ndarray, float]: ...         # x = T(z), and log|det ∂T/∂z|
+    def inverse(self, x: np.ndarray) -> np.ndarray: ...                       # z = T⁻¹(x)
+    def pullback(self, z: np.ndarray, grad_x: np.ndarray) -> np.ndarray: ...  # ∇z of log p(T(z)) + log|det ∂T/∂z|
+```
+
 ### Adapters
 
 ```python
@@ -822,6 +873,7 @@ class Adapter(ABC, Generic[ParamT, SignalsT]):
     target: ClassVar[str]                      # the Params field this adapter owns
     requires: ClassVar[frozenset[str]]         # the Signals fields it reads
     validity: ClassVar[Literal["warmup_only", "diminishing"]] = "warmup_only"
+    needs_hint: bool = False                   # needs an approximation from initialization
 
     def init(self, current: ParamT, hint: Approximation | None) -> AdaptState: ...
     def update(self, a: AdaptState, signals: SignalsT, comm: Comm) -> AdaptState: ...
@@ -882,14 +934,15 @@ schedule = [
 
 ### Validation
 
-`check_schedule(schedule, step, capabilities)` runs at setup and checks that:
+`check_schedule(schedule, step, init, capabilities)` runs at setup and checks that:
 
 1. every `adapter.target` is a field of `step.Params`, with a matching type;
 2. every `adapter.requires` is a subset of the fields of `step.Signals`;
 3. each phase has at most one adapter per target;
 4. every adapter in a phase with `warmup=False` declares `validity != "warmup_only"`, unless the phase sets `allow_invalid_adaptation=True`;
 5. run-scoped stop conditions are only used with samplers that can evaluate them;
-6. the sampler accepts a custom schedule at all (`capabilities.custom_schedule`). For example, a loop-level external library that runs its own warmup cannot take a user-defined schedule.
+6. the sampler accepts a custom schedule at all (`capabilities.custom_schedule`). For example, an external sampler that runs its own warmup can't take a user-defined schedule;
+7. every adapter with `needs_hint=True` runs after an init strategy that provides an approximation (`provides_approximation`).
 
 ### Stop conditions
 
@@ -909,7 +962,7 @@ class StopCondition(Protocol):
 
 ### The canonical loop
 
-This defines the reference semantics. PyMC's samplers implement this loop. An external loop-level sampler must produce the same observable behaviour: the same events, in the same order, and output in the same format.
+This defines the reference semantics. PyMC's samplers implement this loop. An external sampler that runs its own loop must produce the same observable behaviour: the same events, in the same order, and output in the same format.
 
 ```python
 def run_chain(step, bundle, state, schedule, comm, sink, hint, checkpoint=None):
@@ -942,9 +995,12 @@ class Sampler(ABC):
     name: ClassVar[str]
     capabilities: ClassVar[SamplerCapabilities]
 
+    def __init__(self, **config): ...                      # the loop's settings only; typed, immutable
     def default_step(self, model: Model) -> Step: ...
     def default_chains(self) -> int: ...
-    def check_supports(self, step: Step) -> None: ...      # raises with a clear reason
+    # Raises with a clear reason for a step it can't run, or for a shared setting it can't
+    # honour (chains, cores, backend, compile options). Nothing is silently ignored.
+    def check_supports(self, step: Step, settings: SharedSettings) -> None: ...
     def start(self, spec: RunSpec, storage: Storage, monitor: Monitor) -> RunHandle: ...
 
 
@@ -1008,7 +1064,7 @@ class RunHandle:
     def cancel(self) -> None: ...        # immediate: output so far stays valid; states from the last checkpoint
     def checkpoint(self) -> None: ...
     def add_done_callback(self, fn: Callable[["RunHandle"], None]) -> None: ...
-    def result(self, timeout: float | None = None) -> DataTree: ...   # blocks; re-raises worker errors
+    def result(self, timeout: float | None = None) -> DataTree: ...   # storage.result(); blocks; re-raises worker errors
     async def wait_async(self) -> DataTree: ...                         # asyncio.wrap_future under the hood
     def __enter__(self) -> Self: ...
     def __exit__(self, *exc) -> None: ...                               # cancels if still running
@@ -1127,56 +1183,127 @@ internal samplers ────────────► DrawBatch ──┴─
 - External libraries return whatever they like: Arrow tables, dicts of JAX arrays. Their adapter's translator converts that to a `DrawBatch`.
 - PyMC owns postprocessing (unraveling, untransforming, deterministics), so coords, dims and deterministics come out the same regardless of which sampler produced the draws.
 - Postprocessing runs wherever the batch is written, in a worker or in the calling process.
-- Internal samplers emit one batch every N draws. A loop-level library that only reports at the end emits one large batch per chain.
+- Internal samplers emit one batch every N draws. An external sampler that only reports at the end emits one large batch per chain.
 
-### Storage and monitor (sketch, parked until M3)
+### Storage
+
+Every storage subclasses one base class, so PyMC's storages and third-party ones meet the same contract, and the conformance kit checks it. The details are finalized in M3.
 
 ```python
-class Storage(Protocol):
+class Storage(ABC):
+    capabilities: ClassVar[StorageCapabilities]
+
+    @abstractmethod
     def begin(self, spec: RunSpec) -> None: ...
+    @abstractmethod
     def write(self, batch: DrawBatch) -> None: ...                   # already postprocessed
-    def save_checkpoint(self, checkpoint: Checkpoint) -> None: ...
-    def load_checkpoint(self) -> Checkpoint | None: ...
-    def finalize(self) -> DataTree: ...
+    @abstractmethod
+    def save_checkpoint(self, checkpoint: Checkpoint) -> None: ...   # required of every storage
+    @abstractmethod
+    def load_checkpoint(self) -> Checkpoint | None: ...              # None for a new run
+    @abstractmethod
+    def truncate(self, checkpoint: Checkpoint) -> None: ...          # drop draws stored after it, before resuming
+    @abstractmethod
+    def to_datatree(self) -> DataTree: ...                           # includes the latest checkpoint
+    def finalize(self, report: RunReport) -> None: ...               # flush, close, attach the run report
+    def result(self) -> DataTree:                                    # what pymc.sample returns
+        return self.to_datatree()
 
 
-class Monitor(Protocol):
-    def on_start(self, spec: RunSpec, capabilities: SamplerCapabilities) -> None: ...
-    def on_progress(self, event: ProgressEvent) -> None: ...         # chain, iteration, phase, monitored stats
-    def on_phase_end(self, chain: int, phase: Phase) -> None: ...
-    def on_warning(self, warning: SamplingWarning) -> None: ...
-    def on_finish(self, status: str, report: RunReport) -> None: ...
+@dataclass(frozen=True)
+class StorageCapabilities:
+    durable: bool              # outlives the process: needed to resume after a crash
+    variable_shapes: bool      # can store draws whose shapes change during a run
 ```
 
-The loop-level external samplers will be the stress test for both contracts. They report at a coarser granularity, they can't honour every control, and they bring their own output formats.
+| Storage | Replaces | Durable | Checkpoints |
+|---|---|---|---|
+| `DataTreeStorage` (default) | today's in-memory `NDArray` backend and `idata_kwargs` | no | the latest one, in a group of the returned `DataTree`; `DataTreeStorage.from_datatree(idata)` resumes from it |
+| `ZarrStorage(path)` | `trace=ZarrTrace(...)` | yes | written every `checkpoint_every` draws, and whenever the run stops or `RunHandle.checkpoint()` is called |
+
+- **The checkpoint interval is a storage setting**, because the cost of a checkpoint depends on where it is written. The sampler reads it and checkpoints at the next control point.
+- **What a storage can't store raises.** For example, draws whose shapes change during a run go to a storage with `variable_shapes=False`: the write fails with a clear error instead of truncating or padding the data.
+- Whether `pymc.sample` returns `result()`, a `DataTree`, or the storage object itself is an open question.
+
+### Monitors
+
+```python
+class Monitor(ABC):                  # every method is optional; the defaults do nothing
+    def on_start(self, spec: RunSpec, capabilities: SamplerCapabilities) -> None: ...
+    def on_progress(self, event: ProgressEvent) -> None: ...          # chain, iteration, phase, monitored stats
+    def on_phase_end(self, chain: int, phase: Phase) -> None: ...
+    def on_warning(self, warning: SamplingWarning) -> None: ...
+    def on_finish(self, status: str, report: RunReport) -> None: ...  # includes convergence checks
+```
+
+| Monitor | Purpose |
+|---|---|
+| `ProgressBarMonitor` | today's progress bar; the default in interactive sessions |
+| `FileMonitor(path)` | appends progress, phase ends, warnings and the final report to a log file; the default in non-interactive sessions |
+| `CallbackMonitor(fn)` | keeps `callback=` working during its deprecation |
+| `SilentMonitor` | what `progressbar=False` selects |
+
+Passing several monitors, `monitor=[ProgressBarMonitor(), FileMonitor("run.log")]`, sends every event to each of them.
+
+**Non-interactive sessions.** A batch job (SLURM, `nohup`, CI) has no terminal to draw a progress bar on, so today its progress is effectively lost. The default monitor is chosen at setup:
+
+- a `ProgressBarMonitor` when stdout is a terminal, or when the code runs in a Jupyter or IPython kernel;
+- a `FileMonitor` otherwise. Its file goes next to durable storage if there is one (`run.zarr` → `run.zarr.log`), or into the working directory, named after the run. The path is logged through the `pymc` logger when the run starts.
+
+**How `FileMonitor` writes.**
+
+- **Writes are serialized by a lock.** Events can arrive from the sampler's controller thread, from the caller's thread through the `RunHandle`, and from several runs sharing one log file. The monitor holds a `threading.Lock` around each write, plus an advisory file lock when several processes append to the same file (`fcntl.flock`, or the `filelock` package for portability).
+- **Each event is one complete line**, written in a single call and flushed immediately. Lines from different writers never interleave, and the file is up to date if the job is killed.
+- **Progress lines are rate-limited** to at most one every `interval` seconds per chain. Phase ends, warnings and the final report are always written.
+
+External samplers will be the stress test for both contracts. They report at a coarser granularity, they can't honour every control, and they bring their own output formats.
 
 ## Plugins: external steps and samplers
 
-### Two kinds of external integration
+### What an external library provides
 
-| | Implements | Runs in | Examples |
-|---|---|---|---|
-| **Step level** | `Step`, plus its `State` and `Bundle` | any PyMC sampler; composes with PyMC's steps in a compound | blackjax kernels; a nuts-rs step wrapper |
-| **Loop level** | `Sampler`, plus a descriptor step | the library's own runtime | `nutpie.sample`, numpyro's `MCMC` |
+An external library implements the same two contracts as PyMC does, and keeps them separate:
 
-A **descriptor step** such as `NutpieNUTS(target_accept=0.9)` declares a bundle type (which wraps the library's own compiled model), a default schedule, and `default_sampler()`. It cannot be stepped from Python; only its sampler runs it.
+| | Implements | Holds | Runs in | Examples |
+|---|---|---|---|---|
+| **Step** | `Step`, plus its `State` and `Bundle` | the algorithm's settings | PyMC's samplers, or only the library's own sampler | blackjax kernels; `NutpieNUTS` |
+| **Sampler** | `Sampler` | the loop's settings: workers, threads, devices | the library's own runtime | `NutpieSampler`; a `BlackjaxSampler` looping in JAX; numpyro's `MCMC` |
 
-Here is an illustrative sketch. The library calls and capability values are placeholders, not nutpie's actual API.
+- **blackjax fits both halves naturally.** Its kernels are already pure `(state, key) -> state` functions. Each one wraps as a `Step` that PyMC's samplers can run, and that composes with PyMC's steps in a compound. A `BlackjaxSampler` can also run the same steps in a compiled JAX loop (`lax.scan` over draws, `vmap` over chains).
+- **nutpie runs its whole loop in Rust**, so `NutpieNUTS` declares `Requirements(sampler="nutpie")`. Only `NutpieSampler` can run it, and PyMC's samplers reject it in `check_supports` with a clear message. If nutpie later exposes a single transition to Python, the same step can run in PyMC's samplers too, with no change for users.
+- **Settings follow the library.** Each step and sampler takes typed constructor arguments, named as its library names them. Only the settings that every step and sampler shares (`draws`, `chains`, `random_seed`, …) have one PyMC name. This is the pattern of the inference-configuration sketch credited under [Initialization](#initialization). A setting the configuration can't use raises.
+- **There is one entry point, `pymc.sample`.** A library provides a step and a sampler, not a configured object with its own `sample` method, so the same user code works with every library.
+
+Here is an illustrative sketch. The library calls, settings and capability values are placeholders, not nutpie's actual API.
 
 ```python
+class NutpieNUTS(Step[...]):
+    Bundle = NutpieBundle                    # wraps nutpie's own compiled model
+    requirements = Requirements(space="unconstrained", gradient=True,
+                                values="continuous", sampler="nutpie")
+
+    def __init__(self, vars=None, *, target_accept=0.8, low_rank_mass_matrix=False, ...): ...
+    def default_schedule(self, tune, draws): ...     # one warmup phase, one sampling phase
+    def default_sampler(self): return NutpieSampler()
+
+
 class NutpieSampler(Sampler):
     name = "nutpie"
     capabilities = SamplerCapabilities(
         controls=frozenset({"pause", "resume", "cancel"}), progress="per_chunk",
         streaming_output=True, custom_schedule=False, live_stats=True, runs_pymc_steps=False)
 
-    def check_supports(self, step):
+    def __init__(self, *, cores=None, ...): ...       # loop settings only
+
+    def check_supports(self, step, settings):
         if not isinstance(step, NutpieNUTS):
             raise UnsupportedStep(...)
+        if settings.backend not in (None, "numba", "jax"):
+            raise UnsupportedSetting("backend", settings.backend, sampler=self.name)
 
     def start(self, spec, storage, monitor):
         tune, draws = tune_and_draws(spec.schedule)            # rejects anything but (warmup, sample)
-        run = start_library_run(spec.bundle.compiled_model, tune=tune, draws=draws,
+        run = start_library_run(spec.bundle.compiled_model, spec.step, tune=tune, draws=draws,
                                 chains=len(spec.states), seed=..., blocking=False)
         return ExternalRunHandle(run, translate=to_draw_batches, storage=storage, monitor=monitor)
 ```
@@ -1338,7 +1465,8 @@ def test_nutpie_sampler():
 | Adapters | Pure; frozen in non-adaptive phases; a metric adapter recovers a known covariance on a Gaussian. For `validity="diminishing"`, the parameter changes shrink as declared. |
 | Population (SPMD) | Runs with 1, 2 and 3 shards agree; replicated state is identical on every shard. |
 | Composition | Invariance still holds inside a compound step alongside a reference step. |
-| Loop-level samplers | The controls listed in `capabilities` work (pause stops progress; cancel leaves valid partial output); events arrive in order; translated batches validate against `DrawBatch`; draw counts match. |
+| Storage | Draws and checkpoints round-trip; after a simulated crash, `truncate` plus resume reproduces an uninterrupted run; `to_datatree()` includes the latest checkpoint; what `capabilities` excludes, such as varying shapes, raises. |
+| External samplers | The controls listed in `capabilities` work (pause stops progress; cancel leaves valid partial output); events arrive in order; translated batches validate against `DrawBatch`; draw counts match. |
 | Calibration (optional, heavy) | SBC. |
 
 The kit builds on `StepMethodTester` in `tests/helpers.py`, which already round-trips `sampling_state`.
@@ -1357,9 +1485,11 @@ This is why `SamplerCapabilities.progress` has a `"per_chunk"` value, and why st
 
 - The names `Step` and `Sampler`, or the alternative `Sampler` and `Executor` (see [Naming: `Step` and `Sampler`](#naming-step-and-sampler-open-for-discussion)).
 - Where `pm.NUTS`, `pm.Metropolis` and the other public names point once new steps exist: the legacy classes until a deprecation, or the new steps, with the legacy classes moved to a legacy module.
-- The Storage and Monitor contracts, to be settled in M3, using the loop-level external samplers as the stress test.
+- The Storage and Monitor contracts, to be settled in M3, using the external samplers as the stress test.
+- What `pymc.sample` returns: a `DataTree`, as today, or the run's `Storage` object, which converts to one. To be decided with the storage prototype in M3.
+- Whether `cores` and `progressbar` stay as permanent shorthands, and how long the deprecation period for the other superseded arguments lasts.
+- Where `FileMonitor` writes by default when there is no durable storage, and whether its lines are plain text or JSON.
 - The public/internal split of modules.
-- Whether any existing `pymc.sample` argument should eventually be deprecated (for example `nuts_sampler` in favour of `sampler`), or all of them stay indefinitely.
 - The default schedule of a compound step: how to align phase boundaries across blocks.
 - Extending a finished run (more draws) as opposed to resuming a stopped one.
 - Bitwise reproducibility across shard counts (allgather-then-reduce versus allreduce of partial results).
