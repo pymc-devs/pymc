@@ -1655,7 +1655,7 @@ class LKJCorr(BoundedContinuous):
 @_default_transform.register(LKJCorr)
 def lkjcorr_default_transform(op, rv):
     rng, shape, n, eta, *_ = rv.owner.inputs
-    return CholeskyCorrTransform(n=n, upper=False)
+    return CholeskyCorrTransform(n=n)
 
 
 class MatrixNormalRV(RandomVariable):

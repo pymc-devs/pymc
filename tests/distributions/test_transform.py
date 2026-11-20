@@ -704,28 +704,18 @@ class TestLJKCholeskyCorrTransform:
         )
         return x_unconstrained, x_constrained
 
-    @pytest.mark.parametrize("upper", [True, False], ids=["upper", "lower"])
-    def test_fill_triangular_spiral(self, upper):
+    def test_fill_triangular_spiral(self):
         x_unconstrained = np.array([1, 2, 3, 4, 5, 6])
 
-        if upper:
-            x_constrained = np.array(
-                [
-                    [1, 2, 3],
-                    [0, 5, 6],
-                    [0, 0, 4],
-                ]
-            )
-        else:
-            x_constrained = np.array(
-                [
-                    [4, 0, 0],
-                    [6, 5, 0],
-                    [3, 2, 1],
-                ]
-            )
+        x_constrained = np.array(
+            [
+                [4, 0, 0],
+                [6, 5, 0],
+                [3, 2, 1],
+            ]
+        )
 
-        transform = tr.CholeskyCorrTransform(n=3, upper=upper)
+        transform = tr.CholeskyCorrTransform(n=3)
 
         np.testing.assert_allclose(
             transform._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval(),
@@ -738,7 +728,7 @@ class TestLJKCholeskyCorrTransform:
         )
 
     def test_forward(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3)
         x_unconstrained, x_constrained = self._get_test_values()
 
         np.testing.assert_allclose(
@@ -748,7 +738,7 @@ class TestLJKCholeskyCorrTransform:
         )
 
     def test_backward(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3)
         x_unconstrained, x_constrained = self._get_test_values()
 
         np.testing.assert_allclose(
@@ -758,7 +748,7 @@ class TestLJKCholeskyCorrTransform:
         )
 
     def test_transform_round_trip(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3)
         x_unconstrained, x_constrained = self._get_test_values()
 
         constrained_reconstructed = transform.backward(transform.forward(x_constrained)).eval()
@@ -768,7 +758,7 @@ class TestLJKCholeskyCorrTransform:
         np.testing.assert_allclose(x_constrained, constrained_reconstructed, atol=1e-6)
 
     def test_log_jac_det(self):
-        transform = tr.CholeskyCorrTransform(n=3, upper=False)
+        transform = tr.CholeskyCorrTransform(n=3)
         x_unconstrained, _x_constrained = self._get_test_values()
 
         computed_log_jac_det = transform.log_jac_det(x_unconstrained).eval()
@@ -788,7 +778,7 @@ class TestLJKCholeskyCorrTransform:
         n_samples = 5
         n_tril = n * (n - 1) // 2
 
-        transform = tr.CholeskyCorrTransform(n=n, upper=False)
+        transform = tr.CholeskyCorrTransform(n=n)
         x_unconstrained = rng.normal(size=(n_samples, n_tril))
 
         chol_L = transform.backward(x_unconstrained).eval()
