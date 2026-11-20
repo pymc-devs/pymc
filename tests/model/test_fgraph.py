@@ -261,6 +261,31 @@ def test_deterministics(inline_views):
     assert m["y__"].owner.inputs[0] is m["y"]
 
 
+@pytest.mark.parametrize("inline_views", (False, True))
+def test_deterministic_aliases(inline_views):
+    """A Deterministic that only renames another Deterministic or a data variable keeps its name.
+
+    Without a view, the alias and the variable it renames would be one object, and one of the
+    names would be lost. The renamed variable stays the base, and every alias is a view of it.
+    """
+    with pm.Model() as m:
+        x = pm.Normal("x")
+        y = pm.Deterministic("y", x + 1)
+        z = pm.Deterministic("z", y)
+        pm.Deterministic("w", z)
+        data = pm.Data("data", np.ones(3))
+        pm.Deterministic("data_alias", data)
+
+    fg, _ = fgraph_from_model(m, inlined_views=inline_views)
+    m = model_from_fgraph(fg)
+
+    assert sorted(var.name for var in m.deterministics) == ["data_alias", "w", "y", "z"]
+    assert [var.name for var in m.data_vars] == ["data"]
+    assert m["z"].owner.inputs[0] is m["y"]
+    assert m["w"].owner.inputs[0] is m["y"]
+    assert m["data_alias"].owner.inputs[0] is m["data"]
+
+
 def test_context_error():
     """Test that model_from_fgraph fails when called inside a Model context.
 
