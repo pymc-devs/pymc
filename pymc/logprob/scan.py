@@ -444,6 +444,13 @@ def find_measurable_scans(fgraph, node):
     if not valued_outputs:
         return None
 
+    # The logprob of a MeasurableScan requires all random outputs to be valued.
+    # If there are unvalued random outputs, we can't derive the logprob.
+    if not all(
+        rv_outer_out in valued_outputs for _, rv_outer_out, _ in get_random_outer_outputs(scan_args)
+    ):
+        return None
+
     valued_output_idxs = [node.outputs.index(out) for out in valued_outputs]
 
     # Make inner graph measurable
