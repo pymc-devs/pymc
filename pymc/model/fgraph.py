@@ -346,11 +346,13 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
         dummy_var: first_non_model_var(dummy_var.owner.inputs[0])
         for dummy_var in model_dummy_vars
     }
-    # Several model variables can stand on one variable once the dummies are
-    # replaced: a Deterministic that only renames an RV, a data variable or another
-    # Deterministic.  The RV or data variable owns it, else the first Deterministic
-    # in model order; any other is registered as a view, so each keeps its name.
-    owners: dict = {}
+    # A Deterministic that only renames another model variable (an RV, a Potential,
+    # a data variable or another Deterministic) shares that variable once the dummies
+    # are replaced. Give each shared variable one owner: the model variable that is
+    # not a Deterministic, otherwise the first Deterministic in model order (the sort
+    # is stable, so the outputs keep the model's order). Every other Deterministic on
+    # it is registered as a view, so each keeps its own name.
+    owners: dict[Variable, Variable] = {}
     for dummy_var in sorted(
         (out for out in fgraph.outputs if out in model_dummy_vars_to_vars),
         key=lambda out: isinstance(out.owner.op, ModelDeterministic),
