@@ -430,6 +430,22 @@ def test_scan_non_pure_rv_output():
     )
 
 
+def test_scan_unvalued_random_output():
+    """Test that a scan with an unvalued random output fails cleanly.
+
+    regression test for https://github.com/pymc-devs/pymc/issues/7780
+    """
+    _trends, ys = pytensor.scan(
+        fn=lambda trend_tm1: (pt.random.normal(trend_tm1), pt.random.normal(trend_tm1)),
+        outputs_info=[pt.zeros(()), None],
+        n_steps=10,
+        return_updates=False,
+    )
+
+    with pytest.raises(RuntimeError, match="could not be derived"):
+        conditional_logp({ys: ys.clone()})
+
+
 def test_scan_over_seqs():
     """Test that logprob inference for scans based on sequences (mapping)."""
     rng = np.random.default_rng(543)
