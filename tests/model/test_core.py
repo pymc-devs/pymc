@@ -1616,14 +1616,17 @@ class TestProfile:
         assert self.model.profile(self.model.logp(), n=count).fct_callcount == count
 
 
-@pytest.fixture(params=["masked", "pandas"])
+@pytest.fixture(params=["masked", "pandas", "polars"])
 def missing_data(request):
     if request.param == "masked":
         return np.ma.masked_values([1, 2, -1, 4, -1], value=-1)
-    else:
-        # request.param == "pandas"
+    elif request.param == "pandas":
         pd = pytest.importorskip("pandas")
         return pd.DataFrame([1, 2, np.nan, 4, np.nan])
+    else:
+        # request.param == "polars"
+        pl = pytest.importorskip("polars")
+        return pl.Series([1, 2, None, 4, None])
 
 
 class TestImputationMissingData:

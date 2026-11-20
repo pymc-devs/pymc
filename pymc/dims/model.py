@@ -26,6 +26,7 @@ from pymc.distributions.shape_utils import (
 from pymc.model.core import BaseModel, Model, modelcontext
 from pymc.model.core import Deterministic as RegularDeterministic
 from pymc.model.core import Potential as RegularPotential
+from pymc.pytensorf import _narwhals_to_numpy
 
 
 def Data(
@@ -40,6 +41,9 @@ def Data(
     if not isinstance(model, Model):
         raise TypeError(f"Cannot add new data to an immutable {type(model).__name__}.")
     dims = convert_dims(dims)  # type: ignore[assignment]
+    if (converted := _narwhals_to_numpy(value)) is not None:
+        # DataFrame or Series; LazyFrames need collecting before numpy can read them
+        value = converted[0]
     value = xtensor_shared(value, dims=dims, **kwargs, name=name)
     model.register_data_var(value, dims=value.dims)
     return value
