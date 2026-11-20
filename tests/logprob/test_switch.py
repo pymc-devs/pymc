@@ -40,11 +40,36 @@ def test_switch_non_overlapping_logp_matches_change_of_variables():
     v = np.array([-2.0, 0.0, 1.5])
     np.testing.assert_allclose(logp_y_fn(v, 0.5), expected_fn(v, 0.5))
 
-    with pytest.raises(ParameterValueError, match="switch non-overlapping scale > 0"):
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scales > 0"):
         logp_y_fn(v, -0.5)
 
-    with pytest.raises(ParameterValueError, match="switch non-overlapping scale > 0"):
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scales > 0"):
         logp_y_fn(v, 0.0)
+
+
+def test_switch_non_overlapping_dual_scale_logp_matches_change_of_variables():
+    scale_pos = pt.scalar("scale_pos")
+    scale_neg = pt.scalar("scale_neg")
+    x = pm.Normal.dist(mu=0, sigma=1, size=(3,))
+    y = pt.switch(x > 0, scale_pos * x, scale_neg * x)
+
+    vv = pt.vector("vv")
+
+    logp_y = logp(y, vv)
+    inv = pt.switch(pt.gt(vv, 0), vv / scale_pos, vv / scale_neg)
+    expected = logp(x, inv) + pt.switch(pt.gt(vv, 0), -pt.log(scale_pos), -pt.log(scale_neg))
+
+    logp_y_fn = function([vv, scale_pos, scale_neg], logp_y)
+    expected_fn = function([vv, scale_pos, scale_neg], expected)
+
+    v = np.array([-2.0, 0.0, 1.5])
+    np.testing.assert_allclose(logp_y_fn(v, 2.0, 0.5), expected_fn(v, 2.0, 0.5))
+
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scales > 0"):
+        logp_y_fn(v, 0.0, 0.5)
+
+    with pytest.raises(ParameterValueError, match="switch non-overlapping scales > 0"):
+        logp_y_fn(v, 2.0, -0.5)
 
 
 def test_switch_non_overlapping_does_not_rewrite_if_x_replicated_by_condition():
