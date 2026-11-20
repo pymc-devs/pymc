@@ -12,6 +12,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import re
+import warnings
 
 import arviz
 import numpy as np
@@ -179,6 +180,23 @@ def test_hash_key():
 
     tc = TestClass()
     assert tc.some_method(b1) != tc.some_method(b2)
+
+
+def test_locally_cachedmethod():
+    class C:
+        @locally_cachedmethod(ignore=("y",))
+        def f(self, x, y=None):
+            return object()
+
+        # VI's node_property pattern, which cachetools>=7 deprecated for its cachedmethod
+        prop = property(locally_cachedmethod(lambda self: object()))
+
+    a, b = C(), C()
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert a.f(1) is a.f(1, y=2) is not b.f(1)
+        assert a.f(1) is not a.f(2)
+        assert a.prop is a.prop is not b.prop
 
 
 def test_unset_repr(capsys):
