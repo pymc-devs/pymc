@@ -48,7 +48,7 @@ from pymc.distributions.dist_math import (
 )
 from pymc.distributions.distribution import Discrete, SymbolicRandomVariable
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
-from pymc.logprob.basic import logcdf, logp
+from pymc.logprob.basic import logcdf
 from pymc.math import sigmoid
 from pymc.pytensorf import normalize_rng_param
 
@@ -262,25 +262,19 @@ class BetaBinomial(Discrete):
         )
 
     def logcdf(value, n, alpha, beta):
-        # logcdf can only handle scalar values at the moment
-        if np.ndim(value):
-            raise TypeError(
-                f"BetaBinomial.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
-        safe_lower = pt.switch(pt.lt(value, 0), value, 0)
+        safe_value = pt.clip(pt.floor(value), 0, n)
+        # Sum over a separate support axis, preserving the broadcast batch dimensions.
+        support = pt.arange(pt.max(safe_value) + 1)
+        # Keep padded entries in support so their parameter gradients remain finite.
+        values = pt.minimum(support, safe_value[..., None])
+        log_probs = BetaBinomial.logp(values, n[..., None], alpha[..., None], beta[..., None])
+        log_probs = pt.switch(support <= safe_value[..., None], log_probs, -np.inf)
         res = pt.switch(
             pt.lt(value, 0),
             -np.inf,
             pt.switch(
                 pt.lt(value, n),
-                pt.logsumexp(
-                    logp(
-                        BetaBinomial.dist(alpha=alpha, beta=beta, n=n),
-                        pt.arange(safe_lower, value + 1),
-                    ),
-                    keepdims=False,
-                ),
+                pt.logsumexp(log_probs, axis=-1),
                 0,
             ),
         )
@@ -955,26 +949,22 @@ class HyperGeometric(Discrete):
         )
 
     def logcdf(value, good, bad, n):
-        # logcdf can only handle scalar values at the moment
-        if np.ndim(value):
-            raise TypeError(
-                f"HyperGeometric.logcdf expects a scalar value but received a {np.ndim(value)}-dimensional object."
-            )
-
         N = good + bad
         lower = pt.maximum(0, n - bad)
         upper = pt.minimum(good, n)
         safe_value = pt.clip(pt.floor(value), lower, upper)
+        # Offsets allow each batch entry to start at its own lower support bound.
+        offsets = pt.arange(pt.max(safe_value - lower) + 1)
+        values = pt.minimum(lower[..., None] + offsets, safe_value[..., None])
+        log_probs = HyperGeometric.logp(values, good[..., None], bad[..., None], n[..., None])
+        log_probs = pt.switch(offsets <= (safe_value - lower)[..., None], log_probs, -np.inf)
 
         res = pt.switch(
             pt.lt(value, lower),
             -np.inf,
             pt.switch(
                 pt.lt(value, upper),
-                pt.logsumexp(
-                    HyperGeometric.logp(pt.arange(lower, safe_value + 1), good, bad, n),
-                    keepdims=False,
-                ),
+                pt.logsumexp(log_probs, axis=-1),
                 0,
             ),
         )
