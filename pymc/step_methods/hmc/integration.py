@@ -85,12 +85,10 @@ class CpuLeapfrogIntegrator:
             step scale
         state: State namedtuple,
             current position data
-        out: (optional) State namedtuple,
-            preallocated arrays to write to in place
 
         Returns
         -------
-        None if `out` is provided, else a State namedtuple
+        A State namedtuple
         """
         try:
             return self._step(epsilon, state)
