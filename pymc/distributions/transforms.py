@@ -186,7 +186,7 @@ class CholeskyCorrTransform(Transform):
     name = "cholesky_corr"
     ndim_supp = 1
 
-    def __init__(self, n, upper: bool = False):
+    def __init__(self, n):
         """
         Initialize the CholeskyCorr transform.
 
@@ -194,12 +194,9 @@ class CholeskyCorrTransform(Transform):
         ----------
         n : int
             Size of the correlation matrix.
-        upper: bool, default False
-            If True, transform to an upper triangular matrix. If False, transform to a lower triangular matrix.
         """
         self.n = n
         self.m = (n * (n + 1)) // 2  # Number of triangular elements
-        self.upper = upper
 
         super().__init__()
 
@@ -229,15 +226,8 @@ class CholeskyCorrTransform(Transform):
         Notes
         -----
         By "spiral order", it is meant that the matrix is filled by jumping between the top and bottom rows, flipping
-        the fill order from left-to-right to right-to-left on each jump. For example, to fill a 4x4 matrix with
-        `order=True`, the matrix is filled in the following order:
-
-        - Row 0, left to right
-        - Row 3, right to left
-        - Row 1, left to right
-        - Row 2, right to left
-
-        When `upper` if False, everything is reversed:
+        the fill order from left-to-right to right-to-left on each jump. For example, to fill a 4x4 matrix, the
+        matrix is filled in the following order:
 
         - Row 3, right to left
         - Row 0, left to right
@@ -256,7 +246,7 @@ class CholeskyCorrTransform(Transform):
 
             tr = CholeskyCorr(n=4)
             x_unconstrained = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])
-            tr._fill_triangular_spiral(x_unconstrained, upper=False).eval()
+            tr._fill_triangular_spiral(x_unconstrained, unit_diag=False).eval()
 
             # Out:
             # array([[ 5,  0,  0,  0],
@@ -267,20 +257,16 @@ class CholeskyCorrTransform(Transform):
         x_raveled = pt.as_tensor(x_raveled)
         *batch_shape, _ = x_raveled.shape
         n, m = self.n, self.m
-        upper = self.upper
 
         if unit_diag:
             n = n - 1
 
         tail = x_raveled[..., n:]
 
-        if upper:
-            xc = pt.concatenate([x_raveled, pt.flip(tail, -1)], axis=-1)
-        else:
-            xc = pt.concatenate([tail, pt.flip(x_raveled, -1)], axis=-1)
+        xc = pt.concatenate([tail, pt.flip(x_raveled, -1)], axis=-1)
 
         y = pt.reshape(xc, (*batch_shape, n, n))
-        return pt.triu(y) if upper else pt.tril(y)
+        return pt.tril(y)
 
     def _inverse_fill_triangular_spiral(
         self, x: TensorLike, unit_diag: bool = True
@@ -311,14 +297,8 @@ class CholeskyCorrTransform(Transform):
             m = m - n
             n = n - 1
 
-        upper = self.upper
-
-        if upper:
-            initial_elements = x[..., 0, :]
-            triangular_portion = x[..., 1:, :]
-        else:
-            initial_elements = pt.flip(x[..., -1, :], axis=-1)
-            triangular_portion = x[..., :-1, :]
+        initial_elements = pt.flip(x[..., -1, :], axis=-1)
+        triangular_portion = x[..., :-1, :]
 
         rotated_triangular_portion = pt.flip(triangular_portion, axis=(-1, -2))  # type: ignore[arg-type]
         consolidated_matrix = triangular_portion + rotated_triangular_portion
@@ -361,12 +341,7 @@ class CholeskyCorrTransform(Transform):
         unconstrained_matrix = chol_corr_matrix / diag
 
         # Remove the first row and last column before inverting the fill_triangular_spiral
-        # transformation (lower case), or the last row and first column (upper case),
-        # to recover the (n - 1) x (n - 1) filled block.
-        if self.upper:
-            return self._inverse_fill_triangular_spiral(
-                unconstrained_matrix[..., :-1, 1:], unit_diag=True
-            )
+        # transformation.
         return self._inverse_fill_triangular_spiral(
             unconstrained_matrix[..., 1:, :-1], unit_diag=True
         )
@@ -390,15 +365,9 @@ class CholeskyCorrTransform(Transform):
         unconstrained_vector = pt.as_tensor(unconstrained_vector)
         chol_corr_matrix = self._fill_triangular_spiral(unconstrained_vector, unit_diag=True)
 
-        # Pad zeros to embed the (n - 1) x (n - 1) filled block into an n x n
-        # matrix: the lower-triangular block sits at the bottom left (pad the
-        # top row and right column), the upper-triangular block at the top
-        # right (pad the bottom row and left column).
+        # Pad zeros on the top row and right column.
         ndim = chol_corr_matrix.ndim
-        if self.upper:
-            paddings = [*([(0, 0)] * (ndim - 2)), [0, 1], [1, 0]]
-        else:
-            paddings = [*([(0, 0)] * (ndim - 2)), [1, 0], [0, 1]]
+        paddings = [*([(0, 0)] * (ndim - 2)), [1, 0], [0, 1]]
         chol_corr_matrix = pt.pad(chol_corr_matrix, paddings)
 
         diag_idx = pt.arange(self.n)
@@ -430,17 +399,10 @@ class CholeskyCorrTransform(Transform):
         n = self.n
         input_dtype = unconstrained_vector.dtype
 
-        # Each row i contributes (k_i + 2) * log(diag_i), where k_i is the
-        # number of free entries in that row: k_i = i for a lower-triangular
-        # factor and k_i = n - 1 - i for an upper-triangular one.
-        if self.upper:
-            weights = pt.arange(n + 1, 1, -1, dtype=input_dtype)
-        else:
-            weights = pt.arange(2, 2 + n, dtype=input_dtype)
-
         # TODO: tfp has a negative sign here; verify if it is needed
         return pt.sum(
-            weights * pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)),
+            pt.arange(2, 2 + n, dtype=input_dtype)
+            * pt.log(pt.diagonal(chol_corr_matrix, axis1=-2, axis2=-1)),
             axis=-1,
         )
 
