@@ -692,6 +692,14 @@ class TestMatchesScipy:
             lambda value, alpha, beta: st.gamma.logcdf(value, alpha, scale=1.0 / beta),
         )
 
+    def test_gamma_logccdf(self):
+        check_logccdf(
+            pm.Gamma,
+            Domain([0, 0, 0.5, 2, 20, np.inf]),
+            {"alpha": Rplusbig, "beta": Domain([0, 0.5, 1.5, 3, np.inf])},
+            lambda value, alpha, beta: st.gamma.logsf(value, alpha, scale=1.0 / beta),
+        )
+
     def test_gamma_icdf(self):
         check_icdf(
             pm.Gamma,
