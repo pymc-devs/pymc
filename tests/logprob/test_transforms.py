@@ -69,7 +69,7 @@ from pymc.logprob.transforms import (
     Transform,
 )
 from pymc.logprob.utils import ParameterValueError
-from pymc.testing import Rplusbig, Vector, assert_no_rvs
+from pymc.testing import Rplusbig, Unit, Vector, assert_no_rvs
 from tests.distributions.test_transform import check_jacobian_det
 
 
@@ -182,30 +182,30 @@ class TestTransform:
         )
 
     @pytest.mark.parametrize(
-        "transform",
+        "transform, domain",
         [
-            ErfTransform(),
-            ErfcTransform(),
-            ErfcxTransform(),
-            ErfinvTransform(),
-            ErfcinvTransform(),
-            SinhTransform(),
-            CoshTransform(),
-            TanhTransform(),
-            ArcsinTransform(),
-            ArccosTransform(),
-            ArctanTransform(),
-            ArcsinhTransform(),
-            ArccoshTransform(),
-            ArctanhTransform(),
-            LogTransform(),
-            ExpTransform(),
+            (ErfTransform(), Unit),
+            (ErfcTransform(), Unit),
+            (ErfcxTransform(), Rplusbig),
+            (ErfinvTransform(), Unit),
+            (ErfcinvTransform(), Unit),
+            (SinhTransform(), Rplusbig),
+            (CoshTransform(), Rplusbig),
+            (TanhTransform(), Unit),
+            (ArcsinTransform(), Unit),
+            (ArccosTransform(), Unit),
+            (ArctanTransform(), Unit),
+            (ArcsinhTransform(), Rplusbig),
+            (ArccoshTransform(), Rplusbig),
+            (ArctanhTransform(), Unit),
+            (LogTransform(), Rplusbig),
+            (ExpTransform(), Rplusbig),
         ],
     )
-    def test_check_jac_det(self, transform):
+    def test_check_jac_det(self, transform, domain):
         check_jacobian_det(
             transform,
-            Vector(Rplusbig, 2),
+            Vector(domain, 2),
             pt.dvector,
             [0.1, 0.1],
             elemwise=True,
@@ -846,3 +846,39 @@ def test_invalid_broadcasted_transform_rv_fails():
     # This logp derivation should fail or count only once the values that are broadcasted
     logprob = logp(y_rv, y_vv)
     assert logprob.eval({y_vv: [0, 0, 0, 0], loc: [0, 0, 0, 0]}).shape == ()
+
+
+@pytest.mark.parametrize(
+    "pt_transform, below_val, in_val, above_val",
+    [
+        (pt.tanh, -1.5, 0.25, 1.5),
+        (pt.erf, -1.5, 0.25, 1.5),
+        (pt.erfc, -0.5, 0.5, 2.5),
+        (pt.arcsin, -2.0, 0.25, 2.0),
+        (pt.arccos, -0.5, 0.5, 3.5),
+        (pt.arctan, -2.0, 0.25, 2.0),
+        (pt.arccosh, -1.0, 0.5, None),
+    ],
+)
+def test_range_bounded_transform_out_of_codomain(pt_transform, below_val, in_val, above_val):
+    if pt_transform in (pt.arcsin, pt.arccos):
+        base_rv = pt.random.uniform(-1.0, 1.0, name="base_rv")
+    elif pt_transform is pt.arccosh:
+        base_rv = 1.0 + pt.random.exponential(1.0, name="base_rv")
+    else:
+        base_rv = pt.random.normal(0.5, 1.0, name="base_rv")
+
+    rv = pt_transform(base_rv)
+    vv = rv.clone()
+    logp_fn = pytensor.function([vv], logp(rv, vv))
+    logcdf_fn = pytensor.function([vv], logcdf(rv, vv))
+
+    assert np.isfinite(logp_fn(in_val))
+    assert np.isfinite(logcdf_fn(in_val))
+
+    assert logp_fn(below_val) == -np.inf
+    assert logcdf_fn(below_val) == -np.inf
+
+    if above_val is not None:
+        assert logp_fn(above_val) == -np.inf
+        assert logcdf_fn(above_val) == 0.0
