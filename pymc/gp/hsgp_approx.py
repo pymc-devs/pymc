@@ -590,14 +590,14 @@ class HSGP(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Index X using input_dim and active_dims of covariance function
+        Xs, _ = self.cov_func._slice(X)
+
         # Important: fix the computation of the midpoint of X.
         # If X is mutated later, the training midpoint will be subtracted, not the testing one.
         if self._X_center is None:
-            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
-        Xs = X - self._X_center  # center for accurate computation
-
-        # Index Xs using input_dim and active_dims of covariance function
-        Xs, _ = self.cov_func._slice(Xs)
+            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
+        Xs = Xs - self._X_center  # center for accurate computation
 
         # If not provided, use Xs and c to set L
         if self._L is None:
@@ -675,10 +675,10 @@ class HSGP(Base):
                 "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
             )
 
-        Xnew, _ = self.cov_func._slice(Xnew)
+        Xs, _ = self.cov_func._slice(Xnew)
 
         eigvals = calc_eigenvalues(self.L, self._m, boundary=self._boundary)
-        phi = calc_eigenvectors(Xnew - X_center, self.L, eigvals, self._m, boundary=self._boundary)
+        phi = calc_eigenvectors(Xs - X_center, self.L, eigvals, self._m, boundary=self._boundary)
         i = int(self._drop_first is True)
 
         if self._parametrization == "noncentered":
@@ -881,14 +881,14 @@ class HSGPPeriodic(Base):
             with model:
                 ppc = pm.sample_posterior_predictive(idata, var_names=["f"])
         """
+        # Index X using input_dim and active_dims of covariance function
+        Xs, _ = self.cov_func._slice(X)
+
         # Important: fix the computation of the midpoint of X.
         # If X is mutated later, the training midpoint will be subtracted, not the testing one.
         if self._X_center is None:
-            self._X_center = (pt.max(X, axis=0) + pt.min(X, axis=0)).eval() / 2
-        Xs = X - self._X_center  # center for accurate computation
-
-        # Index Xs using input_dim and active_dims of covariance function
-        Xs, _ = self.cov_func._slice(Xs)
+            self._X_center = (pt.max(Xs, axis=0) + pt.min(Xs, axis=0)).eval() / 2
+        Xs = Xs - self._X_center  # center for accurate computation
 
         phi_cos, phi_sin = calc_basis_periodic(Xs, self.cov_func.period, self._m, tl=pt)
         return (phi_cos, phi_sin), self._psd()
@@ -943,11 +943,9 @@ class HSGPPeriodic(Base):
                 "Prior is not set, can't create a conditional.  Call `.prior(name, X)` first."
             )
 
-        Xnew, _ = self.cov_func._slice(Xnew)
+        Xs, _ = self.cov_func._slice(Xnew)
 
-        phi_cos, phi_sin = calc_basis_periodic(
-            Xnew - X_center, self.cov_func.period, self._m, tl=pt
-        )
+        phi_cos, phi_sin = calc_basis_periodic(Xs - X_center, self.cov_func.period, self._m, tl=pt)
         m = self._m
         psd = self._psd()
 
