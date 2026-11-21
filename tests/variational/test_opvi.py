@@ -20,6 +20,7 @@ import pytest
 
 import pymc as pm
 
+from pymc.pytensorf import floatX
 from pymc.testing import assert_no_rvs
 from pymc.variational import opvi
 from pymc.variational.approximations import (
@@ -297,3 +298,26 @@ def test_symbolic_normalizing_constant_no_rvs():
         step = pm.ADVI()
 
     assert_no_rvs(step.approx.symbolic_normalizing_constant)
+
+
+@pytest.mark.parametrize("vfam", ["mean_field", "full_rank"])
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize("use_start", [False, True])
+def test_group_start_follows_variable_order(vfam, reverse, use_start):
+    expected = (
+        {"intercept": 2.0, "beta": np.array([3.0, 4.0])}
+        if use_start
+        else {"intercept": 10.0, "beta": np.array([20.0, 30.0])}
+    )
+    expected = {name: floatX(value) for name, value in expected.items()}
+    with pm.Model():
+        intercept = pm.Normal("intercept", mu=floatX(10))
+        beta = pm.Normal("beta", mu=floatX([20, 30]))
+        variables = [beta, intercept] if reverse else [intercept, beta]
+        group = pm.Group(variables, vfam=vfam, start=expected if use_start else None)
+        approx = pm.Approximation([group])
+
+    for var in [intercept, beta]:
+        np.testing.assert_array_equal(
+            approx.sample_node(var, deterministic=True).eval(), expected[var.name]
+        )
