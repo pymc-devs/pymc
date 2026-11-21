@@ -412,6 +412,71 @@ class TestData:
         assert tuple(pmodel.coords["x"]) == tuple(data.coords["x"].to_numpy())
         assert tuple(pmodel.coords["y"]) == tuple(data.coords["y"].to_numpy())
 
+    def test_infer_dims_and_coords_without_explicit_dims(self):
+        pd = pytest.importorskip("pandas")
+        xr = pytest.importorskip("xarray")
+
+        ser = pd.Series(
+            [1.0, 2.0, 3.0],
+            index=pd.Index(["a", "b", "c"], name="idx"),
+        )
+        with pm.Model() as model:
+            pm.Data("x", ser, infer_dims_and_coords=True)
+            pm.Normal("y", dims="idx")
+        assert model.named_vars_to_dims == {"x": ("idx",), "y": ("idx",)}
+        assert tuple(model.coords["idx"]) == ("a", "b", "c")
+        assert model["y"].eval().shape == (3,)
+
+        df = pd.DataFrame(
+            {"A": [1, 2], "B": [3, 4]},
+            index=pd.Index(["x", "y"], name="rows"),
+        )
+        df.columns.name = "cols"
+        with pm.Model() as model:
+            pm.Data("x", df, infer_dims_and_coords=True)
+        assert model.named_vars_to_dims == {"x": ("rows", "cols")}
+        assert tuple(model.coords["rows"]) == ("x", "y")
+        assert tuple(model.coords["cols"]) == ("A", "B")
+
+        da = xr.DataArray(
+            [[1, 2], [3, 4]],
+            dims=("y", "x"),
+            coords={"y": ["a", "b"], "x": [1, 2]},
+        )
+        with pm.Model() as model:
+            pm.Data("observations", da, infer_dims_and_coords=True)
+        assert model.named_vars_to_dims == {"observations": ("y", "x")}
+        assert tuple(model.coords["y"]) == ("a", "b")
+        assert tuple(model.coords["x"]) == (1, 2)
+
+    def test_infer_dims_and_coords_unnamed_index_stays_unnamed(self):
+        pd = pytest.importorskip("pandas")
+
+        ser = pd.Series([1.0, 2.0, 3.0])
+        with pm.Model() as model:
+            pm.Data("x", ser, infer_dims_and_coords=True)
+        assert model.named_vars_to_dims == {"x": (None,)}
+        assert model.coords == {}
+
+        df = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+        with pm.Model() as model:
+            pm.Data("x", df, infer_dims_and_coords=True)
+        assert model.named_vars_to_dims == {"x": (None, None)}
+        assert model.coords == {}
+
+    def test_infer_dims_and_coords_explicit_dims_take_precedence(self):
+        pd = pytest.importorskip("pandas")
+
+        ser = pd.Series(
+            [1.0, 2.0, 3.0],
+            index=pd.Index(["a", "b", "c"], name="idx"),
+        )
+        with pm.Model() as model:
+            pm.Data("x", ser, dims="obs", infer_dims_and_coords=True)
+        assert model.named_vars_to_dims == {"x": ("obs",)}
+        assert tuple(model.coords["obs"]) == ("a", "b", "c")
+        assert "idx" not in model.coords
+
     def test_data_kwargs(self):
         strict_value = True
         allow_downcast_value = False
