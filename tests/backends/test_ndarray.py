@@ -16,6 +16,8 @@ import numpy as np
 import numpy.testing as npt
 import pytest
 
+import pymc as pm
+
 from pymc.backends import base, ndarray
 from tests.backends import fixtures as bf
 
@@ -159,3 +161,38 @@ class TestSqueezeCat:
         expected = np.concatenate([self.x, self.y])
         result = base._squeeze_cat([self.x, self.y], True, True)
         npt.assert_equal(result, expected)
+
+
+@pytest.mark.parametrize(
+    "selection",
+    [
+        slice(None, None, 2),
+        slice(None, None, -1),
+        slice(None, None, -2),
+        slice(4, 0, -2),
+        slice(4, 1, 2),
+    ],
+)
+def test_multitrace_slice_samples_and_stats(selection):
+    with pm.Model():
+        pm.Normal("mu")
+        trace = pm.sample(
+            draws=5,
+            tune=0,
+            chains=1,
+            cores=1,
+            step=pm.Metropolis(),
+            random_seed=17,
+            progressbar=False,
+            compute_convergence_checks=False,
+            return_inferencedata=False,
+        )
+    expected = trace["mu"][selection]
+    sliced = trace[selection]
+    np.testing.assert_array_equal(sliced["mu"], expected)
+    assert len(sliced) == len(expected)
+    for stat in trace.stat_names:
+        np.testing.assert_array_equal(
+            sliced.get_sampler_stats(stat), trace.get_sampler_stats(stat)[selection]
+        )
+    assert len(list(sliced.points())) == len(expected)
