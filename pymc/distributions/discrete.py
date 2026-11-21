@@ -49,7 +49,6 @@ from pymc.distributions.dist_math import (
 from pymc.distributions.distribution import Discrete, SymbolicRandomVariable
 from pymc.distributions.shape_utils import implicit_size_from_params, rv_size_is_none
 from pymc.logprob.basic import logcdf, logp
-from pymc.math import sigmoid
 from pymc.pytensorf import normalize_rng_param
 
 stats = lazy_scipy_module("stats")
@@ -1320,16 +1319,29 @@ class OrderedLogistic:
         eta = pt.as_tensor_variable(eta)
         cutpoints = pt.as_tensor_variable(cutpoints)
 
-        pa = sigmoid(cutpoints - pt.shape_padright(eta))
-        p_cum = pt.concatenate(
+        # Work in log space, as in OrderedProbit, so the probabilities stay
+        # accurate when the cutpoints are far into either tail. Computing
+        # the differences of CDFs in probability space rounds both CDFs to
+        # 0 or 1 there, and the interior categories come out as exactly 0.
+        # log(sigmoid(z)) = -softplus(-z),
+        # log(1 - sigmoid(z)) = log(sigmoid(-z)) = -softplus(z).
+        z = cutpoints - pt.shape_padright(eta)
+        log_cdf = -pt.softplus(-z)
+        log_ccdf = -pt.softplus(z)
+
+        # Interior categories: log(sigmoid(hi) - sigmoid(lo)) evaluated as
+        # log_cdf(hi) + log_ccdf(lo) + log(1 - exp(lo - hi)), which stays
+        # accurate in both tails, where a plain difference of log CDFs
+        # would round to zero.
+        log_p = pt.concatenate(
             [
-                pt.zeros_like(pt.shape_padright(pa[..., 0])),
-                pa,
-                pt.ones_like(pt.shape_padright(pa[..., 0])),
+                pt.shape_padright(log_cdf[..., 0]),
+                log_cdf[..., 1:] + log_ccdf[..., :-1] + pt.log(-pt.expm1(z[..., :-1] - z[..., 1:])),
+                pt.shape_padright(log_ccdf[..., -1]),
             ],
             axis=-1,
         )
-        p = p_cum[..., 1:] - p_cum[..., :-1]
+        p = pt.exp(log_p)
         return p
 
 
