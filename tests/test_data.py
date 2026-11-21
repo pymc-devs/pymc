@@ -17,6 +17,7 @@ import io
 from os import path
 
 import numpy as np
+import pandas as pd
 import pytensor
 import pytensor.tensor as pt
 import pytest
@@ -424,6 +425,58 @@ class TestData:
             )
         assert data.container.strict is strict_value
         assert data.container.allow_downcast is allow_downcast_value
+
+    @pytest.mark.parametrize(
+        ("value", "dtype"),
+        [
+            ([True, False], bool),
+            (pd.Series([1.5, 2.5]), "float32"),
+        ],
+    )
+    def test_data_explicit_dtype(self, value, dtype):
+        with pm.Model():
+            data = pm.Data("data", value, dtype=dtype)
+
+        assert data.dtype == np.dtype(dtype).name
+        np.testing.assert_array_equal(data.get_value(), np.asarray(value, dtype=dtype))
+
+    def test_data_explicit_dtype_rejects_nan(self):
+        with (
+            pm.Model(),
+            pytest.raises(
+                NotImplementedError,
+                match="Masked arrays or arrays with `nan` entries are not supported.",
+            ),
+        ):
+            pm.Data("data", [1.0, np.nan], dtype="float32")
+
+    def test_set_data_explicit_dtype(self):
+        with pm.Model() as model:
+            data = pm.Data("data", np.array([1], dtype="int64"), dtype="int64")
+
+        updated = np.array([2**40, 2**40 + 1], dtype="int64")
+        model.set_data("data", updated)
+
+        assert data.get_value().dtype == updated.dtype
+        np.testing.assert_array_equal(data.get_value(), updated)
+
+        with pytest.raises(TypeError):
+            model.set_data("data", np.array([1.5, 2.5], dtype="float64"))
+
+    @pytest.mark.parametrize(
+        ("initial", "updated"),
+        [
+            (np.array([1, 2]), pd.Series([3, 4], dtype="Int64")),
+            (np.array([[1.0], [2.0]]), pd.DataFrame({"x": [3.0, 4.0]})),
+        ],
+    )
+    def test_set_data_default_conversion(self, initial, updated):
+        with pm.Model() as model:
+            data = pm.Data("data", initial)
+
+        model.set_data("data", updated)
+
+        np.testing.assert_array_equal(data.get_value(), np.asarray(updated))
 
     def test_masked_array_error(self):
         with pm.Model():
