@@ -1023,7 +1023,7 @@ def sample_posterior_predictive(
     .. code-block:: python
 
         expanded_idata = idata.copy()
-        expanded_idata.posterior = idata.posterior.expand_dims(pred_id=5)
+        expanded_idata.posterior.dataset = idata.posterior.dataset.expand_dims(pred_id=5)
         with model:
             pm.sample_posterior_predictive(
                 expanded_idata,
