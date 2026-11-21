@@ -256,11 +256,16 @@ class Metropolis(ArrayStepShared):
         # remember initial settings before tuning so they can be reset
         self._untuned_settings = {"scaling": self.scaling, "steps_until_tune": tune_interval}
 
-        # TODO: This is not being used when compiling the logp function!
         self.mode = mode
 
         shared = make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
+        self.delta_logp = delta_logp(
+            initial_point,
+            model.logp(),
+            vars,
+            shared,
+            _compile_kwargs_with_mode(compile_kwargs, mode),
+        )
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
@@ -964,7 +969,13 @@ class DEMetropolis(PopulationArrayStepShared):
         self.mode = mode
 
         shared = make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
+        self.delta_logp = delta_logp(
+            initial_point,
+            model.logp(),
+            vars,
+            shared,
+            _compile_kwargs_with_mode(compile_kwargs, mode),
+        )
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def astep(self, q0: RaveledVars) -> tuple[RaveledVars, StatsType]:
@@ -1146,7 +1157,13 @@ class DEMetropolisZ(ArrayStepShared):
         self.mode = mode
 
         shared = make_shared_replacements(initial_point, vars, model)
-        self.delta_logp = delta_logp(initial_point, model.logp(), vars, shared, compile_kwargs)
+        self.delta_logp = delta_logp(
+            initial_point,
+            model.logp(),
+            vars,
+            shared,
+            _compile_kwargs_with_mode(compile_kwargs, mode),
+        )
         super().__init__(vars, shared, blocked=blocked, rng=rng)
 
     def reset_tuning(self):
@@ -1229,6 +1246,17 @@ def sample_except(limit, excluded, rng: np.random.Generator):
     if candidate >= excluded:
         candidate += 1
     return candidate
+
+
+def _compile_kwargs_with_mode(compile_kwargs: dict | None, mode: Any) -> dict:
+    """Merge the legacy ``mode`` argument into ``compile_kwargs`` for ``delta_logp``.
+
+    ``compile_kwargs["mode"]`` wins when both are set, matching the newer API.
+    """
+    kwargs = {} if compile_kwargs is None else dict(compile_kwargs)
+    if mode is not None:
+        kwargs.setdefault("mode", mode)
+    return kwargs
 
 
 def delta_logp(

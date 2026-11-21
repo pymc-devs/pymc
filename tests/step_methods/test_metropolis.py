@@ -425,3 +425,18 @@ def test_sampling_state(step_method, model_fn):
             assert equal_sampling_states(final_state1, final_state2)
             assert equal_dataclass_values(sample1, sample2)
             assert equal_dataclass_values(stat1, stat2)
+
+
+@pytest.mark.parametrize("step_method", [Metropolis, DEMetropolis, DEMetropolisZ])
+def test_mode_forwarded_to_delta_logp(step_method):
+    """The documented ``mode`` argument must reach the compiled logp function."""
+    with pm.Model():
+        pm.Normal("x")
+        step_from_mode = step_method(mode="FAST_COMPILE")
+        step_from_kwargs = step_method(compile_kwargs={"mode": "FAST_COMPILE"})
+
+    assert type(step_from_mode.delta_logp.maker.mode.linker) is type(
+        step_from_kwargs.delta_logp.maker.mode.linker
+    )
+    # Without the fix, mode= is stored but the default (often Numba) linker is used.
+    assert step_from_mode.mode == "FAST_COMPILE"
