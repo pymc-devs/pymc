@@ -1245,17 +1245,22 @@ class OrderedLogistic:
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
+    .. note::
+
+       Observed values should be 0-based, so they range from ``0`` to ``K-1``.
+       Using values from ``1`` to ``K`` can result in errors.
+
     .. math::
 
        f(k \mid \eta, c) = \left\{
          \begin{array}{l}
            1 - \text{logit}^{-1}(\eta - c_1)
              \,, \text{if } k = 0 \\
-           \text{logit}^{-1}(\eta - c_{k - 1}) -
-           \text{logit}^{-1}(\eta - c_{k})
-             \,, \text{if } 0 < k < K \\
+           \text{logit}^{-1}(\eta - c_{k}) -
+           \text{logit}^{-1}(\eta - c_{k + 1})
+             \,, \text{if } 0 < k < K - 1 \\
            \text{logit}^{-1}(\eta - c_{K - 1})
-             \,, \text{if } k = K \\
+             \,, \text{if } k = K - 1 \\
          \end{array}
        \right.
 
@@ -1344,6 +1349,11 @@ class OrderedProbit:
     of cutpoints is K - 1. It is recommended that the cutpoints are
     constrained to be ordered.
 
+    .. note::
+
+       Observed values should be 0-based, so they range from ``0`` to ``K-1``.
+       Using values from ``1`` to ``K`` can result in errors.
+
     In order to stabilize the computation, log-likelihood is computed
     in log space using the scaled error function `erfcx`.
 
@@ -1353,11 +1363,11 @@ class OrderedProbit:
          \begin{array}{l}
            1 - \text{normal_cdf}(0, \sigma, \eta - c_1)
              \,, \text{if } k = 0 \\
-           \text{normal_cdf}(0, \sigma, \eta - c_{k - 1}) -
-           \text{normal_cdf}(0, \sigma, \eta - c_{k})
-             \,, \text{if } 0 < k < K \\
+           \text{normal_cdf}(0, \sigma, \eta - c_{k}) -
+           \text{normal_cdf}(0, \sigma, \eta - c_{k + 1})
+             \,, \text{if } 0 < k < K - 1 \\
            \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
-             \,, \text{if } k = K \\
+             \,, \text{if } k = K - 1 \\
          \end{array}
        \right.
 
