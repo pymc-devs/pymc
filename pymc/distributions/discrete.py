@@ -1361,12 +1361,12 @@ class OrderedProbit:
 
        f(k \mid \eta, c) = \left\{
          \begin{array}{l}
-           1 - \text{normal_cdf}(0, \sigma, \eta - c_1)
+           1 - \text{normal\_cdf}(0, \sigma, \eta - c_1)
              \,, \text{if } k = 0 \\
-           \text{normal_cdf}(0, \sigma, \eta - c_{k}) -
-           \text{normal_cdf}(0, \sigma, \eta - c_{k + 1})
+           \text{normal\_cdf}(0, \sigma, \eta - c_{k}) -
+           \text{normal\_cdf}(0, \sigma, \eta - c_{k + 1})
              \,, \text{if } 0 < k < K - 1 \\
-           \text{normal_cdf}(0, \sigma, \eta - c_{K - 1})
+           \text{normal\_cdf}(0, \sigma, \eta - c_{K - 1})
              \,, \text{if } k = K - 1 \\
          \end{array}
        \right.
