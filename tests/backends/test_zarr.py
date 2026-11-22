@@ -14,6 +14,7 @@
 import itertools
 
 import numpy as np
+import pandas as pd
 import pytest
 import xarray as xr
 import zarr
@@ -160,6 +161,28 @@ def test_sample_steps_that_reshape_state_during_tuning(step_cls, store):
             progressbar=False,
         )
     assert trace.posterior["x"].shape == (1, 5, 3)
+
+
+def test_pandas_datetime_coords(store):
+    # pm.Model stores coordinate values as a tuple, so these become tuples of
+    # pd.Timestamp / pd.Timedelta (object dtype for np.asarray)
+    dates = pd.date_range("2024-01-01", periods=4, freq="D")
+    intervals = pd.timedelta_range("1h", periods=2, freq="h")
+    with pm.Model(coords={"date": dates, "interval": intervals}):
+        x = pm.Data("x", np.arange(4.0), dims="date")
+        pm.Normal("level", x, dims="date")
+        pm.Normal("offset", dims="interval")
+        idata = pm.sample(
+            draws=5,
+            tune=5,
+            chains=1,
+            trace=ZarrTrace(store=store),
+            compute_convergence_checks=False,
+            progressbar=False,
+        )
+    for group in ("posterior", "constant_data"):
+        np.testing.assert_array_equal(idata[group]["date"].values, dates.to_numpy())
+    np.testing.assert_array_equal(idata["posterior"]["interval"].values, intervals.to_numpy())
 
 
 def test_to_datatree(model, model_step, store):
