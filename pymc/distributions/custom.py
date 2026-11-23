@@ -25,7 +25,7 @@ from pytensor.graph.rewriting.basic import GraphRewriter
 from pytensor.graph.traversal import io_toposort
 from pytensor.scan.op import Scan
 from pytensor.tensor import TensorVariable, as_tensor_variable
-from pytensor.tensor.random.op import RandomVariable
+from pytensor.tensor.random.op import RandomVariable, RNGConsumerOp
 from pytensor.tensor.random.type import RandomGeneratorType, RandomType
 from pytensor.tensor.random.utils import normalize_size_param
 from pytensor.tensor.utils import safe_signature
@@ -452,8 +452,15 @@ class SupportPointRewrite(GraphRewriter):
 
     def apply(self, fgraph):
         for node in fgraph.toposort():
-            if isinstance(node.op, RandomVariable | SymbolicRandomVariable):
-                fgraph.replace(node.out, support_point(node.out))
+            if isinstance(node.op, RNGConsumerOp):
+                # RandomVariable and SymbolicRandomVariable define a default output,
+                # other RNG consumers (e.g., the dims CustomDist) return (rv, next_rng)
+                rv = (
+                    node.out
+                    if getattr(node.op, "default_output", None) is not None
+                    else node.outputs[0]
+                )
+                fgraph.replace(rv, support_point(rv))
             elif isinstance(node.op, Scan):
                 new_node = self.rewrite_support_point_scan_node(node)
                 if new_node is not None:
