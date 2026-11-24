@@ -68,7 +68,6 @@ from pymc.distributions.continuous import (
     WeibullBetaRV,
 )
 from pymc.distributions.discrete import DiscreteUniformRV
-from pymc.distributions.dist_math import i0e, i1e
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (
@@ -376,7 +375,7 @@ def rice_mean(op, rv, rng, size, b, sigma):
     return maybe_resize(
         sigma
         * np.sqrt(np.pi / 2)
-        * ((1 + b_squared) * i0e(b_squared / 2) + b_squared * i1e(b_squared / 2)),
+        * ((1 + b_squared) * pt.ive(0, b_squared / 2) + b_squared * pt.ive(1, b_squared / 2)),
         size,
     )
 
