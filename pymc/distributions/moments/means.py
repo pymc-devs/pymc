@@ -245,7 +245,7 @@ def invgamma_mean(op, rv, rng, size, alpha, beta):
 
 
 @_mean.register(KroneckerNormalRV)
-def kronecker_normal_mean(op, rv, rng, size, mu, covs, chols, evds):
+def kronecker_normal_mean(op, rv, rng, size, mu, sigma, *covs):
     mean = mu
     if not rv_size_is_none(size):
         mean_size = pt.concatenate([size, mu.shape])
