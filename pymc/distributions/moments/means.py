@@ -78,6 +78,7 @@ from pymc.distributions.multivariate import (
     MatrixNormalRV,
     MvStudentTRV,
     StickBreakingWeightsRV,
+    WishartRV,
     _LKJCholeskyCovRV,
 )
 from pymc.distributions.shape_utils import maybe_resize, rv_size_is_none
@@ -444,3 +445,13 @@ def wald_mean(op, rv, rng, size, mu, lam, alpha):
 @_mean.register(WeibullBetaRV)
 def weibull_mean(op, rv, rng, size, alpha, beta):
     return maybe_resize(beta * pt.gamma(1 + 1 / alpha), size)
+
+
+@_mean.register(WishartRV)
+def wishart_mean(op, rv, rng, size, nu, scale_chol):
+    V = scale_chol @ scale_chol.mT
+    mean = nu * V
+    if not rv_size_is_none(size):
+        mean_size = pt.concatenate([size, V.shape[-2:]])
+        mean = pt.full(mean_size, mean)
+    return mean
