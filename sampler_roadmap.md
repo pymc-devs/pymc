@@ -12,86 +12,170 @@ It is ordered top down: the implementation plan, what the refactor gains (includ
 
 **Status:** design draft. All code is pseudocode.
 
-## Implementation order and milestones
+## Overview
+
+### Discussed in person
+
+In the in person meeting we had agreed on a very crude restructure of what we wanted from `pymc.sample`. I'll copy over verbatim and then try to summarize it into what I interpret are the main points:
+
+```python
+# Instantiate a Sampler object
+sampler = pm.nuts.sample(target_accept=0.9, draws=200)  # Not this
+pm.nuts(target_accept=0.9).sample(draws=200)  # This. There should be no extra **kwargs in sample
+
+# ---
+# Migrate sampler arguments into sampler and away from sample
+pm.sample(draws=200, target_accept=0.9)   # TODAY
+pm.sample(sampler=pm.nuts(target_accept=0.9), draws=200)  # Migrate towards this
+
+# ---
+# Backends and argument forwarding
+pm.sample_prior_predictive(backend="jax")
+pm.sample(backend="jax")
+pm.sample_posterior_predictive(backend="jax")
+
+# Maybe also a special blocking behavior?
+def sample(
+    *,
+    model=None,
+    sampler=None,
+    random_seed,
+    tune,
+    init: InitialStrategy,
+    draws,
+    chains,
+    cores,
+    blas_cores,
+    monitor = ProgressBar(
+        initial_status_update=True,
+        final_status_update=True,
+    ),
+    backend: str,
+    storage = DataTreeStorage(
+        var_names=None,
+        discard_tune=True,
+    ),
+    blocking: bool = True,
+):
+    if sampler is None:
+        sampler = pm.NUTS or pm.StepSampler(...)
+    future = sampler.sample(**kwargs)
+    if blocking:
+        return await future
+    else:
+        return future
+
+# ---
+# how do we resume sampling
+
+with pm.Model():
+  ...
+
+  # Not this
+  sampler = pm.nuts()
+  tuned_sampler = sampler.tune(chains=4)
+  draws = tuned_sampler.resume()
+
+# ---
+
+  # Not this
+  sampler = pm.nuts()
+  dt, tuned_sampler = pm.sample(tune=500, sampler=sampler, return_sampler_state=True)
+  pm.sample(sampler=tuned_sampler)
+
+# ---
+
+  # This, we later decide if we need some return_sampler_state kwarg or if't over-engineered
+  # By default all samplers encode the last-state meta-data they need to resume sampling
+  dt = pm.sample()
+  sampler = pm.sampler_from_dt(dt)
+  pm.sample(sampler=sampler)  # does tune=None become tune=0
+
+# ---
+# Storage
+pm.sample(
+    idata_kwargs =  # Not this
+)
+
+posterior = pm.sample( # This
+    storage=pm.trace.DataTree(**idata_kwargs),
+    storage=pm.trace.Zarr(**zarr_kwargs),
+)
+
+# ---
+# Logging and monitoring
+MyProtocol:
+  def monitor(self, chain_idx, trace, step_state):
+      logging.logger()  # or whatever
+      ...
+
+pm.sample(monitor="progressbar" | MonitorProtcol):
+```
+
+### Intended goals
+
+- Create a `Sampler` object that is capable of running the MCMC sampling process
+- Forward arguments into `Sampler` creation so that `Sampler.sample` then uses no extra `**kwargs` and accepts almost the same signature as `pymc.sample`
+- Potentially enable blocking and non blocking sampling
+- Enable ability to resume sampling from a partial trace that is held in some kind of storage.
+- Define a `Storage` contract that enables the previous point, and have the `Storage` initialization outside of `sample`.
+- I suppose, that `pymc.sample` will still have to create a default `Storage` when the user provides none.
+- Add a `Monitor` protocol that can be used as the progress monitor. This could be the progress bar that we have or something else.
+
+## High level overview of my proposal
+
+I want to try and tackle all of these points and in order to do so, I tried to go into the potential consequences for different implementation choices.
+
+- **`Sampler` objects**: currently we have no formal `Sampler` contract. We have serial sampling, parallel sampling, SMC and then external samplers, all in `pymc.sampling`. All implement their own protocol of how draws are created, logged and written to storage. The ideal implementation would house all of these under shared contracts and make it easier for external libraries to add their own samplers to be used.
+- **`Step` objects**: currently, we have some `Step` methods, like the built in `NUTS`, but then these get conflated with external libraries running NUTS variants (like nutpie or blackjax). If we want to create `Sampler` objects with a uniform contract, we will also have to create a new `Step` object contract. Just to be clear, the `Step` objects define the kernels that do the MCMC transitions.
+- **Adaptation and initialization**: we currently have some `init` that are `Step` specific, and hard to make compatible with other samplers. Ideally, we should separate the adaptation, and initialization strategies from the `Step` objects, so that custom init-adapt patterns can be used with ease. There will still be limitations for external samplers, and for `Step` objects that can handle a subset of adaptation methods, but this might be cleaner than subclassing `Potential`s, as needs to be done today.
+- **Storage and Monitor**: these objects will have to work with the `Sampler` objects because they control the MCMC flow of information, and they will have to be responsible for writting and logging. That means that `Storage` and `Monitor` should also expose a consistent API for use.
+- **Non blocking and asynchronous behavior**: external samplers might have non blocking sampling, but our builtin ones do not. If we want to enable this functionality we will have to think through how the `Sampler` will instantiate concurrency, background work and communication. The simplest case will be independent chain sampling (e.g. NUTS), where each chain could run in isolation. The next case would be population sampling (e.g. SMC or `DEMetropolis` like step methods) where chains can communicate information with each other at each step and take steps as a whole. These two kinds of sampling will have to be distinguished and reconciled under a uniform API.
+- **Compiled bundles separate from stateless `Step` objects**: our current `Step` objects are linked to the model object and compiled `logp` or `dlogp` callables, making them stateful and tightly linked to models. Ideally, we would have the `Step` methods be stateless, have the step method specific attribute values travel in a separate `State` object, and then have another object that holds all the compiled model objects. This separation will make it easier for external libraries to conform to the API and just implement the pieces that they need.
+- **Resuming sampling**: If the `Step` methods are stateless and only need an external `State` object and compiled bundle, loading these from some `Storage` unit will enable the `Sampler` to resume from a previous place. We will have to reconcile this with `Adapatation` and `Initialization` phases if they are separate objects, but that's something doable.
+- **Storage**: Still need to plan their API better, but they should expose some methods to be able to work in tandem with the new `Sampler` objects. The requirement is that all `Storage` objects should be capable of storing some representation of the `Sampler`'s `State` object so that resuming sampling is possible.
+- **Monitor**: Still need to plan their API better, but they should expose some methods to be able to work in tandem with the new `Sampler` objects. The requirement is that there needs to be at least one monitor that can work in non-interactive systems.
+
+## Concrete plan and internal milestones
 
 The milestones are ordered by dependency, and each one leaves `main` releasable. **`pymc.sample` stays blocking and synchronous throughout, and keeps returning its results as it does today.** Most of its current arguments are absorbed by components. They keep working, with a deprecation warning, until they are removed; see [Backwards compatibility](#backwards-compatibility).
 
 | Milestone | Scope | Depends on | Exit criteria |
 |---|---|---|---|
-| **M0** Contracts | A `pymc.sampling.api` module with the dataclasses and ABCs in this document, and `API_VERSION = 1`. No behaviour change. | — | The types import, and this document matches them. |
+| **M0** Contracts | A `pymc.sampling.api` module with the dataclasses and ABCs in this document, and `API_VERSION = 0`. No behaviour change. | — | The types import, and this document matches them. |
 | **M1** Canonical loop | `InlineSampler`; the phase and schedule machinery; a `LegacyStep` adapter so every existing `BlockedStep` runs in the new loop; conformance kit v0 (contract, purity, resumability, invariance). | M0 | All existing step methods sample through `InlineSampler` via `LegacyStep`. A ported random-walk Metropolis passes the kit. |
 | **M2** HMC split *(optional)* | NUTS and HMC ported as stateless steps. `DualAveraging`, `WindowedDiag`, `WindowedFull`, … extracted from `QuadPotential*`. `InitStrategy`, plus translation of the `init=` strings. | M1 | Posterior regression tests match legacy NUTS. Every legacy `init` string maps to an `(InitStrategy, Schedule)` pair. |
 | **M3** Output and monitoring | `DrawBatch` and bundle `postprocess`. The `Storage` and `Monitor` base classes and their contracts, finalized here. Two storages: in-memory (`DataTreeStorage`, the default) and zarr (`ZarrStorage`); both persist the sampler state. Monitors: a progress bar matching today's, a `FileMonitor` that is the default in non-interactive sessions, and the adapter that keeps `callback=` working during its deprecation. | M1 | Steps run through `LegacyStep` produce the same `DataTree` on the old and new output paths. Both storages pass the kit's storage checks, including the checkpoint round trip. Without a terminal (a batch job), the default monitor writes progress to a file. |
 | **M4** Process sampler and non-blocking API | `ProcessSampler` with free-running workers; `RunHandle` with pause, resume, stop, cancel and checkpoint; resume from storage, including after a crash; `start_sampling` and `sample_async`. `pymc.sample` is routed through the new stack: still blocking, still returning a `DataTree`, with the superseded arguments translated under a deprecation warning. | M3; M2 if included | The test suite passes on the new stack. With legacy steps and the same seed, the new stack reproduces today's draws. A run resumed after `stop()`, or after its process was killed, is bitwise identical to an uninterrupted one (same machine and backend). |
 | **M5** Plugins and external samplers | The entry-point registry with its security rules; adapters for nutpie, numpyro and blackjax, each providing its library's `Step`s and `Sampler`; `nuts_sampler=` deprecated in favour of `sampler=`; sampler conformance checks. | M3, M4 | The deprecated `nuts_sampler="nutpie"` and `sampler="nutpie"` produce the same run. The three adapters pass the kit. |
 | **M6** Population tier | `Comm` (inline and process), consistent cuts, SMC, ChEES, and DEMetropolis moved off `PopulationStepper`. | M4 | SMC and DEMetropolis results match legacy. Runs with 1, 2 and 3 shards agree. |
+| **M7** API version bump | Consolidate the classes and API, and bump `API_VERSION = 1`. | All previous | Have internal agreement on the API. |
 | *Not included, but made possible for the future* | A thread-based sampler (free-threaded Python); loops lowered to JAX or numba; mixing chain and population steps in one compound; steps that change the model during a run; automatic, model-tuned step assignment. | — | — |
 
 **If M2 is left out**, NUTS and HMC keep their adaptation inside `QuadPotential*` and run through `LegacyStep`. `LegacyStep` maps the end of the warmup phase to today's `stop_tuning()`. The `init=` strings keep going through today's `init_nuts`. Everything else still works, because M3–M6 don't depend on M2. What waits for M2 is composable adaptation for HMC: custom schedules and adapters, and `InitStrategy` objects passed to `init=`.
 
+## Rationale
+
+The first, **M1**, most important thing that we need to do is to establish an internal consensus on where we are going and how we plan to get there. That's why I propose starting by defining the APIs for the new classes as contracts that future implementation must uphold. If we find that the API was limiting in some way, we can extend it. That's why **M1** sets out with `API_VERSION = 0` and **M7** finally consolidates into the final API that works and we are satisfied with. Potential future changes will have to bump the `API_VERSION` further up. At the end of the phase, we have no extra functionality.
+
+The next thing, **M2**, that I propose is to have a working `Sampler` that is not asynchronous nor runs in the background with multiple processes, and then build `Step`s, their `State`s, compiled bundles, and simple `Storage`, and `Monitor`s that use that. We will also write a set of tests that will measure how much of the planned contract is covered by the classes. At the end of the phase, we have no extra functionality.
+
+After that, we start with the heavy work of **M3**:
+
+- Wrapping porting step methods
+- Splitting adaptation and initialization
+- Adapting the backends to use the new `Storage` protocol
+- Adapt the `Monitor` classes to conform with the protocol
+
+At the end of the phase, we still have not exposed the new internal API to `sample` and can't show any added functionality
+
+Then **M4** builds support for the more sophisticated `Sampler` loops: concurrency of workers (like what we have with `pymc.sampling.parallel` now), enabling communication between the main process and the worker processes, enable pausing, non blocking and resuming sampling. This is the phase at which we bring our new stack in to `pymc.sample` and the pause, resume, non blocking sampling will become available for internal samplers that don't rely on population steps.
+
+**M5** wraps the external samplers and defines the way that external libraries register their sampler into `pymc`. We can coordinate with `nutpie` and maybe `blackjax` about how they can register their entry points, but in practice, at the end of the phase, the external samplers should be made available to `sample` through a simpler interface.
+
+**M6** ties the last piece of MCMC with population samplers and a cross chain communication protocol. So SMC should become integrated into `sampling` at the end of this milestone.
+
 ## What we gain
-
-### Naming: `Step` and `Sampler` (open for discussion)
-
-The design rests on two abstractions. This section proposes names for them and offers an alternative.
-
-**What they are**
-
-- **`Step`**: one transition of a Markov chain, or of a whole population for methods such as SMC.
-  - It consists of configuration plus pure functions; the central one is `transition(state, bundle) -> (state, stats, signals)`.
-  - Examples: NUTS, Metropolis, Slice, one SMC stage, a wrapped blackjax kernel.
-  - It knows nothing about how many iterations it will run, whether it is tuning, processes, storage or progress bars.
-- **`Sampler`**: runs steps to produce samples. It owns the loop:
-  - the schedule of phases and adapters, and the stop conditions;
-  - parallelism, and one RNG stream per chain;
-  - writing to storage and reporting to monitors;
-  - the pause, stop and cancel controls.
-
-  Examples: `InlineSampler`, `ProcessSampler`, or the whole loop of an external library (`NutpieSampler`).
-
-**Why they are separate**
-
-A step is a mathematical object, a Markov kernel, so it can be tested in isolation; that is what the conformance kit does. A sampler is an engineering object: concurrency, I/O and control. Keeping them apart has two consequences:
-
-- Any step runs under any sampler that supports it.
-- Extension authors have a clear choice: write a `Step` for a new algorithm, or a `Sampler` for a new way of running algorithms (an external library's loop, a cluster, a GPU loop).
-
-**Why these names make sense**
-
-1. **They continue PyMC's own vocabulary.** Users already pass `step=pm.NUTS(...)` to `pm.sample`, and the module is called `pymc.step_methods`. The new `Step` is what `step=` has always accepted, now with a formal contract.
-2. **They continue the vocabulary users already apply to external libraries.** `nuts_sampler="nutpie"` selects "the nutpie sampler", and `sampler="nutpie"` selects the same thing.
-3. **They read literally.** A sampler is what produces samples, and `pm.sample` hands the work to a `Sampler`. A step is one move of the chain.
-4. **Splitting an algorithm into `init` and `step` functions is familiar from blackjax.**
-
-**What they cost**
-
-- **Clashes with legacy names during migration.** `BlockedStep`, `ArrayStep` and `CompoundStep` already exist in `pymc.step_methods`. The new types need their own namespace (`pymc.sampling.api`). The new compound type also needs a name that doesn't shadow the legacy `CompoundStep` while both exist, for example `GibbsStep`. This document calls it `CompoundStep` for readability.
-- **The transition method can't also be called `step`**, or generic code reads `step.step(state, bundle)`. This document calls it `transition`.
-- **Elsewhere, "sampler" often means the algorithm**, as in "the NUTS sampler", or emcee's `EnsembleSampler`. Some readers will expect `Sampler` to be the algorithm.
-
-**The alternative: `Sampler` for the algorithm, `Executor` for the loop**
-
-- **For:** no clash with legacy step classes; "sampler" matches its common use for the algorithm; "executor" says precisely that it runs work.
-- **Against:**
-  - `Executor` suggests `concurrent.futures.Executor` and its `submit`/`map` contract, which this isn't.
-  - Most PyMC users don't know the word in this sense.
-  - It breaks continuity with `step=` and `nuts_sampler=`.
-
-Other libraries use `Kernel` or `TransitionKernel` for the algorithm (numpyro, TensorFlow Probability) and a runner for the loop (numpyro's `MCMC`).
-
-| Concept | Proposed | Alternative |
-|---|---|---|
-| One transition | `Step` | `Sampler` |
-| Its state | `StepState` | `SamplerState` |
-| Its transition method | `transition` | `step` |
-| A population transition | `PopulationStep` | `PopulationSampler` |
-| Gibbs composition of blocks | `CompoundStep` (or `GibbsStep`) | `CompoundSampler` |
-| The loop | `Sampler` | `Executor` |
-| Its declared capabilities | `SamplerCapabilities` | `ExecutorCapabilities` |
-| PyMC's loops | `InlineSampler`, `ProcessSampler` | `InlineExecutor`, `ProcessExecutor` |
-| nutpie's loop | `NutpieSampler` | `NutpieExecutor` |
-| `pymc.sample` arguments | `step=` (existing), `sampler=` (new) | `step=` (existing, now taking a `Sampler`), `executor=` (new) |
-| Entry-point groups | `pymc.steps`, `pymc.samplers` | `pymc.samplers`, `pymc.executors` |
 
 ### 1. An extension path that needs no change to PyMC
 
@@ -100,7 +184,17 @@ A developer can write either of two things in their own package:
 - a `Step`: one transition, which PyMC's samplers run;
 - a `Sampler`: a whole sampling loop, such as an external library's.
 
-They declare an entry point, and `pymc.sample(..., sampler="their-name")` runs it.
+They declare an entry point in their own package like:
+
+```toml
+[project.entry-points."pymc.samplers"]
+my_package = "my_package.pymc_adapter:MyPackageSampler"
+
+[project.entry-points."pymc.steps"]
+my_package-step = "my_package.pymc_adapter:MyPackageStep"
+```
+
+and `pymc.sample(..., sampler="my_package")` runs it (or is able to choose its step).
 
 As a result:
 
@@ -169,13 +263,13 @@ ChEES-style pooled adaptation, SMC, ensemble samplers and tempering share one po
                             user code
                                 │  pymc.sample (blocking) / start_sampling / sample_async
                                 ▼
-┌──────────────────────── setup, in the calling process ────────────────────────┐
+┌──────────────────────── setup, in the calling process ─────────────────────────┐
 │ arguments ──► components (Step, InitStrategy, Schedule, Sampler, Storage, ...) │
 │ Model ──model_transform──► Step.Bundle.build ──► CompiledBundle (+ModelSpace)  │
 │ InitStrategy ──► starting positions + Approximation (the "hint")               │
 │ Step.default_params(bundle, hint) ──► one StepState per chain                  │
 │ Schedule = [Phase(adapters, until, warmup), ...]   validated against the Step  │
-└───────────────────────────────────┬───────────────────────────────────────────┘
+└───────────────────────────────────┬────────────────────────────────────────────┘
                                     │ RunSpec (picklable)
                                     ▼
 Sampler.start(spec, storage, monitor) ──► RunHandle  (progress, pause, stop, cancel, result)
@@ -1494,4 +1588,65 @@ This is why `SamplerCapabilities.progress` has a `"per_chunk"` value, and why st
 - Extending a finished run (more draws) as opposed to resuming a stopped one.
 - Bitwise reproducibility across shard counts (allgather-then-reduce versus allreduce of partial results).
 - Mixing chain and population steps in one compound (shelved).
-- A thread-based sampler, which needs `clone()` and free-threaded PyTensor.
+
+### Naming: `Step` and `Sampler` (open for discussion)
+
+The design rests on two abstractions. This section proposes names for them and offers an alternative.
+
+**What they are**
+
+- **`Step`**: one transition of a Markov chain, or of a whole population for methods such as SMC.
+  - It consists of configuration plus pure functions; the central one is `transition(state, bundle) -> (state, stats, signals)`.
+  - Examples: NUTS, Metropolis, Slice, one SMC stage, a wrapped blackjax kernel.
+  - It knows nothing about how many iterations it will run, whether it is tuning, processes, storage or progress bars.
+- **`Sampler`**: runs steps to produce samples. It owns the loop:
+  - the schedule of phases and adapters, and the stop conditions;
+  - parallelism, and one RNG stream per chain;
+  - writing to storage and reporting to monitors;
+  - the pause, stop and cancel controls.
+
+  Examples: `InlineSampler`, `ProcessSampler`, or the whole loop of an external library (`NutpieSampler`).
+
+**Why they are separate**
+
+A step is a mathematical object, a Markov kernel, so it can be tested in isolation; that is what the conformance kit does. A sampler is an engineering object: concurrency, I/O and control. Keeping them apart has two consequences:
+
+- Any step runs under any sampler that supports it.
+- Extension authors have a clear choice: write a `Step` for a new algorithm, or a `Sampler` for a new way of running algorithms (an external library's loop, a cluster, a GPU loop).
+
+**Why these names make sense**
+
+1. **They continue PyMC's own vocabulary.** Users already pass `step=pm.NUTS(...)` to `pm.sample`, and the module is called `pymc.step_methods`. The new `Step` is what `step=` has always accepted, now with a formal contract.
+2. **They continue the vocabulary users already apply to external libraries.** `nuts_sampler="nutpie"` selects "the nutpie sampler", and `sampler="nutpie"` selects the same thing.
+3. **They read literally.** A sampler is what produces samples, and `pm.sample` hands the work to a `Sampler`. A step is one move of the chain.
+4. **Splitting an algorithm into `init` and `step` functions is familiar from blackjax.**
+
+**What they cost**
+
+- **Clashes with legacy names during migration.** `BlockedStep`, `ArrayStep` and `CompoundStep` already exist in `pymc.step_methods`. The new types need their own namespace (`pymc.sampling.api`). The new compound type also needs a name that doesn't shadow the legacy `CompoundStep` while both exist, for example `GibbsStep`. This document calls it `CompoundStep` for readability.
+- **The transition method can't also be called `step`**, or generic code reads `step.step(state, bundle)`. This document calls it `transition`.
+- **Elsewhere, "sampler" often means the algorithm**, as in "the NUTS sampler", or emcee's `EnsembleSampler`. Some readers will expect `Sampler` to be the algorithm.
+
+**The alternative: `Sampler` for the algorithm, `Executor` for the loop**
+
+- **For:** no clash with legacy step classes; "sampler" matches its common use for the algorithm; "executor" says precisely that it runs work.
+- **Against:**
+  - `Executor` suggests `concurrent.futures.Executor` and its `submit`/`map` contract, which this isn't.
+  - Most PyMC users don't know the word in this sense.
+  - It breaks continuity with `step=` and `nuts_sampler=`.
+
+Other libraries use `Kernel` or `TransitionKernel` for the algorithm (numpyro, TensorFlow Probability) and a runner for the loop (numpyro's `MCMC`).
+
+| Concept | Proposed | Alternative |
+|---|---|---|
+| One transition | `Step` | `Sampler` |
+| Its state | `StepState` | `SamplerState` |
+| Its transition method | `transition` | `step` |
+| A population transition | `PopulationStep` | `PopulationSampler` |
+| Gibbs composition of blocks | `CompoundStep` (or `GibbsStep`) | `CompoundSampler` |
+| The loop | `Sampler` | `Executor` |
+| Its declared capabilities | `SamplerCapabilities` | `ExecutorCapabilities` |
+| PyMC's loops | `InlineSampler`, `ProcessSampler` | `InlineExecutor`, `ProcessExecutor` |
+| nutpie's loop | `NutpieSampler` | `NutpieExecutor` |
+| `pymc.sample` arguments | `step=` (existing), `sampler=` (new) | `step=` (existing, now taking a `Sampler`), `executor=` (new) |
+| Entry-point groups | `pymc.steps`, `pymc.samplers` | `pymc.samplers`, `pymc.executors` |
