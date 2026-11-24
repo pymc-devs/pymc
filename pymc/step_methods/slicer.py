@@ -141,7 +141,7 @@ class Slice(ArrayStepShared):
         logp = self.logp
         for i, wi in enumerate(self.w):
             current_logp = logp(q)
-            if not np.isfinite(current_logp):
+            if i == 0 and not np.isfinite(current_logp):
                 raise SamplingError(
                     "Slice sampler requires a finite log probability at the current point."
                 )
