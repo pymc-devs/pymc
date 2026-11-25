@@ -1111,12 +1111,7 @@ def pregrad_inner_graphs(fgraph):
         )
 
     def rewrite(linker, op, node, inner, *, mode):
-        rewrite_graph(
-            inner,
-            include=("canonicalize", "stabilize"),
-            exclude=("local_view_op",),
-            custom_rewrite=pregrad_inner_graphs,
-        )
+        rewrite_pregrad(inner)
 
     rewrite_inner_graph(fgraph, match, rewrite)
 
