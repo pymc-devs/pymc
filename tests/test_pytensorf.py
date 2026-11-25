@@ -851,3 +851,15 @@ def test_rewrite_pregrad_inner_graphs():
     )
     assert not np.isfinite(dcost_naive_fn(**point, n_steps=1000)).all(), "Test lost sensitivity"
     assert np.isfinite(dcost_stable_fn(**point, n_steps=1000)).all()
+
+
+@pytest.mark.parametrize("inner_graph", [False, True], ids=["outer", "op_from_graph"])
+def test_rewrite_pregrad_keeps_disconnected_grad(inner_graph):
+    x = pt.scalar("x")
+    cost = pytensor.gradient.disconnected_grad(x) * x
+    if inner_graph:
+        cost = OpFromGraph([x], [cost])(x)
+
+    dcost = pt.grad(rewrite_pregrad(cost), x)
+
+    np.testing.assert_allclose(dcost.eval({x: 3.0}), 3.0)

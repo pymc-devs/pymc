@@ -1111,11 +1111,7 @@ def pregrad_inner_graphs(fgraph):
         )
 
     def rewrite(linker, op, node, inner, *, mode):
-        rewrite_graph(
-            inner,
-            include=("canonicalize", "stabilize"),
-            custom_rewrite=pregrad_inner_graphs,
-        )
+        rewrite_pregrad(inner)
 
     rewrite_inner_graph(fgraph, match, rewrite)
 
@@ -1123,7 +1119,10 @@ def pregrad_inner_graphs(fgraph):
 def rewrite_pregrad(graph):
     """Apply simplifying or stabilizing rewrites to graph that are safe to use pre-grad."""
     return rewrite_graph(
-        graph, include=("canonicalize", "stabilize"), custom_rewrite=pregrad_inner_graphs
+        graph,
+        include=("canonicalize", "stabilize"),
+        exclude=("local_view_op",),
+        custom_rewrite=pregrad_inner_graphs,
     )
 
 
