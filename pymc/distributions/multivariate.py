@@ -921,7 +921,7 @@ class WishartRV(SymbolicRandomVariable):
 
     @classmethod
     def rv_op(cls, nu, scale_chol, *, size=None, rng=None):
-        nu = pt.as_tensor_variable(nu, dtype="int64")
+        nu = pt.as_tensor_variable(nu)
         scale_chol = pt.as_tensor_variable(scale_chol)
         if scale_chol.type.ndim < 2:
             raise ValueError("Wishart `scale_chol` must have at least 2 dimensions")
@@ -1036,7 +1036,7 @@ class Wishart(Continuous):
 
     @classmethod
     def dist(cls, nu, V=None, *args, scale_chol=None, **kwargs):
-        nu = pt.as_tensor_variable(nu, dtype=int)
+        nu = pt.as_tensor_variable(nu)
         scale_chol = cls._resolve_scale(V, scale_chol)
         return super().dist([nu, scale_chol], *args, **kwargs)
 
