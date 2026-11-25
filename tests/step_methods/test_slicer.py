@@ -15,11 +15,31 @@
 import numpy as np
 import pytest
 
+import pymc as pm
+
+from pymc.exceptions import SamplingError
 from pymc.step_methods.slicer import Slice
 from tests import sampler_fixtures as sf
 from tests.helpers import RVsAssignmentStepsTester, StepMethodTester
 
 SEED = 20240920
+
+
+def test_slice_rejects_initial_point_outside_support():
+    with pm.Model():
+        x = pm.Uniform("x", lower=0, upper=1, default_transform=None)
+        with pytest.raises(SamplingError, match="Slice sampler requires a finite log probability"):
+            pm.sample(
+                draws=100,
+                tune=0,
+                chains=1,
+                cores=1,
+                step=Slice([x]),
+                initvals={"x": -5.0},
+                random_seed=SEED,
+                progressbar=False,
+                compute_convergence_checks=False,
+            )
 
 
 class TestSliceUniform(sf.SliceFixture, sf.UniformFixture):

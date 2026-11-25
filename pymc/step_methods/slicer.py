@@ -21,6 +21,7 @@ from rich.progress import TextColumn
 from rich.table import Column
 
 from pymc.blocking import RaveledVars, StatsType
+from pymc.exceptions import SamplingError
 from pymc.initial_point import PointType
 from pymc.model import modelcontext
 from pymc.pytensorf import compile, join_nonshared_inputs, make_shared_replacements
@@ -139,8 +140,14 @@ class Slice(ArrayStepShared):
 
         logp = self.logp
         for i, wi in enumerate(self.w):
+            current_logp = logp(q)
+            if i == 0 and not np.isfinite(current_logp):
+                raise SamplingError(
+                    "Slice sampler requires a finite log probability at the current point."
+                )
+
             # uniformly sample from 0 to p(q), but in log space
-            y = logp(q) - self.rng.standard_exponential()
+            y = current_logp - self.rng.standard_exponential()
 
             # Create initial interval
             ql[i] = q[i] - self.rng.uniform() * wi  # q[i] + r * w
