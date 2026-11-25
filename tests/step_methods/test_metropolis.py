@@ -14,6 +14,8 @@
 
 import warnings
 
+from unittest.mock import Mock
+
 import arviz as az
 import numpy as np
 import numpy.testing as npt
@@ -21,9 +23,11 @@ import pytensor
 import pytest
 
 from pytensor.compile.mode import Mode
+from scipy.stats import poisson
 
 import pymc as pm
 
+from pymc.blocking import DictToArrayBijection
 from pymc.step_methods.metropolis import (
     BinaryGibbsMetropolis,
     BinaryMetropolis,
@@ -33,6 +37,7 @@ from pymc.step_methods.metropolis import (
     Metropolis,
     MultivariateNormalProposal,
     NormalProposal,
+    PoissonProposal,
 )
 from pymc.step_methods.state import equal_dataclass_values
 from pymc.testing import fast_unstable_sampling_mode
@@ -62,6 +67,87 @@ class TestMetropolisUniform(sf.MetropolisFixture, sf.UniformFixture):
 
 
 class TestMetropolis:
+    @pytest.mark.parametrize("use_global_rng", [False, True])
+    def test_poisson_proposal_symmetric_increments(self, use_global_rng, monkeypatch):
+        counts = np.array([1, 0, 4])
+        signs = np.array([-1, 1, -1])
+        scales = np.array([0.25, 1.0, 2.0])
+        rng = Mock(spec=np.random.Generator)
+        rng.poisson.return_value = counts
+        rng.choice.return_value = signs
+        if use_global_rng:
+            monkeypatch.setattr(np.random, "poisson", rng.poisson)
+            monkeypatch.setattr(np.random, "choice", rng.choice)
+        result = PoissonProposal(scales)(rng=None if use_global_rng else rng)
+        npt.assert_array_equal(result, (counts - scales) * signs)
+        rng.poisson.assert_called_once()
+        rng.choice.assert_called_once_with([-1, 1], size=3)
+
+    @pytest.mark.parametrize("rate", [1.0, 1.5])
+    @pytest.mark.parametrize("scaling", [0.25, 0.5, 1.0, 1.7])
+    @pytest.mark.parametrize("weights", [[1 / 3] * 3, [0.2, 0.3, 0.5]])
+    def test_poisson_proposal_detailed_balance(self, rate, scaling, weights):
+        # gh-8540: enumerate the actual sampler's transitions instead of
+        # relying on noisy frequencies from a sampled chain.
+        # Detailed balance does not guarantee mixing: rounding can restrict
+        # the reachable lattice for some rates and scaling factors.
+        with pm.Model():
+            x = pm.Categorical("x", p=weights)
+            step = Metropolis(
+                [x],
+                S=np.array([rate]),
+                proposal_dist=PoissonProposal,
+                scaling=scaling,
+                tune=False,
+                rng=SEED,
+            )
+        rng = Mock(spec=np.random.Generator)
+        rng.uniform.return_value = np.finfo(float).tiny
+        step.rng = rng
+        transition = np.zeros((3, 3))
+        # Larger counts leave the support in either direction and only
+        # contribute to the diagonal, including the infinite Poisson tail.
+        max_count = int(np.ceil(rate + 2.5 / scaling))
+        for state in range(3):
+            point = DictToArrayBijection.map({"x": np.array(state, dtype="int64")})
+            for count in range(max_count + 1):
+                rng.poisson.return_value = np.array([count])
+                for sign in (-1, 1):
+                    rng.choice.return_value = np.array([sign])
+                    result, statistics = step.astep(point)
+                    destination = int(result.data[0])
+                    if destination != state:
+                        probability = poisson.pmf(count, rate) / 2
+                        acceptance = min(1.0, statistics[0]["accept"])
+                        transition[state, destination] += probability * acceptance
+            transition[state, state] = 1 - transition[state].sum()
+        assert np.all(transition >= 0)
+        flow = np.asarray(weights)[:, None] * transition
+        npt.assert_allclose(flow, flow.T, rtol=1e-13, atol=1e-15)
+        npt.assert_allclose(np.asarray(weights) @ transition, weights, atol=1e-14)
+
+    @pytest.mark.parametrize("joint", [False, True])
+    @pytest.mark.parametrize("uniform", [0.25, 0.75])
+    def test_poisson_proposal_update_modes(self, joint, uniform):
+        with pm.Model():
+            if joint:
+                x = pm.Multinomial("x", n=2, p=[0.5, 0.5])
+            else:
+                x = pm.Categorical("x", p=[1 / 3] * 3, shape=2)
+            step = Metropolis([x], proposal_dist=PoissonProposal, tune=False, rng=SEED)
+        assert step.elemwise_update == (not joint)
+        rng = Mock(spec=np.random.Generator)
+        rng.poisson.return_value = np.array([0, 0])
+        rng.choice.return_value = np.array([-1, 1])
+        rng.uniform.return_value = uniform
+        step.rng = rng
+        point = DictToArrayBijection.map({"x": np.array([1, 1], dtype="int64")})
+        result, statistics = step.astep(point)
+        expected = [1, 1] if joint and uniform > 0.5 else [2, 0]
+        npt.assert_array_equal(result.data, expected)
+        npt.assert_allclose(statistics[0]["accept"], 0.5 if joint else 1.0)
+        assert rng.uniform.call_count == (1 if joint else 2)
+
     def test_proposal_choice(self):
         with pytensor.config.change_flags(mode=fast_unstable_sampling_mode):
             _, model, _ = mv_simple()
