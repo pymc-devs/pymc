@@ -11,16 +11,23 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import numpy as np
+import pytensor
 import pytensor.xtensor as ptx
 import pytensor.xtensor.random as ptxr
 
 from pytensor.tensor import as_tensor
 from pytensor.xtensor import as_xtensor
 from pytensor.xtensor import random as pxr
+from pytensor.xtensor.type import XTensorVariable
 
 from pymc.dims.distributions.core import VectorDimDistribution
-from pymc.dims.distributions.transforms import SimplexTransform, ZeroSumTransform
-from pymc.distributions.multivariate import ZeroSumNormalRV
+from pymc.dims.distributions.transforms import (
+    SimplexTransform,
+    WeightedZeroSumTransform,
+    ZeroSumTransform,
+)
+from pymc.distributions.multivariate import WeightedZeroSumNormalRV, ZeroSumNormalRV
 from pymc.util import UNSET
 
 
@@ -174,6 +181,105 @@ class MvNormal(VectorDimDistribution):
             cov = chol.dot(chol.rename({d0: safe_name}), dim=d1).rename({safe_name: d1})
 
         return super().dist([mu, cov], core_dims=core_dims, **kwargs)
+
+
+class WeightedZeroSumNormal(VectorDimDistribution):
+    """Weighted zero-sum multivariate normal distribution.
+
+    Draws satisfy ``(weights * value).sum(core_dim) = 0``. Generalization of
+    :class:`ZeroSumNormal`; with equal weights the two coincide. Exactly one
+    core dimension is supported.
+
+    Parameters
+    ----------
+    sigma : xtensor_like, optional
+        The standard deviation of the underlying unconstrained normal
+        distribution. Defaults to 1.0. It cannot have core dimensions.
+    weights : xtensor_like
+        Strictly positive weights along the single core dimension.
+    core_dims : str or Sequence of str
+        The single dimension along which the constraint is applied.
+    **kwargs
+        Additional keyword arguments used to define the distribution.
+
+    Returns
+    -------
+    XTensorVariable
+        An xtensor variable representing the weighted zero-sum normal
+        distribution.
+    """
+
+    @classmethod
+    def __new__(
+        cls,
+        *args,
+        weights=None,
+        core_dims=None,
+        dims=None,
+        default_transform=UNSET,
+        observed=None,
+        **kwargs,
+    ):
+        if core_dims is not None:
+            if isinstance(core_dims, str):
+                core_dims = (core_dims,)
+
+            if observed is None and default_transform is UNSET and weights is not None:
+                default_transform = WeightedZeroSumTransform(dim=core_dims[-1], weights=weights)
+
+        # If the user didn't specify dims, take it from core_dims
+        # We need them to be forwarded to dist in the `dim_lenghts` argument
+        if dims is None and core_dims is not None:
+            dims = (..., *core_dims)
+
+        return super().__new__(
+            *args,
+            weights=weights,
+            core_dims=core_dims,
+            dims=dims,
+            default_transform=default_transform,
+            observed=observed,
+            **kwargs,
+        )
+
+    @classmethod
+    def dist(cls, sigma=1.0, *, weights=None, core_dims=None, dim_lengths, **kwargs):
+        if isinstance(core_dims, str):
+            core_dims = (core_dims,)
+        if core_dims is None or len(core_dims) != 1:
+            raise ValueError("WeightedZeroSumNormal requires exactly one core_dims")
+        if weights is None:
+            raise ValueError("WeightedZeroSumNormal requires weights")
+
+        if not isinstance(weights, XTensorVariable):
+            weights = as_xtensor(np.asarray(weights, dtype=pytensor.config.floatX), dims=core_dims)
+        elif weights.type.dims != tuple(core_dims):
+            raise ValueError(f"weights must have dims {core_dims}, got {weights.type.dims}")
+
+        sigma = cls._as_xtensor(sigma)
+
+        return super().dist(
+            [sigma, weights], core_dims=core_dims, dim_lengths=dim_lengths, **kwargs
+        )
+
+    @classmethod
+    def xrv_op(cls, sigma, weights, core_dims, extra_dims=None, rng=None, **kwargs):
+        sigma = cls._as_xtensor(sigma)
+        weights = as_xtensor(weights)
+        core_rv = WeightedZeroSumNormalRV.rv_op(sigma=sigma.values, weights=weights.values).owner.op
+        xop = pxr.as_xrv(
+            core_rv,
+            core_inps_dims_map=[(), (0,)],
+            core_out_dims_map=(0,),
+        )
+        return xop(
+            sigma,
+            weights,
+            core_dims=core_dims,
+            extra_dims=extra_dims,
+            rng=rng,
+            **kwargs,
+        )
 
 
 class ZeroSumNormal(VectorDimDistribution):
