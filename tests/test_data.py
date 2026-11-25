@@ -376,7 +376,10 @@ class TestData:
             index=pd.date_range(start="2020-05-01", periods=22, freq="24h", name="date"),
             name="sales",
         )
-        with pm.Model() as pmodel:
+        with (
+            pm.Model() as pmodel,
+            pytest.warns(FutureWarning, match="infer_dims_and_coords"),
+        ):
             pm.Data("sales", ser_sales, dims="date", infer_dims_and_coords=True)
 
         assert "date" in pmodel.coords
@@ -394,7 +397,10 @@ class TestData:
         df_data.columns.name = "columns"
 
         # infer coordinates from index and columns of the DataFrame
-        with pm.Model() as pmodel:
+        with (
+            pm.Model() as pmodel,
+            pytest.warns(FutureWarning, match="infer_dims_and_coords"),
+        ):
             pm.Data("observations", df_data, dims=("rows", "columns"), infer_dims_and_coords=True)
 
         assert "rows" in pmodel.coords
@@ -404,7 +410,10 @@ class TestData:
     def test_implicit_coords_xarray(self):
         xr = pytest.importorskip("xarray")
         data = xr.DataArray([[1, 2, 3], [4, 5, 6]], dims=("y", "x"))
-        with pm.Model() as pmodel:
+        with (
+            pm.Model() as pmodel,
+            pytest.warns(FutureWarning, match="infer_dims_and_coords"),
+        ):
             pm.Data("observations", data, dims=("x", "y"), infer_dims_and_coords=True)
         assert "x" in pmodel.coords
         assert "y" in pmodel.coords
@@ -432,6 +441,71 @@ class TestData:
                 match="Masked arrays or arrays with `nan` entries are not supported.",
             ):
                 pm.Data("x", [0, 1, np.nan, 2])
+
+    def test_infer_dims_and_coords_polars_does_not_crash(self):
+        pl = pytest.importorskip("polars")
+        df = pl.DataFrame({"a": [1.0, 2.0, 3.0], "b": [4.0, 5.0, 6.0]})
+        with (
+            pm.Model() as pmodel,
+            pytest.warns(FutureWarning, match="infer_dims_and_coords"),
+        ):
+            pm.Data("x", df, dims=("rows", "cols"), infer_dims_and_coords=True)
+        assert pmodel.named_vars_to_dims == {"x": ("rows", "cols")}
+        assert pmodel.dim_lengths["rows"].eval() == 3
+        assert pmodel.dim_lengths["cols"].eval() == 2
+
+    def test_set_data_polars(self):
+        pl = pytest.importorskip("polars")
+        with pm.Model():
+            x = pm.Data("x", [1.0, 2.0])
+            pm.set_data({"x": pl.Series([3.0, 4.0, 5.0])})
+        np.testing.assert_array_equal(x.get_value(), [3.0, 4.0, 5.0])
+
+    def test_polars_null_error(self):
+        pl = pytest.importorskip("polars")
+        with pm.Model():
+            with pytest.raises(
+                NotImplementedError,
+                match="Masked arrays or arrays with `nan` entries are not supported.",
+            ):
+                pm.Data("x", pl.Series([0, 1, None, 2]))
+
+
+def _data_input_cases():
+    expected = np.arange(6, dtype="float64").reshape(3, 2)
+    cases = [
+        pytest.param(lambda: expected.copy(), id="ndarray"),
+        pytest.param(lambda: expected.tolist(), id="list"),
+        pytest.param(lambda: pytest.importorskip("pandas").DataFrame(expected), id="pandas_frame"),
+        pytest.param(lambda: pytest.importorskip("polars").DataFrame(expected), id="polars_frame"),
+        pytest.param(
+            lambda: pytest.importorskip("polars").DataFrame(expected).lazy(), id="polars_lazyframe"
+        ),
+        pytest.param(lambda: pytest.importorskip("xarray").DataArray(expected), id="xarray"),
+    ]
+    return expected, cases
+
+
+_DATA_INPUT_EXPECTED, _DATA_INPUT_CASES = _data_input_cases()
+
+
+@pytest.mark.parametrize("make_value", _DATA_INPUT_CASES)
+def test_data_input_types(make_value):
+    with pm.Model() as pmodel:
+        x = pm.Data("x", make_value())
+    np.testing.assert_array_equal(x.get_value(), _DATA_INPUT_EXPECTED)
+    assert pmodel.coords == {}
+    assert pmodel.named_vars_to_dims == {}
+
+
+@pytest.mark.parametrize("library", ["pandas", "polars"])
+def test_data_series_input(library):
+    lib = pytest.importorskip(library)
+    expected = np.array([1.0, 2.0, 3.0])
+    with pm.Model() as pmodel:
+        x = pm.Data("x", lib.Series(expected))
+    np.testing.assert_array_equal(x.get_value(), expected)
+    assert pmodel.coords == {}
 
 
 def test_data_naming():
