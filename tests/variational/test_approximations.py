@@ -19,7 +19,7 @@ import pytest
 import pymc as pm
 
 from pymc.pytensorf import floatX
-from pymc.variational.approximations import Empirical, MeanField
+from pymc.variational.approximations import Empirical, MeanField, MeanFieldGroup
 from pymc.variational.operators import KL
 from tests import models
 
@@ -159,6 +159,54 @@ def test_elbo_beta_kl(aux_total_size):
         np.testing.assert_allclose(
             elbo_via_total_size_scaled.eval(), elbo_via_beta_kl.eval(), rtol=0, atol=1e-1
         )
+
+
+@pytest.mark.parametrize("name", ["missing", "sigma"])
+@pytest.mark.parametrize("fit", [False, True], ids=["ADVI", "fit"])
+def test_unknown_start_sigma_name(name, fit):
+    with pm.Model():
+        pm.HalfNormal("sigma")
+        with pytest.raises(KeyError, match=f"Unknown variable name '{name}' in start_sigma"):
+            if fit:
+                pm.fit(0, start_sigma={name: 0.2}, progressbar=False)
+            else:
+                pm.ADVI(start_sigma={name: 0.2})
+
+
+@pytest.mark.parametrize(
+    "start_sigma, expected",
+    [
+        (None, [np.log(2), np.log(2), np.log(2)]),
+        ({}, [np.log(2), np.log(2), np.log(2)]),
+        ({"beta": None, "sigma_log__": None}, [np.log(2), np.log(2), np.log(2)]),
+        ({"beta": [0.2, 0.3]}, [0.2, 0.3, np.log(2)]),
+        ({"beta": [0.2, 0.3], "sigma_log__": 0.4}, [0.2, 0.3, 0.4]),
+    ],
+)
+def test_start_sigma_names(start_sigma, expected):
+    with pm.Model():
+        pm.Normal("beta", shape=2)
+        pm.HalfNormal("sigma")
+        approx = pm.ADVI(start_sigma=start_sigma).approx
+
+    np.testing.assert_allclose(approx.std.eval(), expected, rtol=1e-6)
+
+
+def test_start_sigma_names_in_named_model():
+    with pm.Model(name="group"):
+        pm.HalfNormal("sigma")
+        approx = pm.ADVI(start_sigma={"group::sigma_log__": 0.2}).approx
+
+    np.testing.assert_allclose(approx.std.eval(), [0.2], rtol=1e-6)
+
+
+def test_start_sigma_names_for_other_groups():
+    with pm.Model():
+        beta = pm.Normal("beta")
+        pm.HalfNormal("sigma")
+        group = MeanFieldGroup(group=[beta], start_sigma={"beta": 0.2, "sigma_log__": 0.3})
+
+    np.testing.assert_allclose(group.std.eval(), [0.2], rtol=1e-6)
 
 
 def test_seeding_advi_fit():

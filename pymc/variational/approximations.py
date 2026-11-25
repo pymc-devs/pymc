@@ -86,6 +86,13 @@ class MeanFieldGroup(Group):
         rho1 = np.zeros((self.ddim,))
 
         if start_sigma is not None:
+            value_names = {var.name for var in self.model.value_vars}
+            for name in start_sigma:
+                if name not in value_names:
+                    raise KeyError(
+                        f"Unknown variable name {name!r} in start_sigma. "
+                        "Use names from the unconstrained parameter space."
+                    )
             for name, slice_, *_ in self.ordering.values():
                 sigma = start_sigma.get(name)
                 if sigma is not None:

@@ -479,6 +479,8 @@ class ADVI(KLqp):
         starting point for inference
     start_sigma: `dict[str, np.ndarray]`
         starting standard deviation for inference, only available for method 'advi'
+        Keys must be variable names in the unconstrained parameter space, such as
+        ``sigma_log__`` for a log-transformed variable. Unknown names raise ``KeyError``.
 
     References
     ----------
@@ -732,6 +734,8 @@ def fit(
         starting point for inference
     start_sigma: `dict[str, np.ndarray]`
         starting standard deviation for inference, only available for method 'advi'
+        Keys must be variable names in the unconstrained parameter space, such as
+        ``sigma_log__`` for a log-transformed variable. Unknown names raise ``KeyError``.
     backend: str, optional
         Which computational backend to use. Recommended to be one of "numba", "c", and "jax".
     include_transformed: bool, default False
