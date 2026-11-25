@@ -16,6 +16,25 @@ conda env create -f conda-envs/environment-docs.yml
 pip install -e .
 ```
 
+## Jupyter kernel for notebook builds
+
+The documentation configuration uses the `python3` Jupyter kernel for notebooks.
+Make sure this kernel points to the same environment where you installed PyMC in
+editable mode. To inspect the registered kernels and their locations, run:
+
+```shell
+jupyter kernelspec list
+```
+
+If the `python3` kernel is missing or points to a different environment, activate
+the documentation environment and register its Python executable as that kernel:
+
+```shell
+python -m ipykernel install --user --name python3 --display-name "Python 3"
+```
+
+This replaces an existing `python3` kernelspec with one for the active environment.
+
 ## Building the documentation
 There is a `Makefile` in the pymc repo to help with the doc building process.
 
