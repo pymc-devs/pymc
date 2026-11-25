@@ -163,6 +163,13 @@ class TestMatchesScipy:
             st.geom.ppf,
         )
 
+    def test_geometric_logcdf_support_bounds(self):
+        value = pt.lscalar("value")
+        p = pt.dscalar("p")
+        fn = pytensor.function([value, p], pm.logcdf(pm.Geometric.dist(p=p), value))
+        for x in (-1, 0, 1, 2):
+            np.testing.assert_allclose(fn(x, 1.0), st.geom.logcdf(x, 1.0))
+
     def test_hypergeometric_logcdf_support_bounds(self):
         value = pt.dscalar("value")
         fn = pytensor.function(

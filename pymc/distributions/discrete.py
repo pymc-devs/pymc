@@ -836,7 +836,7 @@ class Geometric(Discrete):
 
     def logcdf(value, p):
         res = pt.switch(
-            pt.lt(value, 0),
+            pt.lt(value, 1),
             -np.inf,
             pt.log1mexp(pt.log1p(-p) * value),
         )
