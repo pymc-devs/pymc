@@ -17,6 +17,7 @@ from collections.abc import Callable, Mapping, MutableMapping, Sequence
 from typing import TYPE_CHECKING, Any
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from pytensor.tensor.variable import TensorVariable
@@ -255,6 +256,21 @@ def get_initial_fill_value_and_dtype(
                 fill_value = DEFAULT_FILL_VALUES[key]
                 break
     return fill_value, _dtype
+
+
+def _coord_values(coord: Any) -> np.ndarray:
+    """Return the values of a coordinate as an array with a zarr compatible dtype.
+
+    ``pm.Model`` stores coordinate values as a tuple, so a ``pd.DatetimeIndex``
+    becomes a tuple of ``pd.Timestamp`` and ``np.asarray`` gives an ``object``
+    array, which zarr v3 cannot store. ``pd.Index`` infers the native dtype
+    (``datetime64``, ``timedelta64``) in the same way xarray does for the other
+    backends.
+    """
+    values = np.asarray(coord)
+    if values.dtype == object:
+        values = pd.Index(values).to_numpy()
+    return values
 
 
 class ZarrTrace(_ZarrTraceBase):
@@ -689,7 +705,7 @@ class ZarrTrace(_ZarrTraceBase):
         for dim, coord in group_coords.items():
             group.create_array(
                 name=dim,
-                data=np.asarray(coord),
+                data=_coord_values(coord),
                 dimension_names=[dim],
                 compressors=self.compressors,
             )
@@ -720,7 +736,7 @@ class ZarrTrace(_ZarrTraceBase):
             for dim, coord in group_coords.items():
                 group.create_array(  # type: ignore[arg-type,union-attr]
                     name=dim,
-                    data=np.asarray(coord),
+                    data=_coord_values(coord),
                     dimension_names=[dim],
                     compressors=self.compressors,
                 )
