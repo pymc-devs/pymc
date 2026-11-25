@@ -17,6 +17,7 @@ from typing import Any
 
 import pytensor.tensor as pt
 
+from pytensor.compile import optdb
 from pytensor.graph.fg import FunctionGraph
 from pytensor.xtensor import as_xtensor, broadcast, zeros_like
 from pytensor.xtensor.basic import xtensor_from_tensor
@@ -26,7 +27,7 @@ from pytensor.xtensor.type import XTensorVariable
 
 from pymc.dims.distributions.core import DimDistribution, DimSymbolicRandomVariable
 from pymc.distributions.custom import CustomDist as TensorCustomDist
-from pymc.distributions.custom import default_not_implemented
+from pymc.distributions.custom import SupportPointRewrite, default_not_implemented
 from pymc.distributions.distribution import _support_point
 from pymc.logprob.abstract import _logcdf, _logprob
 from pymc.model.core import new_or_existing_block_model_access
@@ -57,6 +58,34 @@ def _non_random_dist(*args, dtype, class_name):
         random=default_not_implemented(class_name, "dist"),
     )
     return xtensor_from_tensor(placeholder, dims=tuple(dim_lengths))
+
+
+def _support_point_from_inner_graph(op, inputs):
+    """Replace each random variable in the inner graph by its support point.
+
+    This does not derive a moment of the CustomDist, only a point that is
+    reasonable for the params, so that the logp is finite in common cases.
+    """
+    fgraph = op.fgraph.unfreeze()
+    # Lowering exposes the tensor RandomVariables, which are the ones with a support point
+    optdb.query("+lower_xtensor").rewrite(fgraph)
+    SupportPointRewrite().rewrite(fgraph)
+    # Replace dummy inner inputs by outer inputs
+    fgraph.replace_all(tuple(zip(fgraph.inputs, inputs)), import_missing=True)
+    return fgraph.outputs[0]
+
+
+def _zeros_support_point(op, rv_out, inputs):
+    params = inputs[: op.n_params]
+    # Initial points use FAST_COMPILE, where zeros_like(rv) may evaluate rv.
+    zero = as_xtensor(pt.zeros((), dtype=rv_out.dtype))
+    extra_lengths = dict(zip(op.extra_dims, inputs[op.n_params : -1]))
+    zero = zero.expand_dims(dim=extra_lengths)
+    reduced_dims = {dim for p in params for dim in p.dims if dim not in rv_out.dims}
+    sp, *_ = broadcast(zero, *params, exclude=sorted(reduced_dims))
+    if set(sp.dims) != set(rv_out.dims):
+        return zeros_like(rv_out)
+    return sp.transpose(*rv_out.dims)
 
 
 class CustomDist(DimDistribution):
@@ -90,6 +119,12 @@ class CustomDist(DimDistribution):
     When only ``dist`` is provided, the logp is derived automatically from the
     graph, exactly as it is for the built-in ``pymc.dims`` distributions.
 
+    By default, the support point (used for the initial point) is obtained by
+    replacing every random variable in the ``dist`` graph by its own support point
+    and propagating it through the remaining operations. This is not a moment of
+    the distribution, only a point that should have finite logp. If any inner
+    variable has no support point, zeros are used instead.
+
     User-provided ``logp``/``logcdf``/``support_point`` override the defaults.
     They are dispatched with xtensor semantics: the value, the random
     variable and all the params are ``XTensorVariable`` with named dims, and
@@ -113,8 +148,7 @@ class CustomDist(DimDistribution):
     ``default_transform`` from :mod:`pymc.dims.distributions.transforms`.
     CustomDist does not infer a transform from ``dist``. Using the same
     ``logitnormal_dist`` function, whose support is (0, 1), specify a log-odds
-    transform. A prior draw provides an initial value inside the support,
-    since the default zero support point is outside it::
+    transform::
 
         from pymc.dims.distributions.transforms import LogOddsTransform
 
@@ -128,7 +162,6 @@ class CustomDist(DimDistribution):
                 dist=logitnormal_dist,
                 dims="city",
                 default_transform=LogOddsTransform(),
-                initval="prior",
             )
     """
 
@@ -246,15 +279,11 @@ class CustomDist(DimDistribution):
             params = inputs[: op.n_params]
             if support_point is not None:
                 return support_point(rv_out, *params)
-            # Initial points use FAST_COMPILE, where zeros_like(rv) may evaluate rv.
-            zero = as_xtensor(pt.zeros((), dtype=rv_out.dtype))
-            extra_lengths = dict(zip(op.extra_dims, inputs[op.n_params : -1]))
-            zero = zero.expand_dims(dim=extra_lengths)
-            reduced_dims = {dim for p in params for dim in p.dims if dim not in rv_out.dims}
-            sp, *_ = broadcast(zero, *params, exclude=sorted(reduced_dims))
-            if set(sp.dims) != set(rv_out.dims):
-                return zeros_like(rv_out)
-            return sp.transpose(*rv_out.dims)
+            try:
+                return _support_point_from_inner_graph(op, inputs)
+            except NotImplementedError:
+                # Some inner variable has no support point, fall back to zeros
+                return _zeros_support_point(op, rv_out, inputs)
 
         xop = rv_type(
             inputs=[*dummy_params, *dummy_extra_lengths, dummy_rng],

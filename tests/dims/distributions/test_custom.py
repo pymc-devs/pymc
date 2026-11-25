@@ -12,16 +12,21 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 import numpy as np
+import pytensor
 import pytensor.xtensor.math as ptxm
 import pytest
 
+from pytensor import scan
+from pytensor.tensor.random.op import RandomVariable
 from pytensor.xtensor import as_xtensor, full_like
+from pytensor.xtensor.basic import xtensor_from_tensor
+from pytensor.xtensor.random import as_xrv, shared_rng
 from scipy import stats
 
 import pymc.distributions as regular_distributions
 
 from pymc import draw as pm_draw
-from pymc.dims import Censored, CustomDist, Normal
+from pymc.dims import Censored, CustomDist, HalfNormal, Normal, Uniform
 from pymc.model.core import Model
 from tests.dims.utils import assert_equivalent_logp_graph, assert_equivalent_random_graph
 
@@ -115,7 +120,97 @@ def test_default_support_point_reduced_param_dim():
     with Model(coords={"obs": range(2)}) as model:
         CustomDist("x", mu, dist=averaged_normal_dist, dims="obs")
 
-    np.testing.assert_array_equal(model.initial_point()["x"], np.zeros(2))
+    np.testing.assert_array_equal(model.initial_point()["x"], np.ones(2))
+
+
+def lognormal_dist(mu, sigma, extra_dims):
+    return ptxm.exp(normal_dist(mu, sigma, extra_dims))
+
+
+def shifted_halfnormal_dist(mu, sigma, extra_dims):
+    return mu + 2 * HalfNormal.dist(sigma, dim_lengths=extra_dims)
+
+
+def shifted_uniform_dist(mu, sigma, extra_dims):
+    return Uniform.dist(mu + 10, mu + 11, dim_lengths=extra_dims)
+
+
+@pytest.mark.parametrize(
+    "dist, expected",
+    [
+        (lognormal_dist, np.exp(0.5)),
+        (shifted_halfnormal_dist, 0.5 + 2 * 3.0),
+        (shifted_uniform_dist, 11.0),
+    ],
+)
+def test_default_support_point_has_finite_logp(dist, expected):
+    """The default support point is not on the boundary or outside the support (as zeros was)."""
+    with Model(coords={"city": range(3)}) as model:
+        CustomDist("x", 0.5, 3.0, dist=dist, dims="city")
+
+    initial_point = model.initial_point()
+    np.testing.assert_allclose(initial_point["x"], np.full(3, expected))
+    assert np.isfinite(model.compile_logp()(initial_point))
+
+
+def test_default_support_point_nested_random_variables():
+    """Support points of dependent random variables, including a nested CustomDist, are chained."""
+
+    def nested_dist(mu, extra_dims):
+        first = CustomDist.dist(mu, 1, dist=lognormal_dist, dim_lengths=extra_dims)
+        return HalfNormal.dist(first) + first
+
+    with Model(coords={"city": range(3)}) as model:
+        CustomDist("x", 0.5, dist=nested_dist, dims="city")
+
+    # HalfNormal support point is its sigma
+    np.testing.assert_allclose(model.initial_point()["x"], np.full(3, 2 * np.exp(0.5)))
+
+
+def test_default_support_point_scan():
+    def scan_dist(mu, extra_dims):
+        def step(xtm1, rng):
+            next_rng, x = regular_distributions.Normal.dist(xtm1 + 1, rng=rng).owner.outputs
+            return x, next_rng
+
+        rng = pytensor.shared(np.random.default_rng())
+        xs, _next_rng = scan(
+            step, outputs_info=[mu.values, rng], n_steps=3, name="xs", return_updates=False
+        )
+        return xtensor_from_tensor(xs, dims=("step", *mu.dims))
+
+    mu = as_xtensor(np.zeros(2), dims=("city",))
+    with Model(coords={"city": range(2), "step": range(3)}) as model:
+        CustomDist("x", mu, dist=scan_dist, dims=("step", "city"))
+
+    np.testing.assert_array_equal(
+        model.initial_point()["x"], np.array([[1, 1], [2, 2], [3, 3]], dtype="float64")
+    )
+
+
+def test_default_support_point_without_inner_support_point():
+    """Fall back to zeros if some random variable in the inner graph has no support point."""
+
+    class NoSupportPointRV(RandomVariable):
+        name = "no_support_point"
+        signature = "()->()"
+        dtype = "floatX"
+
+        @classmethod
+        def rng_fn(cls, rng, loc, size):
+            return rng.normal(loc, 1, size)
+
+    def no_support_point_dist(mu, extra_dims):
+        _, rv = as_xrv(NoSupportPointRV())(
+            mu, extra_dims=extra_dims, rng=shared_rng(seed=None), return_next_rng=True
+        )
+        return rv
+
+    mu = as_xtensor(np.arange(3, dtype="float64"), dims=("city",))
+    with Model(coords={"obs": range(2), "city": range(3)}) as model:
+        CustomDist("x", mu, dist=no_support_point_dist, dims=("obs", "city"))
+
+    np.testing.assert_array_equal(model.initial_point()["x"], np.zeros((2, 3)))
 
 
 def test_censored_compound_custom_dist():
