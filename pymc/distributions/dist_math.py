@@ -29,7 +29,8 @@ import pytensor.tensor as pt
 
 from pytensor.graph.basic import Apply, Variable
 from pytensor.graph.op import Op
-from pytensor.scalar import UnaryScalarOp, upgrade_to_float_no_complex
+from pytensor.scalar import UnaryScalarOp
+from pytensor.scalar.basic import _resolve_float_no_complex_dtypes
 from pytensor.tensor import gammaln
 from pytensor.tensor.elemwise import Elemwise
 from pytensor.utils import lazy_scipy_module
@@ -304,18 +305,26 @@ class SplineWrapper(Op):
 class I1e(UnaryScalarOp):
     """Modified Bessel function of the first kind of order 1, exponentially scaled."""
 
+    name = "i1e"
+
+    resolve_dtypes = _resolve_float_no_complex_dtypes
+
     nfunc_spec = ("scipy.special.i1e", 1, 1)
 
     def impl(self, x):
         return special.i1e(x)
 
 
-i1e_scalar = I1e(upgrade_to_float_no_complex, name="i1e")
+i1e_scalar = I1e()
 i1e = Elemwise(i1e_scalar, name="Elemwise{i1e,no_inplace}")
 
 
 class I0e(UnaryScalarOp):
     """Modified Bessel function of the first kind of order 0, exponentially scaled."""
+
+    name = "i0e"
+
+    resolve_dtypes = _resolve_float_no_complex_dtypes
 
     nfunc_spec = ("scipy.special.i0e", 1, 1)
 
@@ -328,7 +337,7 @@ class I0e(UnaryScalarOp):
         return (gz * (i1e_scalar(x) - pytensor.scalar.sign(x) * i0e_scalar(x)),)
 
 
-i0e_scalar = I0e(upgrade_to_float_no_complex, name="i0e")
+i0e_scalar = I0e()
 i0e = Elemwise(i0e_scalar, name="Elemwise{i0e,no_inplace}")
 
 
