@@ -295,7 +295,7 @@ def measurable_transform_logcdf(op: MeasurableTransform, value, *inputs):
 
     # The jacobian is used to ensure a value in the supported domain was provided
     jacobian = op.transform_elemwise.log_jac_det(value, *other_inputs)
-    return pt.switch(pt.isnan(jacobian), -np.inf, logcdf)
+    return pt.switch(pt.isnan(jacobian), pt.switch(value <= 0, -np.inf, 0.0), logcdf)
 
 
 @_icdf.register(MeasurableTransform)
@@ -682,6 +682,9 @@ class TanhTransform(Transform):
     def backward(self, value, *inputs):
         return pt.arctanh(value)
 
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(pt.abs(value) < 1, -pt.log1p(-(value**2)), np.nan)
+
 
 class ArcsinhTransform(Transform):
     name = "arcsinh"
@@ -702,7 +705,10 @@ class ArccoshTransform(Transform):
         return pt.arccosh(value)
 
     def backward(self, value, *inputs):
-        return pt.cosh(value)
+        return pt.switch(value >= 0, pt.cosh(value), np.nan)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(value >= 0, pt.log(pt.sinh(value)), np.nan)
 
 
 class ArctanhTransform(Transform):
@@ -724,7 +730,10 @@ class ArcsinTransform(Transform):
         return pt.arcsin(value)
 
     def backward(self, value, *inputs):
-        return pt.sin(value)
+        return pt.switch(pt.abs(value) <= np.pi / 2, pt.sin(value), np.nan)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(pt.abs(value) <= np.pi / 2, pt.log(pt.cos(value)), np.nan)
 
 
 class ArccosTransform(Transform):
@@ -735,7 +744,10 @@ class ArccosTransform(Transform):
         return pt.arccos(value)
 
     def backward(self, value, *inputs):
-        return pt.cos(value)
+        return pt.switch((value >= 0) & (value <= np.pi), pt.cos(value), np.nan)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch((value >= 0) & (value <= np.pi), pt.log(pt.sin(value)), np.nan)
 
 
 class ArctanTransform(Transform):
@@ -746,7 +758,10 @@ class ArctanTransform(Transform):
         return pt.arctan(value)
 
     def backward(self, value, *inputs):
-        return pt.tan(value)
+        return pt.switch(pt.abs(value) < np.pi / 2, pt.tan(value), np.nan)
+
+    def log_jac_det(self, value, *inputs):
+        return pt.switch(pt.abs(value) < np.pi / 2, -2 * pt.log(pt.cos(value)), np.nan)
 
 
 class ErfTransform(Transform):
