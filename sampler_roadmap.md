@@ -265,10 +265,10 @@ ChEES-style pooled adaptation, SMC, ensemble samplers and tempering share one po
                                 ▼
 ┌──────────────────────── setup, in the calling process ─────────────────────────┐
 │ arguments ──► components (Step, InitStrategy, Schedule, Sampler, Storage, ...) │
-│ Model ──model_transform──► Step.Bundle.build ──► CompiledBundle (+ModelSpace)  │
-│ InitStrategy ──► starting positions + Approximation (the "hint")               │
-│ Step.default_params(bundle, hint) ──► one StepState per chain                  │
+│ Model ──model_transform──► CompiledBundles: the Step's and each init stage's   │
 │ Schedule = [Phase(adapters, until, warmup), ...]   validated against the Step  │
+│ init pipeline (root >> stages) ──draw──► InitResult: positions + Approximation │
+│ Step.default_params(bundle, InitResult) ──► one StepState per chain            │
 └───────────────────────────────────┬────────────────────────────────────────────┘
                                     │ RunSpec (picklable)
                                     ▼
@@ -285,7 +285,7 @@ Sampler.start(spec, storage, monitor) ──► RunHandle  (progress, pause, sto
 | `Step` | Configuration plus a stateless transition: `transition(state, bundle) -> (state, stats, signals)` | PyMC; extension authors |
 | `StepState` | Everything that changes between steps: position, tunable parameters, caches, RNG | step author |
 | `CompiledBundle` | The compiled callables a step needs, plus a description of the space they work in | step author, usually by reusing a PyMC bundle |
-| `InitStrategy` | Starting positions and an optional approximation of the posterior | PyMC, users |
+| `InitStrategy` | One stage of the initialization pipeline, which yields the starting positions and an optional approximation of the posterior | PyMC, users |
 | `Adapter` | Tunes one parameter field from the step's signals | PyMC, users |
 | `Phase`, `Schedule` | Which adapters run, for how long, and whether the draws count as warmup | PyMC (defaults), users |
 | `StopCondition` | When a phase ends: iterations, ESS, wall-clock time | PyMC, users |
@@ -330,7 +330,7 @@ def sample(
     step: Step | BlockedStep | Sequence[Step | BlockedStep] | None = None,  # legacy steps run via LegacyStep
     sampler: Sampler | str | None = None,
     initvals: StartDict | Sequence[StartDict | None] | None = None,
-    init: InitStrategy | None = None,          # None → step.default_init(); strings are deprecated
+    init: InitStrategy | InitPipeline | None = None,   # None → step.default_init(); strings are deprecated
     schedule: Schedule | None = None,
     storage: Storage | None = None,
     monitor: Monitor | Sequence[Monitor] | None = None,
@@ -383,35 +383,38 @@ def start_sampling(draws=1000, *, model=None, step=None, sampler=None, init="aut
     sampler = sampler or step.default_sampler()
     sampler.check_supports(step, c.settings)      # raises for a step or a shared setting it can't use
 
-    # 3. Compile once, in this process
-    bundle = step.Bundle.build(model, step.vars, transform=model_transform,
-                              compile_kwargs=c.compile_kwargs)   # backend= already folded in
+    # 3. Compile once, in this process: the step's bundle and one per initialization stage,
+    #    all from the same transformed model, through one cache
+    bundles = BundleCache(model, transform=model_transform, compile_kwargs=c.compile_kwargs)
+    bundle = bundles.get(step.Bundle, step.vars)               # backend= already folded in
     check_space(step.requirements, bundle.space)
 
-    # 4. Initialization
-    chains = c.chains or sampler.default_chains()
-    rngs = get_random_generator(c.random_seed).spawn(chains)   # one stream per chain, derived as today
-    init = c.init or step.default_init()
-    init_bundle = bundle if isinstance(bundle, init.Bundle) else init.Bundle.build(model, transform=model_transform)
-    init_result = init(init_bundle, chains, rngs=rngs, initvals=c.initvals)
-    params = step.default_params(bundle, init_result.approximation)
-    states = {ch: step.State.new(position=init_result.positions[ch], params=params, rng=rngs[ch])
-              for ch in range(chains)}
-
-    # 5. Schedule
+    # 4. Schedule, validated before initialization, which can take a while (ADVI, Pathfinder)
+    init = with_root(c.init or step.default_init(), initvals=c.initvals)   # SupportPoint() first if missing
     schedule = c.schedule or step.default_schedule(tune=c.tune, draws=c.draws)
     check_schedule(schedule, step, init, sampler.capabilities)  # targets, signals, validity, hints
+
+    # 5. Initialization, before any state exists
+    chains = c.chains or sampler.default_chains()
+    rngs = get_random_generator(c.random_seed).spawn(chains)   # one stream per chain, as today
+    seeds = [rng.integers(2**30) for rng in rngs]              # as today; the chains continue on rngs
+    dist = None
+    for stage in init.stages:                                  # stages[0] is the root
+        dist = stage(bundles.get(stage.Bundle, step.vars), dist, seed=seeds[0])
+    init_result = InitResult(positions=dist.draw(seeds), approximation=dist.approximation)
+    params = step.default_params(bundle, init_result)
+    states = {ch: step.State.new(position=init_result.positions[ch], params=params, rng=rngs[ch])
+              for ch in range(chains)}
 
     # 6. Output, then start
     storage = c.storage or default_storage(model, bundle.space)
     monitor = c.monitor or default_monitor(sampler.capabilities)
-    spec = RunSpec(step=step, bundle=bundle, states=states, schedule=schedule,
-                   hint=init_result.approximation)
+    spec = RunSpec(step=step, bundle=bundle, states=states, schedule=schedule, hint=init_result)
     storage.begin(spec)
     return sampler.start(spec, storage, monitor)
 ```
 
-**Seeds are derived exactly as today** (`pymc/sampling/mcmc.py:921`). Initialization takes its seeds from each chain's generator before the chain starts, and the chain then continues on that same generator. Strategies that need a single stream for all chains, such as ADVI, use the first chain's generator, as `init_nuts` does today. This is what lets legacy steps on the new stack reproduce today's draws for the same seed, which is an exit criterion of M4.
+**Seeds are derived exactly as today** (`pymc/sampling/mcmc.py:921-922`). Each chain's generator first gives one integer seed, and initialization uses only those seeds. The final draw gives chain i the i-th seed. Stages that run once for all chains, such as ADVI, use the first chain's seed, as `init_nuts` does today. Each chain then continues on its own generator. This is what lets legacy steps on the new stack reproduce today's draws for the same seed, which is an exit criterion of M4.
 
 The flow is the same for PyMC's steps and for external libraries. An external library provides its own `Step`s and its own `Sampler`, under the same two contracts, and keeps them separate: the step carries the algorithm's settings, and the sampler the loop's. For example, `NutpieNUTS(target_accept=0.9)` is a step that only `NutpieSampler` can run, so its `default_sampler()` returns a `NutpieSampler`; see [Plugins: external steps and samplers](#plugins-external-steps-and-samplers). So `pm.sample(step=NutpieNUTS())`, `pm.sample(sampler="nutpie")` and the deprecated `pm.sample(nuts_sampler="nutpie")` all resolve to the same run.
 
@@ -420,13 +423,14 @@ The flow is the same for PyMC's steps and for external libraries. An external li
 | Existing argument | Status | Becomes |
 |---|---|---|
 | `draws`, `tune` | kept | the default schedule, `step.default_schedule(tune, draws)` |
-| `chains`, `random_seed`, `model`, `initvals`, `backend`, `compile_kwargs` | kept | settings shared by every step and sampler |
+| `chains`, `random_seed`, `model`, `backend`, `compile_kwargs` | kept | settings shared by every step and sampler |
+| `initvals` | kept | the root of the initialization pipeline: `SupportPoint(initvals=...)` |
 | `step` | kept | the `Step`; legacy `BlockedStep`s are wrapped in `LegacyStep` |
 | `cores` | kept, as a shorthand | `ProcessSampler(cores=...)` by default; any other sampler must declare that it honours `cores`, or it raises |
 | `progressbar` | kept, as a shorthand | `False` selects a silent monitor |
-| `init` | kept; strings deprecated | an `InitStrategy`; a string becomes an `(InitStrategy, Schedule)` pair (table below) |
+| `init` | kept; strings deprecated | an `InitStrategy` or a pipeline of them; a string becomes an `(InitStrategy, Schedule)` pair (table below) |
 | `**kwargs` for steps (`target_accept`, `nuts={...}`) | deprecated | the step's constructor: `step=pm.NUTS(target_accept=0.9)` |
-| `n_init`, `jitter_max_retries` | deprecated | the init strategy's arguments: `ADVI(n=...)`, `Jitter(max_retries=...)` |
+| `n_init`, `jitter_max_retries` | deprecated | the init stages' arguments: `ADVI(n=...)`, `SupportPoint(jitter=True, max_retries=...)` |
 | `nuts_sampler`, `nuts_sampler_kwargs` | deprecated | `sampler="nutpie"`; the adapter splits `nuts_sampler_kwargs` between its step (`NutpieNUTS(...)`) and its sampler (`NutpieSampler(...)`) |
 | `mp_ctx`, `blas_cores` | deprecated | `ProcessSampler(mp_ctx=..., blas_cores=...)` |
 | `progressbar_theme`, `quiet`, `callback` | deprecated | monitors: `ProgressBarMonitor(theme=...)`, `CallbackMonitor(fn)`, … |
@@ -438,15 +442,17 @@ The translation has a few known pitfalls, each of which gets its own test: array
 
 With M2, each deprecated `init` string becomes an `(InitStrategy, Schedule)` pair, as in the table below. NUTS always also gets `DualAveraging` for the step size. Without M2, the strings keep going through today's `init_nuts` until they are removed.
 
-| `init=` today | `InitStrategy` | Metric adaptation in the tuning phase |
+| `init=` today | Initialization | Metric adaptation in the tuning phase |
 |---|---|---|
-| `"adapt_diag"` | `InitialPoint()` | `WindowedDiag()` (today's foreground/background window scheme) |
-| `"jitter+adapt_diag"` (`"auto"`) | `Jitter(max_retries=10)` | `WindowedDiag()` |
-| `"jitter+adapt_diag_grad"` | `Jitter()` | `WindowedDiagGrad()` (today's `QuadPotentialDiagAdaptExp`) |
-| `"advi+adapt_diag"` | `ADVI(n=200_000)` | `WindowedDiag(from_hint=True)`, seeded from the ADVI approximation |
-| `"advi"`, `"advi_map"` | `ADVI()`, `MAP() >> ADVI()` | none: a fixed diagonal metric from the hint |
-| `"map"`, `"jitter+map"` | `MAP()`, `MAP(jitter=True)` | none: a fixed dense metric from the Hessian at the MAP |
-| `"adapt_full"`, `"jitter+adapt_full"` | `InitialPoint()`, `Jitter()` | `WindowedFull()` |
+| `"adapt_diag"` | `SupportPoint()` | `WindowedDiag()` (today's foreground/background window scheme) |
+| `"jitter+adapt_diag"` (`"auto"`) | `SupportPoint(jitter=True)` | `WindowedDiag()` |
+| `"jitter+adapt_diag_grad"` | `SupportPoint(jitter=True)` | `WindowedDiagGrad()` (today's `QuadPotentialDiagAdaptExp`) |
+| `"advi+adapt_diag"` | `SupportPoint() >> ADVI(n=200_000)` | `WindowedDiag(from_hint=True)`, seeded from the ADVI approximation |
+| `"advi"`, `"advi_map"` | `SupportPoint() >> ADVI()`, `SupportPoint() >> MAP() >> ADVI()` | none: a fixed diagonal metric from the hint |
+| `"map"`, `"jitter+map"` | `SupportPoint() >> MAP()`, `SupportPoint(jitter=True) >> MAP()` | none: a fixed dense metric from the Hessian at the MAP |
+| `"adapt_full"`, `"jitter+adapt_full"` | `SupportPoint()`, `SupportPoint(jitter=True)` | `WindowedFull()` |
+
+These reproduce today's starting points, with one deliberate difference. Today's ADVI-based inits ignore `initvals`: `pm.fit` starts from the model's default initial point (`pymc/variational/opvi.py:777`), and the starting points computed before it are discarded. In the new pipelines ADVI starts from the root, so it uses `initvals` when they are given.
 
 ### Blocking, non-blocking and resuming
 
@@ -574,8 +580,8 @@ class Step(ABC, Generic[StateT, BundleT, ParamsT, SignalsT]):
     # Setup
     @classmethod
     def competence(cls, var, has_grad) -> Competence: ...
-    def default_params(self, bundle: BundleT, hint: Approximation | None) -> ParamsT: ...
-    def default_init(self) -> InitStrategy: ...
+    def default_params(self, bundle: BundleT, hint: InitResult) -> ParamsT: ...
+    def default_init(self) -> InitStrategy | InitPipeline: ...
     def default_schedule(self, tune: int, draws: int) -> Schedule: ...
     def default_sampler(self) -> Sampler: return ProcessSampler()
 
@@ -639,10 +645,11 @@ class RandomWalk(Step[RWState, LogpBundle, RWParams, RWSignals]):
     requirements = Requirements(space="any", gradient=False, values="continuous")
 
     def default_params(self, bundle, hint):
-        return RWParams(scale=hint.cov.std() if hint else np.ones(bundle.space.ndim))
+        approx = hint.approximation
+        return RWParams(scale=approx.cov.std() if approx else np.ones(bundle.space.ndim))
 
     def default_init(self):
-        return Jitter()
+        return SupportPoint(jitter=True)
 
     def default_schedule(self, tune, draws):
         return [Phase("tune", (AcceptanceScale(target_rate=0.234),), Iterations(tune)),
@@ -774,16 +781,16 @@ Independent streams per chain plus one process per chain already give correct pa
 
 **Leaving room for later.** Counter-based keys (Philox key + counter, as in JAX) can come later, and are only needed if the loop is lowered to JAX. To make that change non-breaking, everything except the step's own `transition` treats `state.rng` as opaque.
 
-**Hidden RNGs.** Compiled graphs can contain shared random-generator variables with default updates, such as the jitter in the initial-point function. `init` reseeds them from the state's generator, as `reseed_rngs` does today. No randomness may come from anywhere else.
+**Hidden RNGs.** Compiled graphs can contain shared random-generator variables with default updates. A step's `init` reseeds the ones in its bundle from the state's generator, as `reseed_rngs` does today. The initial-point function, whose jitter uses them, belongs to initialization and is reseeded from each chain's seed (see [Initialization](#initialization)). No randomness may come from anywhere else.
 
 ### Serialization, checkpoints and resume
 
 - Every state must round-trip through `pickle`.
-- A checkpoint holds three things: the step states, the position in the schedule (phase index and progress within the phase), and the adapter states. Without the adapter states, a run stopped during warmup couldn't resume.
+- A checkpoint holds four things: the step states, the position in the schedule (phase index and progress within the phase), the adapter states, and the `InitResult`, which adapters still read when a later phase starts. Without the adapter states, a run stopped during warmup couldn't resume.
 - **Every storage persists checkpoints.** This is part of the `Storage` contract, not a feature of some backends (see [Storage](#storage)).
   - Durable storage, such as zarr, writes them as the run goes, so a run can be resumed after a crash, from its last checkpoint. The `_sampling_state` group of `ZarrTrace` already exists for this.
   - In-memory storage keeps the latest checkpoint and puts it in a group of the returned `DataTree`, so a stopped run can be resumed from its result, including after the result has been saved to disk.
-- Resuming means loading a checkpoint, discarding any draws stored after it, building a fresh bundle, and calling `init` on each state. Because the RNG is part of the state, the resumed draws are the ones an uninterrupted run would have produced.
+- Resuming means loading a checkpoint, discarding any draws stored after it, building a fresh bundle, and calling `init` on each state. Initialization doesn't run again. Because the RNG is part of the state, the resumed draws are the ones an uninterrupted run would have produced.
 - The bundle fingerprint stored in the state detects a changed model or changed data. In that case resume fails, unless the user explicitly accepts the change. The fingerprint is compared only when resuming, never during a run.
 - For population steps, the checkpoint holds the whole `PopulationState`, captured at a consistent cut.
 - **Loading a checkpoint unpickles it**, so resuming from a file runs code from that file. Only files from trusted sources should be resumed. A structured encoding (arrays, plus JSON for parameters and the RNG state) can later replace pickle for PyMC's own states.
@@ -902,6 +909,12 @@ The contract still includes `clone()`, with a default implementation that calls 
 
 ## Initialization
 
+Initialization runs in the calling process, after the bundles are built and before any step state exists. It is a pipeline of stages:
+
+1. A **root** stage gives the model's support point.
+2. Each **later stage** starts from what the previous one returned and refines it: MAP, ADVI, Pathfinder, jitter.
+3. Each chain's starting position is **drawn** from what the last stage returned.
+
 ```python
 @dataclass(frozen=True)
 class Approximation:                       # Gaussian, in bundle.space
@@ -909,28 +922,93 @@ class Approximation:                       # Gaussian, in bundle.space
     cov: DiagCov | DenseCov | LowRankPlusDiag
 
 
+class InitialDistribution(ABC):            # what a stage returns, and the next stage starts from
+    space: ModelSpace
+    approximation: Approximation | None    # a Gaussian summary, when the stage has one
+
+    @abstractmethod
+    def draw(self, seeds: Sequence[int]) -> np.ndarray: ...    # one point per seed: (len(seeds), ndim)
+
+
+class InitStrategy(ABC):                   # one stage
+    Bundle: ClassVar[type[CompiledBundle]]
+    root: ClassVar[bool] = False                          # True for SupportPoint and PriorDraw, False otherwise
+    provides_approximation: ClassVar[bool] = False        # True for ADVI, Pathfinder, Laplace
+
+    @abstractmethod
+    def __call__(self,
+        bundle,
+        upstream: InitialDistribution | None,    # None only for a root
+        seed: int,
+    ) -> InitialDistribution: ...
+
+    def __rshift__(self, other: "InitStrategy") -> "InitPipeline": ...
+
+
 @dataclass(frozen=True)
-class InitResult:
+class InitPipeline:                        # stage >> stage >> ...
+    stages: tuple[InitStrategy, ...]       # stages[0] is a root
+    def __rshift__(self, other: InitStrategy) -> "InitPipeline": ...
+
+
+@dataclass(frozen=True)
+class InitResult:                          # the "hint" that the step and the adapters receive
     positions: np.ndarray                  # (chains, ndim), in bundle.space
     approximation: Approximation | None = None
 
 
-class InitStrategy(ABC):
-    Bundle: ClassVar[type[CompiledBundle]]
-    provides_approximation: ClassVar[bool] = False      # True for ADVI, Pathfinder, MAP (Laplace)
-
-    def __call__(self, bundle, chains: int, rngs: Sequence[np.random.Generator],
-                 initvals: StartDict | Sequence[StartDict | None] | None = None,
-                 previous: InitResult | None = None) -> InitResult: ...
-
-    def __rshift__(self, other: "InitStrategy") -> "InitStrategy": ...    # pipeline
+@dataclass(frozen=True)
+class ModelBundle(CompiledBundle):         # for stages that compile their own graphs
+    model: Model                           # after model_transform
+    compile_kwargs: dict
 ```
 
-- **Strategies:** `InitialPoint()`, `Jitter(scale, max_retries)`, `MAP()`, `ADVI(n)`, `Pathfinder(num_paths)`, or a short run of another step. Each starts from `initvals` where they are given, and from the model's initial point otherwise.
-- **Pipelines:** in `Pathfinder(num_paths=4) >> Jitter(0.1)`, each stage receives the previous stage's result.
-- **Randomness:** one generator per chain, the same ones the chains then use (see [Body](#body)).
-- **Hand-off to adaptation:** the approximation is how initialization passes information to adaptation. `step.default_params(bundle, hint)` and `adapter.init(current, hint)` both read it. Today's `"advi+adapt_diag"` becomes `init=ADVI()` plus `WindowedDiag(from_hint=True)`.
-- **Declared output:** each strategy declares whether it provides an approximation of the posterior or only starting positions. A pipeline provides one if any stage does and the later stages pass it on, as `Jitter` does. `check_schedule` uses the declaration: an adapter that needs the hint is rejected at setup when initialization can't provide one. For example, `init=Jitter()` with `WindowedDiag(from_hint=True)` fails with "Jitter provides starting points only; WindowedDiag(from_hint=True) needs an approximation, for example from ADVI(), Pathfinder() or MAP()". This follows the `returns_posterior` flag of Jesse Grabowski's [inference-configuration sketch](https://gist.github.com/jessegrabowski/9918bb7b4cd7cc6243a39183b826b71f).
+### The root: today's initial point
+
+- `SupportPoint(initvals=None, jitter=False, max_retries=10)` is today's initial point: each variable's support point or its `initval`, overridden by `initvals`, in the step's space.
+  - With `jitter=True`, it adds today's uniform jitter inside the compiled graph, and redraws a point whose log density isn't finite, up to `max_retries` times. This is `_init_jitter` unchanged, so it reproduces today's starting points.
+  - `initvals` can be one dict or one per chain, as today. With one per chain, the i-th point drawn uses the i-th chain's values, and drawing more points than there are chains raises.
+- `PriorDraw()` draws from the prior instead, in the step's space. SMC starts from it, and SMC raises at setup for any other pipeline, because its tempering assumes the particles come from the prior. `PriorDraw()` itself raises at setup for a model whose prior can't be drawn from, for example one with a `Flat` variable.
+- Both compile from the model, because `initvals` and per-variable choices such as `initval="prior"` change the graph. Their `Bundle` is `ModelBundle`.
+- A pipeline that doesn't start with a root gets `SupportPoint()` put in front of it. `pymc.sample(initvals=...)` sets that root's `initvals`; passing them both to `pymc.sample` and to an explicit root raises.
+
+### Later stages
+
+- Each one receives the previous stage's `InitialDistribution`, and draws as many starting points from it as it needs: one for MAP and ADVI, one per path for Pathfinder.
+- It returns a new distribution: a point mass at the mode for MAP, a Gaussian for ADVI, the importance-resampled draws for Pathfinder.
+- That is why stages pass distributions and not an array with one position per chain: how many points a stage needs has nothing to do with the number of chains.
+- `Jitter(scale, max_retries)` adds uniform noise in numpy to the draws of the stage before it, and redraws a point whose log density isn't finite. Its `Bundle` is `LogpBundle`, and it passes the approximation on, as in `Pathfinder(num_paths=4) >> Jitter(0.1)`. To reproduce today's draws, jitter the root instead (`SupportPoint(jitter=True)`).
+- The other stages are `MAP()`, `ADVI(n)`, `Pathfinder(num_paths)`, or a short run of another step.
+
+### How stages reach the model
+
+- A stage declares its `Bundle`, as a step does. Every bundle, the step's and each stage's, is built from the same transformed model, through one build cache. A callable that several bundles need, such as the log density and gradient that both NUTS and Pathfinder use, compiles once.
+- So what a stage returns is always in the space the step samples in. A stage holding the untransformed model couldn't guarantee that: under a `model_transform` that marginalizes a variable, it would still optimize that variable.
+- A stage that needs the model itself declares `ModelBundle`. A native Pathfinder declares a bundle with `logp_dlogp` and a batched log density. A wrapper around the current pymc-extras implementation, which takes a model, can declare `ModelBundle` until it is ported.
+- Initialization runs in the calling process, so the stages' bundles never travel to workers.
+
+### Results stay out of the bundles
+
+The bundles are a function of the model, the transform and the backend, while initialization results depend on the seed. Keeping the two apart keeps the fingerprint stable for resume, lets a bundle be reused for another run of the same model, and keeps per-chain data out of what is sent to workers. The `InitResult` belongs to the run, and checkpoints save it.
+
+What initialization learns can still shape the run, in two ways that don't involve the bundles:
+
+- **If it should change what is compiled**, for example choosing between a centered and a non-centered parametrization from a quick fit, it is a `model_transform` that happens to run inference, and it runs before any bundle is built.
+- **If it should change how the step moves**, for example whitening with the approximation's covariance, it goes into the step's parameters through the `Metric` protocol, and nothing is recompiled.
+
+### Drawing the starting positions
+
+- The last stage's distribution is drawn once, in the calling process, with one seed per chain, and the workers receive the positions. Drawing them all together matters:
+  - adaptation can need every chain's start: today, `adapt_diag` starts the metric at their mean (`pymc/sampling/mcmc.py:1893`);
+  - Pathfinder's resampling should draw without replacement across chains;
+  - a distribution can hold compiled functions or JAX state, which no worker needs.
+- **Seeds:** initialization only uses the integer seeds derived from the chains' generators (see [Body](#body)). The final draw gives chain i the i-th seed. The stages that run once for all chains use the first chain's seed, as `init_nuts` does today. A stage that needs more randomness spawns child seeds from its own.
+- The seeds are integers, not generators, because today's initial-point function is reseeded from an integer (`reseed_rngs`), and that is what reproduces today's draws.
+
+### Hand-off to adaptation
+
+- The `InitResult` is the hint that `step.default_params(bundle, hint)` and `adapter.init(current, hint)` read. Some adapters use the positions: today's `"jitter+adapt_diag"` starts the metric at their mean. Others use the approximation: today's `"advi+adapt_diag"` becomes `SupportPoint() >> ADVI()` plus `WindowedDiag(from_hint=True)`.
+- **Declared output:** each stage declares whether it provides an approximation of the posterior or only starting positions. A pipeline provides one if any stage does and the later stages pass it on, as `Jitter` does. `check_schedule` uses the declaration: an adapter that needs the approximation is rejected at setup when initialization can't provide one. For example, `init=SupportPoint(jitter=True)` with `WindowedDiag(from_hint=True)` fails with "SupportPoint provides starting points only; WindowedDiag(from_hint=True) needs an approximation, for example from ADVI(), Pathfinder() or MAP()". This follows the `returns_posterior` flag of Jesse Grabowski's [inference-configuration sketch](https://gist.github.com/jessegrabowski/9918bb7b4cd7cc6243a39183b826b71f).
 
 ## Adaptation and schedules
 
@@ -967,9 +1045,9 @@ class Adapter(ABC, Generic[ParamT, SignalsT]):
     target: ClassVar[str]                      # the Params field this adapter owns
     requires: ClassVar[frozenset[str]]         # the Signals fields it reads
     validity: ClassVar[Literal["warmup_only", "diminishing"]] = "warmup_only"
-    needs_hint: bool = False                   # needs an approximation from initialization
+    needs_approximation: bool = False          # needs hint.approximation from initialization
 
-    def init(self, current: ParamT, hint: Approximation | None) -> AdaptState: ...
+    def init(self, current: ParamT, hint: InitResult) -> AdaptState: ...
     def update(self, a: AdaptState, signals: SignalsT, comm: Comm) -> AdaptState: ...
     def propose(self, a: AdaptState) -> ParamT: ...     # value used for the next step
     def final(self, a: AdaptState) -> ParamT: ...       # value handed to the next phase
@@ -1036,7 +1114,7 @@ schedule = [
 4. every adapter in a phase with `warmup=False` declares `validity != "warmup_only"`, unless the phase sets `allow_invalid_adaptation=True`;
 5. run-scoped stop conditions are only used with samplers that can evaluate them;
 6. the sampler accepts a custom schedule at all (`capabilities.custom_schedule`). For example, an external sampler that runs its own warmup can't take a user-defined schedule;
-7. every adapter with `needs_hint=True` runs after an init strategy that provides an approximation (`provides_approximation`).
+7. every adapter with `needs_approximation=True` runs after an initialization pipeline that provides an approximation (`provides_approximation`).
 
 ### Stop conditions
 
@@ -1104,7 +1182,7 @@ class RunSpec:                                 # picklable: everything a run nee
     bundle: CompiledBundle
     states: Mapping[int, StepState]
     schedule: Schedule
-    hint: Approximation | None = None
+    hint: InitResult                           # positions and approximation from initialization
     checkpoint: Checkpoint | None = None       # set when resuming
 
 
@@ -1585,6 +1663,7 @@ This is why `SamplerCapabilities.progress` has a `"per_chunk"` value, and why st
 - Where `FileMonitor` writes by default when there is no durable storage, and whether its lines are plain text or JSON.
 - The public/internal split of modules.
 - The default schedule of a compound step: how to align phase boundaries across blocks.
+- Initialization of a compound step: whether a stage such as Pathfinder may cover only the continuous blocks, holding the others at the root's values, or must raise. Today's ADVI and MAP inits only run when NUTS samples every variable.
 - Extending a finished run (more draws) as opposed to resuming a stopped one.
 - Bitwise reproducibility across shard counts (allgather-then-reduce versus allreduce of partial results).
 - Mixing chain and population steps in one compound (shelved).
