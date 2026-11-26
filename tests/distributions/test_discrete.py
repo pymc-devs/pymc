@@ -981,6 +981,34 @@ class TestOrderedLogistic:
         expected_p = np.array([0.11920292, 0.38079708, 0.38079708, 0.11920292])
         np.testing.assert_allclose(p, expected_p)
 
+    def test_logp_precise_in_tails(self):
+        # Regression test for gh-8655: an interior category lost all
+        # precision when both neighbouring CDFs rounded to 0 or 1, so
+        # its probability came out as exactly 0 and its logp as -inf.
+        # Upper tail: both CDFs round to 1.
+        eta = 8.1123 * -5
+        cutpoints = 8.1123 * np.array([0.3887, 1.0153])
+        x = OrderedLogistic.dist(eta=eta, cutpoints=cutpoints)
+        lo, hi = cutpoints - eta
+        expected_logp = sp.log_expit(hi) + sp.log_expit(-lo) + np.log(-np.expm1(lo - hi))
+        assert pm.logp(x, 1).eval() == pytest.approx(expected_logp)
+
+        # Lower tail: both CDFs round to 0 (mirror image of the upper tail).
+        eta = 8.1123 * 5
+        cutpoints = -8.1123 * np.array([1.0153, 0.3887])
+        x = OrderedLogistic.dist(eta=eta, cutpoints=cutpoints)
+        lo, hi = cutpoints - eta
+        expected_logp = sp.log_expit(hi) + sp.log_expit(-lo) + np.log(-np.expm1(lo - hi))
+        assert pm.logp(x, 1).eval() == pytest.approx(expected_logp)
+
+        # Gradients stay finite where the logp is representable.
+        eta_t = pt.dscalar("eta")
+        cuts_t = pt.dvector("cutpoints")
+        logp_t = pm.logp(OrderedLogistic.dist(eta=eta_t, cutpoints=cuts_t), 1)
+        grad_fn = pytensor.function([eta_t, cuts_t], pytensor.grad(logp_t, [eta_t, cuts_t]))
+        d_eta, d_cuts = grad_fn(8.1123 * -5, 8.1123 * np.array([0.3887, 1.0153]))
+        assert np.all(np.isfinite(np.concatenate([[d_eta], d_cuts])))
+
     @pytest.mark.parametrize(
         "eta, cutpoints, expected",
         [
