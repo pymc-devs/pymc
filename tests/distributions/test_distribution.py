@@ -11,6 +11,7 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+import inspect
 import sys
 import warnings
 
@@ -82,6 +83,48 @@ class TestBugfixes:
         with pm.Model(check_bounds=False) as m:
             x = pm.DiracDelta("x", 1, size=10)
         npt.assert_almost_equal(m.compile_logp()({"x": np.ones(10)}), 0 * 10)
+
+
+@pytest.mark.parametrize(
+    "dist_class",
+    [
+        pm.HalfNormal,
+        pm.Beta,
+        pm.Cauchy,
+        pm.HalfCauchy,
+        pm.InverseGamma,
+        pm.Interpolated,
+        pm.MatrixNormal,
+        pm.KroneckerNormal,
+        pm.CAR,
+        pm.StickBreakingWeights,
+        pm.Binomial,
+        pm.BetaBinomial,
+        pm.Bernoulli,
+        pm.DiscreteWeibull,
+        pm.DiscreteUniform,
+        pm.DirichletMultinomial,
+        pm.DiracDelta,
+    ],
+)
+def test_dist_does_not_accept_extra_positional_arguments(dist_class):
+    # An unused ``*args`` used to swallow extra positional arguments silently.
+    parameters = inspect.signature(dist_class.dist).parameters.values()
+    assert not any(p.kind is inspect.Parameter.VAR_POSITIONAL for p in parameters)
+
+
+@pytest.mark.parametrize(
+    "dist_class, args",
+    [
+        (pm.HalfNormal, (5, None, 7)),
+        (pm.Bernoulli, (0.5, None, 7)),
+        (pm.DiscreteUniform, (0, 5, 7)),
+        (pm.DiracDelta, (1.0, 7)),
+    ],
+)
+def test_dist_extra_positional_argument_raises(dist_class, args):
+    with pytest.raises(TypeError, match=f"{dist_class.__name__}.dist"):
+        dist_class.dist(*args)
 
 
 def test_all_distributions_have_support_points():

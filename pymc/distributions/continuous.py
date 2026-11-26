@@ -892,7 +892,6 @@ class HalfNormal(PositiveContinuous):
         cls,
         sigma: DIST_PARAMETER_TYPES | None = None,
         tau: DIST_PARAMETER_TYPES | None = None,
-        *args,
         **kwargs,
     ):
         tau, sigma = get_tau_sigma(tau=tau, sigma=sigma)
@@ -1211,7 +1210,6 @@ class Beta(UnitContinuous):
         mu: DIST_PARAMETER_TYPES | None = None,
         sigma: DIST_PARAMETER_TYPES | None = None,
         nu: DIST_PARAMETER_TYPES | None = None,
-        *args,
         **kwargs,
     ):
         alpha, beta = cls.get_alpha_beta(alpha, beta, mu, sigma, nu)
@@ -2276,7 +2274,7 @@ class Cauchy(Continuous):
     rv_op = cauchy
 
     @classmethod
-    def dist(cls, alpha, beta, *args, **kwargs):
+    def dist(cls, alpha, beta, **kwargs):
         alpha = pt.as_tensor_variable(alpha)
         beta = pt.as_tensor_variable(beta)
 
@@ -2375,7 +2373,7 @@ class HalfCauchy(PositiveContinuous):
     rv_type = HalfCauchyRV
 
     @classmethod
-    def dist(cls, beta, *args, **kwargs):
+    def dist(cls, beta, **kwargs):
         beta = pt.as_tensor_variable(beta)
         return super().dist([beta], **kwargs)
 
@@ -2597,7 +2595,7 @@ class InverseGamma(PositiveContinuous):
     rv_op = invgamma
 
     @classmethod
-    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, *args, **kwargs):
+    def dist(cls, alpha=None, beta=None, mu=None, sigma=None, **kwargs):
         alpha, beta = cls._get_alpha_beta(alpha, beta, mu, sigma)
         alpha = pt.as_tensor_variable(alpha)
         beta = pt.as_tensor_variable(beta)
@@ -3901,7 +3899,7 @@ class Interpolated(BoundedContinuous):
     rv_op = interpolated
 
     @classmethod
-    def dist(cls, x_points, pdf_points, *args, **kwargs):
+    def dist(cls, x_points, pdf_points, **kwargs):
         interp = interpolate.InterpolatedUnivariateSpline(x_points, pdf_points, k=1, ext="zeros")
 
         Z = interp.integral(x_points[0], x_points[-1])

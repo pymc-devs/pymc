@@ -119,7 +119,7 @@ class Binomial(Discrete):
     rv_op = binomial
 
     @classmethod
-    def dist(cls, n, p=None, logit_p=None, *args, **kwargs):
+    def dist(cls, n, p=None, logit_p=None, **kwargs):
         if p is not None and logit_p is not None:
             raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
         elif p is None and logit_p is None:
@@ -235,7 +235,7 @@ class BetaBinomial(Discrete):
     rv_op = betabinom
 
     @classmethod
-    def dist(cls, alpha, beta, n, *args, **kwargs):
+    def dist(cls, alpha, beta, n, **kwargs):
         alpha = pt.as_tensor_variable(alpha)
         beta = pt.as_tensor_variable(beta)
         n = pt.as_tensor_variable(n, dtype=int)
@@ -342,7 +342,7 @@ class Bernoulli(Discrete):
     rv_op = bernoulli
 
     @classmethod
-    def dist(cls, p=None, logit_p=None, *args, **kwargs):
+    def dist(cls, p=None, logit_p=None, **kwargs):
         if p is not None and logit_p is not None:
             raise ValueError("Incompatible parametrization. Can't specify both p and logit_p.")
         elif p is None and logit_p is None:
@@ -481,7 +481,7 @@ class DiscreteWeibull(Discrete):
     rv_op = DiscreteWeibullRV.rv_op
 
     @classmethod
-    def dist(cls, q, beta, *args, **kwargs):
+    def dist(cls, q, beta, **kwargs):
         return super().dist([q, beta], **kwargs)
 
     def support_point(rv, size, q, beta):
@@ -1048,7 +1048,7 @@ class DiscreteUniform(Discrete):
     rv_op = discrete_uniform
 
     @classmethod
-    def dist(cls, lower, upper, *args, **kwargs):
+    def dist(cls, lower, upper, **kwargs):
         lower = pt.floor(lower)
         upper = pt.floor(upper)
         return super().dist([lower, upper], **kwargs)

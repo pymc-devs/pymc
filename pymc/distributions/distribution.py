@@ -759,7 +759,7 @@ class DiracDelta(Discrete):
     rv_op = DiracDeltaRV.rv_op
 
     @classmethod
-    def dist(cls, c, *args, **kwargs):
+    def dist(cls, c, **kwargs):
         c = pt.as_tensor_variable(c)
         if c.dtype in continuous_types:
             c = floatX(c)
