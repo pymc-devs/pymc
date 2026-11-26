@@ -15,8 +15,6 @@ from __future__ import annotations
 
 import ctypes
 import logging
-import multiprocessing
-import multiprocessing.sharedctypes
 import platform
 import time
 import traceback
@@ -39,6 +37,8 @@ from pymc.backends import _ZarrChainBase
 from pymc.blocking import DictToArrayBijection
 
 if TYPE_CHECKING:
+    import multiprocessing
+
     from pymc.backends.zarr import ZarrChain
 
 from pymc.exceptions import SamplingError
@@ -91,6 +91,8 @@ def _initialize_multiprocessing_context(
     mode=None,
     quiet: bool = False,
 ) -> multiprocessing.context.BaseContext:
+    import multiprocessing
+
     user_specified = mp_ctx is not None
     jax_mode = mode is not None and isinstance(get_mode(mode).linker, JAXLinker)
 
@@ -297,6 +299,8 @@ class ProcessAdapter:
         zarr_chains: list[ZarrChain] | None = None,
         zarr_chains_pickled: bytes | None = None,
     ):
+        import multiprocessing
+
         self.chain = chain
         process_name = f"worker_chain_{chain}"
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
@@ -408,6 +412,9 @@ class ProcessAdapter:
 
     @staticmethod
     def recv_draw(processes, timeout=3600):
+        import multiprocessing
+        import multiprocessing.connection
+
         if not processes:
             raise ValueError("No processes.")
         pipes = [proc._msg_pipe for proc in processes]
@@ -436,6 +443,8 @@ class ProcessAdapter:
 
     @staticmethod
     def terminate_all(processes, patience=2):
+        import multiprocessing
+
         for process in processes:
             try:
                 process.abort()
@@ -583,6 +592,8 @@ def _cpu_count():
     If not, we use the number provided by multiprocessing, but assume
     that half of the cpus are only hardware threads and ignore those.
     """
+    import multiprocessing
+
     try:
         cpus = multiprocessing.cpu_count() // 2
     except NotImplementedError:

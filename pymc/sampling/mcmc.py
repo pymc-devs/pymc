@@ -17,7 +17,6 @@ from __future__ import annotations
 import contextlib
 import importlib.util
 import logging
-import multiprocessing
 import pickle
 import re
 import sys
@@ -91,6 +90,8 @@ from pymc.util import (
 from pymc.vartypes import discrete_types
 
 if TYPE_CHECKING:
+    import multiprocessing
+
     from pymc.backends.zarr import ZarrChain, ZarrTrace
 
 NUTPIE_INSTALLED = importlib.util.find_spec("nutpie") is not None
