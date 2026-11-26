@@ -782,8 +782,7 @@ class Group(WithMemoization):
             return_transformed=True,
         )
         start = ipfn(self.rng.randint(2**30, dtype=np.int64))
-        group_vars = {self.model.rvs_to_values[v].name for v in self.group}
-        start = {k: v for k, v in start.items() if k in group_vars}
+        start = {name: start[name] for name in self.ordering}
         start = DictToArrayBijection.map(start).data
         return start
 
