@@ -346,6 +346,18 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
         dummy_var: first_non_model_var(dummy_var.owner.inputs[0])
         for dummy_var in model_dummy_vars
     }
+    # A Deterministic that only renames another model variable (an RV, a Potential,
+    # a data variable or another Deterministic) shares that variable once the dummies
+    # are replaced. Give each shared variable one owner: the model variable that is
+    # not a Deterministic, otherwise the first Deterministic in model order (the sort
+    # is stable, so the outputs keep the model's order). Every other Deterministic on
+    # it is registered as a view, so each keeps its own name.
+    owners: dict[Variable, Variable] = {}
+    for dummy_var in sorted(
+        (out for out in fgraph.outputs if out in model_dummy_vars_to_vars),
+        key=lambda out: isinstance(out.owner.op, ModelDeterministic),
+    ):
+        owners.setdefault(model_dummy_vars_to_vars[dummy_var], dummy_var)
     toposort_replace(fgraph, tuple(model_dummy_vars_to_vars.items()))
 
     # Populate new PyMC model mappings
@@ -367,8 +379,8 @@ def model_from_fgraph(fgraph: FunctionGraph, mutate_fgraph: bool = False) -> Mod
             model.potentials.append(var)
         elif isinstance(op, ModelDeterministic):
             [var] = model_var.owner.inputs
-            # If a Deterministic is a direct view on an RV, view it
-            if var in model.basic_RVs:
+            # If a Deterministic only renames another model variable, view it
+            if owners.get(var, model_var) is not model_var:
                 var = view_op(var)
             model.deterministics.append(var)
         elif isinstance(op, ModelNamed):
