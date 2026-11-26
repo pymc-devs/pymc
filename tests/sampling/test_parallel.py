@@ -14,6 +14,7 @@
 import multiprocessing
 import os
 import platform
+import subprocess
 import sys
 import warnings
 
@@ -285,3 +286,25 @@ def test_sampling_with_random_generator_matches(cores):
         post2 = pm.sample(random_seed=np.random.default_rng(42), **kwargs).posterior
 
     assert post1.equals(post2), (post1["x"].mean().item(), post2["x"].mean().item())
+
+
+def test_import_pymc_does_not_import_multiprocessing():
+    code = (
+        "import builtins, os\n"
+        "orig_import = builtins.__import__\n"
+        "pymc_importers = []\n"
+        "def hooked_import(name, globals=None, locals=None, fromlist=(), level=0):\n"
+        "    if name == 'multiprocessing' or name.startswith('multiprocessing.'):\n"
+        "        caller = (globals or {}).get('__file__', '')\n"
+        "        if caller and 'pymc' in caller.replace(os.sep, '/').split('/'):\n"
+        "            pymc_importers.append(caller)\n"
+        "    return orig_import(name, globals, locals, fromlist, level)\n"
+        "builtins.__import__ = hooked_import\n"
+        "import pymc\n"
+        "import pymc.sampling.mcmc\n"
+        "import pymc.sampling.parallel\n"
+        "import pymc.smc.parallel\n"
+        "assert not pymc_importers, pymc_importers\n"
+    )
+    res = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert res.returncode == 0, res.stderr

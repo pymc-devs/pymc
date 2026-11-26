@@ -11,13 +11,15 @@
 #   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
+from __future__ import annotations
+
 import logging
-import multiprocessing
 import time
 
 from collections import namedtuple
 from collections.abc import Sequence
 from contextlib import nullcontext
+from typing import TYPE_CHECKING
 
 import cloudpickle
 import numpy as np
@@ -29,6 +31,9 @@ from pymc.progress_bar import SMCProgressBarManager, default_progress_theme
 from pymc.sampling.parallel import ExceptionWithTraceback, ParallelSamplingError
 from pymc.smc.kernels import SMC_KERNEL
 from pymc.util import RandomGeneratorState, get_state_from_generator, random_generator_from_state
+
+if TYPE_CHECKING:
+    import multiprocessing
 
 logger = logging.getLogger(__name__)
 
@@ -171,6 +176,8 @@ class SMCProcessAdapter:
         mp_ctx,
         blas_cores: int | None,
     ):
+        import multiprocessing
+
         self.chain = chain
         process_name = f"smc_worker_chain_{chain}"
         self._msg_pipe, remote_conn = multiprocessing.Pipe()
@@ -240,6 +247,9 @@ class SMCProcessAdapter:
     @staticmethod
     def recv_message(processes, timeout=3600):
         """Receive a message from any of the worker processes."""
+        import multiprocessing
+        import multiprocessing.connection
+
         if not processes:
             raise ValueError("No processes.")
         pipes = [proc._msg_pipe for proc in processes]
@@ -284,6 +294,8 @@ class SMCProcessAdapter:
     @staticmethod
     def terminate_all(processes, patience=2):
         """Terminate all worker processes."""
+        import multiprocessing
+
         for process in processes:
             try:
                 process.abort()
