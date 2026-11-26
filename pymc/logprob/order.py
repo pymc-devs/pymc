@@ -145,8 +145,8 @@ def max_logprob(op, values, base_rv, **kwargs):
 
     base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
     bcast_value = pt.broadcast_to(value, base_rv_shape)
-    logprob = _logprob_helper(base_rv, bcast_value)[0]
-    logcdf = _logcdf_helper(base_rv, bcast_value)[0]
+    logprob = _logprob_helper(base_rv, bcast_value)[(0,) * base_rv.ndim]
+    logcdf = _logcdf_helper(base_rv, bcast_value)[(0,) * base_rv.ndim]
 
     n = pt.prod(base_rv_shape)
     return (n - 1) * logcdf + logprob + pt.math.log(n)
@@ -165,8 +165,8 @@ def max_logprob_discrete(op, values, base_rv, **kwargs):
 
     base_rv_shape = constant_fold(tuple(base_rv.shape), raise_not_constant=False)
     bcast_value = pt.broadcast_to(value, base_rv_shape)
-    logcdf = _logcdf_helper(base_rv, bcast_value)[0]
-    logcdf_prev = _logcdf_helper(base_rv, bcast_value - 1)[0]
+    logcdf = _logcdf_helper(base_rv, bcast_value)[(0,) * base_rv.ndim]
+    logcdf_prev = _logcdf_helper(base_rv, bcast_value - 1)[(0,) * base_rv.ndim]
 
     n = pt.prod(base_rv_shape)
     return logdiffexp(n * logcdf, n * logcdf_prev)
