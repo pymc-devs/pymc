@@ -746,7 +746,7 @@ class DirichletMultinomial(Discrete):
     rv_op = DirichletMultinomialRV.rv_op
 
     @classmethod
-    def dist(cls, n, a, *args, **kwargs):
+    def dist(cls, n, a, **kwargs):
         return super().dist([n, a], **kwargs)
 
     def support_point(rv, size, n, a):
@@ -1782,7 +1782,6 @@ class MatrixNormal(Continuous):
         rowchol=None,
         colcov=None,
         colchol=None,
-        *args,
         **kwargs,
     ):
         # Among-row matrices
@@ -1985,7 +1984,7 @@ class KroneckerNormal(Continuous):
     rv_op = KroneckerNormalRV.rv_op
 
     @classmethod
-    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=0.0, *args, **kwargs):
+    def dist(cls, mu, covs=None, chols=None, evds=None, sigma=0.0, **kwargs):
         if len([i for i in [covs, chols, evds] if i is not None]) != 1:
             raise ValueError(
                 "Incompatible parameterization. Specify exactly one of covs, chols, or evds."
@@ -2183,7 +2182,7 @@ class CAR(Continuous):
     rv_op = car
 
     @classmethod
-    def dist(cls, mu, W, alpha, tau, *args, **kwargs):
+    def dist(cls, mu, W, alpha, tau, **kwargs):
         # This variable has an expensive validation check, that we want to constant-fold if possible
         # So it's passed as an explicit input
         from pytensor.sparse import as_sparse_or_tensor_variable, sign
@@ -2516,7 +2515,7 @@ class StickBreakingWeights(SimplexContinuous):
     rv_op = stickbreakingweights
 
     @classmethod
-    def dist(cls, alpha, K, *args, **kwargs):
+    def dist(cls, alpha, K, **kwargs):
         alpha = pt.as_tensor_variable(alpha)
         K = pt.as_tensor_variable(K, dtype=int)
 
