@@ -429,6 +429,35 @@ class TestHSGP(_BaseFixtures):
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
 
+    @pytest.mark.parametrize(
+        "active_dims, m, ls",
+        [
+            ([1], [10], 2.0),
+            ([0, 2], [10, 10], [2.0, 2.0]),
+        ],
+    )
+    @pytest.mark.parametrize("parametrization", ["centered", "noncentered"])
+    def test_conditional_active_dims(self, active_dims, m, ls, parametrization):
+        rng = np.random.default_rng(42)
+        X = rng.uniform(0, 10, size=(8, 3))
+        X[:, 0] += 100.0
+        mean_func = pm.gp.mean.Linear(coeffs=[0.5, -0.2, 0.1], intercept=1.0)
+        cov_func = pm.gp.cov.ExpQuad(input_dim=3, ls=ls, active_dims=active_dims)
+
+        with pm.Model():
+            hsgp = pm.gp.HSGP(
+                m=m,
+                c=1.5,
+                parametrization=parametrization,
+                mean_func=mean_func,
+                cov_func=cov_func,
+            )
+            f = hsgp.prior("f", X=X)
+            fc = hsgp.conditional("fc", Xnew=X)
+            f_val, fc_val = pytensor.function([], [f, fc])()
+
+        np.testing.assert_allclose(fc_val, f_val)
+
 
 class TestHSGPPeriodic(_BaseFixtures):
     def test_parametrization(self):
@@ -546,6 +575,21 @@ class TestHSGPPeriodic(_BaseFixtures):
             samples1, samples2, n_sims=500, alpha=0.01
         )
         assert not reject, "H0 was rejected, even though HSGP prior and conditional should match."
+
+    def test_conditional_periodic_active_dims(self):
+        rng = np.random.default_rng(42)
+        X = rng.uniform(0, 10, size=(8, 3))
+        X[:, 0] += 100.0
+        mean_func = pm.gp.mean.Linear(coeffs=[0.5, -0.2, 0.1], intercept=1.0)
+        cov_func = pm.gp.cov.Periodic(input_dim=3, period=1.0, ls=0.5, active_dims=[1])
+
+        with pm.Model():
+            hsgp = pm.gp.HSGPPeriodic(m=10, mean_func=mean_func, cov_func=cov_func)
+            f = hsgp.prior("f", X=X)
+            fc = hsgp.conditional("fc", Xnew=X)
+            f_val, fc_val = pytensor.function([], [f, fc])()
+
+        np.testing.assert_allclose(fc_val, f_val)
 
 
 class TestLaplaceEigenbasis:
