@@ -664,17 +664,10 @@ class ZarrTrace(_ZarrTraceBase):
             fill_value, dtype = get_initial_fill_value_and_dtype(_dtype)
             shape = shape or ()
             attributes = extra_var_attrs[name] if extra_var_attrs is not None else {}
-            try:
-                core_dims = self.vars_to_dims[name]
-                for dim in core_dims:
-                    group_coords[dim] = self.coords[dim]
-            except KeyError:
-                core_dims = []
-                for i, shape_i in enumerate(shape):
-                    dim = f"{name}_dim_{i}"
-                    core_dims.append(dim)
-                    assert shape_i is not None, f"{dim} shape is None"
-                    group_coords[dim] = np.arange(shape_i, dtype="int")
+            core_dims = self.vars_to_dims.get(name, [f"{name}_dim_{i}" for i in range(len(shape))])
+            for dim, shape_i in zip(core_dims, shape):
+                assert shape_i is not None, f"{dim} shape is None"
+                group_coords[dim] = self.coords.get(dim, np.arange(shape_i, dtype="int"))
             dims = ("chain", "draw", *core_dims)
             array = group.create_array(  # type: ignore[arg-type]
                 name=name,
@@ -701,16 +694,11 @@ class ZarrTrace(_ZarrTraceBase):
             group_coords = {}
             group = self.root.create_group(name=name, overwrite=True)
             for var_name, var_value in data_dict.items():
-                try:
-                    dims = self.vars_to_dims[var_name]
-                    for dim in dims:
-                        group_coords[dim] = self.coords[dim]
-                except KeyError:
-                    dims = []
-                    for i in range(var_value.ndim):
-                        dim = f"{var_name}_dim_{i}"
-                        dims.append(dim)
-                        group_coords[dim] = np.arange(var_value.shape[i], dtype="int")
+                dims = self.vars_to_dims.get(
+                    var_name, [f"{var_name}_dim_{i}" for i in range(var_value.ndim)]
+                )
+                for dim, dim_length in zip(dims, var_value.shape):
+                    group_coords[dim] = self.coords.get(dim, np.arange(dim_length, dtype="int"))
                 group.create_array(  # type: ignore[arg-type,union-attr]
                     name=var_name,
                     data=var_value,

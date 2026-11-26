@@ -696,3 +696,30 @@ def test_sampling_consistency(
             random_seed=random_seed,
         )
     xr.testing.assert_equal(parallel_idata.posterior, sequential_idata.posterior)
+
+
+@pytest.mark.parametrize("labelled_dim", [None, "row", "column"])
+def test_sample_implicit_coords(labelled_dim, store):
+    coords = (
+        {}
+        if labelled_dim is None
+        else {labelled_dim: ["first", "second"] if labelled_dim == "row" else ["a", "b", "c"]}
+    )
+    with pm.Model(coords=coords):
+        data = pm.Data("data", np.zeros((2, 3)), dims=("row", "column"))
+        beta = pm.Normal("beta", dims=("row", "column"))
+        pm.Normal("y", mu=beta + data, observed=np.ones((2, 3)), dims=("row", "column"))
+        kwargs = {
+            "draws": 3,
+            "tune": 0,
+            "chains": 1,
+            "cores": 1,
+            "random_seed": 42,
+            "progressbar": False,
+            "compute_convergence_checks": False,
+        }
+        expected = pm.sample(step=pm.Metropolis(), **kwargs)
+        actual = pm.sample(step=pm.Metropolis(), trace=ZarrTrace(store=store), **kwargs)
+
+    for group in ["posterior", "constant_data", "observed_data"]:
+        xr.testing.assert_equal(actual[group].dataset, expected[group].dataset)
