@@ -866,6 +866,8 @@ class TestMatchesScipy:
         assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, 0.15])).eval() == -np.inf
         assert pm.logp(sbw, np.array([1.1, 0.3, 0.2, 0.1])).eval() == -np.inf
         assert pm.logp(sbw, np.array([0.4, 0.3, 0.2, -0.1])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([1.2, -0.1, -0.05, -0.05])).eval() == -np.inf
+        assert pm.logp(sbw, np.array([-0.2, 0.3, 0.4, 0.5])).eval() == -np.inf
         assert pm.logp(sbw_wrong_K, np.array([0.4, 0.3, 0.2, 0.1])).eval() == -np.inf
 
     @pytest.mark.parametrize(
