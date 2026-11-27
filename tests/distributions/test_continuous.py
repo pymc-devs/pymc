@@ -2457,6 +2457,7 @@ class TestInverseGammaMuSigma(BaseTestDistributionRandom):
     expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
+
 @pytest.mark.parametrize(
     "dist, params",
     [
@@ -2473,6 +2474,7 @@ def test_alpha_and_mu_raises(dist, params):
     msg = "Incompatible parametrization. Can't specify both alpha and mu"
     with pytest.raises(ValueError, match=msg):
         dist.dist(mu=0.3, **params)
+
 
 class TestLogistic(BaseTestDistributionRandom):
     pymc_dist = pm.Logistic
