@@ -1576,7 +1576,7 @@ def _iter_sample(
             if callback is not None:
                 callback(
                     trace=trace,
-                    draw=Draw(chain, i == draws, i, i < tune, stats, point),
+                    draw=Draw(chain, i == draws - 1, i, i < tune, stats, point),
                 )
 
             yield stats
