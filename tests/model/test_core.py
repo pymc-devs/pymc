@@ -1059,11 +1059,10 @@ class TestSetUpdateCoords:
                 pmodel.set_data("m2", [4, 5, 6])
                 pmodel.set_data("m1", [1, 2, 3])
 
-            # Resizing the defining variable first is silent
-            with warnings.catch_warnings():
-                warnings.simplefilter("error")
+            # Resizing the defining variable first warns if other data is out of sync
+            with pytest.warns(ShapeWarning, match="other shared variable"):
                 pmodel.set_data("m1", [1, 2])
-                pmodel.set_data("m2", [3, 4])
+            pmodel.set_data("m2", [3, 4])
 
     def test_set_data_constant_shape_error(self):
         # TODO: Why allow such a complex scenario?

@@ -1078,9 +1078,26 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
                     length_belongs_to = length_tensor_origin.owner.inputs[0]
 
                     if length_belongs_to is shared_object:
-                        # This is the shared variable that's being updated!
-                        # No surprise it's changing.
-                        pass
+                        mismatched_vars = []
+                        for other_name, other_dims in self.named_vars_to_dims.items():
+                            if other_name == name or dname not in other_dims:
+                                continue
+                            other_var = self[other_name]
+                            if not isinstance(other_var, SharedVariable):
+                                continue
+                            other_axis = other_dims.index(dname)
+                            if other_var.get_value().shape[other_axis] != new_length:
+                                mismatched_vars.append(other_name)
+                        if mismatched_vars:
+                            others = "', '".join(mismatched_vars)
+                            warnings.warn(
+                                f"You are resizing '{name}', which defines the mutable dimension '{dname}', "
+                                f"but other shared variable(s) ('{others}') still have a different length "
+                                "on that dimension. Remember to update them with the correct shape to avoid "
+                                "shape issues.",
+                                ShapeWarning,
+                                stacklevel=2,
+                            )
                     elif isinstance(length_belongs_to, SharedVariable):
                         # The dimension is mutable through a SharedVariable other than the one being modified.
                         # But the other variable was not yet re-sized! Warn the user to do that!
