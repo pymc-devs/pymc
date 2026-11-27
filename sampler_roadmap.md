@@ -144,7 +144,7 @@ The milestones are ordered by dependency, and each one leaves `main` releasable.
 |---|---|---|---|
 | **M0** Contracts | A `pymc.sampling.api` module with the dataclasses and ABCs in this document, and `API_VERSION = 0`. No behaviour change. | — | The types import, and this document matches them. |
 | **M1** Canonical loop | `InlineSampler`; the phase and schedule machinery; a `LegacyStep` adapter so every existing `BlockedStep` runs in the new loop; conformance kit v0 (contract, purity, resumability, invariance). | M0 | All existing step methods sample through `InlineSampler` via `LegacyStep`. A ported random-walk Metropolis passes the kit. |
-| **M2** HMC split *(optional)* | NUTS and HMC ported as stateless steps. `DualAveraging`, `WindowedDiag`, `WindowedFull`, … extracted from `QuadPotential*`. `InitStrategy`, plus translation of the `init=` strings. | M1 | Posterior regression tests match legacy NUTS. Every legacy `init` string maps to an `(InitStrategy, Schedule)` pair. |
+| **M2** HMC split *(optional)* | NUTS and HMC ported as stateless steps. `DualAveraging`, `WindowedDiag`, `WindowedFull`, … extracted from `QuadPotential*`. `InitStrategy`, plus translation of the `init=` strings. | M1 | Posterior regression tests match legacy NUTS. Every legacy `init` string maps to an initialization plus NUTS's `mass_matrix_adapter`. |
 | **M3** Output and monitoring | `DrawBatch` and bundle `postprocess`. The `Storage` and `Monitor` base classes and their contracts, finalized here. Two storages: in-memory (`DataTreeStorage`, the default) and zarr (`ZarrStorage`); both persist the sampler state. Monitors: a progress bar matching today's, a `FileMonitor` that is the default in non-interactive sessions, and the adapter that keeps `callback=` working during its deprecation. | M1 | Steps run through `LegacyStep` produce the same `DataTree` on the old and new output paths. Both storages pass the kit's storage checks, including the checkpoint round trip. Without a terminal (a batch job), the default monitor writes progress to a file. |
 | **M4** Process sampler and non-blocking API | `ProcessSampler` with free-running workers; `RunHandle` with pause, resume, stop, cancel and checkpoint; resume from storage, including after a crash; `start_sampling` and `sample_async`. `pymc.sample` is routed through the new stack: still blocking, still returning a `DataTree`, with the superseded arguments translated under a deprecation warning. | M3; M2 if included | The test suite passes on the new stack. With legacy steps and the same seed, the new stack reproduces today's draws. A run resumed after `stop()`, or after its process was killed, is bitwise identical to an uninterrupted one (same machine and backend). |
 | **M5** Plugins and external samplers | The entry-point registry with its security rules; adapters for nutpie, numpyro and blackjax, each providing its library's `Step`s and `Sampler`; `nuts_sampler=` deprecated in favour of `sampler=`; sampler conformance checks. | M3, M4 | The deprecated `nuts_sampler="nutpie"` and `sampler="nutpie"` produce the same run. The three adapters pass the kit. |
@@ -352,7 +352,8 @@ async def sample_async(...same arguments...) -> DataTree:
 ```
 
 - **`sample` is exactly `start_sampling(...).result()`.** There is one implementation, so the blocking and non-blocking paths can't drift apart.
-- **`draws` and `tune` only feed `step.default_schedule(tune, draws)`.** `tune=None` resolves to each step's own default, as `get_default_tune_steps` does today (`pymc/sampling/mcmc.py:128`). Passing an explicit `schedule` together with `draws` or `tune` is an error; they are never silently ignored.
+- **`draws` and `tune` only feed the default schedule, `default_schedule(step, tune, draws)`.** `tune=None` resolves to the step's `default_tune`. A compound step takes the largest of its blocks', as `get_default_tune_steps` does today (`pymc/sampling/mcmc.py:128`).
+- **Settings that only feed the default schedule can't be combined with an explicit one.** Passing a `schedule` together with `draws` or `tune` is an error. So is passing it together with a step that sets an adaptation setting, such as `pm.NUTS(target_accept=0.9)` (see [Steps](#the-contract)). They are never silently ignored.
 - **`backend` and `compile_kwargs` become compile options once**, through `resolve_backend_compile_kwargs` (`pymc/pytensorf.py:918`) as today, and go to `Bundle.build`. An external sampler that compiles the model itself declares which backends it accepts, and raises for any other.
 - **`cores` and `progressbar` are kept as shorthands** because nearly every call uses them. Whether they stay permanently is an open question.
 
@@ -383,16 +384,22 @@ def start_sampling(draws=1000, *, model=None, step=None, sampler=None, init="aut
     sampler = sampler or step.default_sampler()
     sampler.check_supports(step, c.settings)      # raises for a step or a shared setting it can't use
 
-    # 3. Compile once, in this process: the step's bundle and one per initialization stage,
+    # 3. Schedule, validated before anything that takes a while: compilation, then
+    #    initialization (ADVI, Pathfinder). It needs the step and the init strategy, not the bundle.
+    init = with_root(c.init or step.default_init(), initvals=c.initvals)   # SupportPoint() first if missing
+    if c.schedule is None:
+        schedule = default_schedule(step, tune=c.tune, draws=c.draws)
+    else:
+        reject_adaptation_settings(step)       # e.g. NUTS(target_accept=0.9), in any block
+        schedule = c.schedule
+    check_schedule(schedule, step, init, sampler.capabilities)  # targets, signals, blocks, validity, hints
+    schedule = resolve_blocks(schedule, step)   # each entry → (its block's position, or None; adapter)
+
+    # 4. Compile once, in this process: the step's bundle and one per initialization stage,
     #    all from the same transformed model, through one cache
     bundles = BundleCache(model, transform=model_transform, compile_kwargs=c.compile_kwargs)
     bundle = bundles.get(step.Bundle, step.vars)               # backend= already folded in
     check_space(step.requirements, bundle.space)
-
-    # 4. Schedule, validated before initialization, which can take a while (ADVI, Pathfinder)
-    init = with_root(c.init or step.default_init(), initvals=c.initvals)   # SupportPoint() first if missing
-    schedule = c.schedule or step.default_schedule(tune=c.tune, draws=c.draws)
-    check_schedule(schedule, step, init, sampler.capabilities)  # targets, signals, validity, hints
 
     # 5. Initialization, before any state exists
     chains = c.chains or sampler.default_chains()
@@ -422,13 +429,13 @@ The flow is the same for PyMC's steps and for external libraries. An external li
 
 | Existing argument | Status | Becomes |
 |---|---|---|
-| `draws`, `tune` | kept | the default schedule, `step.default_schedule(tune, draws)` |
+| `draws`, `tune` | kept | the default schedule, `default_schedule(step, tune, draws)` |
 | `chains`, `random_seed`, `model`, `backend`, `compile_kwargs` | kept | settings shared by every step and sampler |
 | `initvals` | kept | the root of the initialization pipeline: `SupportPoint(initvals=...)` |
 | `step` | kept | the `Step`; legacy `BlockedStep`s are wrapped in `LegacyStep` |
 | `cores` | kept, as a shorthand | `ProcessSampler(cores=...)` by default; any other sampler must declare that it honours `cores`, or it raises |
 | `progressbar` | kept, as a shorthand | `False` selects a silent monitor |
-| `init` | kept; strings deprecated | an `InitStrategy` or a pipeline of them; a string becomes an `(InitStrategy, Schedule)` pair (table below) |
+| `init` | kept; strings deprecated | an `InitStrategy` or a pipeline of them; a string becomes an initialization plus NUTS's `mass_matrix_adapter` (table below) |
 | `**kwargs` for steps (`target_accept`, `nuts={...}`) | deprecated | the step's constructor: `step=pm.NUTS(target_accept=0.9)` |
 | `n_init`, `jitter_max_retries` | deprecated | the init stages' arguments: `ADVI(n=...)`, `SupportPoint(jitter=True, max_retries=...)` |
 | `nuts_sampler`, `nuts_sampler_kwargs` | deprecated | `sampler="nutpie"`; the adapter splits `nuts_sampler_kwargs` between its step (`NutpieNUTS(...)`) and its sampler (`NutpieSampler(...)`) |
@@ -440,16 +447,16 @@ The flow is the same for PyMC's steps and for external libraries. An external li
 
 The translation has a few known pitfalls, each of which gets its own test: array-like `random_seed` values, `tune=None` resolving to each step's default, and forwarding `backend` to external samplers.
 
-With M2, each deprecated `init` string becomes an `(InitStrategy, Schedule)` pair, as in the table below. NUTS always also gets `DualAveraging` for the step size. Without M2, the strings keep going through today's `init_nuts` until they are removed.
+With M2, each deprecated `init` string becomes an initialization and a value for NUTS's `mass_matrix_adapter` adaptation setting, as in the table below. NUTS's default schedule always also has `DualAveraging` for the step size. The adapters are shown without their bindings, which come from the presets in `hmc` (see [Adapters](#adapters)). Without M2, the strings keep going through today's `init_nuts` until they are removed.
 
-| `init=` today | Initialization | Metric adaptation in the tuning phase |
+| `init=` today | Initialization | NUTS's `mass_matrix_adapter` |
 |---|---|---|
 | `"adapt_diag"` | `SupportPoint()` | `WindowedDiag()` (today's foreground/background window scheme) |
 | `"jitter+adapt_diag"` (`"auto"`) | `SupportPoint(jitter=True)` | `WindowedDiag()` |
 | `"jitter+adapt_diag_grad"` | `SupportPoint(jitter=True)` | `WindowedDiagGrad()` (today's `QuadPotentialDiagAdaptExp`) |
 | `"advi+adapt_diag"` | `SupportPoint() >> ADVI(n=200_000)` | `WindowedDiag(from_hint=True)`, seeded from the ADVI approximation |
-| `"advi"`, `"advi_map"` | `SupportPoint() >> ADVI()`, `SupportPoint() >> MAP() >> ADVI()` | none: a fixed diagonal metric from the hint |
-| `"map"`, `"jitter+map"` | `SupportPoint() >> MAP()`, `SupportPoint(jitter=True) >> MAP()` | none: a fixed dense metric from the Hessian at the MAP |
+| `"advi"`, `"advi_map"` | `SupportPoint() >> ADVI()`, `SupportPoint() >> MAP() >> ADVI()` | `False`: a fixed diagonal inverse mass matrix from the hint |
+| `"map"`, `"jitter+map"` | `SupportPoint() >> MAP()`, `SupportPoint(jitter=True) >> MAP()` | `False`: a fixed dense one, the inverse of the Hessian at the MAP |
 | `"adapt_full"`, `"jitter+adapt_full"` | `SupportPoint()`, `SupportPoint(jitter=True)` | `WindowedFull()` |
 
 These reproduce today's starting points, with one deliberate difference. Today's ADVI-based inits ignore `initvals`: `pm.fit` starts from the model's default initial point (`pymc/variational/opvi.py:777`), and the starting points computed before it are discarded. In the new pipelines ADVI starts from the root, so it uses `initvals` when they are given.
@@ -548,7 +555,7 @@ A parallel hierarchy avoids both problems:
 
 - **Existing steps keep working unchanged** through `LegacyStep` (M1), including user-defined and pymc-extras steps, while they are ported.
 - **Steps are ported one at a time:** random-walk Metropolis in M1, then NUTS and HMC in the optional M2.
-- **The numerical cores are reused, not rewritten:** proposal distributions, `metrop_select`, the leapfrog integrator and NUTS tree building, the slice logic, `competence`, and the `stats_dtypes_shapes` declarations, which become `stats`. The one structural change inside them is that the integrator receives the metric as a parameter instead of holding a stateful potential.
+- **The numerical cores are reused, not rewritten:** proposal distributions, `metrop_select`, the leapfrog integrator and NUTS tree building, the slice logic, `competence`, and the `stats_dtypes_shapes` declarations, which become `stats`. The one structural change inside them is that the integrator receives the inverse mass matrix as a parameter instead of holding a stateful potential.
 - **The old classes are retired on their own schedule**, once their replacements exist.
 
 **What `LegacyStep` can and can't do**
@@ -574,6 +581,8 @@ class Step(ABC, Generic[StateT, BundleT, ParamsT, SignalsT]):
     Signals: ClassVar[type[SignalsT]]        # what each step offers to adapters
     stats: ClassVar[Mapping[str, Stat]]      # every statistic transition() returns
     requirements: ClassVar[Requirements]
+    adaptation_settings: ClassVar[tuple[str, ...]] = ()   # settings that only configure default_adapters
+    default_tune: int = 1000                 # tuning iterations when tune=None
 
     def __init__(self, vars=None, **config): ...         # immutable configuration only
 
@@ -582,7 +591,7 @@ class Step(ABC, Generic[StateT, BundleT, ParamsT, SignalsT]):
     def competence(cls, var, has_grad) -> Competence: ...
     def default_params(self, bundle: BundleT, hint: InitResult) -> ParamsT: ...
     def default_init(self) -> InitStrategy | InitPipeline: ...
-    def default_schedule(self, tune: int, draws: int) -> Schedule: ...
+    def default_adapters(self) -> tuple[Adapter | OnBlock, ...]: ...   # bound to this step's own fields
     def default_sampler(self) -> Sampler: return ProcessSampler()
 
     # Sampling: pure functions of (state, bundle)
@@ -614,24 +623,24 @@ class Requirements:
 1. The step object holds configuration only (`target_accept`, `max_treedepth`, …). It never caches anything computed during sampling. It must be picklable and cheap to copy. That makes it a coordinator, not a container of state.
    - Configuration is typed: one constructor argument per setting, named as the algorithm's library names it.
    - A setting, or a combination of settings, that the step can't use raises in the constructor.
+   - **Adaptation settings**, such as NUTS's `target_accept`, only configure the step's default adapters. The step lists them in `adaptation_settings`. Each defaults to `None`, which keeps the adapter's own default. A step that sets one can't be combined with an explicit schedule: setup raises, as it does for `tune` and `draws`.
 2. `transition` is a pure function of `(state, bundle)`; the one exception is advancing the state's RNG (see [RNG and ownership](#rng-and-ownership)).
 3. **A step doesn't know whether it is tuning.** It only sees `state.params`. Whether those params are still being adapted is the adapters' business, and whether draws count as warmup is the phase's.
 4. `init` fills the caches derived from the position (log density, gradient). It is idempotent, so it serves fresh and resumed states alike.
 5. The step never touches storage, monitors, processes or other chains. Statistics leave as return values, and the sampler routes them.
 6. `stats` declares every statistic with its dtype and shape, so storage can preallocate and monitors know what is available.
+7. **A step provides its default adapters, not its default schedule.** `default_adapters` binds adapters to the step's own fields, usually from PyMC's presets (see [Adapters](#adapters)). PyMC puts them in a tuning phase followed by a sampling phase (see [Phases and schedules](#phases-and-schedules)). So every default schedule has the same structure, and the blocks of a compound step always line up. A richer default, such as Stan's windows, is a schedule the user passes.
 
 ### Example: random-walk Metropolis
 
 This is everything an author writes for a simple step.
 
 ```python
-@dataclass(frozen=True)
-class RWParams:
-    scale: np.ndarray                         # (ndim,)
+class RWParams(Param):
+    scale: ParamField[np.ndarray]             # (ndim,)
 
-@dataclass(frozen=True)
-class RWSignals:
-    accept_prob: float
+class RWSignals(Signal):
+    accept_prob: SignalField[float]
 
 @dataclass(frozen=True)
 class RWState(StepState[RWParams]):
@@ -646,14 +655,13 @@ class RandomWalk(Step[RWState, LogpBundle, RWParams, RWSignals]):
 
     def default_params(self, bundle, hint):
         approx = hint.approximation
-        return RWParams(scale=approx.cov.std() if approx else np.ones(bundle.space.ndim))
+        return RWParams(scale=np.sqrt(approx.cov.diag()) if approx else np.ones(bundle.space.ndim))
 
     def default_init(self):
         return SupportPoint(jitter=True)
 
-    def default_schedule(self, tune, draws):
-        return [Phase("tune", (AcceptanceScale(target_rate=0.234),), Iterations(tune)),
-                Phase("sample", (), Iterations(draws), warmup=False)]
+    def default_adapters(self):
+        return (AcceptanceScale(RWParams.scale, accept=RWSignals.accept_prob, target_rate=0.234),)
 
     def init(self, state, bundle):
         return state.replace(logp=bundle.logp(state.position, state.cond))
@@ -674,7 +682,17 @@ The same step can be tuned differently without touching its code. For example:
 
 ```python
 schedule = [
-    Phase("tune", (AcceptanceScale(),), Iterations(500)),
+    Phase(
+        "tune",
+        (
+            AcceptanceScale(
+                RWParams.scale,
+                accept=RWSignals.accept_prob,
+                target_rate=0.44,
+            ),
+        ),
+        Iterations(500)
+    ),
     Phase("sample", (), Iterations(2000), warmup=False),
 ]
 ```
@@ -691,13 +709,33 @@ The loop checks both after every step. If an algorithm has outputs that only exi
 ### Compound steps
 
 - `CompoundStep((NUTS(vars=[mu, sigma]), Slice(vars=[k])))` is itself a `Step`.
-  - Its state is a tuple of sub-states.
+  - Its state is a tuple of sub-states, one per block, and so are its signals.
   - Its bundle is a tuple of sub-bundles, all built from the same transformed model.
   - Its `transition` is a Gibbs sweep: before each block steps, that block receives the other blocks' current values in `state.cond`.
 - Changing `cond` invalidates the block's cached log density, so the compound runs that block's `init` before its `transition`. This is no more expensive than today: legacy step methods recompute the log density at the start of every step.
 - External steps, such as a blackjax kernel wrapped as a `Step`, compose the same way. When blocks use different array libraries, `cond` is converted at block boundaries (zero-copy via DLPack where possible).
-- Adapters bind to a block: `DualAveraging().on(nuts_block)`.
 - Out of scope for v1: mixing chain steps and population steps in one compound.
+
+**Tuning a compound step.** An adapter is bound to the fields of a step *type*, such as `HMCParams.step_size`. That doesn't say which block it tunes when two blocks share a type. So in a compound's schedule, each adapter is also put on a block:
+
+```python
+nuts, rw = pm.NUTS(vars=[mu, sigma]), RandomWalk(vars=[tau])
+schedule = [
+    Phase("tune", (replace(hmc.step_size, target_accept=0.9).on(nuts),
+                   hmc.diag_mass_matrix.on(nuts),
+                   AcceptanceScale(RWParams.scale, accept=RWSignals.accept_prob).on(rw)),
+          Iterations(1000)),
+    Phase("sample", (), Iterations(1000), warmup=False),
+]
+pm.sample(step=CompoundStep((nuts, rw)), schedule=schedule)
+```
+
+- **A block is named by its step object.** For a compound you didn't build, such as one from `assign_steps`, `step.block_of("mu")` returns the block that samples `mu`. Every variable is in exactly one block, so the lookup is unambiguous.
+- **`adapter.on(block)` returns an `OnBlock`**, which checks the binding against the block's type as soon as it is written (see [Adapters](#adapters)). The adapter itself is unchanged, so one preset can go on several blocks.
+- **In a compound's schedule, every adapter is on a block.** An adapter on its own only works with a single step.
+- **At setup, each block becomes its position.** `check_schedule` checks that every block an `OnBlock` names belongs to the step being sampled. Then the entry is replaced by the block's position in the compound. While sampling, the loop only uses positions: each adapter reads its block's entry of the compound's signals, and its values go into its block's hyperparameters (see [The canonical loop](#the-canonical-loop)). Adapters never see the compound's signals, and the loop never sees step objects.
+- **The default schedule merges the blocks' defaults.** A compound's `default_adapters` returns each block's default adapters, put on that block, and its `default_tune` is the largest of its blocks'. Every default schedule is a tuning phase followed by a sampling phase, so the blocks always line up.
+- **Adaptation settings are checked in every block.** `CompoundStep((pm.NUTS(target_accept=0.9), rw))` with an explicit schedule raises.
 
 ### Population steps
 
@@ -711,7 +749,7 @@ class PopulationStep(Step[PopStateT, BundleT, ParamsT, SignalsT]):
 
 @dataclass(frozen=True)
 class PopulationState(Generic[ReplicatedT, MembersT]):
-    replicated: ReplicatedT    # identical on every shard: SMC's beta and stage, a pooled metric, a shared RNG
+    replicated: ReplicatedT    # identical on every shard: SMC's beta and stage, a pooled mass matrix, a shared RNG
     members: MembersT          # leading axis = the members this shard holds: positions, log densities, weights
 ```
 
@@ -725,7 +763,7 @@ The previous draft required the final phase to have no adapters. That rule is to
 |---|---|---|---|
 | **Part of the Markov state** | GHMC's partially refreshed momentum, $p \leftarrow \alpha p + \sqrt{1-\alpha^2}\,\xi$ (Horowitz, 1991) | `GHMCState.momentum`; the damping α in `Params` | The kernel is fixed on the extended space $(x, p)$ and leaves $\pi(x)\,\mathcal{N}(p)$ invariant |
 | **Ensemble kernel** | MEADS (Hoffman & Sountsov, 2022): each fold's step size, damping and preconditioner come from the *other* folds' current states. Also stretch moves. | A `PopulationStep`; the "adapted" quantities are computed inside `transition` | It's a fixed kernel on the product space. Each fold's update conditions only on the other folds, so it leaves $\prod_i \pi(x_i)$ invariant. Updating every fold at once from each other's states would not. |
-| **History-dependent adaptation** | Adaptive Metropolis (Haario et al., 2001); metric estimators whose updates shrink like $1/n$ | An `Adapter` declaring `validity="diminishing"` | Not invariance: ergodicity holds under diminishing adaptation and containment (Roberts & Rosenthal, 2007) |
+| **History-dependent adaptation** | Adaptive Metropolis (Haario et al., 2001); covariance estimators whose updates shrink like $1/n$ | An `Adapter` declaring `validity="diminishing"` | Not invariance: ergodicity holds under diminishing adaptation and containment (Roberts & Rosenthal, 2007) |
 
 So yes: GHMC with persistent momentum is a pure step with an ordinary, non-adaptive sampling phase. That isn't a workaround; it is the correct mathematical description. It also means the conformance kit's invariance check applies to GHMC directly: start from exact draws of $\pi(x)\,\mathcal{N}(p)$.
 
@@ -749,10 +787,9 @@ class StepState(Generic[ParamsT]):
     def snapshot(self) -> Self: ...         # independent copy, including the RNG's bit-generator state
 
 
-@dataclass(frozen=True)
-class HMCParams:
-    step_size: float
-    metric: Metric                          # an open protocol; see "Parameters and signals"
+class HMCParams(Param):                     # see "Parameters and signals"
+    step_size: ParamField[float]
+    inverse_mass_matrix: ParamField[Covariance]
 
 
 @dataclass(frozen=True)
@@ -919,7 +956,7 @@ Initialization runs in the calling process, after the bundles are built and befo
 @dataclass(frozen=True)
 class Approximation:                       # Gaussian, in bundle.space
     mean: np.ndarray
-    cov: DiagCov | DenseCov | LowRankPlusDiag
+    cov: Covariance                        # DiagCov, DenseCov or LowRankPlusDiag; see "Parameters and signals"
 
 
 class InitialDistribution(ABC):            # what a stage returns, and the next stage starts from
@@ -994,12 +1031,12 @@ The bundles are a function of the model, the transform and the backend, while in
 What initialization learns can still shape the run, in two ways that don't involve the bundles:
 
 - **If it should change what is compiled**, for example choosing between a centered and a non-centered parametrization from a quick fit, it is a `model_transform` that happens to run inference, and it runs before any bundle is built.
-- **If it should change how the step moves**, for example whitening with the approximation's covariance, it goes into the step's parameters through the `Metric` protocol, and nothing is recompiled.
+- **If it should change how the step moves**, for example whitening with the approximation's covariance, it goes into the step's parameters, such as NUTS's inverse mass matrix, and nothing is recompiled.
 
 ### Drawing the starting positions
 
 - The last stage's distribution is drawn once, in the calling process, with one seed per chain, and the workers receive the positions. Drawing them all together matters:
-  - adaptation can need every chain's start: today, `adapt_diag` starts the metric at their mean (`pymc/sampling/mcmc.py:1893`);
+  - adaptation can need every chain's start: today, `adapt_diag` starts its running estimate from their mean (`pymc/sampling/mcmc.py:1893`);
   - Pathfinder's resampling should draw without replacement across chains;
   - a distribution can hold compiled functions or JAX state, which no worker needs.
 - **Seeds:** initialization only uses the integer seeds derived from the chains' generators (see [Body](#body)). The final draw gives chain i the i-th seed. The stages that run once for all chains use the first chain's seed, as `init_nuts` does today. A stage that needs more randomness spawns child seeds from its own.
@@ -1007,65 +1044,281 @@ What initialization learns can still shape the run, in two ways that don't invol
 
 ### Hand-off to adaptation
 
-- The `InitResult` is the hint that `step.default_params(bundle, hint)` and `adapter.init(current, hint)` read. Some adapters use the positions: today's `"jitter+adapt_diag"` starts the metric at their mean. Others use the approximation: today's `"advi+adapt_diag"` becomes `SupportPoint() >> ADVI()` plus `WindowedDiag(from_hint=True)`.
+- The `InitResult` is the hint that `step.default_params(bundle, hint)` and `adapter.init(current, hint)` read. Some adapters use the positions: today's `"jitter+adapt_diag"` starts its running estimate from their mean. Others use the approximation: today's `"advi+adapt_diag"` becomes `SupportPoint() >> ADVI()` plus `WindowedDiag(from_hint=True)`.
 - **Declared output:** each stage declares whether it provides an approximation of the posterior or only starting positions. A pipeline provides one if any stage does and the later stages pass it on, as `Jitter` does. `check_schedule` uses the declaration: an adapter that needs the approximation is rejected at setup when initialization can't provide one. For example, `init=SupportPoint(jitter=True)` with `WindowedDiag(from_hint=True)` fails with "SupportPoint provides starting points only; WindowedDiag(from_hint=True) needs an approximation, for example from ADVI(), Pathfinder() or MAP()". This follows the `returns_posterior` flag of Jesse Grabowski's [inference-configuration sketch](https://gist.github.com/jessegrabowski/9918bb7b4cd7cc6243a39183b826b71f).
 
 ## Adaptation and schedules
 
+### How tuning is organized
+
+A step has several hyperparameters: NUTS has a step size and an inverse mass matrix, random-walk Metropolis a proposal scale. During warmup, tuning sets some of them from the chain's own draws.
+
+- **One adapter per tuned hyperparameter.** Each tuned hyperparameter is handled by its own `Adapter` object. After every iteration, the adapter reads what the step reported about that iteration (its *signals*, such as the acceptance statistic), updates its estimate, and gives the hyperparameter a new value.
+- **Adapters that run together form a `Phase`.** A phase is a stretch of iterations that lasts until its stop condition holds, and its adapters are applied after every iteration of that stretch. A phase without adapters keeps every hyperparameter fixed.
+- **A sequence of phases is a `Schedule`.** Tuning can take several phases, as in Stan's windows, or a diagonal estimate followed by a dense one. The last phase of a run usually has no adapters, and holds the draws that are kept.
+
+Today's default NUTS run, in these terms:
+
+```python
+schedule = [
+    Phase(
+        "tune",
+        (
+            DualAveraging(
+                HMCParams.step_size,
+                accept=HMCSignals.accept_stat,
+                target_accept=0.8,
+            ),
+            WindowedDiag(
+                HMCParams.inverse_mass_matrix, draws=HMCSignals.position
+            ),
+        ),
+        until=Iterations(1000),
+    ),
+    Phase("sample", (), until=Iterations(1000), warmup=False),
+]
+```
+
+1. Before the first tuning iteration, each adapter starts from its hyperparameter's initial value, set by `step.default_params`, and from the initialization result.
+2. In each tuning iteration, the step moves the chain and reports its signals. Each adapter reads the signals it is bound to, updates its estimate, and proposes a new value for its hyperparameter. The next iteration uses the new values.
+3. When the phase ends, each adapter hands over a final value. Dual averaging, for example, explores with a noisy step size and hands over a smoothed average.
+4. The sampling phase has no adapters, so the hyperparameters stay fixed, and its draws are kept.
+
+The step never knows whether it is being tuned: it only reads its hyperparameters from its state. The rest of this section describes each piece in turn.
+
 ### Parameters and signals
 
-A step is coupled to adaptation through exactly two declarations: what it lets adapters tune (`Params`) and what each step reports to them (`Signals`).
+A step is coupled to adaptation through exactly two declarations: what it lets adapters tune (`Params`) and what it reports to them after each iteration (`Signals`).
+
+```python
+class HMCParams(Param):                            # tunable
+    step_size: ParamField[float]
+    inverse_mass_matrix: ParamField[Covariance]    # the momentum is drawn from N(0, M); this is M⁻¹
+
+class HMCSignals(Signal):                          # offered to adapters after each iteration; not stored by default
+    accept_stat: SignalField[float]
+    position: SignalField[np.ndarray]
+    grad: SignalField[np.ndarray]
+```
+
+- **Fields are named as the step's algorithm names them.** No adapter expects a particular name (see [Adapters](#adapters)).
+- **A subclass of `Param` or `Signal` is a frozen dataclass, without the decorator.** Each field's type is wrapped in `ParamField` or `SignalField`. A default is given with `param_field(default=...)` or `signal_field(default=...)`, which take the arguments of `dataclasses.field`.
+- **A field accessed on the class gives a reference to it.** `HMCParams.step_size` is a `ParamRef[HMCParams, float]`, and `HMCSignals.accept_stat` is a `SignalRef[HMCSignals, float]`. On an instance, the same attribute gives the value, a `float`.
+- **References are typed.** Type checkers know both types, so a binding to the wrong kind of field is flagged where the schedule is written. A reference is an attribute, not a string: an editor can find or rename every use of a field, and a typo raises `AttributeError` on the line that builds the schedule.
+
+**The inverse mass matrix is a covariance.** HMC draws its momentum from N(0, M), and its kinetic energy is ½ pᵀM⁻¹p. Tuning sets M⁻¹ to an estimate of the posterior covariance. That is why the parameter is the inverse, and why its type is `Covariance`, the same type initialization uses for its approximation:
+
+```python
+class Covariance(ABC):                     # DiagCov, DenseCov, LowRankPlusDiag, ...
+    def __matmul__(self, v: np.ndarray) -> np.ndarray: ...              # Σ v
+    def diag(self) -> np.ndarray: ...
+    def draw(self, rng: np.random.Generator) -> np.ndarray: ...         # x ~ N(0, Σ)
+    def draw_inverse(self, rng: np.random.Generator) -> np.ndarray: ... # x ~ N(0, Σ⁻¹)
+```
+
+- HMC uses `draw_inverse` for the momentum, and `@` for the velocity M⁻¹p and the kinetic energy. These are the operations of today's `QuadPotential` (`random`, `velocity`, `energy`) without the adaptation, which moves to the adapters. Today's `QuadPotentialDiag` and `QuadPotentialFull` are already built from a variance and a covariance.
+- `Covariance` is an ordinary base class with concrete subclasses. A new structure, such as block-diagonal or Kronecker, is a new subclass plus the adapter that estimates it, with no change to the step.
+- Because the type describes what is estimated, not how HMC uses it, the same estimators serve other steps: adaptive Metropolis binds `WelfordDense` to its proposal covariance. `default_params` can also start from the initialization's `Approximation.cov` as it is.
+- A learned nonlinear transport map, as in nutpie's normalizing-flow adaptation, isn't a covariance: it changes the coordinates the log density is evaluated in. A step that supports one declares a separate parameter for it, with its own type and adapter. PyMC's NUTS doesn't in v1; nutpie's step does.
+
+**How references work.** `Param` turns each subclass into a frozen dataclass, then puts a descriptor on the class for each field. The descriptor answers class access with a reference, and stays out of the way on instances. `Signal`, `SignalField`, `signal_field` and `SignalRef` are the same, for signals.
 
 ```python
 @dataclass(frozen=True)
-class HMCParams:                 # tunable
-    step_size: float
-    metric: Metric
+class ParamRef(Generic[O, T]):
+    owner: type[O]                                 # the class the reference was taken from
+    name: str                                      # the field
+    def get(self, params: O) -> T:
+        return getattr(params, self.name)
 
-@dataclass(frozen=True)
-class HMCSignals:                # offered to adapters after each step; not stored by default
-    accept_stat: float
-    position: np.ndarray
-    grad: np.ndarray
+
+class ParamField(Generic[T]):
+    def __init__(self, name: str):
+        self.name = name
+
+    @overload
+    def __get__(self, obj: None, owner: type[O]) -> ParamRef[O, T]: ...
+    @overload
+    def __get__(self, obj: O, owner: type[O]) -> T: ...
+    def __get__(self, obj, owner):
+        return ParamRef(owner, self.name)          # only reached on class access, see below
+
+    if TYPE_CHECKING:
+        def __set__(self, obj: object, value: T) -> None: ...   # tells type checkers that __init__ takes a T
+
+
+def param_field(*, default=MISSING, **kwargs) -> Any:
+    return dataclasses.field(default=default, **kwargs)
+
+
+@dataclass_transform(frozen_default=True, field_specifiers=(param_field,))
+class Param:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for name in inspect.get_annotations(cls):  # a re-declared inherited field must not
+            if name not in cls.__dict__:           # take its parent's descriptor as its default
+                setattr(cls, name, dataclasses.field())
+        dataclass(frozen=True)(cls)                # dataclass must see plain fields only
+        for f in dataclasses.fields(cls):
+            setattr(cls, f.name, ParamField(f.name))
+
+    @classmethod
+    def ref_to(cls, name: str) -> ParamRef[Self, Any]: ...   # raises on an unknown name
 ```
 
-**`Metric` is an open protocol**, not a closed set of classes. A metric maps the integrator's coordinates `z` to the bundle's coordinates `x`. The map is linear for diagonal, dense and low-rank metrics, and nonlinear for a learned transport map, as in nutpie's normalizing-flow adaptation. A new kind of preconditioning is therefore a new `Metric` plus the `Adapter` that fits it, with no change to the step.
-
-```python
-class Metric(Protocol):
-    def forward(self, z: np.ndarray) -> tuple[np.ndarray, float]: ...         # x = T(z), and log|det ∂T/∂z|
-    def inverse(self, x: np.ndarray) -> np.ndarray: ...                       # z = T⁻¹(x)
-    def pullback(self, z: np.ndarray, grad_x: np.ndarray) -> np.ndarray: ...  # ∇z of log p(T(z)) + log|det ∂T/∂z|
-```
+- **The dataclass comes first, the descriptors after.** A descriptor present while `dataclass` runs is taken for the field's default: dataclass would call `ParamField.__get__(None, cls)` and make the resulting `ParamRef` the default. That is why subclasses don't use the `@dataclass` decorator; `@dataclass(frozen=True)` on a subclass raises `TypeError`.
+- **`dataclass_transform` only informs type checkers.** It tells them that subclasses of `Param` are frozen dataclasses, and that `param_field` declares a field. At run time it only records its arguments on the class.
+- **Class access gives the reference; instance access never reaches the descriptor.** `HMCParams.step_size` calls `__get__(None, HMCParams)`. The generated `__init__` stores each value in the instance's `__dict__`, and a descriptor with only `__get__` ranks below the instance's `__dict__`, so `params.step_size` is an ordinary attribute read. This matters for signals, which are built after every iteration. Reads and construction cost about the same as for a plain frozen dataclass: 15 instead of 10 ns per read, and 146 instead of 134 ns to build a three-field signal.
+- **`__set__` exists only for type checkers.** The typing spec takes the type of a descriptor-typed field's `__init__` parameter from `__set__`. Without it, checkers expect `__init__` to receive a `ParamField[float]`. At run time, a `__set__` would make every instance read go through `__get__`: 50 ns per read, and 275 ns to build a three-field signal. So type checkers see a data descriptor and the interpreter a non-data one. They agree on everything observable: `__init__` takes a `T`, an instance gives a `T`, the class gives a reference, and assignment fails because the dataclass is frozen.
+- **References taken through a subclass.** `NUTSParams.step_size` and `HMCParams.step_size` have different owners but name the same hyperparameter. Once `check_schedule` has confirmed that a reference's owner is the step's `Params` or a class it inherits from, a hyperparameter is identified by its name. mypy 1.19 types an inherited field accessed through a subclass as its value (`float`), not as a reference; ty types it correctly. So bindings go through the class that declares the field.
+- **`ref_to(name)`** builds a reference from a name known only at run time, for example in a loop or from a configuration file. Its value type is `Any`, so only `check_schedule` checks it.
+- **Checked with mypy 1.19 and ty 0.0.86.** Both infer `ParamRef[HMCParams, float]` for `HMCParams.step_size` and `float` for `params.step_size`. Both flag a wrong `__init__` argument, a misspelt field, an assignment, and a step-size adapter bound to the covariance. `dataclasses.replace` and pickling work as usual. A bare default (`max_treedepth: ParamField[int] = 10`) works at run time, but both checkers reject it, hence `param_field`.
+- This is the typing pattern of SQLAlchemy 2.0's `Mapped[int]`, where `User.id` is a column expression and `user.id` an int.
 
 ### Adapters
 
 ```python
-class Adapter(ABC, Generic[ParamT, SignalsT]):
-    target: ClassVar[str]                      # the Params field this adapter owns
-    requires: ClassVar[frozenset[str]]         # the Signals fields it reads
+@dataclass_transform(frozen_default=True, kw_only_default=True)
+@dataclass(frozen=True)
+class Adapter(ABC, Generic[ValueT, InputsT, AdaptStateT]):
     validity: ClassVar[Literal["warmup_only", "diminishing"]] = "warmup_only"
-    needs_approximation: bool = False          # needs hint.approximation from initialization
 
-    def init(self, current: ParamT, hint: InitResult) -> AdaptState: ...
-    def update(self, a: AdaptState, signals: SignalsT, comm: Comm) -> AdaptState: ...
-    def propose(self, a: AdaptState) -> ParamT: ...     # value used for the next step
-    def final(self, a: AdaptState) -> ParamT: ...       # value handed to the next phase
+    param: ParamRef[Any, ValueT]               # the hyperparameter it tunes; ValueT is that field's type
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        dataclass(frozen=True, kw_only=True)(cls)   # a subclass's own fields are keyword-only
+
+    @property
+    def needs_approximation(self) -> bool:     # needs hint.approximation from initialization
+        return False
+
+    @abstractmethod
+    def read(self, signals: Signal) -> InputsT: ...     # picks its inputs out of the step's signals
+
+    def init(self, current: ValueT, hint: InitResult | None) -> AdaptStateT: ...
+    def update(self, a: AdaptStateT, inputs: InputsT, comm: Comm) -> AdaptStateT: ...
+    def propose(self, a: AdaptStateT) -> ValueT: ...    # the value the step uses in the next iteration
+    def final(self, a: AdaptStateT) -> ValueT: ...      # the value the hyperparameter keeps after the phase
+
+    def on(self, block: Step) -> OnBlock:               # puts it on one block of a compound step
+        return OnBlock(block, self)
 ```
 
-- Adapters are pure, like steps. `AdaptState` is serializable and saved in checkpoints.
-- `comm` lets an adapter pool its estimate across chains, for example one metric shared by all chains. For independent adaptation it is the identity.
-- Because adapters depend only on declared fields, they work with any step that declares those fields. For example, `WelfordDiag` works for HMC, NUTS, MALA, or anything else with a `metric` parameter.
+```python
+DualAveraging(HMCParams.step_size, accept=HMCSignals.accept_stat, target_accept=0.8)
+WelfordDiag(HMCParams.inverse_mass_matrix, draws=HMCSignals.position)
 
-| Adapter | `target` | `requires` |
-|---|---|---|
-| `DualAveraging(target_accept)` | `step_size` | `accept_stat` |
-| `WindowedDiag()`, `WelfordDiag()` | `metric` | `position` |
-| `WindowedDiagGrad()`, `FisherDiag()` (nutpie-style) | `metric` | `position`, `grad` |
-| `WindowedFull()`, `WelfordDense()` | `metric` | `position` |
-| `ShrunkDense(toward="current", shrinkage)` | `metric` | `position` |
-| `LowRank(k)` | `metric` | `position`, `grad` |
-| `AcceptanceScale(target_rate)` | `scale` | `accept_prob` |
+# The same algorithms, bound to other steps' hyperparameters
+DualAveraging(MetropolisParams.scaling, accept=MetropolisSignals.accept_rate, target_accept=0.234)
+WelfordDense(AdaptiveMetropolisParams.proposal_cov, draws=AdaptiveMetropolisSignals.position)
+
+# Each adapter declares its references as typed fields, and reads its inputs through them
+class DualAveraging(Adapter[float, float, DualAveragingState]):   # one input, so InputsT is float
+    accept: SignalRef[Any, float]
+    target_accept: float = 0.8
+
+    def read(self, signals: Signal) -> float:
+        return self.accept.get(signals)
+
+class DrawsAndGrads(NamedTuple):
+    draws: np.ndarray
+    grads: np.ndarray
+
+class FisherDiag(Adapter[Covariance, DrawsAndGrads, FisherDiagState]):
+    draws: SignalRef[Any, np.ndarray]
+    grads: SignalRef[Any, np.ndarray]
+
+    def read(self, signals: Signal) -> DrawsAndGrads:
+        return DrawsAndGrads(self.draws.get(signals), self.grads.get(signals))
+```
+
+- **An adapter is bound when it is constructed.** Its first argument says which hyperparameter it tunes. Each of its inputs gets a keyword argument that says which signal feeds it.
+- **Subclasses become frozen dataclasses without a decorator**, as with `Param`.
+  - `__init_subclass__` makes each subclass a frozen dataclass whose own fields are keyword-only. `Adapter` itself is an ordinary dataclass, so `param` stays positional, and a subclass of a subclass works the same way.
+  - `dataclass_transform` tells type checkers the same thing. mypy and ty both see `param` as positional and the other arguments as keywords, and both flag a missing `param`, a signal passed by position, and an assignment to a field.
+  - Decorating a subclass with `@dataclass(frozen=True)` as well raises `TypeError`.
+- **Each reference is a field of its own, with its own type.** A reference held in a container, such as a dict of signals, would lose its type, and `check_schedule` couldn't find it.
+- **Its code never sees the step's field names.** `read` picks the adapter's inputs out of the signals through its references. It returns them as `InputsT`: the value itself for a single input (a `float` for `DualAveraging`), and a small named tuple for several. The loop passes the result to `update`. That is how one `DualAveraging` tunes NUTS's step size or a Metropolis step's scaling, and how each step can keep its algorithm's names.
+- **`InputsT` types `update` in each adapter.** Inside `FisherDiag.update`, `inputs.grads` is an `np.ndarray`. It has to be a type parameter: a subclass that narrowed a base `update(inputs: Mapping[str, Any])` to `DrawsAndGrads` would break substitutability, and mypy and ty both reject that override. For the same reason, `read` takes any `Signal`: an adapter doesn't know which step it serves.
+- **Types only check a binding, they never choose a field.** Two `float` fields can't be confused, because the binding names one of them. The check happens twice:
+  - When the schedule is written, a type checker flags a binding to the wrong kind of field, such as `DualAveraging` on `inverse_mass_matrix`, or fed from `position`.
+  - At setup, `check_schedule` checks the same thing again, for users who don't run a type checker and for references built with `ref_to`. An adapter object doesn't carry its type parameters, so `check_schedule` reads them from its class. The annotations say what each reference must point to (`accept: SignalRef[Any, float]`), and the class's generic arguments give `ValueT` (`Adapter[float, float, DualAveragingState]`).
+  - Both apply the same rule: the field must have the type the adapter declares. So `WelfordDiag`, an `Adapter[Covariance, ...]`, can't tune a field declared as `DiagCov`, although its `final` returns one. No planned step declares a covariance that narrowly.
+- **A step's `default_adapters` binds PyMC's adapters to its own fields**, so most users never write a binding. A custom schedule writes one per adapter, or starts from the presets below. An adapter holds configuration only, so the same adapter object can appear in several phases; each phase starts it with a fresh `AdaptState`.
+- **`validity` and `needs_approximation` describe the algorithm.** `validity` is fixed for a class. `needs_approximation` is a property, because it can depend on the configuration: for example, if `ShrunkDense` could shrink toward the initialization's approximation instead of the current value.
+- **Few people write adapters.** Each one writes a `read` of a line or two, and one with several inputs also writes a named tuple for them.
+- Adapters are pure, like steps. `AdaptState` is serializable and saved in checkpoints.
+- `comm` lets an adapter pool its estimate across chains, for example one inverse mass matrix shared by all chains. For independent adaptation it is the identity.
+
+**Presets.** Next to each step, PyMC provides adapters already bound to the step's fields, with every setting at its default. The step's `default_adapters` takes them from there, and applies its adaptation settings:
+
+```python
+# pymc/step_methods/hmc/adapters.py, imported as hmc
+step_size = DualAveraging(HMCParams.step_size, accept=HMCSignals.accept_stat)
+diag_mass_matrix = WindowedDiag(HMCParams.inverse_mass_matrix, draws=HMCSignals.position)
+dense_mass_matrix = WindowedFull(HMCParams.inverse_mass_matrix, draws=HMCSignals.position)
+
+replace(hmc.step_size, target_accept=0.9)      # dataclasses.replace: the preset, with one setting changed
+
+
+class NUTS(Step[...]):
+    adaptation_settings = ("target_accept", "mass_matrix_adapter")
+
+    def __init__(self, vars=None, *, target_accept: float | None = None,
+                 mass_matrix_adapter: Adapter | Literal[False] | None = None, max_treedepth=10, ...): ...
+
+    def default_adapters(self):
+        step_size = hmc.step_size
+        if self.target_accept is not None:
+            step_size = replace(step_size, target_accept=self.target_accept)
+        if self.mass_matrix_adapter is False:     # the inverse mass matrix stays at its default_params value
+            return (step_size,)
+        return (step_size, self.mass_matrix_adapter or hmc.diag_mass_matrix)
+```
+
+- **Users change a default through the step**, for example `pm.NUTS(target_accept=0.9)` or `pm.NUTS(mass_matrix_adapter=hmc.dense_mass_matrix)`. A custom schedule uses the presets directly.
+- **A preset is an adapter**, so it goes straight into a phase. `replace` raises at once on a misspelt setting. That is why every adapter setting has a default. A `functools.partial` would not be an adapter until it is called, and ty doesn't check calls to one.
+- **`None` keeps the preset's default.** `mass_matrix_adapter=False` turns mass-matrix adaptation off, which is what the deprecated `init="advi"` and `init="map"` translate to.
+
+**Adapters on a block.** In a compound step, each adapter is also put on one block (see [Compound steps](#compound-steps)):
+
+```python
+@dataclass(frozen=True)
+class OnBlock:
+    block: Step                                # one block of a compound step
+    adapter: Adapter
+
+    def __post_init__(self):
+        check_binding(self.adapter, type(self.block))   # Validation rules 1–2, where the binding is written
+```
+
+- **The adapter stays unchanged**, so one preset can go on several blocks.
+- **Only a runtime check can verify this link.** An adapter's references are typed `ParamRef[Any, ...]`, so they don't record which step class they belong to.
+
+**`propose` and `final`.** While its phase runs, an adapter's `propose` gives the value the step uses in the next iteration. When the phase ends, `final` gives the value the hyperparameter keeps. The two often differ:
+
+- `DualAveraging` explores with a noisy step size (`propose`) and hands over the average of its iterates (`final`), as today's NUTS does at the end of tuning.
+- `WelfordDiag` keeps proposing the covariance it started with while it accumulates draws, and hands over its new estimate at the end. So the covariance changes only between phases. That starting covariance can have any structure, so `WelfordDiag` tunes a `Covariance` field, and only its `final` is sure to return a `DiagCov`.
+- `WindowedDiag` proposes a new covariance after every iteration, and its `final` is the latest one.
+
+In the table, "Produces" is what `final` returns. Every covariance adapter tunes a `Covariance` field.
+
+| Adapter | Produces | Inputs | Typical binding |
+|---|---|---|---|
+| `DualAveraging(target_accept)` | `float` | `accept` | NUTS `step_size`, from `accept_stat` |
+| `WindowedDiag()`, `WelfordDiag()` | `DiagCov` | `draws` | NUTS `inverse_mass_matrix`, from `position` |
+| `WindowedDiagGrad()`, `FisherDiag()` (nutpie-style) | `DiagCov` | `draws`, `grads` | NUTS `inverse_mass_matrix`, from `position` and `grad` |
+| `WindowedFull()`, `WelfordDense()` | `DenseCov` | `draws` | NUTS `inverse_mass_matrix`, from `position` |
+| `ShrunkDense(toward="current", shrinkage)` | `DenseCov` | `draws` | NUTS `inverse_mass_matrix`, from `position` |
+| `LowRank(k)` | `LowRankPlusDiag` | `draws`, `grads` | NUTS `inverse_mass_matrix`, from `position` and `grad` |
+| `AcceptanceScale(target_rate)` | `np.ndarray` | `accept` | Metropolis `scale`, from `accept_prob` |
+
+**`WindowedDiag` and `WelfordDiag` estimate the same thing, but are used differently:**
+
+- `WindowedDiag` is today's PyMC scheme, and covers a whole tuning phase on its own. It keeps two overlapping running estimates. After every iteration it updates the covariance from the older one, and at the end of each of its internal windows it drops the older estimate and starts a new one.
+- `WelfordDiag` is Stan's estimator for a single window. It is meant for a sequence of window phases, one adapter per phase, as in `stan_windows` below.
+- `WindowedFull` and `WelfordDense` are the dense versions of the two.
 
 ### Phases and schedules
 
@@ -1073,7 +1326,7 @@ class Adapter(ABC, Generic[ParamT, SignalsT]):
 @dataclass(frozen=True)
 class Phase:
     name: str
-    adapters: tuple[Adapter, ...] = ()          # empty → params frozen
+    adapters: tuple[Adapter | OnBlock, ...] = ()   # empty → hyperparameters fixed; OnBlock in a compound
     until: StopCondition = Iterations(0)
     warmup: bool = True                         # draws flagged as warmup in storage
     record: bool = True                         # store this phase's draws at all
@@ -1082,23 +1335,60 @@ class Phase:
 Schedule = Sequence[Phase]                      # or an iterable, for schedules built lazily
 ```
 
-**Phase boundary rule:** when a new phase starts, each of its adapters is initialized with `init(current=<the previous phase's final value>, hint=...)`. That single rule covers Stan's step-size restart at the end of every window and the hand-off between metric estimators.
+**The default schedule** is the same for every step: a tuning phase with the step's default adapters, then a sampling phase.
 
 ```python
-# Stan's windowed adaptation
-def stan_windows(tune=1000, init_buffer=75, term_buffer=50, base_window=25, metric=WelfordDiag):
-    phases = [Phase("fast-init", (DualAveraging(),), Iterations(init_buffer))]
+def default_schedule(step, tune: int | None, draws: int) -> Schedule:
+    tune = step.default_tune if tune is None else tune
+    return [Phase("tune", step.default_adapters(), Iterations(tune)),
+            Phase("sample", (), Iterations(draws), warmup=False)]
+```
+
+**How a phase starts.** Each adapter starts from `current`, the value its hyperparameter has when the phase starts: the value from `default_params` in the first phase, and the value the previous phase handed over after that.
+
+- The initialization result (`hint`) goes only to the adapters of the first phase that tunes their hyperparameter. In later phases they get `hint=None`, and continue from what was handed over.
+- So in Stan's windows, the second window's estimator starts from the first window's estimate, and not again from ADVI's approximation.
+- The same rule gives Stan's step-size restart at every window, and the hand-off from one estimator to the next.
+
+```python
+# Stan's windowed adaptation, for any step: the caller passes the two bound adapters
+def stan_windows(
+    step_size: Adapter,
+    covariance: Adapter,
+    tune=1000,
+    init_buffer=75,
+    term_buffer=50,
+    base_window=25,
+):
+    phases = [Phase("fast-init", (step_size,), Iterations(init_buffer))]
     for i, w in enumerate(doubling_windows(tune - init_buffer - term_buffer, base_window)):
-        phases.append(Phase(f"slow-{i}", (DualAveraging(), metric()), Iterations(w)))
-    phases.append(Phase("fast-term", (DualAveraging(),), Iterations(term_buffer)))
+        phases.append(Phase(f"slow-{i}", (step_size, covariance), Iterations(w)))
+    phases.append(Phase("fast-term", (step_size,), Iterations(term_buffer)))
     return phases
+
+step_size = DualAveraging(HMCParams.step_size, accept=HMCSignals.accept_stat, target_accept=0.8)
+imm, pos = HMCParams.inverse_mass_matrix, HMCSignals.position
+
+schedule = stan_windows(step_size, WelfordDiag(imm, draws=pos))
 
 # Diagonal → strongly regularized dense → full dense
 schedule = [
-    Phase("diag", (DualAveraging(), WelfordDiag()), Iterations(200)),
-    Phase("reg",  (DualAveraging(), ShrunkDense(toward="current", shrinkage=0.9)), Iterations(300)),
-    Phase("full", (DualAveraging(), WelfordDense()), Iterations(500)),
-    Phase("sample", (), Iterations(1000) | EssAtLeast(400), warmup=False),
+    Phase(
+        "diag",
+        (step_size, WelfordDiag(imm, draws=pos)),
+        Iterations(200),
+    ),
+    Phase(
+        "reg",
+        (step_size, ShrunkDense(imm, draws=pos, toward="current", shrinkage=0.9)),
+        Iterations(300),
+    ),
+    Phase(
+        "full", (step_size, WelfordDense(imm, draws=pos)), Iterations(500)
+    ),
+    Phase(
+        "sample", (), Iterations(1000) | EssAtLeast(400), warmup=False
+    ),
 ]
 ```
 
@@ -1106,15 +1396,23 @@ schedule = [
 
 ### Validation
 
-`check_schedule(schedule, step, init, capabilities)` runs at setup and checks that:
+Binding checks run in two places:
 
-1. every `adapter.target` is a field of `step.Params`, with a matching type;
-2. every `adapter.requires` is a subset of the fields of `step.Signals`;
-3. each phase has at most one adapter per target;
-4. every adapter in a phase with `warmup=False` declares `validity != "warmup_only"`, unless the phase sets `allow_invalid_adaptation=True`;
-5. run-scoped stop conditions are only used with samplers that can evaluate them;
-6. the sampler accepts a custom schedule at all (`capabilities.custom_schedule`). For example, an external sampler that runs its own warmup can't take a user-defined schedule;
-7. every adapter with `needs_approximation=True` runs after an initialization pipeline that provides an approximation (`provides_approximation`).
+- **`OnBlock` runs rules 1–2 when it is constructed**, against its block's type. A wrong binding on a block fails at the line that wrote it.
+- **`check_schedule(schedule, step, init, capabilities)` runs at setup**, before compilation, and checks the whole schedule. It repeats a type checker's binding checks, for users who don't run one and for references built with `ref_to`. It also makes the checks that need the step being sampled, the initialization or the sampler, which can't run earlier. A schedule built lazily can only be checked phase by phase, as it is produced.
+
+Each adapter's step is the block its `OnBlock` names, or the step being sampled for an adapter on its own. `check_schedule` checks that:
+
+1. every adapter's `param` refers to a field of its step's `Params`, or of a class it inherits from, whose type is the adapter's `ValueT`. The field's type is read from its annotation (`ParamField[Covariance]` gives `Covariance`);
+2. every `SignalRef` among an adapter's fields refers to a field of its step's `Signals` with the type the adapter's annotation declares (`accept: SignalRef[Any, float]` needs a `float` field);
+3. every block an `OnBlock` names is a block of the step being sampled, and in a compound's schedule every adapter is on a block;
+4. each phase has at most one adapter per hyperparameter, identified by its block and the field's name;
+5. every adapter in a phase with `warmup=False` declares `validity != "warmup_only"`, unless the phase sets `allow_invalid_adaptation=True`;
+6. run-scoped stop conditions are only used with samplers that can evaluate them;
+7. the sampler accepts a custom schedule at all (`capabilities.custom_schedule`). For example, an external sampler that runs its own warmup can't take a user-defined schedule;
+8. every adapter with `needs_approximation=True` is in the first phase that tunes its hyperparameter, and initialization provides an approximation (`provides_approximation`).
+
+Before it, setup rejects an explicit schedule passed together with a step or block that sets an adaptation setting.
 
 ### Stop conditions
 
@@ -1138,24 +1436,36 @@ This defines the reference semantics. PyMC's samplers implement this loop. An ex
 
 ```python
 def run_chain(step, bundle, state, schedule, comm, sink, hint, checkpoint=None):
+    # Setup turned each phase entry into (b, adapter): b is the position of the adapter's block
+    # in a compound step, or None for a single step. A hyperparameter is a (b, field name) pair.
     state = step.init(state, bundle)
+    tuned = set()                                           # hyperparameters an earlier phase tuned
     for phase_idx, phase in enumerate(schedule):
+        first = {(b, a.param.name) for b, a in phase.adapters} - tuned   # first tuned here: get the hint
+        tuned |= first
         if checkpoint and phase_idx < checkpoint.phase_idx:
             continue                                        # resume: skip finished phases
-        adapters = [(a, a.init(getattr(state.params, a.target), hint)) for a in phase.adapters]
+        adapters = [(b, a, a.init(a.param.get(at(state, b).params),
+                                  hint if (b, a.param.name) in first else None))
+                    for b, a in phase.adapters]
         progress = PhaseProgress.start(phase, checkpoint)
         while not (phase.until.done(progress, sink.run_view) or step.is_finished(state)):
             state, stats, signals = step.transition(state, bundle)
-            adapters = [(a, a.update(s, signals, comm)) for a, s in adapters]
-            state = state.replace(params=state.params.replace(
-                **{a.target: a.propose(s) for a, s in adapters}))
+            adapters = [(b, a, a.update(s, a.read(at(signals, b)), comm)) for b, a, s in adapters]
+            state = with_params(state, {(b, a.param.name): a.propose(s) for b, a, s in adapters})
             progress = progress.advance()
             sink.record(phase, state, stats)      # → DrawBatch chunks → storage; progress → monitor
             yield state, adapters, progress       # control point: pause, stop, checkpoint
-        state = state.replace(params=state.params.replace(
-            **{a.target: a.final(s) for a, s in adapters}))
+        state = with_params(state, {(b, a.param.name): a.final(s) for b, a, s in adapters})
         sink.phase_end(phase, state)
     sink.final(step.finalize(state, bundle))
+
+
+def at(x, b):                       # block b's entry of a compound's state or signals
+    return x if b is None else x[b]
+
+def with_params(state, values):     # values: {(b, field name): value}
+    ...                             # replaces those hyperparameters, block by block
 ```
 
 The `yield` is the only place where a run can be paused, stopped or checkpointed. Everything between two control points is one synchronous unit of work.
@@ -1313,7 +1623,7 @@ class SMC(PopulationStep[SMCState, TemperedBundle, SMCParams, SMCSignals]):
 
 ### Groups, scheduling and failure
 
-- A **group** is the set of members of one population run: one SMC run, or one set of chains that share a pooled metric.
+- A **group** is the set of members of one population run: one SMC run, or one set of chains that share a pooled mass matrix.
 - **Gang scheduling:** all shards of a group start together, so a collective never waits for a worker that hasn't started yet.
 - **Failure domain:** if one shard fails, its whole group fails. Other groups keep running.
 - **When to shard:** only when there are fewer groups than workers. Otherwise a batched step on a single worker is cheaper than collectives across processes.
@@ -1455,7 +1765,7 @@ class NutpieNUTS(Step[...]):
                                 values="continuous", sampler="nutpie")
 
     def __init__(self, vars=None, *, target_accept=0.8, low_rank_mass_matrix=False, ...): ...
-    def default_schedule(self, tune, draws): ...     # one warmup phase, one sampling phase
+    def default_adapters(self): return ()            # nutpie runs its own warmup
     def default_sampler(self): return NutpieSampler()
 
 
@@ -1634,7 +1944,7 @@ def test_nutpie_sampler():
 | Resumability | Pickle the state mid-run and continue: the result is bitwise identical to an uninterrupted run. This follows from purity. |
 | **Invariance** (the important one) | With params frozen, start M chains (e.g. 2,000) from **exact** draws of the reference posterior, plus exact auxiliary state such as GHMC's momentum. Run k steps. The M end points must still follow the posterior: per-coordinate KS tests and tests of mean and covariance, Bonferroni-corrected. It needs no convergence, so it is cheap and catches most bugs. |
 | Joint distribution test | Geweke's "getting it right" test: on a model whose data can be simulated, alternate between drawing data given θ and applying the step to θ given the data. θ's marginal must match the prior. |
-| Adapters | Pure; frozen in non-adaptive phases; a metric adapter recovers a known covariance on a Gaussian. For `validity="diminishing"`, the parameter changes shrink as declared. |
+| Adapters | Pure; frozen in non-adaptive phases; a covariance adapter recovers a known covariance on a Gaussian. For `validity="diminishing"`, the parameter changes shrink as declared. |
 | Population (SPMD) | Runs with 1, 2 and 3 shards agree; replicated state is identical on every shard. |
 | Composition | Invariance still holds inside a compound step alongside a reference step. |
 | Storage | Draws and checkpoints round-trip; after a simulated crash, `truncate` plus resume reproduces an uninterrupted run; `to_datatree()` includes the latest checkpoint; what `capabilities` excludes, such as varying shapes, raises. |
@@ -1662,7 +1972,7 @@ This is why `SamplerCapabilities.progress` has a `"per_chunk"` value, and why st
 - Whether `cores` and `progressbar` stay as permanent shorthands, and how long the deprecation period for the other superseded arguments lasts.
 - Where `FileMonitor` writes by default when there is no durable storage, and whether its lines are plain text or JSON.
 - The public/internal split of modules.
-- The default schedule of a compound step: how to align phase boundaries across blocks.
+- How a population step that ends through `is_finished`, such as SMC, fits the default schedule of a tuning phase followed by a sampling phase: what `draws` means for it, and which of its iterations are recorded.
 - Initialization of a compound step: whether a stage such as Pathfinder may cover only the continuous blocks, holding the others at the root's values, or must raise. Today's ADVI and MAP inits only run when NUTS samples every variable.
 - Extending a finished run (more draws) as opposed to resuming a stopped one.
 - Bitwise reproducibility across shard counts (allgather-then-reduce versus allreduce of partial results).
