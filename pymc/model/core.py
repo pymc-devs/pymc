@@ -1661,6 +1661,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
         *,
         split_groups: bool = True,
         truncate_deterministic: int | None = None,
+        truncate_rv: int | None = None,
         parameter_count: bool = True,
     ):
         """Create a rich table summarizing the model's variables and their expressions.
@@ -1673,6 +1674,7 @@ class BaseModel(WithMemoization, metaclass=ContextMeta):
             self,
             split_groups=split_groups,
             truncate_deterministic=truncate_deterministic,
+            truncate_rv=truncate_rv,
             parameter_count=parameter_count,
         )
 

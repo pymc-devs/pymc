@@ -387,11 +387,50 @@ def _format_underscore(variable: str) -> str:
     return re.sub(r"(?<!\\)_", r"\\_", variable)
 
 
+def _split_top_level(args: str) -> list[str]:
+    """Split a comma separated argument string, ignoring commas nested in brackets."""
+    parts: list[str] = []
+    depth = 0
+    start = 0
+    for i, char in enumerate(args):
+        if char in "([{":
+            depth += 1
+        elif char in ")]}":
+            depth -= 1
+        elif char == "," and depth == 0:
+            parts.append(args[start:i].strip())
+            start = i + 1
+    parts.append(args[start:].strip())
+    return parts
+
+
+def _truncate_call_expression(expr: str, max_length: int | None) -> str:
+    """Truncate the argument list of a ``name(arg1, arg2, ...)`` expression.
+
+    Expressions that do not exceed ``max_length`` are returned unchanged.
+    """
+    if max_length is None or len(expr) <= max_length:
+        return expr
+    name, sep, rest = expr.partition("(")
+    if not sep or not rest.endswith(")"):
+        return expr
+    contents = _split_top_level(rest[:-1])
+    str_len = 0
+    show_n = 0
+    for show_n, content in enumerate(contents):
+        str_len += len(content) + 2
+        if str_len > max_length:
+            break
+    shown = ", ".join(contents[:show_n])
+    return f"{name}({shown}, ...)" if shown else f"{name}(...)"
+
+
 def _variable_expression(
     model: Model,
     var: Variable,
     truncate_deterministic: int | None,
     named_vars: set[Variable],
+    truncate_rv: int | None = None,
 ) -> str:
     """Get the expression of a variable in a human-readable format."""
     if var in model.data_vars:
@@ -399,21 +438,14 @@ def _variable_expression(
     elif var in model.deterministics:
         str_repr = str_for_potential_or_deterministic(var, dist_name="", named_vars=named_vars)
         _, var_expr = str_repr.split(" = ")
-        var_expr = var_expr[1:-1]
-        if truncate_deterministic is not None and len(var_expr) > truncate_deterministic:
-            contents = var_expr[2:-1].split(", ")
-            str_len = 0
-            for show_n, content in enumerate(contents):
-                str_len += len(content) + 2
-                if str_len > truncate_deterministic:
-                    break
-            var_expr = f"f({', '.join(contents[:show_n])}, ...)"
+        var_expr = _truncate_call_expression(var_expr[1:-1], truncate_deterministic)
     elif var in model.potentials:
         var_expr = str_for_potential_or_deterministic(
             var, dist_name="Potential", named_vars=named_vars
         ).split(" ~ ")[1]
     else:
         var_expr = str_for_dist(var, named_vars=named_vars).split(" ~ ")[1]
+        var_expr = _truncate_call_expression(var_expr, truncate_rv)
     return var_expr
 
 
@@ -447,6 +479,7 @@ def model_table(
     *,
     split_groups: bool = True,
     truncate_deterministic: int | None = None,
+    truncate_rv: int | None = None,
     parameter_count: bool = True,
 ) -> Table:
     """Create a rich table with a summary of the model's variables and their expressions.
@@ -460,6 +493,10 @@ def model_table(
         will be separated by a section.
     truncate_deterministic : int | None
         If not None, truncate the expression of deterministic variables that go beyond this length.
+    truncate_rv : int | None
+        If not None, truncate the parameter list of random variables (free and observed)
+        whose expression goes beyond this length. Useful for distributions with
+        many parameters, such as :class:`~pymc.CustomDist`.
     parameter_count : bool
         If True, add a row with the total number of parameters in the model.
 
@@ -556,7 +593,9 @@ def model_table(
         for var in group:
             var_name = var.name
             sep = f"[b]{' ~' if (var in model.basic_RVs) else ' ='}[/b]"
-            var_expr = _variable_expression(model, var, truncate_deterministic, named_vars)
+            var_expr = _variable_expression(
+                model, var, truncate_deterministic, named_vars, truncate_rv
+            )
             dims_expr = _dims_expression(model, var)
             table.add_row(var_name + sep, var_expr, dims_expr)
 
