@@ -41,13 +41,17 @@ from pytensor import tensor as pt
 
 from pymc.logprob.basic import logp
 
+pytestmark = pytest.mark.filterwarnings("error")
+
 
 @pytest.mark.parametrize("axis", (None, 0))
 def test_sum_of_normals_logprob(axis):
     mu = pt.constant([[1.0, 2.0, 3.0], [0.5, 1.5, 2.5]])
     sigma = pt.constant([[1.0, 2.0, 3.0], [1.5, 2.5, 3.5]])
 
-    x_rv = pt.random.normal(mu, sigma, name="x")
+    _, x_rv = pt.random.normal(
+        mu, sigma, name="x", rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
     x_sum = pt.sum(x_rv, axis=axis)
     x_sum_vv = pt.scalar("x_sum")
 
@@ -55,7 +59,9 @@ def test_sum_of_normals_logprob(axis):
 
     ref_mu = pt.sum(mu, axis=axis)
     ref_sigma = pt.sqrt(pt.sum(pt.square(sigma), axis=axis))
-    ref_rv = pt.random.normal(ref_mu, ref_sigma, name="ref")
+    _, ref_rv = pt.random.normal(
+        ref_mu, ref_sigma, name="ref", rng=pt.random.shared_rng(seed=None), return_next_rng=True
+    )
     ref_vv = pt.scalar("ref_vv")
     ref_logp = logp(ref_rv, ref_vv)
 
