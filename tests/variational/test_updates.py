@@ -90,3 +90,20 @@ def test_updates_fast(opt, loss_and_params, kwargs, getter):
         # Usual call to optimizer, old behaviour
         updates = opt(**args)
         assert isinstance(updates, dict)
+
+
+def test_adagrad_window_excludes_current_gradient():
+    # Regression test for #8444: with n_win=1 the rule after the first
+    # (stock) step is constant-scale SGD, lr * g / sqrt(epsilon).
+    p = pytensor.shared(np.array(1.0))
+    gval = pytensor.shared(np.array(0.0))
+    updates = adagrad_window([gval], [p], learning_rate=0.1, epsilon=0.1, n_win=1)
+    f = pytensor.function([], [], updates=updates)
+    gval.set_value(np.array(2.0))
+    f()
+    assert p.get_value() == pytest.approx(1.0 - 0.1 * 2.0 / np.sqrt(4.0 + 0.1))
+    gval.set_value(np.array(-1.0))
+    f()
+    assert p.get_value() == pytest.approx(
+        1.0 - 0.1 * 2.0 / np.sqrt(4.0 + 0.1) + 0.1 * 1.0 / np.sqrt(0.1)
+    )
