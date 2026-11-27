@@ -2372,3 +2372,42 @@ def test_change_dist_size_zero_sum_normal():
     resized = change_dist_size(intercept, new_size=(10,), expand=True)
 
     assert resized.type.shape == (10, 2)
+
+
+@pytest.mark.parametrize("allow_rvs_in_graph", [True, False])
+def test_vectorize_over_posterior_zero_sum_normal(allow_rvs_in_graph):
+    with pm.Model() as model:
+        intercept = pm.ZeroSumNormal("intercept", sigma=1.0, shape=2)
+        sigma = pm.HalfNormal("sigma", sigma=1.0)
+        y = pm.Normal("y", mu=intercept, sigma=sigma, observed=[0.0, 0.0], shape=2)
+        idata = pm.sample_prior_predictive(10, var_names=["intercept", "sigma"])
+
+    # Conditioned on posterior samples of intercept
+    [vec_intercept] = vectorize_over_posterior(
+        outputs=[intercept],
+        posterior=idata.prior,
+        input_rvs=model.free_RVs,
+        allow_rvs_in_graph=allow_rvs_in_graph,
+    )
+    assert isinstance(vec_intercept, TensorConstant)
+    np.testing.assert_allclose(vec_intercept.value, idata.prior["intercept"].data)
+
+    # Downstream observed RV depending on ZeroSumNormal
+    if allow_rvs_in_graph:
+        [vec_y] = vectorize_over_posterior(
+            outputs=[y],
+            posterior=idata.prior,
+            input_rvs=model.free_RVs,
+            allow_rvs_in_graph=True,
+        )
+        assert vec_y.type.shape == (1, 10, 2)
+
+        # Unconditioned ZeroSumNormal resampled across posterior batch shape
+        [resampled_intercept] = vectorize_over_posterior(
+            outputs=[intercept],
+            posterior=idata.prior,
+            input_rvs=[],
+            allow_rvs_in_graph=True,
+        )
+        assert resampled_intercept.type.shape == (1, 10, 2)
+        np.testing.assert_allclose(resampled_intercept.eval().sum(axis=-1), 0.0, atol=1e-12)
