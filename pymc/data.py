@@ -168,8 +168,8 @@ def determine_coords(
     value: pd.DataFrame | pd.Series | xr.DataArray,
     dims: Sequence[str] | None = None,
     coords: dict[str, Sequence | np.ndarray] | None = None,
-) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str] | Sequence[None]]:
-    """Determine coordinate values from data or the model (via ``dims``)."""
+) -> tuple[dict[str, Sequence | np.ndarray], Sequence[str | None]]:
+    """Determine coordinate values and dimension names from data or the model."""
     if coords is None:
         coords = {}
 
@@ -185,6 +185,8 @@ def determine_coords(
 
     # If value is a df, we also interpret the columns as coords:
     if hasattr(value, "columns"):
+        # Reset so a named index is not reused as the column dimension.
+        dim_name = None
         if dims is not None:
             dim_name = dims[1]
         if dim_name is None and value.columns.name is not None:
@@ -193,10 +195,11 @@ def determine_coords(
             coords[dim_name] = value.columns
 
     if isinstance(value, xr.DataArray):
-        if dims is not None:
-            for dim in dims:
-                dim_name = dim
-                # str is applied because dim entries may be None
+        dim_names = tuple(dims) if dims is not None else value.dims
+        for dim in dim_names:
+            dim_name = dim
+            # str is applied because dim entries may be None
+            if str(dim_name) not in coords:
                 coords[str(dim_name)] = cast(xr.DataArray, value[dim]).to_numpy()
 
     if isinstance(value, np.ndarray) and dims is not None:
@@ -212,8 +215,14 @@ def determine_coords(
                 coords[dim] = range(size)
 
     if dims is None:
-        # TODO: Also determine dim names from the index
-        new_dims: Sequence[str] | Sequence[None] = [None] * np.ndim(value)
+        if isinstance(value, xr.DataArray):
+            new_dims: Sequence[str | None] = tuple(value.dims)
+        elif isinstance(value, pd.DataFrame):
+            new_dims = (value.index.name, value.columns.name)
+        elif isinstance(value, pd.Series):
+            new_dims = (value.index.name,)
+        else:
+            new_dims = tuple(None for _ in range(np.ndim(value)))
     else:
         new_dims = dims
     return coords, new_dims
@@ -258,13 +267,14 @@ def Data(
         ``dims`` will then be the name of the Series / DataFrame's columns. See ArviZ
         documentation for more information about dimensions and coordinates:
         :doc:`arviz_base:tutorial/WorkingWithDataTree`.
-        If this parameter is not specified, the random variables will not have dimension
-        names.
+        If omitted, the variable has no dimension names unless
+        ``infer_dims_and_coords=True`` and names can be taken from ``value``.
     coords : dict, optional
         Coordinate values to set for new dimensions introduced by this ``Data`` variable.
     infer_dims_and_coords : bool, default=False
-        If True, the ``Data`` container will try to infer what the coordinates
-        and dimension names should be if there is an index in ``value``.
+        If True, infer dimension names and coordinate values from ``value`` when
+        ``dims`` is omitted. Pandas Series/DataFrame index (and column) names and
+        values are used, as are ``xarray.DataArray`` dimension names and coordinates.
     model : Model, optional
         Model in which to register the container. Defaults to the current context.
     **kwargs : dict, optional
@@ -349,7 +359,7 @@ def Data(
             expected=x.ndim,
         )
 
-    new_dims: Sequence[str] | Sequence[None] | None
+    new_dims: Sequence[str | None] | None
     if infer_dims_and_coords:
         coords, new_dims = determine_coords(model, value, dims)
     else:
