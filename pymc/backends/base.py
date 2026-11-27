@@ -158,6 +158,8 @@ class BaseTrace(IBaseTrace):
         `model.unobserved_RVs` is used.
     test_point: dict
         use different test point that might be with changed variables shapes
+    compile_kwargs: dict, optional
+        Keyword arguments passed to ``model.compile_fn`` when ``fn`` is not given.
     """
 
     def __init__(
@@ -170,6 +172,7 @@ class BaseTrace(IBaseTrace):
         fn=None,
         var_shapes=None,
         var_dtypes=None,
+        compile_kwargs=None,
     ):
         model = modelcontext(model)
 
@@ -186,9 +189,12 @@ class BaseTrace(IBaseTrace):
             fn = model.compile_fn(
                 outs=[pytensor.Out(v, borrow=True) for v in vars],
                 inputs=[pytensor.In(v, borrow=True) for v in model.value_vars],
-                point_fn=False,
-                on_unused_input="ignore",
-                trust_input=True,
+                **{
+                    **(compile_kwargs or {}),
+                    "point_fn": False,
+                    "on_unused_input": "ignore",
+                    "trust_input": True,
+                },
             )
 
         # Get variable shapes. Most backends will need this
