@@ -580,7 +580,7 @@ def adagrad_window(loss_or_grads=None, params=None, learning_rate=0.001, epsilon
         updates[accu] = accu_new
         updates[i] = i_new
 
-        accu_sum = accu_new.sum(axis=-1)
+        accu_sum = accu.sum(axis=-1)
         updates[param] = param - (learning_rate * grad / pt.sqrt(accu_sum + epsilon))
     return updates
 
