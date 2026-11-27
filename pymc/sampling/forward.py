@@ -34,6 +34,7 @@ from pytensor.graph.basic import (
 )
 from pytensor.graph.fg import FunctionGraph
 from pytensor.graph.traversal import ancestors, general_toposort, walk
+from pytensor.tensor.random.op import RNGConsumerOp
 from pytensor.tensor.random.type import RandomType
 from pytensor.tensor.sharedvar import SharedVariable, TensorSharedVariable
 from rich.theme import Theme
@@ -1388,7 +1389,13 @@ def vectorize_over_posterior(
         replace_dict[rv] = pt.constant(posterior_samples.astype(rv.dtype), name=rv.name)  # type: ignore[attr-defined]
 
     # Replace the rvs that remain in the graph with resized versions
-    all_rvs = rvs_in_graph(outputs)
+    all_rvs = [
+        var
+        for var in ancestors(outputs, blockers=needed_rvs)
+        if var.owner is not None
+        and isinstance(var.owner.op, RNGConsumerOp)
+        and not isinstance(var.type, RandomType)
+    ]
 
     # Once we give values for the needed_rvs (setting them to their posterior samples),
     # we need to identify the rvs that only depend on these conditioned values, and
@@ -1405,7 +1412,7 @@ def vectorize_over_posterior(
         if rv in all_rvs and rv not in needed_rvs
     ]:
         blockers = [*needed_rvs, *independent_rvs, *outputs]
-        rv_ancestors = ancestors([rv], blockers=blockers)
+        rv_ancestors = ancestors(rv.owner.inputs, blockers=blockers)
         if not (set(blockers) & set(rv_ancestors)):
             independent_rvs.append(rv)
     for rv in independent_rvs:
