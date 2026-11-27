@@ -53,6 +53,7 @@ from scipy.stats import (
     uniform,
     vonmises,
     weibull_min,
+    wishart,
 )
 
 from pymc import (
@@ -110,6 +111,7 @@ from pymc import (
     VonMises,
     Wald,
     Weibull,
+    Wishart,
     ZeroInflatedBinomial,
     ZeroInflatedNegativeBinomial,
     ZeroInflatedPoisson,
@@ -259,6 +261,18 @@ def test_mean_equal_expected(dist, dist_params, expected):
     np.testing.assert_almost_equal(
         pymc_mean_tiled, np.tile(pymc_mean, (3,) + (1,) * pymc_mean.ndim)
     )
+
+
+def test_wishart_mean():
+    nu = 10
+    V = np.array([[2.0, 0.5], [0.5, 1.5]])
+
+    rv = Wishart.dist(nu=nu, V=V)
+
+    pymc_mean_val = mean(rv).eval()
+    scipy_mean = wishart(df=nu, scale=V).mean()
+
+    np.testing.assert_almost_equal(pymc_mean_val, scipy_mean)
 
 
 @pytest.mark.parametrize(

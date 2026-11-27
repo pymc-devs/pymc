@@ -68,7 +68,6 @@ from pymc.distributions.continuous import (
     WeibullBetaRV,
 )
 from pymc.distributions.discrete import DiscreteUniformRV
-from pymc.distributions.dist_math import i0e, i1e
 from pymc.distributions.distribution import DiracDeltaRV
 from pymc.distributions.mixture import MixtureRV
 from pymc.distributions.multivariate import (
@@ -79,6 +78,7 @@ from pymc.distributions.multivariate import (
     MatrixNormalRV,
     MvStudentTRV,
     StickBreakingWeightsRV,
+    WishartRV,
     _LKJCholeskyCovRV,
 )
 from pymc.distributions.shape_utils import maybe_resize, rv_size_is_none
@@ -245,7 +245,7 @@ def invgamma_mean(op, rv, rng, size, alpha, beta):
 
 
 @_mean.register(KroneckerNormalRV)
-def kronecker_normal_mean(op, rv, rng, size, mu, covs, chols, evds):
+def kronecker_normal_mean(op, rv, rng, size, mu, sigma, *covs):
     mean = mu
     if not rv_size_is_none(size):
         mean_size = pt.concatenate([size, mu.shape])
@@ -376,7 +376,7 @@ def rice_mean(op, rv, rng, size, b, sigma):
     return maybe_resize(
         sigma
         * np.sqrt(np.pi / 2)
-        * ((1 + b_squared) * i0e(b_squared / 2) + b_squared * i1e(b_squared / 2)),
+        * ((1 + b_squared) * pt.ive(0, b_squared / 2) + b_squared * pt.ive(1, b_squared / 2)),
         size,
     )
 
@@ -445,3 +445,13 @@ def wald_mean(op, rv, rng, size, mu, lam, alpha):
 @_mean.register(WeibullBetaRV)
 def weibull_mean(op, rv, rng, size, alpha, beta):
     return maybe_resize(beta * pt.gamma(1 + 1 / alpha), size)
+
+
+@_mean.register(WishartRV)
+def wishart_mean(op, rv, rng, size, nu, scale_chol):
+    V = scale_chol @ scale_chol.mT
+    mean = nu * V
+    if not rv_size_is_none(size):
+        mean_size = pt.concatenate([size, V.shape[-2:]])
+        mean = pt.full(mean_size, mean)
+    return mean
