@@ -115,7 +115,10 @@ class Slice(ArrayStepShared):
 
         shared = make_shared_replacements(initial_point, vars, model)
         [logp], raveled_inp = join_nonshared_inputs(
-            point=initial_point, outputs=[model.logp()], inputs=vars, shared_inputs=shared
+            point=initial_point,
+            outputs=[model.dependent_logp(vars)],
+            inputs=vars,
+            shared_inputs=shared,
         )
         if compile_kwargs is None:
             compile_kwargs = {}

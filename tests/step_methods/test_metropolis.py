@@ -21,6 +21,7 @@ import pytensor
 import pytest
 
 from pytensor.compile.mode import Mode
+from pytensor.graph import graph_inputs
 
 import pymc as pm
 
@@ -425,3 +426,41 @@ def test_sampling_state(step_method, model_fn):
             assert equal_sampling_states(final_state1, final_state2)
             assert equal_dataclass_values(sample1, sample2)
             assert equal_dataclass_values(stat1, stat2)
+
+
+@pytest.mark.parametrize(
+    "step_method, step_kwargs",
+    [
+        (BinaryMetropolis, {}),
+        (BinaryGibbsMetropolis, {}),
+        (CategoricalGibbsMetropolis, {"proposal": "uniform"}),
+        (CategoricalGibbsMetropolis, {"proposal": "proportional"}),
+    ],
+)
+def test_discrete_steps_use_dependent_logp(step_method, step_kwargs):
+    with pm.Model() as m:
+        w = pm.Normal("w", size=3)
+        pm.Normal("unrelated_obs", w.sum(), 1, observed=np.zeros(10))
+        p = pm.Dirichlet("p", np.ones(3))
+        if step_method is CategoricalGibbsMetropolis:
+            z = pm.Categorical("z", p, size=4)
+        else:
+            z = pm.Bernoulli("z", p[0], size=4)
+        pm.Normal("y", z, 1, observed=[0.9, 0.1, 1.2, -0.3])
+
+        step = step_method([z], rng=SEED, **step_kwargs)
+        step_full_logp = step_method([z], rng=SEED, **step_kwargs)
+    step_full_logp.fs = [m.compile_logp()]
+
+    # Only the terms of z and of its child y are compiled
+    [logp_fn] = step.fs
+    fgraph = logp_fn.f.maker.fgraph
+    used_inputs = {var.name for var in graph_inputs(fgraph.outputs) if var in fgraph.inputs}
+    assert used_inputs == {"z", "p_simplex__"}
+
+    # The sampler takes the same steps as with the full model logp
+    point = point_full = m.initial_point()
+    for _ in range(5):
+        point, _ = step.step(point)
+        point_full, _ = step_full_logp.step(point_full)
+        np.testing.assert_equal(point, point_full)

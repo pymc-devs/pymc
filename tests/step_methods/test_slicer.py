@@ -15,6 +15,10 @@
 import numpy as np
 import pytest
 
+from pytensor.graph import graph_inputs
+
+import pymc as pm
+
 from pymc.step_methods.slicer import Slice
 from tests import sampler_fixtures as sf
 from tests.helpers import RVsAssignmentStepsTester, StepMethodTester
@@ -50,3 +54,20 @@ class TestRVsAssignmentSlicer(RVsAssignmentStepsTester):
     @pytest.mark.parametrize("step, step_kwargs", [(Slice, {})])
     def test_continuous_steps(self, step, step_kwargs):
         self.continuous_steps(step, step_kwargs)
+
+
+def test_slice_uses_dependent_logp():
+    with pm.Model():
+        w = pm.Normal("w", size=3)
+        pm.Normal("unrelated_obs", w.sum(), 1, observed=np.zeros(10))
+        sigma = pm.HalfNormal("sigma")
+        x = pm.Normal("x", 0, sigma)
+        pm.Normal("y", x, 1, observed=[0.5])
+
+        step = Slice([x])
+
+    # Only the terms of x and of its child y are compiled
+    fgraph = step.logp.maker.fgraph
+    used_inputs = {var.name for var in graph_inputs(fgraph.outputs) if var in fgraph.inputs}
+    assert "w_shared" not in used_inputs
+    assert "sigma_log___shared" in used_inputs
