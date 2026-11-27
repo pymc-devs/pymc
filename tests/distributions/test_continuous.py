@@ -2457,6 +2457,22 @@ class TestInverseGammaMuSigma(BaseTestDistributionRandom):
     expected_rv_op_params = {"alpha": expected_alpha, "beta": expected_beta}
     checks_to_run = ["check_pymc_params_match_rv_op"]
 
+@pytest.mark.parametrize(
+    "dist, params",
+    [
+        (pm.Gamma, {"alpha": 2, "beta": 1}),
+        (pm.Gamma, {"alpha": 2, "sigma": 1}),
+        (pm.InverseGamma, {"alpha": 3}),
+        (pm.InverseGamma, {"alpha": 3, "sigma": 1}),
+        (pm.Beta, {"alpha": 2, "beta": 2}),
+        (pm.Beta, {"alpha": 2, "sigma": 0.1}),
+    ],
+)
+def test_alpha_and_mu_raises(dist, params):
+    # https://github.com/pymc-devs/pymc/issues/8676
+    msg = "Incompatible parametrization. Can't specify both alpha and mu"
+    with pytest.raises(ValueError, match=msg):
+        dist.dist(mu=0.3, **params)
 
 class TestLogistic(BaseTestDistributionRandom):
     pymc_dist = pm.Logistic

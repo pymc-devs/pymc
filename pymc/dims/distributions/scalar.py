@@ -28,7 +28,6 @@ from pymc.dims.distributions.core import (
 )
 from pymc.dims.distributions.transforms import IntervalTransform, circular
 from pymc.distributions.continuous import Beta as RegularBeta
-from pymc.distributions.continuous import Gamma as RegularGamma
 from pymc.distributions.continuous import (
     HalfCauchyRV,
     HalfStudentTRV,
@@ -310,6 +309,8 @@ class Gamma(PositiveDimDistribution):
 
     @classmethod
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):
+        if alpha is not None and mu is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and mu.")
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
@@ -322,7 +323,6 @@ class Gamma(PositiveDimDistribution):
             raise ValueError(
                 "Incompatible parameterization. Either use alpha and beta, or mu and sigma."
             )
-        alpha, beta = RegularGamma.get_alpha_beta(alpha=alpha, beta=beta, mu=mu, sigma=sigma)
         return super().dist([alpha, ptx.math.reciprocal(beta)], **kwargs)
 
 
@@ -341,6 +341,8 @@ class InverseGamma(PositiveDimDistribution):
 
     @classmethod
     def dist(cls, alpha=None, beta=None, *, mu=None, sigma=None, **kwargs):
+        if alpha is not None and mu is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and mu.")
         if alpha is not None:
             if beta is None:
                 beta = 1.0
