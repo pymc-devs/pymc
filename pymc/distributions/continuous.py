@@ -1228,6 +1228,8 @@ class Beta(UnitContinuous):
 
     @classmethod
     def get_alpha_beta(self, alpha=None, beta=None, mu=None, sigma=None, nu=None):
+        if alpha is not None and mu is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and mu.")
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
@@ -2492,6 +2494,8 @@ class Gamma(PositiveContinuous):
 
     @classmethod
     def get_alpha_beta(cls, alpha=None, beta=None, mu=None, sigma=None):
+        if alpha is not None and mu is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and mu.")
         if (alpha is not None) and (beta is not None):
             pass
         elif (mu is not None) and (sigma is not None):
@@ -2614,6 +2618,8 @@ class InverseGamma(PositiveContinuous):
 
     @classmethod
     def _get_alpha_beta(cls, alpha, beta, mu, sigma):
+        if alpha is not None and mu is not None:
+            raise ValueError("Incompatible parametrization. Can't specify both alpha and mu.")
         if alpha is not None:
             if beta is not None:
                 pass

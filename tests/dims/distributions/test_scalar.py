@@ -316,6 +316,21 @@ def test_inverse_gamma():
     assert_equivalent_logp_graph(model, reference_model)
 
 
+@pytest.mark.parametrize(
+    "dist, params",
+    [
+        (Gamma, {"alpha": 2, "beta": 1}),
+        (InverseGamma, {"alpha": 3}),
+        (Beta, {"alpha": 2, "beta": 2}),
+    ],
+)
+def test_alpha_and_mu_raises(dist, params):
+    # https://github.com/pymc-devs/pymc/issues/8676
+    msg = "Incompatible parametrization. Can't specify both alpha and mu"
+    with pytest.raises(ValueError, match=msg):
+        dist.dist(mu=0.3, **params)
+
+
 def test_wald():
     coords = {"a": range(3)}
     with Model(coords=coords) as model:
