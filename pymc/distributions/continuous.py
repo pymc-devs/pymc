@@ -30,7 +30,6 @@ from pytensor.tensor.exceptions import NotScalarConstantError
 from pytensor.tensor.extra_ops import broadcast_shape
 from pytensor.tensor.math import betaincinv, gammaincinv, tanh
 from pytensor.tensor.random.basic import (
-    BetaRV,
     _gamma,
     cauchy,
     exponential,
@@ -78,7 +77,6 @@ from pymc.distributions.dist_math import (
     check_icdf_parameters,
     check_icdf_value,
     check_parameters,
-    clipped_beta_rvs,
     i0e,
     log_diff_normal_cdf,
     log_normal,
@@ -1116,15 +1114,6 @@ class Wald(PositiveContinuous):
             alpha >= 0,
             msg="mu > 0, lam > 0, alpha >= 0",
         )
-
-
-class BetaClippedRV(BetaRV):
-    @classmethod
-    def rng_fn(cls, rng, alpha, beta, size) -> np.ndarray:
-        return np.asarray(clipped_beta_rvs(alpha, beta, size=size, random_state=rng))
-
-
-beta = BetaClippedRV()
 
 
 class Beta(UnitContinuous):
