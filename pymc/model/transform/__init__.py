@@ -28,7 +28,12 @@ from pymc.model.transform.deterministic import (
     extract_deterministics,
     insert_deterministics,
 )
-from pymc.model.transform.optimization import freeze_dims_and_data, freeze_model
+from pymc.model.transform.optimization import (
+    freeze_dims_and_data,
+    freeze_model,
+    model_to_float32,
+    model_to_float64,
+)
 
 __all__ = (
     "change_value_transforms",
@@ -37,6 +42,8 @@ __all__ = (
     "freeze_dims_and_data",
     "freeze_model",
     "insert_deterministics",
+    "model_to_float32",
+    "model_to_float64",
     "observe",
     "prune_vars_detached_from_observed",
     "remove_minibatched_nodes",
