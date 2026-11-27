@@ -190,6 +190,7 @@ class Latent(Base):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal`
             distribution constructor.
         """
+        X = pt.as_tensor_variable(X)
         f = self._build_prior(name, X, n_outputs, reparameterize, jitter, **kwargs)
 
         self.X = X
@@ -214,6 +215,8 @@ class Latent(Base):
         return X, f, cov_total, mean_total
 
     def _build_conditional(self, Xnew, X, f, cov_total, mean_total, jitter):
+        Xnew = pt.as_tensor_variable(Xnew)
+        X = pt.as_tensor_variable(X)
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
 
@@ -352,12 +355,15 @@ class TP(Latent):
             Extra keyword arguments that are passed to :class:`~pymc.MvStudentT`
             distribution constructor.
         """
+        X = pt.as_tensor_variable(X)
         f = self._build_prior(name, X, reparameterize, jitter, **kwargs)
         self.X = X
         self.f = f
         return f
 
     def _build_conditional(self, Xnew, X, f, jitter):
+        Xnew = pt.as_tensor_variable(Xnew)
+        X = pt.as_tensor_variable(X)
         Kxx = self.cov_func(X)
         Kxs = self.cov_func(X, Xnew)
         Kss = self.cov_func(Xnew)
@@ -494,6 +500,8 @@ class Marginal(Base):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
+        X = pt.as_tensor_variable(X)
+        y = pt.as_tensor_variable(y)
         noise_func = sigma if isinstance(sigma, BaseCovariance) else pm.gp.cov.WhiteNoise(sigma)
         mu, cov = self._build_marginal_likelihood(X=X, noise_func=noise_func, jitter=jitter)
         self.X = X
@@ -530,6 +538,9 @@ class Marginal(Base):
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, y, noise_func, cov_total, mean_total, jitter
     ):
+        Xnew = pt.as_tensor_variable(Xnew)
+        X = pt.as_tensor_variable(X)
+        y = pt.as_tensor_variable(y)
         Kxx = cov_total(X)
         Kxs = self.cov_func(X, Xnew)
         Knx = noise_func(X)
@@ -804,6 +815,9 @@ class MarginalApprox(Marginal):
             Extra keyword arguments that are passed to :class:`~pymc.MvNormal` distribution
             constructor.
         """
+        X = pt.as_tensor_variable(X)
+        Xu = pt.as_tensor_variable(Xu)
+        y = pt.as_tensor_variable(y)
         self.X = X
         self.Xu = Xu
         self.y = y
@@ -818,6 +832,10 @@ class MarginalApprox(Marginal):
     def _build_conditional(
         self, Xnew, pred_noise, diag, X, Xu, y, sigma, cov_total, mean_total, jitter
     ):
+        Xnew = pt.as_tensor_variable(Xnew)
+        X = pt.as_tensor_variable(X)
+        Xu = pt.as_tensor_variable(Xu)
+        y = pt.as_tensor_variable(y)
         sigma2 = pt.square(sigma)
         Kuu = cov_total(Xu)
         Kuf = cov_total(Xu, X)
@@ -1015,6 +1033,7 @@ class LatentKron(Base):
         return f
 
     def _build_conditional(self, Xnew, jitter):
+        Xnew = pt.as_tensor_variable(Xnew)
         Xs, f = self.Xs, self.f
         X = cartesian(*Xs)
         delta = f - self.mean_func(X)
@@ -1178,6 +1197,7 @@ class MarginalKron(Base):
             distribution constructor.
         """
         self._check_inputs(Xs, y)
+        y = pt.as_tensor_variable(y)
         mu, covs = self._build_marginal_likelihood(Xs)
         self.Xs = Xs
         self.y = y
@@ -1194,7 +1214,8 @@ class MarginalKron(Base):
             return pm.KroneckerNormal(name, mu=mu, covs=covs, sigma=sigma, size=size, **kwargs)
 
     def _build_conditional(self, Xnew, diag, pred_noise):
-        Xs, y, sigma = self.Xs, self.y, self.sigma
+        Xnew = pt.as_tensor_variable(Xnew)
+        Xs, y, sigma = self.Xs, pt.as_tensor_variable(self.y), self.sigma
 
         # Old points
         X = cartesian(*Xs)
