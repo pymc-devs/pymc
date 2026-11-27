@@ -44,6 +44,7 @@ import pymc as pm
 from pymc.backends.arviz import _DefaultTrace, dataset_to_point_list
 from pymc.backends.base import MultiTrace
 from pymc.blocking import PointType
+from pymc.distributions.distribution import PlaceholderRV
 from pymc.distributions.shape_utils import change_dist_size
 from pymc.exceptions import ImplicitFreezeWarning
 from pymc.model import BaseModel, modelcontext
@@ -357,6 +358,18 @@ def compile_forward_sampling_function(
         freeze_vars=freeze_vars,
     )
 
+    volatile_basic_rvs = set(basic_rvs) & volatile_closure
+    if placeholders := sorted(
+        rv.name or str(rv)
+        for rv in volatile_basic_rvs
+        if rv.owner is not None and isinstance(rv.owner.op, PlaceholderRV)
+    ):
+        raise ValueError(
+            f"Placeholder variables {placeholders} would have to be sampled, but they have no "
+            "distribution. Their values must be provided by the trace: check that the trace "
+            "contains variables with the same names, and that they are not listed in `sample_vars`."
+        )
+
     # Collect the function inputs by walking the graph from the outputs. Inputs will be:
     # 1. Random variables that are not volatile
     # 2. Variables that have no owner and are not constant or shared
@@ -390,7 +403,7 @@ def compile_forward_sampling_function(
 
     return (
         fn,
-        set(basic_rvs) & volatile_closure,  # Basic RVs that will be resampled
+        volatile_basic_rvs,  # Basic RVs that will be resampled
     )
 
 

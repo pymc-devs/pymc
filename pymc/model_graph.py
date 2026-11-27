@@ -22,9 +22,11 @@ from typing import Any, cast
 
 from pytensor import function
 from pytensor.graph.basic import Variable
+from pytensor.graph.rewriting.utils import rewrite_graph
 from pytensor.graph.traversal import ancestors, walk
 from pytensor.tensor.shape import Shape
 
+from pymc.distributions.distribution import PlaceholderRV
 from pymc.model.core import modelcontext
 from pymc.pytensorf import _cheap_eval_mode
 from pymc.util import get_default_varnames, get_var_name
@@ -133,13 +135,18 @@ def random_variable_symbol(var: Variable) -> str:
     return symbol
 
 
+def _is_placeholder(var: Variable) -> bool:
+    return var.owner is not None and isinstance(var.owner.op, PlaceholderRV)
+
+
 def default_free_rv(var: Variable) -> GraphvizNodeKwargs:
     """Return default data for free RV in the graph."""
     symbol = random_variable_symbol(var)
 
     return {
         "shape": "ellipse",
-        "style": None,
+        # Placeholder variables take their values from a trace, mark them as such
+        "style": "dashed" if _is_placeholder(var) else None,
         "label": f"{var.name}\n~\n{symbol}",
     }
 
@@ -345,9 +352,20 @@ class ModelGraph:
         dim_lengths: dict[str, int] = {
             dim_name: fast_eval(value).item() for dim_name, value in self.model.dim_lengths.items()
         }
+        var_names_to_plot = self.vars_to_plot(var_names)
+        # Infer the shapes symbolically first, so that variables that cannot be
+        # sampled (e.g. Flat) don't need to be evaluated.
+        symbolic_shapes = (
+            rewrite_graph(
+                [self.model[var_name].shape for var_name in var_names_to_plot],
+                include=("ShapeOpt", "canonicalize"),
+            )
+            if var_names_to_plot
+            else []
+        )
         var_shapes: dict[str, tuple[int, ...]] = {
-            var_name: tuple(map(int, fast_eval(self.model[var_name].shape)))
-            for var_name in self.vars_to_plot(var_names)
+            var_name: tuple(map(int, fast_eval(shape)))
+            for var_name, shape in zip(var_names_to_plot, symbolic_shapes)
         }
 
         for var_name in self.vars_to_plot(var_names):
@@ -796,10 +814,13 @@ def _build_mermaid_node(node: NodeInfo) -> list[str]:
         ]
 
     elif node_type == NodeType.FREE_RV:
-        return [
+        lines = [
             f"{node_name}([{name} ~ {random_variable_symbol(var)}])",
             f"{node_name}@{{ shape: rounded }}",
         ]
+        if _is_placeholder(var):
+            lines.append(f"style {node_name} stroke-dasharray: 5 5")
+        return lines
     elif node_type == NodeType.DETERMINISTIC:
         return [
             f"{node_name}([{name} ~ Deterministic])",
