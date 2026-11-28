@@ -1106,7 +1106,7 @@ class HMCSignals(Signal):                          # offered to adapters after e
 - **A field accessed on the class gives a reference to it.** `HMCParams.step_size` is a `ParamRef[HMCParams, float]`, and `HMCSignals.accept_stat` is a `SignalRef[HMCSignals, float]`. On an instance, the same attribute gives the value, a `float`.
 - **References are typed.** Type checkers know both types, so a binding to the wrong kind of field is flagged where the schedule is written. A reference is an attribute, not a string: an editor can find or rename every use of a field, and a typo raises `AttributeError` on the line that builds the schedule.
 
-**The inverse mass matrix is a covariance.** HMC draws its momentum from N(0, M), and its kinetic energy is ½ pᵀM⁻¹p. Tuning sets M⁻¹ to an estimate of the posterior covariance. That is why the parameter is the inverse, and why its type is `Covariance`, the same type initialization uses for its approximation:
+**The inverse mass matrix is a covariance.** HMC draws its momentum from N(0, M), and its kinetic energy is $\frac{1}{2} p^\top M^{-1} p$. Tuning sets $M^{-1}$ to an estimate of the posterior covariance. That is why the parameter is the inverse, and why its type is `Covariance`, the same type initialization uses for its approximation:
 
 ```python
 class Covariance(ABC):                     # DiagCov, DenseCov, LowRankPlusDiag, ...
@@ -1116,7 +1116,7 @@ class Covariance(ABC):                     # DiagCov, DenseCov, LowRankPlusDiag,
     def draw_inverse(self, rng: np.random.Generator) -> np.ndarray: ... # x ~ N(0, Σ⁻¹)
 ```
 
-- HMC uses `draw_inverse` for the momentum, and `@` for the velocity M⁻¹p and the kinetic energy. These are the operations of today's `QuadPotential` (`random`, `velocity`, `energy`) without the adaptation, which moves to the adapters. Today's `QuadPotentialDiag` and `QuadPotentialFull` are already built from a variance and a covariance.
+- HMC uses `draw_inverse` for the momentum, and `@` for the velocity $M^{-1}p$ and the kinetic energy. These are the operations of today's `QuadPotential` (`random`, `velocity`, `energy`) without the adaptation, which moves to the adapters. Today's `QuadPotentialDiag` and `QuadPotentialFull` are already built from a variance and a covariance.
 - `Covariance` is an ordinary base class with concrete subclasses. A new structure, such as block-diagonal or Kronecker, is a new subclass plus the adapter that estimates it, with no change to the step.
 - Because the type describes what is estimated, not how HMC uses it, the same estimators serve other steps: adaptive Metropolis binds `WelfordDense` to its proposal covariance. `default_params` can also start from the initialization's `Approximation.cov` as it is.
 - A learned nonlinear transport map, as in nutpie's normalizing-flow adaptation, isn't a covariance: it changes the coordinates the log density is evaluated in. A step that supports one declares a separate parameter for it, with its own type and adapter. PyMC's NUTS doesn't in v1; nutpie's step does.
@@ -1254,30 +1254,37 @@ class FisherDiag(Adapter[Covariance, DrawsAndGrads, FisherDiagState]):
 **Presets.** Next to each step, PyMC provides adapters already bound to the step's fields, with every setting at its default. The step's `default_adapters` takes them from there, and applies its adaptation settings:
 
 ```python
-# pymc/step_methods/hmc/adapters.py, imported as hmc
+# pymc/step_methods/hmc/adapters.py, imported as hmc_adapters
 step_size = DualAveraging(HMCParams.step_size, accept=HMCSignals.accept_stat)
 diag_mass_matrix = WindowedDiag(HMCParams.inverse_mass_matrix, draws=HMCSignals.position)
 dense_mass_matrix = WindowedFull(HMCParams.inverse_mass_matrix, draws=HMCSignals.position)
 
-replace(hmc.step_size, target_accept=0.9)      # dataclasses.replace: the preset, with one setting changed
+replace(hmc_adapters.step_size, target_accept=0.9)      # dataclasses.replace: the preset, with one setting changed
 
 
 class NUTS(Step[...]):
     adaptation_settings = ("target_accept", "mass_matrix_adapter")
 
-    def __init__(self, vars=None, *, target_accept: float | None = None,
-                 mass_matrix_adapter: Adapter | Literal[False] | None = None, max_treedepth=10, ...): ...
+    def __init__(
+        self,
+        vars=None,
+        *,
+        target_accept: float | None = None,
+        mass_matrix_adapter: Adapter | Literal[False] | None = None,
+        max_treedepth=10,
+        ...,
+    ): ...
 
     def default_adapters(self):
-        step_size = hmc.step_size
+        step_size = hmc_adapters.step_size
         if self.target_accept is not None:
             step_size = replace(step_size, target_accept=self.target_accept)
         if self.mass_matrix_adapter is False:     # the inverse mass matrix stays at its default_params value
             return (step_size,)
-        return (step_size, self.mass_matrix_adapter or hmc.diag_mass_matrix)
+        return (step_size, self.mass_matrix_adapter or hmc_adapters.diag_mass_matrix)
 ```
 
-- **Users change a default through the step**, for example `pm.NUTS(target_accept=0.9)` or `pm.NUTS(mass_matrix_adapter=hmc.dense_mass_matrix)`. A custom schedule uses the presets directly.
+- **Users change a default through the step**, for example `pm.NUTS(target_accept=0.9)` or `pm.NUTS(mass_matrix_adapter=hmc_adapters.dense_mass_matrix)`. A custom schedule uses the presets directly.
 - **A preset is an adapter**, so it goes straight into a phase. `replace` raises at once on a misspelt setting. That is why every adapter setting has a default. A `functools.partial` would not be an adapter until it is called, and ty doesn't check calls to one.
 - **`None` keeps the preset's default.** `mass_matrix_adapter=False` turns mass-matrix adaptation off, which is what the deprecated `init="advi"` and `init="map"` translate to.
 
@@ -1340,8 +1347,10 @@ Schedule = Sequence[Phase]                      # or an iterable, for schedules 
 ```python
 def default_schedule(step, tune: int | None, draws: int) -> Schedule:
     tune = step.default_tune if tune is None else tune
-    return [Phase("tune", step.default_adapters(), Iterations(tune)),
-            Phase("sample", (), Iterations(draws), warmup=False)]
+    return [
+        Phase("tune", step.default_adapters(), Iterations(tune)),
+        Phase("sample", (), Iterations(draws), warmup=False),
+    ]
 ```
 
 **How a phase starts.** Each adapter starts from `current`, the value its hyperparameter has when the phase starts: the value from `default_params` in the first phase, and the value the previous phase handed over after that.
@@ -1424,9 +1433,9 @@ class StopCondition(Protocol):
     def __and__(self, other: "StopCondition") -> "StopCondition": ...
 ```
 
-- **Built-in conditions:** `Iterations(n)`, `EssAtLeast(400, var_names=...)`, `RhatBelow(1.01)`, `WallTime(minutes=30)`.
+- **Built-in conditions:** `Iterations(n)`, `EssAtLeast(400, var_names=...)`, `WallTime(minutes=30)`.
 - **Chain-scoped conditions**, such as iterations or wall time per chain, are checked by the loop after every step.
-- **Run-scoped conditions**, such as ESS or R-hat, need data from all chains. The sampler evaluates them on the draws that have been stored. When one fires, the sampler stops all chains at a consistent point.
+- **Run-scoped conditions**, such as ESS needs data from all chains. The sampler evaluates them on the draws that have been stored. When one fires, the sampler stops all chains at a consistent point.
 
 ## Samplers
 
